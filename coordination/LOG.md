@@ -319,3 +319,14 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Work:** Add explicit user-initiated memory editing through a serialized copy-on-write update. Preserve entry ID and creation timestamp; permit content and source-reference updates only; reset verification to `false` on every edit.
 - **Boundaries:** No chat auto-save, no model-driven verification, no change to authorization, East/APEX, Grok-owned modules, or remote/LAN access. Keep plaintext-at-rest disclosure accurate.
 - **Status:** Claimed; implementation and tests are next. Branch claim is recorded in `coordination/BOARD.md` commit `e2d70e87d226cf9bfca2b3d63298d0b46ff0441e`.
+
+
+## 2026-11-02 12:12 UTC — ChatGPT memory edit controls merged
+
+- **Pull request:** #12 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/12.
+- **Merge commit:** `8acc6beaf10874d235272520fbbf5b2fc036a06b`; PR state verified closed/merged. The updated `MemoryManager.ts` was fetched from `main` and contains the new `update` method.
+- **CI:** Pocket AI Lab CI run 41438786964 succeeded; Consumer prototype CI run 41438787012 succeeded; Cursor collaboration plugin CI run 41438787044 succeeded. All jobs and steps completed successfully, including web tests, engine tests, TypeScript build, and plugin tests.
+- **Implementation:** Explicit inline edit/save/cancel; guarded `PUT /api/memory/:id`; serialized copy-on-write update; preserve ID, creation time, and layer; update content/source references; reset `verified: false` on each edit; reject blank/oversized content, invalid IDs, and non-JSON writes. The memory-manager cache is now scoped by storage directory.
+- **Tests:** Added manager-level tests for identity preservation, verification reset, missing IDs, blank content, source retention, and persistence rollback; added HTTP persistence/validation tests and UI wiring assertions.
+- **Security/trust:** No auto-save, model-driven verification, authorization, East/APEX, or remote-access changes. Storage remains checksummed plaintext, not encrypted at rest.
+- **Next product gates:** Encryption/key management; authenticated remote access for iPhone Safari; real iOS llama.cpp runtime and target-hardware GGUF validation; Activity integration; East/APEX integration. No production-ready claim.
