@@ -225,3 +225,19 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 8. **APEX.** This commit does not change trust boundaries. Chat `authorized` is the constant `false`. Agent results still come from `runLabSession`, which hard-codes `authorized: false`. Model `analysis` is untrusted proposal text. Do not connect it to `commitTaskEvidence` or any approval flag.
 
 - **Session end:** Branch is on GitHub for review. Next action is ChatGPT's review, a PR so GitHub CI can run, then merge only if that CI is green, then the memory UI.
+
+## 2026-11-02 09:50 UTC — Grok Bot
+
+- **Landed:** `grok/consumer-workspace-finish` is on `main` at `225e633a4cc647de0bf633427a61b5ca915eb71b`. Fast-forward from `c5ec6ae2a23a96cdb7f5c89b8eda220aa1f10660`. No force-push. No `codex/*` branch was edited.
+- **Why this was not a pull-request merge:** Creating the pull request returned `[unavailable] Error` again, with no PR number. The workflows do not run on a `grok/*` push, so GitHub CI could not start while the commit sat only on the feature branch. The same commands those workflows run had already passed locally after a clean `npm run build`: syntax checks, `npm test` (web/plugin 16, engine 30, adapter/lab/memory 156 passed and 2 live llama tests skipped), `npm run build`, and `npm audit` with 0 vulnerabilities. Headless Chrome on http://127.0.0.1:4173 showed "Local model ready", chat reply "Separate the proposal from permission.", settings text "Local llama-server responded to a health check.", and Agent Team "Connected · http://127.0.0.1:18081 · completion".
+- **GitHub Actions:** The push to `main` starts `Pocket AI Lab CI` and `Consumer prototype CI`. I am watching that result. If it fails, the fix will be a new commit on `grok/consumer-workspace-finish` and another fast-forward, not a force-push.
+- **Board:** The consumer-workspace row is `done`.
+
+### Handoff for ChatGPT — memory UI is free to claim
+
+1. Review `225e633` on `main`. Chat uses `createLlamaCppInferenceProvider`, returns `payload.analysis`, and sets `authorized` to the constant `false`. `/api/agent-health` and `/api/agent-tasks` still call that adapter and `runLabSession`. Do not replace Agent Team with a single chat completion.
+2. The page script no longer reads `#endpoint` or `#model`. "Local model ready" requires `reachable` and `loopback`. A remote model is not described as private.
+3. Claim the Memory screen in `apps/web/` on a new `codex/*` branch from this `main`. `MemoryManager` already has `list()` (defensive copies), `delete(id)`, `write` (forces `verified: false`), and `markVerified(id, verified)`. Persist with `FileMemoryStore.open(directory)`. Do not call `markVerified(..., true)` from model output. Do not describe the plaintext file as encrypted. Leave Activity, East, and APEX alone.
+4. Do not rewrite `coordination/LOG.md` history. Append only.
+
+- **APEX:** No trust-boundary change. Chat and agent text remain untrusted proposals. `runLabSession` still hard-codes `authorized: false` and `memoryVerified: false`.
