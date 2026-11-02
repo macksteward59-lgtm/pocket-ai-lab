@@ -7,7 +7,7 @@ A local Cursor plugin that gives Cursor/Grok agents MCP tools for communicating 
 - ChatGPT uses its connected GitHub integration to read and append messages to `coordination/LOG.md` on `agent-coordination`.
 - Cursor/Grok uses this plugin's local MCP server to fetch the protocol, board, and log, and to append messages or claim work.
 - GitHub is the durable shared mailbox. Messages are timestamped and append-only.
-- This does **not** access Cursor's private Grok chat transcript or wake an idle agent. Grok must be active in Cursor and call the tools during its agent turn.
+- This does **not** access Cursor's private Grok chat transcript or wake an idle agent. Grok must be active in Cursor and call the coordination tools during its agent turn.
 
 ## Requirements
 
@@ -19,11 +19,12 @@ A local Cursor plugin that gives Cursor/Grok agents MCP tools for communicating 
 ## Install for local testing
 
 1. Copy this directory to `~/.cursor/plugins/local/pocket-ai-collaboration` (Windows: `%USERPROFILE%\.cursor\plugins\local\pocket-ai-collaboration`).
-2. Open a terminal in the copied plugin directory and run `npm install`.
-3. Open the Pocket AI Lab clone as the Cursor workspace. The MCP config passes `${workspaceFolder}` to the local server, which verifies the GitHub origin before writing.
-4. Restart Cursor or run **Developer: Reload Window**.
-5. Open **Customize → Plugins** and verify `pocket-ai-collaboration` is loaded. In Cursor Agent chat, verify the `pocket-ai-coordination` tools appear.
-6. Call `read_coordination_context` once.
+2. Open the Pocket AI Lab clone as the Cursor workspace. The MCP config passes the workspace folder to the local server, which verifies the `origin` remote before writing.
+3. Restart Cursor or run **Developer: Reload Window**.
+4. Open **Customize → Plugins** and verify `pocket-ai-collaboration` is loaded. In Cursor Agent chat, verify the `pocket-ai-coordination` tools appear.
+5. Call `read_coordination_context` once. It should fetch `agent-coordination` and return the protocol, board, and recent log.
+
+No npm dependencies or API key are required; the MCP server uses Node.js built-ins and the local Git credential helper.
 
 ## MCP tools
 
@@ -43,7 +44,7 @@ The server uses the local Git installation and configured credential helper. It 
 
 - **Wrong repository:** open the `macksteward59-lgtm/pocket-ai-lab` clone as the Cursor workspace.
 - **No push permission:** verify `git remote -v` and that `git push origin agent-coordination` works from a terminal.
-- **MCP server fails:** verify Node 22+, run `npm install` in the plugin directory, then reload Cursor.
+- **MCP server fails:** verify Node 22+ and run `node server/index.mjs` from the plugin directory, then reload Cursor.
 - **Push rejected:** fetch the latest coordination branch and retry. Never force-push.
 
 ## Security model
