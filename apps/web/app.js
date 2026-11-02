@@ -104,6 +104,55 @@ function renderMemories(entries){
    card.append(header,content,meta,source);
   }else card.append(header,content,meta);
   const actions=memoryElement("div","memory-entry-actions");
+  const edit=memoryElement("button","secondary-button","Edit");
+  edit.type="button";
+  edit.addEventListener("click",()=>{
+   const editor=memoryElement("form","memory-editor");
+   const contentLabel=memoryElement("label","","Memory content");
+   const contentInput=memoryElement("textarea");
+   contentInput.rows=4;
+   contentInput.maxLength=12000;
+   contentInput.required=true;
+   contentInput.value=entry.content||"";
+   contentLabel.append(contentInput);
+   const sourceLabel=memoryElement("label","","Source reference (optional)");
+   const sourceInput=memoryElement("input");
+   sourceInput.type="text";
+   sourceInput.maxLength=500;
+   sourceInput.value=Array.isArray(entry.provenance?.sourceRefs)?entry.provenance.sourceRefs.join(", "):"";
+   sourceLabel.append(sourceInput);
+   const controls=memoryElement("div","memory-editor-actions");
+   const save=memoryElement("button","primary-button","Save changes");
+   save.type="submit";
+   const cancel=memoryElement("button","secondary-button","Cancel");
+   cancel.type="button";
+   cancel.addEventListener("click",loadMemories);
+   controls.append(cancel,save);
+   editor.append(contentLabel,sourceLabel,controls);
+   editor.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const value=contentInput.value.trim();
+    if(!value)return;
+    save.disabled=true;
+    $( "memory-status" ).textContent="Updating memory…";
+    try{
+     const response=await fetch("/api/memory/"+encodeURIComponent(entry.id),{
+      method:"PUT",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({content:value,source:sourceInput.value.trim()})
+     });
+     const data=await response.json().catch(()=>({}));
+     if(!response.ok)throw new Error(data.error||"Memory could not be updated.");
+     $( "memory-status" ).textContent="Updated. This memory is now unverified until independently checked.";
+     await loadMemories();
+    }catch(error){
+     $( "memory-status" ).textContent=error.message;
+     save.disabled=false;
+    }
+   });
+   card.replaceChildren(header,editor);
+   contentInput.focus();
+  });
   const remove=memoryElement("button","secondary-button","Delete");
   remove.type="button";
   remove.addEventListener("click",async()=>{
@@ -117,7 +166,7 @@ function renderMemories(entries){
     await loadMemories();
    }catch(error){$("memory-status").textContent=error.message;remove.disabled=false;}
   });
-  actions.append(remove);
+  actions.append(edit,remove);
   card.append(actions);
   list.append(card);
  }
