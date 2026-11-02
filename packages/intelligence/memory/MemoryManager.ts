@@ -87,6 +87,32 @@ export class MemoryManager {
     });
   }
 
+  async update(id: string, patch: { content: string; sourceRefs?: string[] }): Promise<boolean> {
+    if (typeof patch.content !== "string" || !patch.content.trim()) {
+      throw new Error("Memory content is required.");
+    }
+    return this.withMutation(async () => {
+      const index = this.store.findIndex(entry => entry.id === id);
+      if (index < 0) return false;
+      const nextStore = this.snapshot();
+      const current = nextStore[index];
+      nextStore[index] = {
+        ...current,
+        content: patch.content.trim(),
+        provenance: {
+          ...current.provenance,
+          verified: false,
+          sourceRefs: patch.sourceRefs
+            ? [...patch.sourceRefs]
+            : [...current.provenance.sourceRefs]
+        }
+      };
+      if (this.backend) await this.backend.save(nextStore.map(cloneEntry));
+      this.store = nextStore;
+      return true;
+    });
+  }
+
   async markVerified(id: string, verified: boolean): Promise<boolean> {
     return this.withMutation(async () => {
       const index = this.store.findIndex(value => value.id === id);
