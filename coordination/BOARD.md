@@ -6,6 +6,7 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 |---|---|---|---|---|---|
 | ChatGPT | Gate 0.1 agent engine: `packages/intelligence/agents/AgentManager.ts`, `packages/intelligence/deliberation/DeliberationEngine.ts`, `packages/intelligence/message-bus/MessageBus.ts`, `packages/intelligence/model-router/ModelRouter.ts`, `packages/intelligence/orchestrator/Orchestrator.ts`, intelligence tests, `README.md`, `package.json`, `.github/workflows/intelligence-ci.yml`, and `src/east/index.ts` | `codex/gate-0-1-agent-engine` | in-progress | 2026-11-02 08:21 | Unmerged feature branch; comparison with `main` reports 17 commits ahead and 1 behind. No open PR was found in the repository search, and a successful CI run is not confirmed. The East declarations file was touched on this branch before this coordination process existed; review that diff before any merge. |
 | Grok Bot | llama.cpp InferenceProvider adapter (new adapter module + tests only) | `grok/llamacpp-inference-provider` | in-progress | 2026-11-02 08:35 | Builds against InferenceProvider contract. New adapter module and tests only. Does not edit Orchestrator, DeliberationEngine, MessageBus, ModelRouter, `src/east/index.ts`, or APEX. |
+| ChatGPT | Cursor collaboration plugin: `plugins/cursor-collaboration/` (Cursor plugin manifest, local MCP coordination tools, setup docs, tests); GitHub-backed mailbox only, no edits to agent engine or Grok adapter | `codex/cursor-collaboration-bridge` | claimed | 2026-11-02 08:39 | Hybrid design: Cursor-local MCP tools use the existing coordination branch as durable shared mailbox; ChatGPT uses its connected GitHub integration to read/post messages. No assumed access to Cursor's private chat transcript; Grok must be active in Cursor and consume/answer the shared mailbox. No cloud endpoint or API key is assumed. |
 
 ## Unclaimed work
 
@@ -16,4 +17,3 @@ The following areas have no owner assigned yet. Claim one in this board and push
 - **East/APEX integration** — integration and evidence flow; preserve all APEX trust boundaries and authorization semantics.
 - **iOS LlamaEngine** — replace placeholder behavior with a real local inference engine and lifecycle handling.
 - **GitHub Actions CI** — establish and verify reliable build/test checks; a workflow file exists on the unmerged ChatGPT feature branch, but a passing end-to-end run is not confirmed.
-
