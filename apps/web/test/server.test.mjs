@@ -251,3 +251,34 @@ test("memory API rejects blank and oversized content", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+
+test("memory API rejects cross-origin browser requests", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-origin-"));
+  try {
+    await withServer(async url => {
+      const response = await fetch(url + "/api/memory", {
+        headers: { origin: "https://attacker.example" }
+      });
+      assert.equal(response.status, 403);
+    }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("memory writes require JSON content type to block simple cross-site form posts", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-content-type-"));
+  try {
+    await withServer(async url => {
+      const response = await fetch(url + "/api/memory", {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: JSON.stringify({ content: "cross-site write" })
+      });
+      assert.equal(response.status, 415);
+    }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
