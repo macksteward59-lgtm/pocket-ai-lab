@@ -92,6 +92,7 @@ export class Orchestrator {
       [],
       async (stage, priorMessages) => {
         const generated: AgentMessage[] = [];
+        let nextSequence = this.bus.getThread(request.id).length;
         for (const agentId of STAGE_PLAN[stage]) {
           const agent = this.agents.getAgent(agentId);
           if (!agent) throw new Error("Unknown agent: " + agentId);
@@ -122,7 +123,7 @@ export class Orchestrator {
               payload: result.payload,
               evidenceRefs: result.evidenceRefs ?? [],
               createdAt: new Date().toISOString(),
-              sequence: this.bus.getThread(request.id).length + generated.length
+              sequence: nextSequence++
             };
             generated.push(this.bus.publish(message));
             this.agents.updateStatus(sessionId, "complete");
