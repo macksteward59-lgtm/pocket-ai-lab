@@ -166,37 +166,48 @@ async function readCheckedBody(response: Response, signal: AbortSignal, path: st
     }
     const body = await readBody(response, signal);
     consumed = true;
-    if (Buffer.byteLength(body, "utf8") > MAX_RESPONSE_BYTES) {
-      throw new LlamaCppInferenceError(
-        "malformed_response",
-        `llama.cpp response exceeded ${MAX_RESPONSE_BYTES} bytes`
-      );
-    }
     return body;
   } finally {
     if (!consumed) await response.body?.cancel().catch(() => undefined);
   }
 }
 
-function readBody(response: Response, signal: AbortSignal): Promise<string> {
-  if (signal.aborted) return Promise.reject(abortReason(signal));
-  return new Promise((resolve, reject) => {
-    const onAbort = () => {
-      reject(abortReason(signal));
-      void response.body?.cancel().catch(() => undefined);
-    };
-    signal.addEventListener("abort", onAbort, { once: true });
-    response.text().then(
-      value => {
-        signal.removeEventListener("abort", onAbort);
-        resolve(value);
-      },
-      error => {
-        signal.removeEventListener("abort", onAbort);
-        reject(isAbortError(error) ? abortReason(signal) : error);
+async function readBody(response: Response, signal: AbortSignal): Promise<string> {
+  if (signal.aborted) throw abortReason(signal);
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const onAbort = () => { void reader.cancel(abortReason(signal)).catch(() => undefined); };
+  signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    while (true) {
+      if (signal.aborted) throw abortReason(signal);
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new LlamaCppInferenceError(
+          "malformed_response",
+          `llama.cpp response exceeded ${MAX_RESPONSE_BYTES} bytes`
+        );
       }
-    );
-  });
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (signal.aborted) throw abortReason(signal);
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function abortReason(signal: AbortSignal): unknown {

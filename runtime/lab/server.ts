@@ -12,6 +12,7 @@ import type { InferenceProvider } from "../../packages/intelligence/orchestrator
 import { runLabSession, type LabEvent } from "./session";
 
 const PAGE = resolve(process.cwd(), "runtime/lab/public/index.html");
+const MAX_REQUEST_BYTES = 16 * 1024;
 
 export function assertLoopbackBaseUrl(baseUrl: string): string {
   let url: URL;
@@ -31,6 +32,9 @@ export function assertLoopbackBaseUrl(baseUrl: string): string {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new LlamaCppInferenceError("invalid_config", "Llama server URL must use http or https.");
   }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new LlamaCppInferenceError("invalid_config", "Llama server URL cannot contain credentials, query parameters, or fragments.");
+  }
   return url.toString().replace(/\/$/, "");
 }
 
@@ -43,7 +47,9 @@ export function startLabServer(options?: {
       await route(request, response, options?.provider);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Lab request failed.";
-      const status = error instanceof LlamaCppInferenceError ? 502 : 500;
+      const status = error instanceof LlamaCppInferenceError
+        ? (error.code === "invalid_request" || error.code === "invalid_config" ? 400 : 502)
+        : 500;
       sendJson(response, status, { error: message });
     }
   });
@@ -93,7 +99,7 @@ async function route(
       connection: "keep-alive"
     });
     const controller = new AbortController();
-    request.on("close", () => controller.abort());
+    response.on("close", () => { if (!response.writableEnded) controller.abort(); });
     await runLabSession({
       objective,
       provider,
@@ -115,10 +121,23 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
 
 async function readJson(request: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  let total = 0;
+  for await (const chunk of request) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += bytes.byteLength;
+    if (total > MAX_REQUEST_BYTES) {
+      throw new LlamaCppInferenceError("invalid_request", `Request body exceeds ${MAX_REQUEST_BYTES} bytes.`);
+    }
+    chunks.push(bytes);
+  }
   const text = Buffer.concat(chunks).toString("utf8");
   if (!text.trim()) return {};
-  const parsed = JSON.parse(text) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    throw new LlamaCppInferenceError("invalid_request", "Request body must contain valid JSON.");
+  }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new LlamaCppInferenceError("invalid_request", "Request body must be a JSON object.");
   }

@@ -96,6 +96,7 @@ describe("lab session", () => {
 describe("lab server", () => {
   it("rejects a non-loopback llama-server URL", () => {
     expect(() => assertLoopbackBaseUrl("http://example.com:8080")).toThrow(/this machine/);
+    expect(() => assertLoopbackBaseUrl("http://user:pass@127.0.0.1:8080")).toThrow(/credentials/);
     expect(assertLoopbackBaseUrl("http://127.0.0.1:8080/")).toBe("http://127.0.0.1:8080");
   });
 
@@ -125,7 +126,13 @@ describe("lab server", () => {
       const health = await fetch(`${lab.url}/api/health?baseUrl=${encodeURIComponent(`http://127.0.0.1:${llamaPort}`)}`);
       expect(health.status).toBe(200);
       const blocked = await fetch(`${lab.url}/api/health?baseUrl=${encodeURIComponent("http://example.com")}`);
-      expect(blocked.status).toBe(502);
+      expect(blocked.status).toBe(400);
+      const oversized = await fetch(`${lab.url}/api/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ objective: "x".repeat(17_000), baseUrl: `http://127.0.0.1:${llamaPort}` })
+      });
+      expect(oversized.status).toBe(400);
       const task = await fetch(`${lab.url}/api/tasks`, {
         method: "POST",
         headers: { "content-type": "application/json" },
