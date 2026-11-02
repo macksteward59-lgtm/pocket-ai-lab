@@ -7,3 +7,9 @@ test("health reports unconfigured without model secrets",async()=>withServer(asy
 test("chat rejects empty messages",async()=>withServer(async url=>{const r=await fetch(url+"/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message:" "})});assert.equal(r.status,400);}));
 test("chat fails closed when no model is configured",async()=>withServer(async url=>{const r=await fetch(url+"/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message:"hello"})});assert.equal(r.status,503);}));
 test("static app shell is served",async()=>withServer(async url=>{const r=await fetch(url+"/");assert.equal(r.status,200);assert.match(await r.text(),/Pocket AI Lab/);}));
+
+test("chat forwards to the configured OpenAI-compatible endpoint without exposing the key",async()=>withServer(async url=>{
+ const original=globalThis.fetch;let captured;
+ globalThis.fetch=async(input,init)=>{captured={url:String(input),headers:init.headers,body:JSON.parse(init.body)};return new Response(JSON.stringify({choices:[{message:{content:"real model reply"}}]}),{status:200,headers:{"content-type":"application/json"}});};
+ try{const r=await fetch(url+"/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message:"hello"})});assert.equal(r.status,200);assert.equal((await r.json()).reply,"real model reply");assert.equal(captured.url,"http://127.0.0.1:8080/v1/chat/completions");assert.equal(captured.headers.authorization,"Bearer server-secret");assert.equal(captured.body.model,"test-model");}finally{globalThis.fetch=original;}
+},{LLM_BASE_URL:"http://127.0.0.1:8080/v1",LLM_MODEL:"test-model",LLM_API_KEY:"server-secret"}));
