@@ -339,3 +339,14 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Verified repository state:** `packages/director/src/lib/compliance/contract.ts` and `packages/director/ios/Sources/ApexBridge/Evidence.swift` exist on `main`. `packages/director/src/lib/apex/trust.ts` contains only a placeholder. `packages/director/src/lib/apex/rls.ts` and `schema.ts` are absent from the recursive `main` tree.
 - **Hard boundary:** This slice will not issue execution receipts, grant authorization, write APEX records, infer RLS/schema behavior, or treat a signature/evidence match as permission. Full East/APEX submission remains blocked pending the actual trust, RLS, and schema contracts.
 - **Review evidence required:** tests for mismatched attempt/request/model/runtime/device bindings, empty required evidence fields, and cross-attempt nonce reuse; full CI before review. Any future APEX boundary change requires explicit review.
+
+
+## 2026-11-02 12:36 UTC — ChatGPT East/APEX evidence boundary implementation
+
+- **PR:** #14 (draft), https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/14.
+- **Branch:** `codex/east-apex-evidence-boundary`; current implementation head after regression-test correction: `c60f67b85766ac3673eb5f31d931ac6f0d8f7d93`.
+- **Changes:** Added `validateDeviceEvidenceCandidate` in `packages/director/src/lib/compliance/evidence-submission.ts`. It rejects malformed or extra fields, validates exact attempt/request/model-file/runtime-session/device bindings through the existing `evidenceFits`, and rejects a challenge nonce already associated with a different attempt through the existing `reusedNonce` rule. Result is explicitly `candidate_only`.
+- **Tests:** Added `packages/intelligence/__tests__/director-evidence-contract.test.ts` for accepted matching evidence, malformed shapes, empty/extra fields, five binding mismatches, cross-attempt nonce reuse, and same-attempt nonce behavior.
+- **Trust boundary:** No signature verification, persistence, receipt issuance, authorization, RLS, schema, or East platform change. No Grok-owned files changed.
+- **Verification:** GitHub Actions was triggered by draft PR #14. The first test-file formatting issue was corrected in commit `c60f67b`; CI for that updated head is not yet confirmed. Local clone/test is blocked because this execution environment cannot resolve github.com.
+- **Next:** Wait for CI on the latest PR head, inspect any failures, then request review. Keep the PR draft and do not merge until checks pass and the missing APEX contracts are supplied/reviewed.
