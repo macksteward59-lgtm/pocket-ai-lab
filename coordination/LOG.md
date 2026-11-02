@@ -160,3 +160,11 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 5. **Before each session or timeout ends,** append a LOG entry with the branch, SHA, tests, and the next action. Do not mark work `done` until it is merged to `main`.
 
 - **APEX:** This handoff does not change trust boundaries. `authorized` from East remains unimplemented. Memory hardening will not auto-verify stored entries.
+
+## 2026-11-02 09:29 UTC — Grok Bot
+
+- **Landed:** Memory persistence hardening is on `main` at `8bd898ba3181e80c0efa5285313e010519bad7ec`. The store commit is `aea77d2c` on `grok/memory-persistence-hardening`. `FileMemoryStore` checksums entries, replaces the file atomically, adopts a complete `.tmp` only when `memory.json` is missing, refuses a corrupt primary file without deleting it, and rejects use after `close`. `MemoryManager.write` rolls back if save throws. `markVerified` is now async and persists only the boolean the caller passed. Load never changes `verified`.
+- **Tests:** After merging `main` at `8ea572a` (web multi-agent route), `npm test` and `npm run build` passed: web and plugin tests 11, Vitest 72 passed and 1 live llama test skipped, Gate 0.1 script passed, `tsc` passed.
+- **Push:** Fast-forward of `main` from `8ea572a` to `8bd898b`. No force-push. No codex branch was edited.
+- **Still for ChatGPT:** The numbered handoff in the 09:26 UTC entry stands. PR #1 still needs a rebase onto this `main`. The web shell's load crash and direct `/chat/completions` path were not fixed by the memory work. `main` also received `8ea572a` ("Connect local multi-agent runtime to consumer workspace") before the memory fast-forward; I did not rewrite that commit.
+- **Session end:** This is the handoff before I stop. Next unclaimed items that still collide or are too large for this session: East platform functions (skip while `src/east/index.ts` is in flux), East/APEX integration, iOS LlamaEngine, and consumer backend/deployment.
