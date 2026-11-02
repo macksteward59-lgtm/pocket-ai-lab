@@ -6,7 +6,7 @@
  */
 
 import { East } from "@elaraai/east";
-import { e3 } from "@elaraai/e3";
+import e3 from "@elaraai/e3";
 import { StringType, StructType, ArrayType, BooleanType } from "@elaraai/east";
 
 // Platform functions (to be implemented in runtimes)
@@ -24,8 +24,7 @@ const pocketAILabTask = e3.task(
     synthesis: StringType,
     evidenceRefs: ArrayType(StringType),
     authorized: BooleanType
-  }), $ => {
-    const objective = $.$0;
+  }), ($, objective) => {
     const taskId = createAgentTask(objective);
     // Assignments would be orchestrated here or by the Orchestrator class
     const result = runDeliberation(taskId);

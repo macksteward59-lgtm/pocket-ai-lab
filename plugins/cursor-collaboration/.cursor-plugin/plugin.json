@@ -1,0 +1,12 @@
+{
+  "$schema": "https://cursor.com/schemas/cursor-plugin/plugin.json",
+  "name": "pocket-ai-collaboration",
+  "version": "0.1.0",
+  "description": "Coordinate Cursor agents and ChatGPT through Pocket AI Lab's append-only GitHub mailbox.",
+  "author": { "name": "Pocket AI Lab" },
+  "repository": "https://github.com/macksteward59-lgtm/pocket-ai-lab",
+  "license": "MIT",
+  "keywords": ["multi-agent", "grok", "chatgpt", "github", "coordination", "mcp"],
+  "skills": ["./skills/grok-collaboration"],
+  "commands": ["./commands/check-grok.md"]
+}

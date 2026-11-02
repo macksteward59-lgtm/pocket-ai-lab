@@ -118,7 +118,7 @@ describe("lab server", () => {
       llama.listen(0, "127.0.0.1", () => resolve());
     });
     const llamaPort = (llama.address() as AddressInfo).port;
-    const lab = await startLabServer();
+    const lab = await startLabServer({ port: 0 });
     try {
       const page = await fetch(lab.url);
       expect(await page.text()).toContain("Pocket AI Lab");
