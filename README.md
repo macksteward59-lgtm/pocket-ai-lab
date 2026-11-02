@@ -1,75 +1,70 @@
 # Pocket AI Lab
 
-**Hybrid offline-first multi-agent intelligence platform.**
+**Hybrid offline-first multi-agent intelligence platform.** Agents collaborate to determine what should happen; APEX/East authorization and evidence infrastructure determines what is permitted to happen.
 
-Agents collaborate to determine *what should happen*.  
-Existing APEX / East authorization and evidence infrastructure determines *what is permitted to happen*.
+## Consumer prototype (web/PWA)
 
-## Architecture Principles
+The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, model connection status, settings and transparent agent/memory/activity sections. It can send real chat requests to a server-configured OpenAI-compatible local inference endpoint; when no model is configured it fails closed and does not invent a response.
 
-1. **Model independence** — Agents are roles + instructions + permissions, not tied to a single model.
-2. **Collective intelligence** — Independent analysis → challenge → revision → validation → synthesis.
-3. **Governed autonomy** — Permanent core team + dynamic specialists; all consequential actions pass APEX.
+### Run locally
 
-## Structure
-
-```
-pocket-ai-lab/
-├── apps/                  # (future) Native iOS app
-├── packages/
-│   ├── director/          # Existing APEX governance & orchestration
-│   ├── exploitgym/        # Existing cybersecurity evaluation
-│   ├── grok/              # Existing workspace & artifacts
-│   ├── east/              # East/e3 foundation
-│   └── intelligence/      # New multi-agent engine
-│       ├── agents/        # AgentManager + core team
-│       ├── orchestrator/  # Director coordination
-│       ├── model-registry/
-│       ├── model-router/
-│       ├── message-bus/   # Typed AgentMessage protocol
-│       ├── deliberation/
-│       ├── memory/        # 4-layer + provenance
-│       ├── knowledge/
-│       ├── evaluation/
-│       ├── policies/
-│       └── telemetry/
-├── runtime/
-│   └── ios/               # LlamaEngine protocol + stubs
-├── src/east/              # e3 durable task package
-└── docs/
-    ├── architecture/      # Full v1.0 specification
-    ├── agent-contracts/
-    └── implementation/
-```
-
-## Quick Start
+Requires Node.js 22 or newer.
 
 ```bash
 npm install
-npm run build
-# Full local inference (Gate 1) requires llama.cpp Metal bindings in runtime/ios
+npm run start:web
 ```
 
-## Implementation Status
+Open `http://localhost:4173`.
 
-| Gate | Description                  | Status                                      |
-|------|------------------------------|---------------------------------------------|
-| 0    | Architecture audit           | Done                                        |
-| 0.1  | Corrective engineering pass  | In progress (inference interface, immutable messages, honest consensus, non-auto-verified memory) |
-| 1    | Local inference (llama.cpp)  | Stub / InferenceProvider ready for plug-in  |
-| 2    | Multi-model registry         | Implemented                                 |
-| 3    | Agent orchestration          | Core done (placeholder inference)           |
-| 4    | Deliberation                 | Engine improved (no forced consensus)       |
-| 5    | Shared memory                | Layers ready + optional persistence backend |
-| 6    | East/APEX integration        | Tasks defined; platform fns still to implement |
-| 7    | Full Pocket AI Lab UI        | Next                                        |
+To connect a local llama.cpp server, configure the app host environment:
 
-## Trust Invariants (must never break)
+```bash
+LLM_BASE_URL=http://127.0.0.1:8080/v1
+LLM_MODEL=your-loaded-model
+# Optional; keep credentials server-side only.
+LLM_API_KEY=your-local-provider-key
+npm run start:web
+```
+
+The server calls the configured OpenAI-compatible `/chat/completions` endpoint. Provider URLs and credentials are controlled by the server environment, not browser storage. Do not expose a network-reachable app server without authentication, TLS, and deployment hardening.
+
+```bash
+npm test
+npm run build
+```
+
+The PWA caches its static shell for offline launch. Inference still requires a reachable local or configured provider.
+
+## Architecture principles
+
+1. **Model independence** — Agents are roles, instructions, and permission profiles, not tied to a single model.
+2. **Collective intelligence** — Independent analysis → challenge → revision → validation → synthesis.
+3. **Governed autonomy** — Permanent core team + dynamic specialists; consequential actions must pass the independent APEX authorization path.
+4. **Honest product states** — A role is not represented as an active inference agent until a real provider call occurs. Model text is not verification or authorization.
+
+## Implementation status
+
+| Area | Status |
+|---|---|
+| Architecture and trust invariants | Documented |
+| Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
+| llama.cpp provider | Grok feature branch; independent review and integration pending |
+| Consumer web/PWA shell | Prototype foundation on `codex/consumer-prototype-foundation` |
+| Real chat through configured local endpoint | Implemented in prototype branch; CI verification pending |
+| Agent collaboration UI and live multi-agent execution | Not yet connected |
+| Durable, governed memory | Not yet connected |
+| East/APEX runtime integration | Not yet complete |
+| Native iOS local inference | Placeholder; not consumer-ready |
+| Production deployment, auth, telemetry, release pipeline | Not yet complete |
+
+## Trust invariants (must never break)
 
 - A model cannot grant itself permission.
 - An agent cannot approve its own consequential action.
 - Agent messages are not authorization receipts.
-- Individual generation evidence is preserved; parent task evidence references them.
+- Individual generation evidence is preserved; parent task evidence references it.
 - Unauthorized actions are denied by APEX.
+- Repair operations require independent authorization.
 
-See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` for the complete engineering specification.
+See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` and `docs/implementation/consumer-prototype-acceptance.md` for the architecture and measurable product acceptance criteria.
