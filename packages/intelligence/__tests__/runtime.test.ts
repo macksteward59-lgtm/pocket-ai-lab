@@ -114,30 +114,28 @@ describe("DeliberationEngine", () => {
   it("requires objections to be addressed and validator affirmation", async () => {
     const engine = new DeliberationEngine(1);
     let objection: AgentMessage | undefined;
-    const result = await engine.runCycle("task-1", [], async (stage: DeliberationStage) => {
+    const result = await engine.runCycle("task-1", [], async (stage: DeliberationStage, prior) => {
+      let generated: AgentMessage[] = [];
       if (stage === "challenge") {
         objection = message("counterargument", "critic", {
           claim: "Claim", objection: "Evidence is missing", evidenceRefs: []
-        }, 0);
-        return [objection];
-      }
-      if (stage === "revision") {
-        return [message("revision", "engineer", {
+        }, prior.length);
+        generated = [objection];
+      } else if (stage === "revision") {
+        generated = [message("revision", "engineer", {
           revision: "Addressed the concern",
           addressesMessageIds: [objection!.messageId]
-        }, 1)];
-      }
-      if (stage === "verification") {
-        return [message("validation", "validator", {
+        }, prior.length)];
+      } else if (stage === "verification") {
+        generated = [message("validation", "validator", {
           claim: "Revised result", verified: true
-        }, 2)];
-      }
-      if (stage === "synthesis") {
-        return [message("completion", "director", {
+        }, prior.length)];
+      } else if (stage === "synthesis") {
+        generated = [message("completion", "director", {
           synthesis: "Final result", evidenceRefs: []
-        }, 3)];
+        }, prior.length)];
       }
-      return [];
+      return [...prior, ...generated];
     });
     expect(result.consensus).toBe(true);
     expect(result.disagreementCount).toBe(0);
