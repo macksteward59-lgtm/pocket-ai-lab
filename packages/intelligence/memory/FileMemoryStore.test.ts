@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,24 @@ async function directory(): Promise<string> {
 }
 
 describe("file memory store", () => {
+  it("restricts local memory directory and file permissions on POSIX", async () => {
+    if (process.platform === "win32") return;
+    const dir = await directory();
+    try {
+      const memory = new MemoryManager(await FileMemoryStore.open(dir));
+      await memory.init();
+      await memory.write({
+        layer: "episodic",
+        content: "Private local note.",
+        provenance: { agentId: "user", verified: false, sourceRefs: [] }
+      });
+      expect((await stat(dir)).mode & 0o777).toBe(0o700);
+      expect((await stat(join(dir, "memory.json"))).mode & 0o777).toBe(0o600);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("reloads unverified entries unchanged", async () => {
     const dir = await directory();
     try {
