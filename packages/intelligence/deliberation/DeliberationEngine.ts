@@ -47,8 +47,8 @@ export class DeliberationEngine {
     }
 
     current = await onStage("verification", [...current]);
-    const synthesisMessages = await onStage("synthesis", [...current]);
-    const taskMessages = [...current, ...synthesisMessages].filter(m => m.taskId === taskId);
+    current = await onStage("synthesis", [...current]);
+    const taskMessages = current.filter(m => m.taskId === taskId);
     const objections = taskMessages.filter(m => m.messageType === "counterargument");
     const revisions = taskMessages.filter(m => m.messageType === "revision");
     const addressed = new Set(revisions.flatMap(message =>
@@ -66,7 +66,7 @@ export class DeliberationEngine {
     );
     const consensus = unresolved.length === 0 && affirmative && !negative;
 
-    const completion = synthesisMessages.find(
+    const completion = taskMessages.find(
       message => message.messageType === "completion" && message.senderAgentId === "director"
     );
     const finalSynthesis = completion
