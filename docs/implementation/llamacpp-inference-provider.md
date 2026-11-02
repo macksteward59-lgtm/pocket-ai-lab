@@ -108,6 +108,19 @@ Cancellation is an optional second argument, `{ signal }`, because `InferencePro
 
 `checkHealth()` calls `GET /health` and resolves only for HTTP 200 with status `ok`.
 
+## Local harness
+
+This is not the consumer product shell. It is a loopback page that runs the adapter through the existing message bus and deliberation engine.
+
+```bash
+llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
+npm run lab
+```
+
+Open http://127.0.0.1:8787. The page talks only to a llama-server on this machine unless `POCKET_LAB_ALLOW_REMOTE_LLAMA=1` is set. A director completion is shown only when the model returns one. The page always reports `authorized: false`.
+
+The model has to return the stage JSON object (`analysis`, `question`, `counterargument`, `revision`, `validation`, then `completion`). If a stage is malformed, the transcript stops there and no completion is invented.
+
 ## Tests
 
 ```bash

@@ -91,3 +91,11 @@ const orchestrator = new Orchestrator({ inference });
 ```
 
 Model text is untrusted proposal data. It is not an APEX approval or receipt. Setup, config, and failure behavior: `docs/implementation/llamacpp-inference-provider.md`.
+
+Open the local harness after llama-server is running:
+
+```bash
+npm run lab
+```
+
+Then open http://127.0.0.1:8787. The page is a loopback runner for this adapter. It is not the product shell, and a run does not authorize anything.

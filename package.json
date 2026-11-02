@@ -6,7 +6,8 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run runtime/adapters && tsx packages/intelligence/__tests__/gate01.test.ts",
+    "test": "vitest run runtime/adapters runtime/lab && tsx packages/intelligence/__tests__/gate01.test.ts",
+    "lab": "tsx runtime/lab/server.ts",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev"
   },
   "dependencies": {
