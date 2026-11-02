@@ -23,7 +23,12 @@ const evidence: DeviceEvidence = {
   attested_at: "2026-11-02T12:00:00.000Z",
 };
 
-function rejectionReason(input: unknown, rows: Array<{ attempt_id: string; challenge_nonce: string }> = []) {\n  const result = validateDeviceEvidenceCandidate(input, attempt, rows);\n  return result.ok ? undefined : result.reason;\n}\n\ndescribe("DeviceEvidence candidate validation", () => {
+function rejectionReason(input: unknown, rows: Array<{ attempt_id: string; challenge_nonce: string }> = []) {
+  const result = validateDeviceEvidenceCandidate(input, attempt, rows);
+  return result.ok ? undefined : result.reason;
+}
+
+describe("DeviceEvidence candidate validation", () => {
   it("accepts evidence bound to the exact attempt without granting authorization", () => {
     expect(validateDeviceEvidenceCandidate(evidence, attempt, [])).toEqual({
       ok: true,
@@ -52,9 +57,9 @@ function rejectionReason(input: unknown, rows: Array<{ attempt_id: string; chall
   });
 
   it("rejects a nonce already used by a different attempt", () => {
-    expect(validateDeviceEvidenceCandidate(evidence, attempt, [
+    expect(rejectionReason(evidence, [
       { attempt_id: "attempt-previous", challenge_nonce: "nonce-1" },
-    ]).reason).toBe("nonce_reuse");
+    ])).toBe("nonce_reuse");
   });
 
   it("does not reject nonce history belonging to the same attempt, matching the contract", () => {
