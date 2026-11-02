@@ -38,4 +38,4 @@ This document defines the minimum bar for a usable Pocket AI Lab prototype. A pa
 - Documented limitations, supported model formats, memory requirements, and recovery steps.
 
 ## Current prototype slice
-The initial web shell is deliberately honest: it provides navigation and a working server-side OpenAI-compatible chat proxy when a model is configured, and explicitly fails closed otherwise. Agent-team, memory, activity, cloud-provider consent, and APEX/East runtime integration remain gated until their real backends are connected and tested.
+The web shell on this tree loads without reading missing settings fields. Chat and Agent Team call the llama.cpp `InferenceProvider` and fail closed when the server is unreachable or the payload is rejected. "Local model ready" requires a successful loopback `/health` check. Memory, activity, cloud-provider consent, and APEX/East runtime integration remain explicit about what is not connected. Model text is still not an authorization receipt.

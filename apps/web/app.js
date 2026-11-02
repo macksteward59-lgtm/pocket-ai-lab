@@ -4,7 +4,7 @@ const views = ["chat","agents","memory","activity","settings"];
 function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
 function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
-async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"model not connected";setConnection(Boolean(j.configured),j.configured?"Local model ready":"Model not connected");}catch{setConnection(false,"Server unavailable");}}
+async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
 let agentController=null;
 async function checkAgentHealth(){
  const status=$("agent-status");
@@ -72,8 +72,7 @@ document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",(
 $("settings-shortcut").addEventListener("click",()=>setView("settings"));
 $("new-chat").addEventListener("click",()=>{$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
 $("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
-$("endpoint").value=state.endpoint;$("model").value=state.model;
-$("settings-form").addEventListener("submit",e=>{e.preventDefault();state.endpoint=$("endpoint").value.trim()||"/v1";state.model=$("model").value.trim()||"local-model";localStorage.setItem("pal.endpoint",state.endpoint);localStorage.setItem("pal.model",state.model);$("settings-status").textContent="Saved for this browser. Server endpoint is controlled by the app host.";health();});
-$("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Model endpoint is configured. Send a test prompt in Chat.":"No configured local model detected. Start llama-server and configure the app host."});
+$("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
+$("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 health();

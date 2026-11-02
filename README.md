@@ -4,7 +4,7 @@
 
 ## Consumer prototype (web/PWA)
 
-The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings and transparent memory/activity sections. Chat uses a server-configured OpenAI-compatible endpoint; Agent Team uses the local llama.cpp InferenceProvider and streams real multi-agent stages. Both fail closed when no model is available.
+The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings, and transparent memory/activity sections. Chat and Agent Team both call the local llama.cpp `InferenceProvider`. Chat shows the model's `analysis` text and fails closed when that text is missing. Agent Team streams the real multi-agent stages. Neither view invents a reply.
 
 ### Run locally
 
@@ -20,14 +20,10 @@ Open `http://localhost:4173`.
 To connect a local llama.cpp server, configure the app host environment:
 
 ```bash
-LLM_BASE_URL=http://127.0.0.1:8080/v1
-LLM_MODEL=your-loaded-model
-# Optional; keep credentials server-side only.
-LLM_API_KEY=your-local-provider-key
-npm run start:web
+LLAMACPP_BASE_URL=http://127.0.0.1:8080 npm run start:web
 ```
 
-The chat server calls the configured OpenAI-compatible `/chat/completions` endpoint. Provider URLs and credentials are controlled by the server environment, not browser storage. The Agent Team view uses `LLAMACPP_BASE_URL` (default `http://127.0.0.1:8080`) and `LLAMACPP_API` (`completion` by default or `openai-chat`). Do not expose a network-reachable app server without authentication, TLS, and deployment hardening.
+`LLAMACPP_API` is `completion` by default, or `openai-chat` for `/v1/chat/completions`. A legacy `LLM_BASE_URL` that ends in `/v1` selects `openai-chat` and is not given an API key by this adapter. The browser never stores the endpoint. "Local model ready" is shown only after `GET /health` succeeds on a loopback URL. Do not expose a network-reachable app server without authentication, TLS, and deployment hardening.
 
 ```bash
 npm test
@@ -80,8 +76,8 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 |---|---|
 | Architecture and trust invariants | Documented |
 | Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
-| llama.cpp provider | HTTP adapter and loopback harness are in this tree; consumer Agent Team view now calls the adapter. iOS LlamaEngine is still a stub. |
-| Consumer web/PWA shell | On main. Chat uses a server-side OpenAI-compatible proxy, not `InferenceProvider` yet. |
+| llama.cpp provider | HTTP adapter and loopback harness are in this tree. Consumer chat and Agent Team both call the adapter. iOS LlamaEngine is still a stub. |
+| Consumer web/PWA shell | On main. Chat returns the provider's `analysis` text. "Local model ready" requires a successful loopback health check. |
 | Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
 | Durable, governed memory | Not yet connected |
 | East/APEX runtime integration | Not yet complete |
