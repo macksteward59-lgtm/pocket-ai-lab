@@ -6,29 +6,30 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const maxBody = 64 * 1024;
-let memoryManagerPromise;
+const memoryManagerPromises = new Map();
 
 async function openMemoryManager() {
-  if (!memoryManagerPromise) {
-    memoryManagerPromise = (async () => {
+  const directory = path.resolve(process.env.POCKET_MEMORY_DIR || path.join(
+    process.env.HOME || process.env.USERPROFILE || ".",
+    ".pocket-ai-lab"
+  ));
+  if (!memoryManagerPromises.has(directory)) {
+    const pending = (async () => {
       const [{ MemoryManager }, { FileMemoryStore }] = await Promise.all([
         import("../../packages/intelligence/memory/MemoryManager.ts"),
         import("../../packages/intelligence/memory/FileMemoryStore.ts")
       ]);
-      const directory = process.env.POCKET_MEMORY_DIR || path.join(
-        process.env.HOME || process.env.USERPROFILE || ".",
-        ".pocket-ai-lab"
-      );
       const store = await FileMemoryStore.open(directory);
       const manager = new MemoryManager(store);
       await manager.init();
       return manager;
     })();
+    memoryManagerPromises.set(directory, pending);
   }
   try {
-    return await memoryManagerPromise;
+    return await memoryManagerPromises.get(directory);
   } catch (error) {
-    memoryManagerPromise = undefined;
+    memoryManagerPromises.delete(directory);
     throw error;
   }
 }
