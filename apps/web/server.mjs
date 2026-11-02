@@ -11,6 +11,7 @@ function json(res,status,payload){res.writeHead(status,{"content-type":"applicat
 async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>maxBody)throw Object.assign(new Error("Request too large"),{status:413});}try{return JSON.parse(raw);}catch{throw Object.assign(new Error("Invalid JSON"),{status:400});}}
 function configured(){return Boolean(process.env.LLM_BASE_URL&&process.env.LLM_MODEL);}
 export function createServer(){return http.createServer(async(req,res)=>{
+ try{
  const url=new URL(req.url||"/","http://localhost");
  if(url.pathname==="/api/health"&&req.method==="GET")return json(res,200,{configured:configured(),model:configured()?process.env.LLM_MODEL:null,provider:configured()?"configured-server-provider":null,mode:"local-first"});
  if(url.pathname==="/api/agent-health"&&req.method==="GET"){
@@ -75,6 +76,12 @@ export function createServer(){return http.createServer(async(req,res)=>{
  const resolved=path.resolve(root,requested);
  if(!resolved.startsWith(root+path.sep))return json(res,403,{error:"Forbidden."});
  try{const content=await readFile(resolved);res.writeHead(200,{"content-type":mime[path.extname(resolved)]||"application/octet-stream","cache-control":resolved.endsWith("index.html")?"no-cache":"public, max-age=3600"});res.end(req.method==="HEAD"?undefined:content);}catch{return json(res,404,{error:"Not found."});}
+ }catch(error){
+  if(res.headersSent){res.end();return;}
+  const code=error&&typeof error==="object"?error.code:"";
+  const status=code==="backend_unreachable"||code==="http_error"?502:code==="invalid_request"||code==="invalid_config"?400:500;
+  return json(res,status,{error:error instanceof Error?error.message:"Request failed."});
+ }
  });}
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const host=process.env.HOST||"127.0.0.1";
