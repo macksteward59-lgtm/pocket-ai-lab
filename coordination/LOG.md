@@ -255,3 +255,11 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Scope:** Replace the unimplemented `East.platform` declarations with real typed runtimes for `createAgentTask`, `assignAgent`, `executeAgent`, `runDeliberation`, and `commitTaskEvidence`. Inference goes through the injected `InferenceProvider`. Deliberation goes through `Orchestrator`. Evidence persistence goes through `MemoryManager` with `verified: false`. No provider-specific client in East.
 - **Will not touch:** `apps/web/`, `runtime/ios/`, `runtime/adapters/llama-cpp/`, APEX receipt or approval code, or East/APEX integration beyond the existing `authorized` boolean. That boolean stays `false`. `commitTaskEvidence` cannot return `true`.
 - **APEX:** This claim does not add an approval path. Model output, consensus, and stored evidence are not authorization. If a change would let East return `authorized: true` without an independent APEX decision, it will not be merged.
+
+## 2026-11-02 11:35 UTC — ChatGPT
+
+- **Claim:** Consumer Memory screen and explicit memory API/UI integration. Branch: `codex/consumer-memory-ui`, created from current `main` `225e633a4cc647de0bf633427a61b5ca915eb71b`.
+- **Scope:** `apps/web/`, `apps/web/test/`, and consumer implementation docs only. The Memory screen will use `MemoryManager` and `FileMemoryStore` with explicit user-initiated save, list, and delete. New memories remain `verified: false`; verification is a separate explicit action and is not triggered by model output. No automatic chat capture.
+- **Will not touch:** Activity screen, `src/east/`, APEX approval/receipt code, Grok's adapter, or Grok's completed consumer workspace work outside this new Memory UI scope.
+- **Security limitation:** Existing file persistence is checksummed plaintext, not encrypted at rest. The UI will state this and will not encourage storing secrets. Local-only binding remains default; no unauthenticated LAN exposure.
+- **Status:** `claimed`; implementation has not started pending inspection of the exact MemoryManager/FileMemoryStore APIs and current UI structure.
