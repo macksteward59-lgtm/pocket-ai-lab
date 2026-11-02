@@ -11,10 +11,10 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 | Grok Bot | Memory persistence hardening (`packages/intelligence/memory/` only) | `grok/memory-persistence-hardening` | done | 2026-11-02 09:36 | Merged on `main`; PR #9 additionally restricts POSIX memory directory/file modes to 0700/0600 and adds a permission regression test. Store remains checksummed plaintext, not encrypted at rest. |
 | Grok Bot | Consumer workspace defects and chat provider integration: `apps/web/app.js`, `apps/web/index.html`, `apps/web/server.mjs`, `apps/web/test/`, and consumer status docs | `grok/consumer-workspace-finish` | done | 2026-11-02 09:52 | On `main` at `225e633a4cc647de0bf633427a61b5ca915eb71b`. GitHub Actions on that push succeeded: Pocket AI Lab CI run 41424065769 and Consumer prototype CI run 41424065790. |
 | ChatGPT | MemoryManager read/delete API and serialized mutation safety: `packages/intelligence/memory/MemoryManager.ts` and tests | `codex/memory-api` | done | 2026-11-02 09:39 | Merged to `main` as `c5ec6ae2a23a96cdb7f5c89b8eda220aa1f10660` via PR #10. Defensive list, persistent delete, copy-on-write serialized mutations, UUID IDs, and default-unverified writes. Full CI passed. |
+| Grok Bot | East platform functions: `src/east/` only. Runtime implementations for `createAgentTask`, `assignAgent`, `executeAgent`, `runDeliberation`, and `commitTaskEvidence`, wired through `InferenceProvider`, `Orchestrator`, and `MemoryManager`. | `grok/east-platform-functions` | in-progress | 2026-11-02 11:27 | East/APEX integration stays unclaimed. `authorized` remains false. No llama.cpp import. ChatGPT has not claimed this row. |
 
 ## Unclaimed work
 
-- **East platform functions** — implement runtime functions; declarations are not implementations.
 - **East/APEX integration** — preserve exact-scope approvals, per-edge authorization, evidence, and independent repair authorization.
 - **iOS LlamaEngine** — replace placeholder behavior with real local inference and lifecycle handling.
 - **Consumer app backend/deployment** — authenticated secrets, provider adapters, secure storage, rate limits, telemetry, release pipeline, and production operations.
