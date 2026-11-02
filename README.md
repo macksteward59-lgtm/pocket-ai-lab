@@ -52,7 +52,17 @@ import { Orchestrator } from "./packages/intelligence/orchestrator/Orchestrator"
 import { createLlamaCppInferenceProvider } from "./runtime/adapters/llama-cpp/index";
 
 const inference = createLlamaCppInferenceProvider({ baseUrl: "http://127.0.0.1:8080" });
-const orchestrator = new Orchestrator({ inference });
+const orchestrator = new Orchestrator({
+  inference,
+  getResources: () => ({ availableMemoryMB: 4096, loadedModels: [] })
+});
+orchestrator.models.register({
+  id: "local", name: "Local llama.cpp", path: "llama-server",
+  contextLength: 4096, capabilities: ["reason", "code"], memoryEstimateMB: 1024
+});
+for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+  orchestrator.models.associateAgent(agentId, "local");
+}
 ```
 
 Model text is untrusted proposal data. It is not an APEX approval or receipt.
