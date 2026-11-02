@@ -36,6 +36,27 @@ npm run build
 
 The PWA caches its static shell for offline launch. Inference still requires a reachable local or configured provider.
 
+## Local llama.cpp adapter
+
+A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The loopback harness at `runtime/lab` runs a multi-stage session through the existing message bus and deliberation engine. It is not the product shell, and a run does not authorize anything.
+
+```bash
+llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
+npm run lab
+```
+
+Open http://127.0.0.1:8787. Setup and failure behavior: `docs/implementation/llamacpp-inference-provider.md`.
+
+```ts
+import { Orchestrator } from "./packages/intelligence/orchestrator/Orchestrator";
+import { createLlamaCppInferenceProvider } from "./runtime/adapters/llama-cpp/index";
+
+const inference = createLlamaCppInferenceProvider({ baseUrl: "http://127.0.0.1:8080" });
+const orchestrator = new Orchestrator({ inference });
+```
+
+Model text is untrusted proposal data. It is not an APEX approval or receipt.
+
 ## Architecture principles
 
 1. **Model independence** — Agents are roles, instructions, and permission profiles, not tied to a single model.
@@ -49,10 +70,9 @@ The PWA caches its static shell for offline launch. Inference still requires a r
 |---|---|
 | Architecture and trust invariants | Documented |
 | Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
-| llama.cpp provider | Grok feature branch; independent review and integration pending |
-| Consumer web/PWA shell | Prototype foundation on `codex/consumer-prototype-foundation` |
-| Real chat through configured local endpoint | Implemented in prototype branch; CI verification pending |
-| Agent collaboration UI and live multi-agent execution | Not yet connected |
+| llama.cpp provider | HTTP adapter and loopback lab harness are in this tree. The web shell does not call this adapter yet. iOS LlamaEngine is still a stub. |
+| Consumer web/PWA shell | On main. Chat uses a server-side OpenAI-compatible proxy, not `InferenceProvider` yet. |
+| Agent collaboration UI and live multi-agent execution | Not yet connected to the web shell |
 | Durable, governed memory | Not yet connected |
 | East/APEX runtime integration | Not yet complete |
 | Native iOS local inference | Placeholder; not consumer-ready |

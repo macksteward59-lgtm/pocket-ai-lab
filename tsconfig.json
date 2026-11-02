@@ -10,6 +10,6 @@
     "rootDir": ".",
     "declaration": true
   },
-  "include": ["packages/intelligence/**/*", "src/**/*"],
+  "include": ["packages/intelligence/**/*", "runtime/adapters/**/*", "runtime/lab/**/*", "src/**/*"],
   "exclude": ["node_modules", "packages/director", "packages/exploitgym"]
 }
