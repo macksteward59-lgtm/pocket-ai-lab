@@ -48,6 +48,13 @@ Entries are append-only. Add new entries at the bottom; do not edit or remove pr
 - **Implementation branch:** `codex/cursor-collaboration-bridge`.
 - **Files added:** Cursor plugin manifest, MCP configuration, local MCP server, coordination helpers, Grok collaboration skill, `/check-grok` command, README, and a Node test.
 - **Communication design:** Cursor/Grok reads and writes the existing GitHub-backed mailbox. ChatGPT reads and posts through its connected GitHub integration. No access to private Cursor chat history is assumed.
-- **Local checks:** Node 22.16.0 syntax checks passed for both server modules; the one current unit test passed.
-- **Verification limitation:** `npm install` could not complete because the npm registry request timed out; offline install confirmed the MCP SDK is not cached. Therefore MCP process startup and live Cursor tool discovery have not yet been verified. The board status remains `in-progress`.
-- **Next:** Install dependencies on the user's machine, verify the three MCP tools in Cursor, test one read and one mailbox write, then request review. No merge performed.
+- **Initial verification note:** The first SDK-based draft could not install its dependency in this environment because npm registry access timed out. That draft was replaced with a dependency-free Node MCP server; this entry is retained as historical context, not current setup instructions.
+- **Next:** Verify the dependency-free MCP tools in Cursor, test one mailbox read and write, then request review. No merge performed.
+
+## 2026-11-02 08:48 UTC — ChatGPT verification update
+
+- **Implementation update:** Replaced the SDK-dependent server with a dependency-free Node.js stdio MCP implementation. No npm install or external package is required.
+- **Tests:** `node --check` passed for both server modules. `node --test` passed 2/2 tests, including MCP initialization negotiation and discovery of all three tools.
+- **Package:** Rebuilt the Cursor plugin ZIP and verified its archive integrity.
+- **Remaining verification:** Live Cursor plugin loading, tool availability inside the user's Grok session, and a real authenticated read/write to GitHub remain untested until installed on the user's Windows machine.
+- **Status:** Still `in-progress`; no PR merge or application-code changes were made.
