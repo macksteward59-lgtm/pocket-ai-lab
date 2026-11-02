@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run test:web && npm run test:runtime && npm run test:engine",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev",
-    "start:web": "node apps/web/server.mjs",
+    "start:web": "tsx apps/web/server.mjs",
     "test:web": "node --test apps/web/test/*.test.mjs plugins/cursor-collaboration/test/*.test.mjs",
     "test:runtime": "vitest run runtime/adapters runtime/lab",
     "test:engine": "tsx packages/intelligence/__tests__/gate01.test.ts",
