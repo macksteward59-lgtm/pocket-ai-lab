@@ -6,10 +6,13 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "npm run test:web",
+    "test": "npm run test:web && npm run test:runtime && npm run test:engine",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev",
     "start:web": "node apps/web/server.mjs",
-    "test:web": "node --test apps/web/test/*.test.mjs"
+    "test:web": "node --test apps/web/test/*.test.mjs plugins/cursor-collaboration/test/*.test.mjs",
+    "test:runtime": "vitest run runtime/adapters runtime/lab",
+    "test:engine": "tsx packages/intelligence/__tests__/gate01.test.ts",
+    "lab": "tsx runtime/lab/server.ts"
   },
   "dependencies": {
     "@elaraai/east": "^1.0.96",
@@ -18,7 +21,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.16.5",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "tsx": "^4.20.6",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=22"
