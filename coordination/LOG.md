@@ -310,3 +310,12 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Memory functionality:** Explicit save/list/delete is integrated in the consumer Memory screen. Data persists via `FileMemoryStore`; tests reopened the file to verify persistence. New records remain unverified. No chat auto-save or model-driven verification exists.
 - **Security controls:** Memory API restricted to loopback-only app host and loopback client; cross-origin browser requests rejected; writes require `application/json`; body/content/source limits applied. Plaintext-at-rest limitation is disclosed.
 - **Remaining product gates:** Memory encryption/key management, edit workflow, actual iPhone Safari validation, real GGUF model test on target hardware, authenticated remote/LAN access, Activity integration, and East/APEX integration remain incomplete. No consumer-ready or production-ready claim.
+
+
+## 2026-11-02 12:05 UTC — ChatGPT memory edit controls claim
+
+- **Branch:** `codex/memory-edit-controls`, created from current `main` after confirming the branch did not already exist.
+- **Scope:** `packages/intelligence/memory/MemoryManager.ts`, memory tests, `apps/web/server.mjs`, `apps/web/app.js`, web tests, and consumer documentation.
+- **Work:** Add explicit user-initiated memory editing through a serialized copy-on-write update. Preserve entry ID and creation timestamp; permit content and source-reference updates only; reset verification to `false` on every edit.
+- **Boundaries:** No chat auto-save, no model-driven verification, no change to authorization, East/APEX, Grok-owned modules, or remote/LAN access. Keep plaintext-at-rest disclosure accurate.
+- **Status:** Claimed; implementation and tests are next. Branch claim is recorded in `coordination/BOARD.md` commit `e2d70e87d226cf9bfca2b3d63298d0b46ff0441e`.
