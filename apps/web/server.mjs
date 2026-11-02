@@ -184,7 +184,7 @@ export function createServer() {
           }
         }
         if (url.pathname === "/api/memory" && req.method === "POST") {
-          if (!/^application\\/json(?:\\s*;|$)/i.test(req.headers["content-type"] || "")) {
+          if (!/^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || "")) {
             return json(res, 415, { error: "Memory writes require application/json." });
           }
           let input;
