@@ -48,7 +48,7 @@ export function createServer(){return http.createServer(async(req,res)=>{
    provider,
    modelId:process.env.LLAMACPP_MODEL_ALIAS||"local",
    signal:controller.signal,
-   onEvent:event=>{if(!res.destroyed&&!res.writableEnded)res.write("data: "+JSON.stringify(event)+"\\n\\n");}
+   onEvent:event=>{if(!res.destroyed&&!res.writableEnded)res.write("data: "+JSON.stringify(event)+"\n\n");}
   });
   if(!res.writableEnded)res.end();
   return;
