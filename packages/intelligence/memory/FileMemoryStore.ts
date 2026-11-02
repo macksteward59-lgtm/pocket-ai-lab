@@ -5,7 +5,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { open, readFile, rename, unlink, mkdir } from "node:fs/promises";
+import { open, readFile, rename, unlink, mkdir, chmod } from "node:fs/promises";
 import { join } from "node:path";
 import type { MemoryEntry, MemoryStore } from "./MemoryManager";
 
@@ -33,7 +33,13 @@ export class FileMemoryStore implements MemoryStore {
   private constructor(private readonly filePath: string) {}
 
   static async open(directory: string): Promise<FileMemoryStore> {
-    await mkdir(directory, { recursive: true });
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32") {
+      await chmod(directory, 0o700);
+      await chmod(join(directory, "memory.json"), 0o600).catch(error => {
+        if (!isNotFound(error)) throw error;
+      });
+    }
     return new FileMemoryStore(join(directory, "memory.json"));
   }
 
@@ -68,7 +74,7 @@ export class FileMemoryStore implements MemoryStore {
   async save(entries: MemoryEntry[]): Promise<void> {
     this.assertOpen();
     const payload = Buffer.from(serialize(entries), "utf8");
-    const handle = await open(this.tmpPath(), "w");
+    const handle = await open(this.tmpPath(), "w", 0o600);
     try {
       await handle.writeFile(payload);
       await handle.sync();
