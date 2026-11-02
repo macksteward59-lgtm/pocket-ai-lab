@@ -1,6 +1,6 @@
 /**
- * Bounded deliberation. Consensus requires independent affirmative validation
- * and no unresolved counterarguments; absence of objections is not consensus.
+ * Bounded deliberation. Objections are unresolved until a revision explicitly
+ * references them; consensus requires affirmative validator confirmation.
  */
 import { AgentMessage } from "../message-bus/MessageBus";
 
@@ -50,30 +50,40 @@ export class DeliberationEngine {
     const synthesisMessages = await onStage("synthesis", [...current]);
     const taskMessages = [...current, ...synthesisMessages].filter(m => m.taskId === taskId);
     const objections = taskMessages.filter(m => m.messageType === "counterargument");
-    const validations = taskMessages.filter(m => m.messageType === "validation");
-    const affirmative = validations.filter(m => {
-      const payload = m.payload as { verified?: unknown };
-      return payload.verified === true;
-    });
-    const negative = validations.some(m => (m.payload as { verified?: unknown }).verified === false);
-    const distinctValidators = new Set(affirmative.map(m => m.senderAgentId));
-    const consensus = objections.length === 0 && !negative && distinctValidators.size >= 1;
+    const revisions = taskMessages.filter(m => m.messageType === "revision");
+    const addressed = new Set(revisions.flatMap(message =>
+      (message.payload as { addressesMessageIds: string[] }).addressesMessageIds
+    ));
+    const unresolved = objections.filter(message => !addressed.has(message.messageId));
+    const validations = taskMessages.filter(
+      message => message.messageType === "validation" && message.senderAgentId === "validator"
+    );
+    const affirmative = validations.some(
+      message => (message.payload as { verified: boolean }).verified === true
+    );
+    const negative = validations.some(
+      message => (message.payload as { verified: boolean }).verified === false
+    );
+    const consensus = unresolved.length === 0 && affirmative && !negative;
 
-    const completion = synthesisMessages.find(m => m.messageType === "completion");
+    const completion = synthesisMessages.find(
+      message => message.messageType === "completion" && message.senderAgentId === "director"
+    );
     const finalSynthesis = completion
       ? (completion.payload as { synthesis: string }).synthesis
       : undefined;
-    if (!completion) notes.push("No completion message was produced; synthesis is unavailable.");
-    if (objections.length > 0) notes.push("Unresolved counterarguments remain; consensus withheld.");
-    if (distinctValidators.size === 0) notes.push("No affirmative validation was recorded; consensus withheld.");
+    if (!completion) notes.push("No valid Director completion message was produced.");
+    if (unresolved.length) notes.push(unresolved.length + " counterargument(s) remain unresolved.");
+    if (!affirmative) notes.push("The Validator did not affirm the result; consensus withheld.");
+    if (negative) notes.push("The Validator recorded a negative finding; consensus withheld.");
 
     return {
       stage: "synthesis",
       rounds,
       consensus,
-      disagreementCount: objections.length,
+      disagreementCount: unresolved.length,
       finalSynthesis,
-      evidenceRefs: [...new Set(taskMessages.flatMap(m => m.evidenceRefs))],
+      evidenceRefs: [...new Set(taskMessages.flatMap(message => message.evidenceRefs))],
       notes
     };
   }
