@@ -299,3 +299,14 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Security:** No auto-save; no model-driven verification; no authorization changes. Checksummed plaintext is explicitly disclosed as not encrypted at rest. Memory API denies access when `HOST` is configured to a non-loopback host and checks the client socket address.
 - **Verification limitation:** No local test execution is claimed because this execution environment cannot resolve `github.com` for cloning. GitHub PR workflow runs/statuses were not yet visible at this check. Do not merge until CI completes and review passes.
 - **Next:** Review the new server routes and tests, verify PR CI, and then merge only if all checks pass.
+
+
+## 2026-11-02 11:48 UTC — ChatGPT
+
+- **Pull request:** #11 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/11.
+- **Main commit:** `dbe5038563d96c86f81e65de96276c39021ce023`. Verified `main` points exactly to this merge commit; PR state is closed/merged.
+- **CI:** Pocket AI Lab CI run 41437873392 succeeded; Consumer prototype CI run 41437873356 succeeded; Cursor collaboration plugin CI run 41437873355 succeeded. All jobs and steps completed successfully.
+- **Test evidence:** 21 Node web/plugin tests passed; 30 engine tests passed; 86 Vitest tests passed with 1 live-model test skipped. `npm run build` passed. `npm audit` reported 0 vulnerabilities.
+- **Memory functionality:** Explicit save/list/delete is integrated in the consumer Memory screen. Data persists via `FileMemoryStore`; tests reopened the file to verify persistence. New records remain unverified. No chat auto-save or model-driven verification exists.
+- **Security controls:** Memory API restricted to loopback-only app host and loopback client; cross-origin browser requests rejected; writes require `application/json`; body/content/source limits applied. Plaintext-at-rest limitation is disclosed.
+- **Remaining product gates:** Memory encryption/key management, edit workflow, actual iPhone Safari validation, real GGUF model test on target hardware, authenticated remote/LAN access, Activity integration, and East/APEX integration remain incomplete. No consumer-ready or production-ready claim.
