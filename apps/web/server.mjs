@@ -220,6 +220,47 @@ export function createServer() {
             return json(res, 500, { error: "Memory could not be saved. Existing data was not changed." });
           }
         }
+        if (url.pathname.startsWith("/api/memory/") && req.method === "PUT") {
+          if (!/^application\\/json(?:\\s*;|$)/i.test(req.headers["content-type"] || "")) {
+            return json(res, 415, { error: "Memory edits require application/json." });
+          }
+          let id;
+          try {
+            id = decodeURIComponent(url.pathname.slice("/api/memory/".length));
+          } catch {
+            return json(res, 400, { error: "Invalid memory id." });
+          }
+          if (!/^mem-[0-9a-f-]{36}$/i.test(id)) return json(res, 400, { error: "Invalid memory id." });
+          let input;
+          try {
+            input = await body(req);
+          } catch (error) {
+            return json(res, error.status || 400, { error: error.message });
+          }
+          if (typeof input.content !== "string" || !input.content.trim()) {
+            return json(res, 400, { error: "Memory content is required." });
+          }
+          if (input.content.length > 12000) {
+            return json(res, 413, { error: "Memory content exceeds 12,000 characters." });
+          }
+          const source = typeof input.source === "string" ? input.source.trim() : "";
+          if (source.length > 500) return json(res, 400, { error: "Source reference exceeds 500 characters." });
+          try {
+            const manager = await openMemoryManager();
+            const updated = await manager.update(id, {
+              content: input.content,
+              sourceRefs: source ? [source] : []
+            });
+            if (!updated) return json(res, 404, { error: "Memory entry not found." });
+            const entry = manager.list().find(item => item.id === id);
+            return json(res, 200, { entry });
+          } catch (error) {
+            if (error instanceof Error && error.message === "Memory content is required.") {
+              return json(res, 400, { error: error.message });
+            }
+            return json(res, 500, { error: "Memory could not be updated. Existing data was not changed." });
+          }
+        }
         if (url.pathname.startsWith("/api/memory/") && req.method === "DELETE") {
           let id;
           try {
