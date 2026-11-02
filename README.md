@@ -49,14 +49,14 @@ The PWA caches its static shell for offline launch. Inference still requires a r
 |---|---|
 | Architecture and trust invariants | Documented |
 | Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
-| llama.cpp provider | Grok feature branch; independent review and integration pending |
-| Consumer web/PWA shell | Merged into `main`; responsive chat shell and local model proxy |
-| Real chat through configured local endpoint | Merged into `main`; server-side provider proxy with tests |
-| Agent collaboration UI and live multi-agent execution | Local multi-agent lab harness integrated; consumer UI connection pending |
-| Durable, governed memory | Not yet connected |
-| East/APEX runtime integration | Not yet complete |
+| llama.cpp provider | HTTP adapter integrated on this branch; automated tests and independent review pending |
+| Consumer web/PWA shell | Merged into `main`; responsive chat shell, local-model proxy, and PWA shell |
+| Real chat through configured local endpoint | Merged into `main`; server-side provider proxy with automated tests |
+| Agent collaboration UI and live multi-agent execution | Local developer harness integrated; consumer UI connection pending |
+| Durable, governed memory | Session-only harness memory; durable persistence not yet connected |
+| East/APEX runtime integration | Not yet complete; consequential action execution remains disabled |
 | Native iOS local inference | Placeholder; not consumer-ready |
-| Production deployment, auth, telemetry, release pipeline | Not yet complete |
+| Production deployment, auth, telemetry, release pipeline | Not yet complete; hosted deployment is not safe yet |
 
 ## Local multi-agent lab harness
 
@@ -70,18 +70,6 @@ npm run lab
 ```
 
 Open `http://127.0.0.1:8787`. Keep the llama server on loopback. The lab refuses non-loopback model endpoints unless the operator explicitly sets `POCKET_LAB_ALLOW_REMOTE_LLAMA=1`. The harness is for local testing; it is not a substitute for APEX authorization or a production security boundary.
-
-## Current delivery status
-
-| Area | Status |
-|---|---|
-| Consumer web/PWA shell | Merged into main; local-model chat proxy and automated tests |
-| llama.cpp HTTP inference adapter | Integrated on this branch; adapter CI and review pending |
-| Real multi-agent local harness | Integrated on this branch; analysis, cross-review, challenge, revision, verification, and synthesis |
-| Memory | Session memory only in the harness; durable governed persistence remains outstanding |
-| East/APEX execution | Not integrated end-to-end; no model or harness output authorizes actions |
-| Native iOS inference | Still a placeholder |
-| Hosted consumer release | Not ready: authentication, tenant isolation, TLS, rate limits, CSRF protection, secure persistence, release pipeline, and operational monitoring remain required |
 
 ## Trust invariants (must never break)
 
