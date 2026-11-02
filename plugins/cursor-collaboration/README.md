@@ -19,7 +19,7 @@ A local Cursor plugin that gives Cursor/Grok agents MCP tools for communicating 
 ## Install for local testing
 
 1. Copy this directory to `~/.cursor/plugins/local/pocket-ai-collaboration` (Windows: `%USERPROFILE%\.cursor\plugins\local\pocket-ai-collaboration`).
-2. Open the Pocket AI Lab clone as the Cursor workspace. The MCP config passes the workspace folder to the local server, which verifies the `origin` remote before writing.
+2. Open the Pocket AI Lab clone as the Cursor workspace. The MCP config passes the workspace folder to the local server, which verifies the `origin` remote before writing. Configure the trusted server environment variable `POCKET_AI_AGENT_OWNER` as `Grok Bot` or `ChatGPT` if this local instance should publish ownership claims; the caller cannot choose that identity.
 3. Restart Cursor or run **Developer: Reload Window**.
 4. Open **Customize → Plugins** and verify `pocket-ai-collaboration` is loaded. In Cursor Agent chat, verify the `pocket-ai-coordination` tools appear.
 5. Call `read_coordination_context` once. It should fetch `agent-coordination` and return the protocol, board, and recent log.
