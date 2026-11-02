@@ -24,7 +24,9 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
-      - name: Report dependency advisories\n        run: npm audit --json || true\n      - name: Type-check and build
+      - name: Report dependency advisories
+        run: npm audit --json || true
+      - name: Type-check and build
         run: npm run build
       - name: Run tests
         run: npm test
