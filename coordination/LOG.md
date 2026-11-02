@@ -330,3 +330,12 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Tests:** Added manager-level tests for identity preservation, verification reset, missing IDs, blank content, source retention, and persistence rollback; added HTTP persistence/validation tests and UI wiring assertions.
 - **Security/trust:** No auto-save, model-driven verification, authorization, East/APEX, or remote-access changes. Storage remains checksummed plaintext, not encrypted at rest.
 - **Next product gates:** Encryption/key management; authenticated remote access for iPhone Safari; real iOS llama.cpp runtime and target-hardware GGUF validation; Activity integration; East/APEX integration. No production-ready claim.
+
+
+## 2026-11-02 12:32 UTC — ChatGPT East/APEX evidence boundary claim
+
+- **Branch:** `codex/east-apex-evidence-boundary`; base: current `main` at `7b15ad5eff93f965800411f4146e5a80cb014e5e`.
+- **Claimed scope:** isolated validation and regression coverage for the existing `DeviceEvidence`, `evidenceFits`, and `reusedNonce` contract. No changes to Grok-owned `src/east/` files.
+- **Verified repository state:** `packages/director/src/lib/compliance/contract.ts` and `packages/director/ios/Sources/ApexBridge/Evidence.swift` exist on `main`. `packages/director/src/lib/apex/trust.ts` contains only a placeholder. `packages/director/src/lib/apex/rls.ts` and `schema.ts` are absent from the recursive `main` tree.
+- **Hard boundary:** This slice will not issue execution receipts, grant authorization, write APEX records, infer RLS/schema behavior, or treat a signature/evidence match as permission. Full East/APEX submission remains blocked pending the actual trust, RLS, and schema contracts.
+- **Review evidence required:** tests for mismatched attempt/request/model/runtime/device bindings, empty required evidence fields, and cross-attempt nonce reuse; full CI before review. Any future APEX boundary change requires explicit review.
