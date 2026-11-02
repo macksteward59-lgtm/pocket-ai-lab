@@ -139,8 +139,8 @@ export function postCoordinationMessage(repoPath, input) {
 
 export function claimCoordinationWork(repoPath, input) {
   const root = validateRepo(repoPath);
-  const owner = cleanLine(input.owner, 'owner', 60);
-  if (owner !== 'Grok Bot' && owner !== 'ChatGPT') throw new Error('owner must be exactly Grok Bot or ChatGPT.');
+  const owner = process.env.POCKET_AI_AGENT_OWNER;
+  if (owner !== 'Grok Bot' && owner !== 'ChatGPT') throw new Error('Set POCKET_AI_AGENT_OWNER to Grok Bot or ChatGPT in the trusted MCP server environment before claiming work. Caller-supplied identity is never accepted.');
   const area = cleanLine(input.area, 'area', 180);
   const branch = cleanLine(input.branch, 'branch', 120);
   const notes = cleanLine(input.notes, 'notes', 500);
