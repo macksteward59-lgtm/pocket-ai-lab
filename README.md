@@ -17,7 +17,7 @@ npm run start:web
 
 Open `http://localhost:4173`.
 
-To connect a local llama.cpp server, configure the app host environment:
+To connect the chat view to an OpenAI-compatible local server, configure the app host environment:
 
 ```bash
 LLM_BASE_URL=http://127.0.0.1:8080/v1
@@ -34,7 +34,7 @@ npm test
 npm run build
 ```
 
-The PWA caches its static shell for offline launch. Inference still requires a reachable local or configured provider.
+The PWA caches its static shell for offline launch. Inference still requires a reachable local or configured provider. The Agent Team view uses a separate local llama.cpp completion endpoint (`LLAMACPP_BASE_URL`, default `http://127.0.0.1:8080`) and runs real agent stages inside the app. Start llama.cpp before using that view. `LLAMACPP_API=openai-chat` selects the OpenAI-compatible chat endpoint; the default is llama.cpp `/completion`.
 
 ## Architecture principles
 
@@ -52,7 +52,7 @@ The PWA caches its static shell for offline launch. Inference still requires a r
 | llama.cpp provider | HTTP adapter integrated on this branch; automated tests and independent review pending |
 | Consumer web/PWA shell | Merged into `main`; responsive chat shell, local-model proxy, and PWA shell |
 | Real chat through configured local endpoint | Merged into `main`; server-side provider proxy with automated tests |
-| Agent collaboration UI and live multi-agent execution | Local developer harness integrated; consumer UI connection pending |
+| Agent collaboration UI and live multi-agent execution | Consumer UI connects to the local multi-agent runtime on this branch; end-to-end CI pending |
 | Durable, governed memory | Session-only harness memory; durable persistence not yet connected |
 | East/APEX runtime integration | Not yet complete; consequential action execution remains disabled |
 | Native iOS local inference | Placeholder; not consumer-ready |
