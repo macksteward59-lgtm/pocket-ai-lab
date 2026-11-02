@@ -13,5 +13,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: node --check apps/web/server.mjs
+      - run: node --check apps/web/app.js
+      - run: node --check apps/web/sw.js
       - run: npm test
       - run: npm run build
