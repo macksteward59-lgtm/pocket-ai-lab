@@ -221,7 +221,7 @@ export function createServer() {
           }
         }
         if (url.pathname.startsWith("/api/memory/") && req.method === "PUT") {
-          if (!/^application\\/json(?:\\s*;|$)/i.test(req.headers["content-type"] || "")) {
+          if (!/^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || "")) {
             return json(res, 415, { error: "Memory edits require application/json." });
           }
           let id;
