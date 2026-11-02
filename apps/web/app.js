@@ -1,0 +1,20 @@
+const $ = (id) => document.getElementById(id);
+const state = { endpoint: localStorage.getItem("pal.endpoint") || "/v1", model: localStorage.getItem("pal.model") || "local-model", busy: false };
+const views = ["chat","agents","memory","activity","settings"];
+function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");}
+function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
+function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
+async function health(){try{const r=await fetch("/api/health");const j=await r.json();setConnection(Boolean(j.configured),j.configured?"Local model ready":"Model not connected");}catch{setConnection(false,"Server unavailable");}}
+async function sendMessage(text){if(!text.trim()||state.busy)return; $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";state.busy=true;$("send").disabled=true;const output=appendMessage("assistant","Connecting to your configured model…");try{const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");output.textContent=data.reply||"The model returned an empty response."; }catch(error){output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";}finally{state.busy=false;$("send").disabled=false;health();}}
+$("composer").addEventListener("submit",e=>{e.preventDefault();sendMessage($("prompt").value);});
+$("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("composer").requestSubmit();}});
+document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("settings-shortcut").addEventListener("click",()=>setView("settings"));
+$("new-chat").addEventListener("click",()=>{$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
+$("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
+$("endpoint").value=state.endpoint;$("model").value=state.model;
+$("settings-form").addEventListener("submit",e=>{e.preventDefault();state.endpoint=$("endpoint").value.trim()||"/v1";state.model=$("model").value.trim()||"local-model";localStorage.setItem("pal.endpoint",state.endpoint);localStorage.setItem("pal.model",state.model);$("settings-status").textContent="Saved for this browser. Server endpoint is controlled by the app host.";health();});
+$("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Model endpoint is configured. Send a test prompt in Chat.":"No configured local model detected. Start llama-server and configure the app host."});
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
+health();
