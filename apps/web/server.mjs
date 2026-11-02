@@ -6,6 +6,40 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const maxBody = 64 * 1024;
+let memoryManagerPromise;
+
+async function openMemoryManager() {
+  if (!memoryManagerPromise) {
+    memoryManagerPromise = (async () => {
+      const [{ MemoryManager }, { FileMemoryStore }] = await Promise.all([
+        import("../../packages/intelligence/memory/MemoryManager.ts"),
+        import("../../packages/intelligence/memory/FileMemoryStore.ts")
+      ]);
+      const directory = process.env.POCKET_MEMORY_DIR || path.join(
+        process.env.HOME || process.env.USERPROFILE || ".",
+        ".pocket-ai-lab"
+      );
+      const store = await FileMemoryStore.open(directory);
+      const manager = new MemoryManager(store);
+      await manager.init();
+      return manager;
+    })();
+  }
+  try {
+    return await memoryManagerPromise;
+  } catch (error) {
+    memoryManagerPromise = undefined;
+    throw error;
+  }
+}
+
+function memoryApiAllowed(req) {
+  const host = (process.env.HOST || "127.0.0.1").toLowerCase();
+  const remote = (req.socket.remoteAddress || "").toLowerCase();
+  const localHost = host === "127.0.0.1" || host === "localhost" || host === "::1";
+  const localClient = remote === "::1" || remote === "127.0.0.1" || remote.startsWith("::ffff:127.");
+  return localHost && localClient;
+}
 const mime = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -123,6 +157,72 @@ export function createServer() {
           mode: "local-first",
           baseUrl: cfg.baseUrl
         });
+      }
+      if (url.pathname === "/api/memory" || url.pathname.startsWith("/api/memory/")) {
+        if (!memoryApiAllowed(req)) {
+          return json(res, 403, { error: "Memory is available only to a loopback-only app instance." });
+        }
+        if (url.pathname === "/api/memory" && req.method === "GET") {
+          try {
+            const manager = await openMemoryManager();
+            return json(res, 200, { entries: manager.list() });
+          } catch {
+            return json(res, 500, { error: "Memory storage could not be opened. Existing data was not changed." });
+          }
+        }
+        if (url.pathname === "/api/memory" && req.method === "POST") {
+          let input;
+          try {
+            input = await body(req);
+          } catch (error) {
+            return json(res, error.status || 400, { error: error.message });
+          }
+          if (typeof input.content !== "string" || !input.content.trim()) {
+            return json(res, 400, { error: "Memory content is required." });
+          }
+          if (input.content.length > 12000) {
+            return json(res, 413, { error: "Memory content exceeds 12,000 characters." });
+          }
+          const layers = ["working", "episodic", "semantic", "procedural"];
+          const layer = layers.includes(input.layer) ? input.layer : "semantic";
+          const source = typeof input.source === "string" ? input.source.trim() : "";
+          if (source.length > 500) return json(res, 400, { error: "Source reference exceeds 500 characters." });
+          try {
+            const manager = await openMemoryManager();
+            const id = await manager.write({
+              layer,
+              content: input.content.trim(),
+              provenance: {
+                agentId: "user",
+                verified: false,
+                sourceRefs: source ? [source] : []
+              }
+            });
+            const entry = manager.list().find(item => item.id === id);
+            return json(res, 201, { entry });
+          } catch {
+            return json(res, 500, { error: "Memory could not be saved. Existing data was not changed." });
+          }
+        }
+        if (url.pathname.startsWith("/api/memory/") && req.method === "DELETE") {
+          let id;
+          try {
+            id = decodeURIComponent(url.pathname.slice("/api/memory/".length));
+          } catch {
+            return json(res, 400, { error: "Invalid memory id." });
+          }
+          if (!/^mem-[0-9a-f-]{36}$/i.test(id)) return json(res, 400, { error: "Invalid memory id." });
+          try {
+            const manager = await openMemoryManager();
+            const deleted = await manager.delete(id);
+            return deleted
+              ? json(res, 200, { deleted: true })
+              : json(res, 404, { error: "Memory entry not found." });
+          } catch {
+            return json(res, 500, { error: "Memory could not be deleted. Existing data was not changed." });
+          }
+        }
+        return json(res, 405, { error: "Method not allowed." });
       }
       if (url.pathname === "/api/agent-health" && req.method === "GET") {
         const { cfg, provider } = await openProvider(30000);
