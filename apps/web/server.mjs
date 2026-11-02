@@ -6,29 +6,30 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const maxBody = 64 * 1024;
-let memoryManagerPromise;
+const memoryManagerPromises = new Map();
 
 async function openMemoryManager() {
-  if (!memoryManagerPromise) {
-    memoryManagerPromise = (async () => {
+  const directory = path.resolve(process.env.POCKET_MEMORY_DIR || path.join(
+    process.env.HOME || process.env.USERPROFILE || ".",
+    ".pocket-ai-lab"
+  ));
+  if (!memoryManagerPromises.has(directory)) {
+    const pending = (async () => {
       const [{ MemoryManager }, { FileMemoryStore }] = await Promise.all([
         import("../../packages/intelligence/memory/MemoryManager.ts"),
         import("../../packages/intelligence/memory/FileMemoryStore.ts")
       ]);
-      const directory = process.env.POCKET_MEMORY_DIR || path.join(
-        process.env.HOME || process.env.USERPROFILE || ".",
-        ".pocket-ai-lab"
-      );
       const store = await FileMemoryStore.open(directory);
       const manager = new MemoryManager(store);
       await manager.init();
       return manager;
     })();
+    memoryManagerPromises.set(directory, pending);
   }
   try {
-    return await memoryManagerPromise;
+    return await memoryManagerPromises.get(directory);
   } catch (error) {
-    memoryManagerPromise = undefined;
+    memoryManagerPromises.delete(directory);
     throw error;
   }
 }
@@ -218,6 +219,47 @@ export function createServer() {
             return json(res, 201, { entry });
           } catch {
             return json(res, 500, { error: "Memory could not be saved. Existing data was not changed." });
+          }
+        }
+        if (url.pathname.startsWith("/api/memory/") && req.method === "PUT") {
+          if (!/^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || "")) {
+            return json(res, 415, { error: "Memory edits require application/json." });
+          }
+          let id;
+          try {
+            id = decodeURIComponent(url.pathname.slice("/api/memory/".length));
+          } catch {
+            return json(res, 400, { error: "Invalid memory id." });
+          }
+          if (!/^mem-[0-9a-f-]{36}$/i.test(id)) return json(res, 400, { error: "Invalid memory id." });
+          let input;
+          try {
+            input = await body(req);
+          } catch (error) {
+            return json(res, error.status || 400, { error: error.message });
+          }
+          if (typeof input.content !== "string" || !input.content.trim()) {
+            return json(res, 400, { error: "Memory content is required." });
+          }
+          if (input.content.length > 12000) {
+            return json(res, 413, { error: "Memory content exceeds 12,000 characters." });
+          }
+          const source = typeof input.source === "string" ? input.source.trim() : "";
+          if (source.length > 500) return json(res, 400, { error: "Source reference exceeds 500 characters." });
+          try {
+            const manager = await openMemoryManager();
+            const updated = await manager.update(id, {
+              content: input.content,
+              sourceRefs: source ? [source] : []
+            });
+            if (!updated) return json(res, 404, { error: "Memory entry not found." });
+            const entry = manager.list().find(item => item.id === id);
+            return json(res, 200, { entry });
+          } catch (error) {
+            if (error instanceof Error && error.message === "Memory content is required.") {
+              return json(res, 400, { error: error.message });
+            }
+            return json(res, 500, { error: "Memory could not be updated. Existing data was not changed." });
           }
         }
         if (url.pathname.startsWith("/api/memory/") && req.method === "DELETE") {

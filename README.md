@@ -34,7 +34,7 @@ The PWA caches its static shell and icon for offline launch. Inference still req
 
 ### Consumer memory
 
-The Memory screen supports explicit user-initiated save, list, and delete through `MemoryManager` backed by `FileMemoryStore`. Chat is never auto-saved. New entries are always marked `verified: false`; the UI does not offer model-driven verification. On POSIX systems, the memory directory and file are restricted to owner access. The file is checksummed plaintext, **not encrypted at rest**; do not store passwords, tokens, or other secrets. The memory API is enabled only when the app is configured to bind to loopback and the request originates from a loopback client. `POCKET_MEMORY_DIR` can override the default `~/.pocket-ai-lab` directory.
+The Memory screen supports explicit user-initiated save, list, edit, and delete through `MemoryManager` backed by `FileMemoryStore`. Editing preserves the entry ID and creation time, changes content/source references only, and resets verification to `false`. Chat is never auto-saved; no model-driven verification is offered. On POSIX systems, the memory directory and file are restricted to owner access. The file is checksummed plaintext, **not encrypted at rest**; do not store passwords, tokens, or other secrets. The memory API is enabled only when the app is configured to bind to loopback and the request originates from a loopback client. `POCKET_MEMORY_DIR` can override the default `~/.pocket-ai-lab` directory.
 
 ## Local llama.cpp adapter
 

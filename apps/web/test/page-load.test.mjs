@@ -108,5 +108,7 @@ test("app.js loads against index.html and reaches health plus the service worker
   assert.equal(typeof byId.get("test-connection").listeners.click, "function");
   assert.equal(typeof byId.get("memory-form").listeners.submit, "function");
   assert.equal(typeof byId.get("memory-refresh").listeners.click, "function");
+  assert.match(script, /method:\s*"PUT"/);
+  assert.match(script, /memory-editor/);
   assert.equal(byId.has("endpoint"), false);
 });

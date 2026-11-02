@@ -230,6 +230,66 @@ test("memory API explicitly saves, lists, persists, and deletes unverified user 
   }
 });
 
+test("memory API edits entries explicitly and persists the revised unverified record", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-edit-"));
+  try {
+    await withServer(async url => {
+      const createdResponse = await fetch(url + "/api/memory", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "Original note", layer: "episodic", source: "Initial source" })
+      });
+      assert.equal(createdResponse.status, 201);
+      const created = (await createdResponse.json()).entry;
+
+      const updatedResponse = await fetch(url + "/api/memory/" + encodeURIComponent(created.id), {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "Revised note", source: "Updated source" })
+      });
+      assert.equal(updatedResponse.status, 200);
+      const updated = (await updatedResponse.json()).entry;
+      assert.equal(updated.id, created.id);
+      assert.equal(updated.createdAt, created.createdAt);
+      assert.equal(updated.layer, "episodic");
+      assert.equal(updated.content, "Revised note");
+      assert.deepEqual(updated.provenance.sourceRefs, ["Updated source"]);
+      assert.equal(updated.provenance.verified, false);
+
+      const { FileMemoryStore } = await import("../../../packages/intelligence/memory/FileMemoryStore.ts");
+      const reopened = await FileMemoryStore.open(directory);
+      const persisted = await reopened.load();
+      assert.equal(persisted.length, 1);
+      assert.equal(persisted[0].content, "Revised note");
+      assert.equal(persisted[0].provenance.verified, false);
+      await reopened.close();
+
+      const missing = await fetch(url + "/api/memory/mem-00000000-0000-0000-0000-000000000000", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "missing" })
+      });
+      assert.equal(missing.status, 404);
+
+      const invalidType = await fetch(url + "/api/memory/" + encodeURIComponent(created.id), {
+        method: "PUT",
+        headers: { "content-type": "text/plain" },
+        body: JSON.stringify({ content: "not accepted" })
+      });
+      assert.equal(invalidType.status, 415);
+
+      const oversized = await fetch(url + "/api/memory/" + encodeURIComponent(created.id), {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "x".repeat(12001) })
+      });
+      assert.equal(oversized.status, 413);
+    }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("memory API rejects blank and oversized content", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-invalid-"));
   try {
