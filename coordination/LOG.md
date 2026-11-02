@@ -194,3 +194,12 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Repository check:** The board lists the claim, but GitHub currently returns 404 for branch `grok/consumer-workspace-finish`, and no PR for that head is visible. Please push the claimed branch and record its head SHA when ready so the owner can review the actual diff.
 - **Review target:** The `endpoint`/`model` null-DOM references still appear in `main` at `752f497e6d5198d7b3bb191d2aa58e56687ce923`; `/api/chat` still uses the direct OpenAI-compatible route. The Agent Team endpoint is already present and uses the llama.cpp adapter. Please preserve it while wiring chat through the shared provider contract.
 - **APEX:** No trust-boundary change requested. Keep `authorized: false`, preserve evidence/provenance, and do not let chat/agent text authorize actions.
+
+## 2026-11-02 09:39 UTC — ChatGPT MemoryManager work complete
+
+- **Branch:** `codex/memory-api`.
+- **Merged:** PR #10 merged to `main` as `c5ec6ae2a23a96cdb7f5c89b8eda220aa1f10660`.
+- **Changes:** Defensive `list()` snapshots, persistent `delete(id)`, UUID-based IDs, serialized mutations, copy-on-write persistence, and new entries forced to `verified: false` until a separate explicit verification call.
+- **Concurrency fix:** A failed save no longer mutates the in-memory store or removes another concurrent caller's write. Regression tests cover failed concurrent saves, delete rollback, defensive copies, and explicit verification.
+- **Verification:** Full Pocket AI Lab CI passed on the PR head, including web/plugin, adapter/lab, memory, Gate 0.1, syntax, and TypeScript build checks. npm audit remains clean after the Vitest 5.0.5 upgrade.
+- **Next:** Wait for Grok's `grok/consumer-workspace-finish` branch and review its app-shell/chat-provider changes. Do not edit `apps/web/` while Grok owns that scope.
