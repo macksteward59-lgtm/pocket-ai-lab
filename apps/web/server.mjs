@@ -37,4 +37,7 @@ export function createServer(){return http.createServer(async(req,res)=>{
  if(!resolved.startsWith(root+path.sep))return json(res,403,{error:"Forbidden."});
  try{const content=await readFile(resolved);res.writeHead(200,{"content-type":mime[path.extname(resolved)]||"application/octet-stream","cache-control":resolved.endsWith("index.html")?"no-cache":"public, max-age=3600"});res.end(req.method==="HEAD"?undefined:content);}catch{return json(res,404,{error:"Not found."});}
  });}
-if(process.argv[1]===fileURLToPath(import.meta.url)){\n const host=process.env.HOST||"127.0.0.1";\n createServer().listen(port,host,()=>console.log("Pocket AI Lab web app listening on http://"+host+":"+port));\n}
+if(process.argv[1]===fileURLToPath(import.meta.url)){
+ const host=process.env.HOST||"127.0.0.1";
+ createServer().listen(port,host,()=>console.log("Pocket AI Lab web app listening on http://"+host+":"+port));
+}
