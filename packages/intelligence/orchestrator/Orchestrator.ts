@@ -132,7 +132,7 @@ export class Orchestrator {
             this.router.release(selected.id);
           }
         }
-        return generated;
+        return [...priorMessages, ...generated];
       }
     );
 
