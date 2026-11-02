@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const state = { model: "model not connected", busy: false };
 const views = ["chat","agents","memory","activity","settings"];
-function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();}
+function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
 function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
 async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
@@ -74,5 +74,91 @@ $("new-chat").addEventListener("click",()=>{$("messages").replaceChildren();$("w
 $("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
 $("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
 $("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});
+function memoryElement(tag,className,text){
+ const node=document.createElement(tag);
+ if(className)node.className=className;
+ if(text!==undefined)node.textContent=text;
+ return node;
+}
+function renderMemories(entries){
+ const list=$("memory-list");
+ list.replaceChildren();
+ if(!entries.length){
+  const empty=memoryElement("div","empty-state");
+  empty.append(memoryElement("h3","","No saved memories yet"),memoryElement("p","","Use the form above to save something intentionally. Nothing from Chat is saved automatically."));
+  list.append(empty);
+  return;
+ }
+ for(const entry of entries){
+  const card=memoryElement("article","memory-entry");
+  const header=memoryElement("div","memory-entry-header");
+  const type=memoryElement("strong","memory-type",String(entry.layer||"memory").toUpperCase());
+  const date=memoryElement("time","memory-date",entry.createdAt?new Date(entry.createdAt).toLocaleString():"Date unavailable");
+  header.append(type,date);
+  const content=memoryElement("p","memory-entry-content",entry.content||"");
+  const meta=memoryElement("div","memory-entry-meta");
+  meta.append(memoryElement("span","memory-provenance","Saved by "+(entry.provenance?.agentId||"unknown")));
+  meta.append(memoryElement("span",entry.provenance?.verified?"memory-verified":"memory-unverified",entry.provenance?.verified?"Verified separately":"Unverified · not independently checked"));
+  if(Array.isArray(entry.provenance?.sourceRefs)&&entry.provenance.sourceRefs.length){
+   const source=memoryElement("p","memory-source","Source: "+entry.provenance.sourceRefs.join(", "));
+   card.append(header,content,meta,source);
+  }else card.append(header,content,meta);
+  const actions=memoryElement("div","memory-entry-actions");
+  const remove=memoryElement("button","secondary-button","Delete");
+  remove.type="button";
+  remove.addEventListener("click",async()=>{
+   if(!window.confirm("Delete this saved memory? This cannot be undone."))return;
+   remove.disabled=true;
+   try{
+    const response=await fetch("/api/memory/"+encodeURIComponent(entry.id),{method:"DELETE"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"Could not delete memory.");
+    $("memory-status").textContent="Memory deleted.";
+    await loadMemories();
+   }catch(error){$("memory-status").textContent=error.message;remove.disabled=false;}
+  });
+  actions.append(remove);
+  card.append(actions);
+  list.append(card);
+ }
+}
+async function loadMemories(){
+ const status=$("memory-status");
+ const list=$("memory-list");
+ if(!list)return;
+ status.textContent="Loading saved memories…";
+ try{
+  const response=await fetch("/api/memory");
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"Memory storage is unavailable.");
+  const entries=Array.isArray(data.entries)?data.entries:[];
+  entries.sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+  renderMemories(entries);
+  status.textContent=entries.length+" saved memor"+(entries.length===1?"y":"ies")+". New entries remain unverified.";
+ }catch(error){
+  list.replaceChildren();
+  list.append(memoryElement("div","empty-state",error.message));
+  status.textContent="Memory could not be loaded.";
+ }
+}
+$("memory-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const content=$("memory-content").value.trim();
+ if(!content)return;
+ const button=$("memory-save");
+ button.disabled=true;
+ $("memory-status").textContent="Saving memory…";
+ try{
+  const response=await fetch("/api/memory",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({content,layer:$("memory-layer").value,source:$("memory-source").value.trim()})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"Memory could not be saved.");
+  $("memory-content").value="";
+  $("memory-source").value="";
+  $("memory-status").textContent="Saved. This memory is unverified until independently checked.";
+  await loadMemories();
+ }catch(error){$("memory-status").textContent=error.message;}
+ finally{button.disabled=false;}
+});
+$("memory-refresh").addEventListener("click",loadMemories);
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 health();

@@ -45,7 +45,21 @@
             <div id="agent-result" class="agent-result hidden"></div>
           </div>
           <div class="agent-grid"><article class="agent-card"><b>01</b><h3>Director</h3><p>Breaks down work and coordinates the team.</p><span>ORCHESTRATION</span></article><article class="agent-card"><b>02</b><h3>Reasoner</h3><p>Decomposes complex questions and checks logic.</p><span>ANALYSIS</span></article><article class="agent-card"><b>03</b><h3>Researcher</h3><p>Collects sources and tracks evidence.</p><span>RESEARCH</span></article><article class="agent-card"><b>04</b><h3>Engineer</h3><p>Builds, tests, and debugs software.</p><span>IMPLEMENTATION</span></article><article class="agent-card"><b>05</b><h3>Security analyst</h3><p>Reviews threats, trust boundaries, and risk.</p><span>SECURITY</span></article><article class="agent-card"><b>06</b><h3>Critic & validator</h3><p>Challenges assumptions and independently checks results.</p><span>VERIFICATION</span></article></div></section>
-      <section class="view secondary-view hidden" id="memory-view"><div class="section-heading"><div class="eyebrow">YOUR CONTEXT</div><h1>Memory</h1><p>Memory controls are being connected to the governed persistence layer. This prototype does not silently save conversation content as long-term memory.</p></div><div class="empty-state"><span>▤</span><h3>Your memory is under your control</h3><p>Persistent memory will be opt-in, inspectable, editable, and traceable to its source.</p></div></section>
+      <section class="view secondary-view hidden" id="memory-view">
+        <div class="section-heading"><div class="eyebrow">YOUR CONTEXT</div><h1>Memory</h1><p>Save only what you choose. Chat messages are never automatically added to long-term memory.</p></div>
+        <div class="memory-warning" role="note"><strong>Local storage notice</strong><p>Memory is stored in a local file with restricted permissions and an integrity checksum, but it is <strong>not encrypted at rest</strong>. Do not save passwords, financial credentials, or other secrets. Keep this app bound to loopback.</p></div>
+        <form id="memory-form" class="memory-form">
+          <label for="memory-content">What should Pocket AI Lab remember?</label>
+          <textarea id="memory-content" rows="4" maxlength="12000" required placeholder="Write a preference, project fact, or note you want to keep…"></textarea>
+          <div class="memory-fields">
+            <label for="memory-layer">Memory type<select id="memory-layer"><option value="semantic">Semantic · facts and preferences</option><option value="episodic">Episodic · events and experiences</option><option value="procedural">Procedural · methods and workflows</option><option value="working">Working · short-term context</option></select></label>
+            <label for="memory-source">Source reference (optional)<input id="memory-source" maxlength="500" placeholder="A document, URL, or your own note"></label>
+          </div>
+          <div class="memory-actions"><button class="primary-button" id="memory-save" type="submit">Save memory</button><span id="memory-status" role="status">Loading saved memories…</span></div>
+        </form>
+        <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
+        <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
+      </section>
       <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
     </main>
   </div>

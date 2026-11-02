@@ -32,6 +32,10 @@ npm run build
 
 The PWA caches its static shell and icon for offline launch. Inference still requires a reachable local provider.
 
+### Consumer memory
+
+The Memory screen supports explicit user-initiated save, list, and delete through `MemoryManager` backed by `FileMemoryStore`. Chat is never auto-saved. New entries are always marked `verified: false`; the UI does not offer model-driven verification. On POSIX systems, the memory directory and file are restricted to owner access. The file is checksummed plaintext, **not encrypted at rest**; do not store passwords, tokens, or other secrets. The memory API is enabled only when the app is configured to bind to loopback and the request originates from a loopback client. `POCKET_MEMORY_DIR` can override the default `~/.pocket-ai-lab` directory.
+
 ## Local llama.cpp adapter
 
 A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The consumer Agent Team view and the loopback harness both run multi-stage sessions through the existing message bus and deliberation engine. The harness remains a developer surface; neither UI authorizes anything.
@@ -79,7 +83,7 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 | llama.cpp provider | HTTP adapter and loopback harness are in this tree. Consumer chat and Agent Team both call the adapter. iOS LlamaEngine is still a stub. |
 | Consumer web/PWA shell | On main. Chat returns the provider's `analysis` text. "Local model ready" requires a successful loopback health check. |
 | Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
-| Durable, governed memory | Not yet connected |
+| Consumer memory controls | Explicit local save/list/delete connected to `MemoryManager` + `FileMemoryStore`; user opt-in only, unverified by default, plaintext at rest |
 | East/APEX runtime integration | Not yet complete |
 | Native iOS local inference | Placeholder; not consumer-ready |
 | Production deployment, auth, telemetry, release pipeline | Not yet complete |
