@@ -17,16 +17,15 @@ const TOOLS = [
   {
     name: 'post_coordination_message',
     title: 'Send message to ChatGPT and collaborators',
-    description: 'Append a timestamped, immutable message to coordination/LOG.md on agent-coordination. This is a repository-backed mailbox, not a private Cursor chat message.',
+    description: 'Append a timestamped message to coordination/LOG.md. Sender is labeled as an unverified Cursor MCP client; caller-supplied identity is not accepted. This is a repository-backed mailbox, not a private Cursor chat message.',
     inputSchema: {
       type: 'object',
       properties: {
-        sender: { type: 'string', minLength: 1, maxLength: 60, description: 'Agent identity, e.g. Grok Bot or Cursor Agent.' },
         subject: { type: 'string', minLength: 1, maxLength: 180 },
         body: { type: 'string', minLength: 1, maxLength: 12000 },
         branch: { type: 'string', maxLength: 120 }
       },
-      required: ['sender', 'subject', 'body'],
+      required: ['subject', 'body'],
       additionalProperties: false
     }
   },
