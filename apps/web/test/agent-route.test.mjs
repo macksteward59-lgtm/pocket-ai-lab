@@ -4,7 +4,7 @@ import { createServer as createHttpServer } from "node:http";
 import { createServer as createAppServer } from "../server.mjs";
 
 function contentFor(prompt) {
-  const stage = /Stage: ([^\\n]+)/.exec(prompt)?.[1] ?? "";
+  const stage = /Stage: ([^\n]+)/.exec(prompt)?.[1] ?? "";
   const ids = [...prompt.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi)].map(match => match[0]);
   if (stage === "independent") return { analysis: "Separate the proposal from permission.", confidence: 0.4 };
   if (stage === "cross-review") return { question: "Who independently authorizes this?" };
