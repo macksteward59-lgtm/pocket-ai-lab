@@ -52,16 +52,17 @@ npm run build
 
 ## Implementation Status
 
-| Gate | Description                  | Status      |
-|------|------------------------------|-------------|
-| 0    | Architecture audit           | Done        |
-| 1    | Local inference (llama.cpp)  | Stub ready  |
-| 2    | Multi-model registry         | Implemented |
-| 3    | Agent orchestration          | Core done   |
-| 4    | Deliberation                 | Engine ready|
-| 5    | Shared memory                | Layers ready|
-| 6    | East/APEX integration        | Tasks defined |
-| 7    | Full Pocket AI Lab UI        | Next        |
+| Gate | Description                  | Status                                      |
+|------|------------------------------|---------------------------------------------|
+| 0    | Architecture audit           | Done                                        |
+| 0.1  | Corrective engineering pass  | In progress (inference interface, immutable messages, honest consensus, non-auto-verified memory) |
+| 1    | Local inference (llama.cpp)  | Stub / InferenceProvider ready for plug-in  |
+| 2    | Multi-model registry         | Implemented                                 |
+| 3    | Agent orchestration          | Core done (placeholder inference)           |
+| 4    | Deliberation                 | Engine improved (no forced consensus)       |
+| 5    | Shared memory                | Layers ready + optional persistence backend |
+| 6    | East/APEX integration        | Tasks defined; platform fns still to implement |
+| 7    | Full Pocket AI Lab UI        | Next                                        |
 
 ## Trust Invariants (must never break)
 
