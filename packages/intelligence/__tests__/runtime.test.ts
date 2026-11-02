@@ -4,6 +4,7 @@ import { DeliberationEngine, DeliberationStage } from "../deliberation/Deliberat
 import { AgentMessage, AgentMessageSchema, MessageBus } from "../message-bus/MessageBus";
 import { ModelDescriptor } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "../model-router/ModelRouter";
+import { Orchestrator } from "../orchestrator/Orchestrator";
 
 function message(
   messageType: AgentMessage["messageType"],
@@ -141,5 +142,64 @@ describe("DeliberationEngine", () => {
     expect(result.consensus).toBe(true);
     expect(result.disagreementCount).toBe(0);
     expect(result.finalSynthesis).toBe("Final result");
+  });
+});
+
+
+describe("Orchestrator", () => {
+  it("requires a real injected inference provider", () => {
+    expect(() => new Orchestrator({
+      inference: undefined as never,
+      getResources: () => ({ availableMemoryMB: 4096, loadedModels: [] })
+    })).toThrow(/InferenceProvider must be supplied/);
+  });
+
+  it("executes each stage through the injected provider and records unverified synthesis", async () => {
+    const orchestrator = new Orchestrator({
+      maxDeliberationRounds: 1,
+      getResources: () => ({ availableMemoryMB: 8192, loadedModels: [] }),
+      inference: {
+        async generate(request) {
+          switch (request.stage) {
+            case "independent":
+              return { payload: { analysis: "Analysis from " + request.agentId } };
+            case "cross-review":
+              return { payload: { question: "What evidence supports this?" } };
+            case "challenge":
+              return { payload: { claim: "Core claim", objection: "Needs support", evidenceRefs: [] } };
+            case "revision":
+              return {
+                payload: {
+                  revision: "Addressed the objection",
+                  addressesMessageIds: request.contextMessages
+                    .filter(item => item.messageType === "counterargument")
+                    .map(item => item.messageId)
+                }
+              };
+            case "verification":
+              return { payload: { claim: "Revised claim", verified: true } };
+            case "synthesis":
+              return { payload: { synthesis: "Integrated result", evidenceRefs: [] } };
+          }
+        }
+      }
+    });
+
+    orchestrator.models.register(model);
+    for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+      orchestrator.models.associateAgent(agentId, model.id);
+    }
+
+    const result = await orchestrator.executeTask({
+      id: "orchestration-test",
+      objective: "Verify the multi-agent execution path",
+      requiredCapabilities: []
+    });
+
+    expect(result.synthesis).toBe("Integrated result");
+    expect(result.consensus).toBe(true);
+    const thread = orchestrator.bus.getThread("orchestration-test");
+    expect(thread).toHaveLength(10);
+    expect(thread.map(item => item.sequence)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 });
