@@ -1,11 +1,12 @@
 /**
- * Deliberation Engine — bounded collaborative reasoning
- * Does not claim consensus unless evidence of agreement exists.
+ * Bounded deliberation. Objections are unresolved until a revision explicitly
+ * references them; consensus requires affirmative validator confirmation.
  */
-
 import { AgentMessage } from "../message-bus/MessageBus";
 
-export type DeliberationStage = "independent" | "cross-review" | "challenge" | "revision" | "verification" | "synthesis";
+export type DeliberationStage =
+  | "independent" | "cross-review" | "challenge" | "revision"
+  | "verification" | "synthesis";
 
 export interface DeliberationResult {
   stage: DeliberationStage;
@@ -18,52 +19,71 @@ export interface DeliberationResult {
 }
 
 export class DeliberationEngine {
-  private maxRounds = 2;
+  constructor(private readonly maxRounds = 2) {
+    if (!Number.isInteger(maxRounds) || maxRounds < 0 || maxRounds > 5) {
+      throw new Error("maxRounds must be an integer between 0 and 5");
+    }
+  }
 
   async runCycle(
     taskId: string,
     messages: AgentMessage[],
     onStage: (stage: DeliberationStage, msgs: AgentMessage[]) => Promise<AgentMessage[]>
   ): Promise<DeliberationResult> {
+    if (!taskId.trim()) throw new Error("taskId is required");
     let current = [...messages];
-    let rounds = 0;
     const notes: string[] = [];
+    let rounds = 0;
 
-    current = await onStage("independent", current);
-    current = await onStage("cross-review", current);
-
+    for (const stage of ["independent", "cross-review"] as const) {
+      current = await onStage(stage, [...current]);
+    }
     while (rounds < this.maxRounds) {
       const before = current.length;
-      current = await onStage("challenge", current);
-      current = await onStage("revision", current);
+      current = await onStage("challenge", [...current]);
+      current = await onStage("revision", [...current]);
       rounds++;
-      notes.push(`Round ${rounds}: ${current.length - before} new messages`);
+      notes.push("Round " + rounds + ": " + (current.length - before) + " new messages");
     }
 
-    current = await onStage("verification", current);
-    const synthesisMsgs = await onStage("synthesis", current);
+    current = await onStage("verification", [...current]);
+    current = await onStage("synthesis", [...current]);
+    const taskMessages = current.filter(m => m.taskId === taskId);
+    const objections = taskMessages.filter(m => m.messageType === "counterargument");
+    const revisions = taskMessages.filter(m => m.messageType === "revision");
+    const addressed = new Set(revisions.flatMap(message =>
+      (message.payload as { addressesMessageIds: string[] }).addressesMessageIds
+    ));
+    const unresolved = objections.filter(message => !addressed.has(message.messageId));
+    const validations = taskMessages.filter(
+      message => message.messageType === "validation" && message.senderAgentId === "validator"
+    );
+    const affirmative = validations.some(
+      message => (message.payload as { verified: boolean }).verified === true
+    );
+    const negative = validations.some(
+      message => (message.payload as { verified: boolean }).verified === false
+    );
+    const consensus = unresolved.length === 0 && affirmative && !negative;
 
-    // Consensus only if we see explicit validation messages that agree, or no unresolved counterarguments
-    const counterarguments = current.filter(m => m.messageType === "counterargument");
-    const validations = current.filter(m => m.messageType === "validation");
-    const verifiedTrue = validations.filter(v => {
-      const p = v.payload as any;
-      return p && typeof p === "object" && p.verified === true;
-    }).length;
-
-    const consensus = counterarguments.length === 0 || (validations.length > 0 && verifiedTrue >= validations.length / 2);
-    const completion = synthesisMsgs.find(m => m.messageType === "completion");
+    const completion = taskMessages.find(
+      message => message.messageType === "completion" && message.senderAgentId === "director"
+    );
     const finalSynthesis = completion
-      ? ((completion.payload as any)?.synthesis ?? String(completion.payload))
+      ? (completion.payload as { synthesis: string }).synthesis
       : undefined;
+    if (!completion) notes.push("No valid Director completion message was produced.");
+    if (unresolved.length) notes.push(unresolved.length + " counterargument(s) remain unresolved.");
+    if (!affirmative) notes.push("The Validator did not affirm the result; consensus withheld.");
+    if (negative) notes.push("The Validator recorded a negative finding; consensus withheld.");
 
     return {
       stage: "synthesis",
       rounds,
       consensus,
-      disagreementCount: counterarguments.length,
+      disagreementCount: unresolved.length,
       finalSynthesis,
-      evidenceRefs: current.flatMap(m => m.evidenceRefs),
+      evidenceRefs: [...new Set(taskMessages.flatMap(message => message.evidenceRefs))],
       notes
     };
   }
