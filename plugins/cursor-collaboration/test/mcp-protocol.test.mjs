@@ -38,6 +38,14 @@ test('MCP server negotiates initialization and lists coordination tools', async 
   assert.deepEqual(listed.result.tools.map((tool) => tool.name), [
     'read_coordination_context', 'post_coordination_message', 'claim_coordination_work'
   ]);
+  const postTool = listed.result.tools.find((tool) => tool.name === 'post_coordination_message');
+  const claimTool = listed.result.tools.find((tool) => tool.name === 'claim_coordination_work');
+  assert.equal('sender' in postTool.inputSchema.properties, false, 'caller cannot choose mailbox identity');
+  assert.equal('owner' in claimTool.inputSchema.properties, false, 'caller cannot choose claim owner');
+  child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'post_coordination_message', arguments: { sender: 'Grok Bot', subject: 'spoof', body: 'test' } } }) + '\\n');
+  const spoofAttempt = await waitFor(3);
+  assert.equal(spoofAttempt.result.isError, true);
+  assert.match(spoofAttempt.result.content[0].text, /Unexpected argument: sender/);
   child.kill();
   await once(child, 'exit');
 });
