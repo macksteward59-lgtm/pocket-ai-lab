@@ -180,6 +180,8 @@ describe("Orchestrator", () => {
               return { payload: { claim: "Revised claim", verified: true } };
             case "synthesis":
               return { payload: { synthesis: "Integrated result", evidenceRefs: [] } };
+            default:
+              throw new Error("Unhandled deliberation stage");
           }
         }
       }
