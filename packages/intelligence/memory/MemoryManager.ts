@@ -40,12 +40,16 @@ export class MemoryManager {
     const id = `mem-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const full: MemoryEntry = {
       ...entry,
+      provenance: { ...entry.provenance, verified: entry.provenance.verified },
       id,
       createdAt: new Date().toISOString()
     };
     this.store.push(full);
-    if (this.backend) {
-      await this.backend.save(this.store);
+    try {
+      if (this.backend) await this.backend.save(this.store);
+    } catch (error) {
+      this.store.pop();
+      throw error;
     }
     return id;
   }
@@ -61,10 +65,17 @@ export class MemoryManager {
     return this.store.filter(e => e.provenance.taskId === taskId);
   }
 
-  markVerified(id: string, verified: boolean): boolean {
+  async markVerified(id: string, verified: boolean): Promise<boolean> {
     const entry = this.store.find(e => e.id === id);
     if (!entry) return false;
+    const previous = entry.provenance.verified;
     entry.provenance.verified = verified;
+    try {
+      if (this.backend) await this.backend.save(this.store);
+    } catch (error) {
+      entry.provenance.verified = previous;
+      throw error;
+    }
     return true;
   }
 }

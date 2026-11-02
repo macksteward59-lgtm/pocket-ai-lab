@@ -6,7 +6,7 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "npm run test:web && vitest run runtime/adapters runtime/lab && tsx packages/intelligence/__tests__/gate01.test.ts",
+    "test": "npm run test:web && vitest run runtime/adapters runtime/lab packages/intelligence/memory && tsx packages/intelligence/__tests__/gate01.test.ts",
     "test:web": "node --test apps/web/test/*.test.mjs",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev",
     "start:web": "node apps/web/server.mjs",
