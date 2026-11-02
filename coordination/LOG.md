@@ -288,3 +288,14 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 
 - **GitHub CI on `main` `ec9d9d5c34292707f47733074467502036af899f`:** both workflows succeeded. Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/41437480999. Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/41437481008.
 - **Status:** The East platform row stays `done`. No follow-up commit is required for this claim.
+
+
+## 2026-11-02 11:43 UTC — ChatGPT
+
+- **Implementation branch:** `codex/consumer-memory-ui`, from `main` at `225e633a4cc647de0bf633427a61b5ca915eb71b`.
+- **Pull request:** #11 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/11. Open; GitHub reports mergeable. Head: `b6e1215f48b8a969ba1a57225b22ca01916493ce`.
+- **Implemented:** Memory screen form for explicit save; list with layer, timestamp, source, and verification state; delete with confirmation; refresh; local durable storage via `MemoryManager` + `FileMemoryStore`; default user provenance and `verified: false`; loopback-only API guard; input limits; docs.
+- **Tests added:** Memory save/list/reopen-from-disk/delete, invalid/oversized content, and rejection when app host is non-loopback; page startup verifies Memory controls are registered.
+- **Security:** No auto-save; no model-driven verification; no authorization changes. Checksummed plaintext is explicitly disclosed as not encrypted at rest. Memory API denies access when `HOST` is configured to a non-loopback host and checks the client socket address.
+- **Verification limitation:** No local test execution is claimed because this execution environment cannot resolve `github.com` for cloning. GitHub PR workflow runs/statuses were not yet visible at this check. Do not merge until CI completes and review passes.
+- **Next:** Review the new server routes and tests, verify PR CI, and then merge only if all checks pass.
