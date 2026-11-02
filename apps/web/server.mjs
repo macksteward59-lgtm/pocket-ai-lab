@@ -38,7 +38,20 @@ function memoryApiAllowed(req) {
   const remote = (req.socket.remoteAddress || "").toLowerCase();
   const localHost = host === "127.0.0.1" || host === "localhost" || host === "::1";
   const localClient = remote === "::1" || remote === "127.0.0.1" || remote.startsWith("::ffff:127.");
-  return localHost && localClient;
+  const origin = req.headers.origin;
+  let sameOrigin = true;
+  if (origin) {
+    try {
+      const parsed = new URL(origin);
+      sameOrigin = Boolean(req.headers.host) && parsed.host === req.headers.host &&
+        (parsed.protocol === "http:" || parsed.protocol === "https:");
+    } catch {
+      sameOrigin = false;
+    }
+  }
+  const fetchSite = req.headers["sec-fetch-site"];
+  const sameFetchSite = !fetchSite || fetchSite === "same-origin" || fetchSite === "none";
+  return localHost && localClient && sameOrigin && sameFetchSite;
 }
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -171,6 +184,9 @@ export function createServer() {
           }
         }
         if (url.pathname === "/api/memory" && req.method === "POST") {
+          if (!/^application\\/json(?:\\s*;|$)/i.test(req.headers["content-type"] || "")) {
+            return json(res, 415, { error: "Memory writes require application/json." });
+          }
           let input;
           try {
             input = await body(req);
