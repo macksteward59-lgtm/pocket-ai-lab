@@ -126,7 +126,7 @@ describe("lab server", () => {
       const health = await fetch(`${lab.url}/api/health?baseUrl=${encodeURIComponent(`http://127.0.0.1:${llamaPort}`)}`);
       expect(health.status).toBe(200);
       const blocked = await fetch(`${lab.url}/api/health?baseUrl=${encodeURIComponent("http://example.com")}`);
-      expect(blocked.status).toBe(502);
+      expect(blocked.status).toBe(400);
       const oversized = await fetch(`${lab.url}/api/tasks`, {
         method: "POST",
         headers: { "content-type": "application/json" },
