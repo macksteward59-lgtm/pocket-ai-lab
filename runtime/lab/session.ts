@@ -134,9 +134,10 @@ export async function runLabSession(options: {
           ].filter(Boolean).join("\n"),
           contextMessages: [...prior]
         }, options.signal);
-        const payload = isRecord(inference.payload)
-          ? { ...inference.payload }
-          : { text: inference.text };
+        if (!isRecord(inference.payload)) {
+          throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");
+        }
+        const payload = { ...inference.payload };
         const message: AgentMessage = {
           messageId: crypto.randomUUID(),
           taskId,
@@ -246,9 +247,9 @@ function generateWithSignal(
   provider: InferenceProvider,
   request: InferenceRequest,
   signal?: AbortSignal
-): Promise<InferenceResult & { payload?: unknown }> {
+): Promise<InferenceResult> {
   const cancellable = provider as InferenceProvider & {
-    generate(req: InferenceRequest, options?: { signal?: AbortSignal }): Promise<InferenceResult & { payload?: unknown }>;
+    generate(req: InferenceRequest, options?: { signal?: AbortSignal }): Promise<InferenceResult>;
   };
   return cancellable.generate(request, signal ? { signal } : undefined);
 }
