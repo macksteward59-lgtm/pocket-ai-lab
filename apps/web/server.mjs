@@ -12,13 +12,13 @@ async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(
 function configured(){return Boolean(process.env.LLM_BASE_URL&&process.env.LLM_MODEL);}
 export function createServer(){return http.createServer(async(req,res)=>{
  const url=new URL(req.url||"/","http://localhost");
- if(url.pathname==="/api/health"&&req.method==="GET")return json(res,200,{configured:configured(),provider:configured()?"configured-server-provider":null,mode:"local-first"});
+ if(url.pathname==="/api/health"&&req.method==="GET")return json(res,200,{configured:configured(),model:configured()?process.env.LLM_MODEL:null,provider:configured()?"configured-server-provider":null,mode:"local-first"});
  if(url.pathname==="/api/chat"&&req.method==="POST"){
   let input;try{input=await body(req);}catch(e){return json(res,e.status||400,{error:e.message});}
   if(typeof input.message!=="string"||!input.message.trim())return json(res,400,{error:"A non-empty message is required."});
   if(input.message.length>12000)return json(res,413,{error:"Message exceeds 12,000 characters."});
   if(!configured())return json(res,503,{error:"No model is configured. Set LLM_BASE_URL and LLM_MODEL on the server."});
-  let target;try{target=new URL("/chat/completions",process.env.LLM_BASE_URL.endsWith("/")?process.env.LLM_BASE_URL:process.env.LLM_BASE_URL+"/");}catch{return json(res,500,{error:"Invalid server model endpoint."});}
+  let target;try{target=new URL("chat/completions",process.env.LLM_BASE_URL.endsWith("/")?process.env.LLM_BASE_URL:process.env.LLM_BASE_URL+"/");}catch{return json(res,500,{error:"Invalid server model endpoint."});}
   const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),60000);
   try{
    const headers={"content-type":"application/json"};if(process.env.LLM_API_KEY)headers.authorization="Bearer "+process.env.LLM_API_KEY;
