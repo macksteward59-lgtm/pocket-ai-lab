@@ -342,7 +342,7 @@ describe("llama.cpp generation with a stub backend", () => {
     const { backend, calls } = stubBackend(JSON.stringify({ analysis: "unused" }));
     const provider = createLlamaCppInferenceProvider({}, backend);
     await expect(provider.generate(baseRequest({ prompt: "  " }))).rejects.toMatchObject({ code: "invalid_request" });
-    await expect(provider.generate(baseRequest({ stage: "planning" }))).rejects.toMatchObject({ code: "invalid_request" });
+    await expect(provider.generate(baseRequest({ stage: "planning" as never }))).rejects.toMatchObject({ code: "invalid_request" });
     await expect(provider.generate({ ...baseRequest(), contextMessages: undefined as never })).rejects.toMatchObject({
       code: "invalid_request"
     });
