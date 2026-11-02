@@ -28,3 +28,10 @@
 .memory-entry-actions{justify-content:flex-end;margin-top:12px}
 .memory-entry-actions button:disabled,.memory-actions button:disabled{opacity:.55;cursor:wait}
 @media(max-width:600px){.memory-fields{grid-template-columns:1fr}.memory-form{padding:15px}.memory-entry-header{align-items:flex-start;flex-direction:column;gap:5px}.memory-actions{align-items:flex-start;flex-direction:column}}
+
+.memory-editor{display:grid;gap:11px;margin-top:12px}
+.memory-editor label{display:grid;gap:7px;font-size:10px;color:#b9c4d3}
+.memory-editor textarea,.memory-editor input{width:100%;padding:11px 12px;background:#101722;border:1px solid #354255;border-radius:7px;color:var(--text);font:12px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;outline:none}
+.memory-editor textarea{resize:vertical;min-height:90px}
+.memory-editor textarea:focus,.memory-editor input:focus{border-color:#7896cc}
+.memory-editor-actions{display:flex;justify-content:flex-end;gap:9px}
