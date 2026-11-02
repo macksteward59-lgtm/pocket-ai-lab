@@ -32,17 +32,16 @@ const TOOLS = [
   {
     name: 'claim_coordination_work',
     title: 'Claim a Pocket AI Lab work area',
-    description: 'Check for likely ownership conflicts, then add a Grok or ChatGPT claim to coordination/BOARD.md and coordination/LOG.md.',
+    description: 'Check for likely ownership conflicts, then add a claim using POCKET_AI_AGENT_OWNER from the trusted MCP server environment. Caller-supplied identity is never accepted.',
     inputSchema: {
       type: 'object',
       properties: {
-        owner: { type: 'string', enum: ['Grok Bot', 'ChatGPT'] },
         area: { type: 'string', minLength: 1, maxLength: 180 },
         paths: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 180 }, minItems: 1, maxItems: 30 },
         branch: { type: 'string', minLength: 1, maxLength: 120 },
         notes: { type: 'string', minLength: 1, maxLength: 500 }
       },
-      required: ['owner', 'area', 'paths', 'branch', 'notes'],
+      required: ['area', 'paths', 'branch', 'notes'],
       additionalProperties: false
     }
   }
