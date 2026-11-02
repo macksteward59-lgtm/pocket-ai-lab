@@ -1,8 +1,6 @@
 /**
- * Pocket AI Lab — Multi-Agent Intelligence Engine
- * Agent Manager
+ * Agent registry and task-scoped session lifecycle.
  */
-
 export type AgentId = string;
 export type Capability = string;
 
@@ -29,50 +27,67 @@ export class AgentManager {
   private sessions = new Map<string, AgentSession>();
 
   registerPermanent(profile: AgentProfile): void {
-    this.agents.set(profile.id, { ...profile, permanent: true });
+    if (!profile.id.trim()) throw new Error("Agent id is required");
+    this.agents.set(profile.id, {
+      ...profile,
+      capabilities: [...profile.capabilities],
+      permissions: [...profile.permissions],
+      permanent: true
+    });
   }
 
   createSpecialist(profile: Omit<AgentProfile, "permanent">): AgentId {
-    const id = `specialist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    this.agents.set(id, { ...profile, id, permanent: false });
+    const id = "specialist-" + crypto.randomUUID();
+    this.agents.set(id, {
+      ...profile,
+      id,
+      capabilities: [...profile.capabilities],
+      permissions: [...profile.permissions],
+      permanent: false
+    });
     return id;
   }
 
   getAgent(id: AgentId): AgentProfile | undefined {
-    return this.agents.get(id);
+    const profile = this.agents.get(id);
+    return profile ? {
+      ...profile,
+      capabilities: [...profile.capabilities],
+      permissions: [...profile.permissions]
+    } : undefined;
   }
 
   listPermanent(): AgentProfile[] {
-    return Array.from(this.agents.values()).filter(a => a.permanent);
+    return Array.from(this.agents.values())
+      .filter(agent => agent.permanent)
+      .map(agent => this.getAgent(agent.id)!);
   }
 
   startSession(agentId: AgentId, taskId: string, modelId: string): string {
-    const sessionId = `sess-${Date.now()}`;
+    if (!this.agents.has(agentId)) throw new Error("Cannot start session for unknown agent " + agentId);
+    if (!taskId.trim() || !modelId.trim()) throw new Error("taskId and modelId are required");
+    const sessionId = "sess-" + crypto.randomUUID();
     this.sessions.set(sessionId, {
-      agentId,
-      taskId,
-      modelId,
-      status: "queued",
-      createdAt: new Date().toISOString()
+      agentId, taskId, modelId, status: "queued", createdAt: new Date().toISOString()
     });
     return sessionId;
   }
 
   updateStatus(sessionId: string, status: AgentSession["status"]): void {
-    const s = this.sessions.get(sessionId);
-    if (s) s.status = status;
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error("Unknown session " + sessionId);
+    session.status = status;
   }
 
   releaseSession(sessionId: string): void {
-    const s = this.sessions.get(sessionId);
-    if (s && !this.agents.get(s.agentId)?.permanent) {
-      this.agents.delete(s.agentId);
-    }
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    session.status = "released";
     this.sessions.delete(sessionId);
+    if (!this.agents.get(session.agentId)?.permanent) this.agents.delete(session.agentId);
   }
 }
 
-// Default permanent core team
 export const CORE_AGENTS: AgentProfile[] = [
   { id: "director", role: "Director", description: "Delegation and synthesis", capabilities: ["orchestrate", "synthesize", "delegate"], permanent: true, permissions: ["assign", "synthesize"] },
   { id: "reasoner", role: "Reasoner", description: "Logical decomposition", capabilities: ["reason", "decompose"], permanent: true, permissions: ["analyze"] },
