@@ -1,8 +1,7 @@
 /**
- * Model Router and Resource Scheduler (offline-first)
- * Memory report is injectable. Queue resolves when resources free up.
+ * Fail-closed model selection and resource accounting.
+ * Waiting indefinitely for memory is deliberately avoided; callers may retry.
  */
-
 import { ModelDescriptor } from "../model-registry/ModelRegistry";
 
 export interface ResourceReport {
@@ -11,60 +10,52 @@ export interface ResourceReport {
 }
 
 export class ModelRouter {
-  private loaded = new Set<string>();
-  private queue: Array<{ agentId: string; model: ModelDescriptor; resolve: (m: ModelDescriptor) => void; reject: (e: Error) => void }> = [];
+  private reservations = new Map<string, number>();
 
-  constructor(private getResources: () => ResourceReport) {}
+  constructor(private readonly getResources: () => ResourceReport) {}
 
-  async route(agentId: string, preferred: ModelDescriptor | undefined, requiredCaps: string[]): Promise<ModelDescriptor> {
-    const candidates = preferred ? [preferred] : [];
-    const model = candidates[0] ?? {
-      id: "fallback",
-      name: "Local",
-      path: "",
-      contextLength: 4096,
-      capabilities: requiredCaps,
-      memoryEstimateMB: 2000
-    };
+  async route(
+    agentId: string,
+    preferred: ModelDescriptor | undefined,
+    requiredCaps: string[]
+  ): Promise<ModelDescriptor> {
+    if (!agentId.trim()) throw new Error("agentId is required");
+    if (!preferred) throw new Error("No model is registered for agent " + agentId);
+    if (!preferred.id || !preferred.path) {
+      throw new Error("Model " + preferred.id + " has no configured runtime path");
+    }
+    if (!Number.isFinite(preferred.memoryEstimateMB) || preferred.memoryEstimateMB <= 0) {
+      throw new Error("Model " + preferred.id + " has an invalid memory estimate");
+    }
+    const missing = requiredCaps.filter(cap => !preferred.capabilities.includes(cap));
+    if (missing.length) {
+      throw new Error("Model " + preferred.id + " lacks required capabilities: " + missing.join(", "));
+    }
 
     const resources = this.getResources();
-    const needsMemory = !this.loaded.has(model.id) && resources.availableMemoryMB < model.memoryEstimateMB;
-
-    if (needsMemory && this.loaded.size === 0) {
-      // No models loaded and not enough memory — fail fast rather than hang
-      throw new Error(`Insufficient memory for model ${model.id} (${model.memoryEstimateMB}MB needed, ${resources.availableMemoryMB}MB available)`);
+    if (!Number.isFinite(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
+      throw new Error("Resource provider returned invalid available memory");
     }
-
-    if (needsMemory) {
-      return new Promise((resolve, reject) => {
-        this.queue.push({ agentId, model, resolve, reject });
-      });
+    const alreadyLoaded = resources.loadedModels.includes(preferred.id) || this.reservations.has(preferred.id);
+    const reservedElsewhere = [...this.reservations.entries()]
+      .filter(([id]) => id !== preferred.id)
+      .reduce((sum, [, amount]) => sum + amount, 0);
+    const available = Math.max(0, resources.availableMemoryMB - reservedElsewhere);
+    if (!alreadyLoaded && available < preferred.memoryEstimateMB) {
+      throw new Error(
+        "Insufficient memory for " + preferred.id + ": requires " +
+        preferred.memoryEstimateMB + "MB, " + available + "MB available"
+      );
     }
-
-    this.loaded.add(model.id);
-    return model;
+    if (!alreadyLoaded) this.reservations.set(preferred.id, preferred.memoryEstimateMB);
+    return preferred;
   }
 
   release(modelId: string): void {
-    this.loaded.delete(modelId);
-    this.processQueue();
-  }
-
-  private processQueue(): void {
-    while (this.queue.length > 0) {
-      const next = this.queue[0];
-      const resources = this.getResources();
-      if (resources.availableMemoryMB >= next.model.memoryEstimateMB || this.loaded.has(next.model.id)) {
-        this.queue.shift();
-        this.loaded.add(next.model.id);
-        next.resolve(next.model);
-      } else {
-        break;
-      }
-    }
+    this.reservations.delete(modelId);
   }
 
   getLoadedModels(): string[] {
-    return Array.from(this.loaded);
+    return [...this.reservations.keys()];
   }
 }
