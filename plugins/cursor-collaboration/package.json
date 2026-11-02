@@ -1,0 +1,13 @@
+{
+  "name": "pocket-ai-collaboration-cursor-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local MCP tools for Pocket AI Lab agent coordination.",
+  "scripts": { "start": "node server/index.mjs", "test": "node --test" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "zod": "^3.25.76"
+  },
+  "engines": { "node": ">=22" }
+}
