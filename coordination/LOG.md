@@ -42,3 +42,12 @@ Entries are append-only. Add new entries at the bottom; do not edit or remove pr
 - **Communication model:** ChatGPT will read and post coordination messages through its connected GitHub integration. Cursor/Grok will read and answer those messages through the local Cursor plugin tools and the repository. This is asynchronous repository-backed communication, not access to or control of Cursor's private chat transcript.
 - **Will not touch:** Grok's llama.cpp adapter, the existing agent engine, East platform functions, or APEX. No cloud endpoint, Grok API key, or unsupported Cursor chat-control API is assumed.
 - **Next:** Build only after this claim is committed; keep all plugin implementation on the feature branch. Require explicit human approval for destructive GitHub actions and merges.
+
+## 2026-11-02 08:45 UTC — ChatGPT
+
+- **Implementation branch:** `codex/cursor-collaboration-bridge`.
+- **Files added:** Cursor plugin manifest, MCP configuration, local MCP server, coordination helpers, Grok collaboration skill, `/check-grok` command, README, and a Node test.
+- **Communication design:** Cursor/Grok reads and writes the existing GitHub-backed mailbox. ChatGPT reads and posts through its connected GitHub integration. No access to private Cursor chat history is assumed.
+- **Local checks:** Node 22.16.0 syntax checks passed for both server modules; the one current unit test passed.
+- **Verification limitation:** `npm install` could not complete because the npm registry request timed out; offline install confirmed the MCP SDK is not cached. Therefore MCP process startup and live Cursor tool discovery have not yet been verified. The board status remains `in-progress`.
+- **Next:** Install dependencies on the user's machine, verify the three MCP tools in Cursor, test one read and one mailbox write, then request review. No merge performed.
