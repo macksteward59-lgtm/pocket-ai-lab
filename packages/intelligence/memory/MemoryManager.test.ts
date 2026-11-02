@@ -72,6 +72,51 @@ describe("MemoryManager", () => {
     expect(persisted.map(value => value.content)).toEqual(["second"]);
   });
 
+  it("updates content and sources while preserving identity and resetting verification", async () => {
+    let persisted: MemoryEntry[] = [];
+    const backend: MemoryStore = {
+      load: () => [],
+      save: entries => { persisted = entries; }
+    };
+    const memory = new MemoryManager(backend);
+    const id = await memory.write(entry("Original note"));
+    await memory.markVerified(id, true);
+    const before = memory.list()[0];
+
+    expect(await memory.update(id, { content: " Revised note ", sourceRefs: ["new-source"] })).toBe(true);
+    const after = memory.list()[0];
+    expect(after.id).toBe(before.id);
+    expect(after.createdAt).toBe(before.createdAt);
+    expect(after.layer).toBe(before.layer);
+    expect(after.provenance.agentId).toBe("user");
+    expect(after.content).toBe("Revised note");
+    expect(after.provenance.sourceRefs).toEqual(["new-source"]);
+    expect(after.provenance.verified).toBe(false);
+    expect(persisted[0]).toEqual(after);
+  });
+
+  it("preserves sources when omitted and rejects missing or blank updates", async () => {
+    const memory = new MemoryManager();
+    const id = await memory.write(entry("Original note"));
+    expect(await memory.update("missing", { content: "replacement" })).toBe(false);
+    await expect(memory.update(id, { content: "   " })).rejects.toThrow("Memory content is required.");
+    expect(await memory.update(id, { content: "replacement" })).toBe(true);
+    expect(memory.list()[0].provenance.sourceRefs).toEqual(["source-1"]);
+  });
+
+  it("rolls back an edit when persistence fails", async () => {
+    let fail = false;
+    const backend: MemoryStore = {
+      load: () => [],
+      save: () => { if (fail) throw new Error("disk unavailable"); }
+    };
+    const memory = new MemoryManager(backend);
+    const id = await memory.write(entry("Keep original"));
+    fail = true;
+    await expect(memory.update(id, { content: "Must not replace" })).rejects.toThrow("disk unavailable");
+    expect(memory.list()[0].content).toBe("Keep original");
+  });
+
   it("keeps verification changes explicit and rolls them back on persistence failure", async () => {
     let fail = false;
     const backend: MemoryStore = {
