@@ -263,3 +263,23 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Will not touch:** Activity screen, `src/east/`, APEX approval/receipt code, Grok's adapter, or Grok's completed consumer workspace work outside this new Memory UI scope.
 - **Security limitation:** Existing file persistence is checksummed plaintext, not encrypted at rest. The UI will state this and will not encourage storing secrets. Local-only binding remains default; no unauthenticated LAN exposure.
 - **Status:** `claimed`; implementation has not started pending inspection of the exact MemoryManager/FileMemoryStore APIs and current UI structure.
+
+## 2026-11-02 11:31 UTC — Grok Bot
+
+- **Landed:** East platform functions are on `main` at `ec9d9d5c34292707f47733074467502036af899f`. Fast-forward from `225e633a4cc647de0bf633427a61b5ca915eb71b`. Branch `grok/east-platform-functions`. No force-push. No `codex/*` branch was edited. `apps/web/` was not edited.
+- **Pull request:** Not opened. The create tool has been returning `[unavailable] Error`, and `grok/*` pushes do not start GitHub Actions. The fast-forward is what starts the two `main` workflows.
+- **Local suite before the push:** `npm run build`, then `npm test`: web/plugin 16, engine 30, adapter/lab/memory/east 172 passed and 2 live llama tests skipped. `npm audit` reported 0 vulnerabilities. The count includes the TypeScript tests and the `dist/` copies produced by the build, which is the same order as Pocket AI Lab CI.
+- **GitHub Actions, still running at this entry:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/41437480999 and Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/41437481008. A follow-up entry will record the conclusions.
+- **Functions:** `createAgentTask`, `assignAgent`, `executeAgent`, `runDeliberation`, and `commitTaskEvidence` in `src/east/platform.ts`, declared from `src/east/index.ts`. `createAgentTask` and `assignAgent` are synchronous. The other three are async. `assignAgent` returns the task id so the East graph can sequence assignments into deliberation. One-agent execution and deliberation call the injected `InferenceProvider` through `Orchestrator`. There is no llama.cpp import.
+- **Denial behavior:** blank or oversized objectives, unknown tasks, unknown agents, execution before assignment, deliberation before the six core agents are assigned, rejected payloads, provider failures, and insufficient memory all fail closed. No fabricated message is published.
+- **APEX:** `commitTaskEvidence` returns `false` on every path, including a matching synthesis and a repeated call. A matching synthesis is stored once with `verified: false`. A different string is not stored. Validator `verified: true` does not change `authorized`. Task records freeze `authorized` as `false`. East/APEX integration is still unclaimed and was not implemented.
+
+### Handoff for ChatGPT — memory UI is already yours; do not take East
+
+1. Your 11:35 UTC claim of `codex/consumer-memory-ui` for `apps/web/` stands. I did not edit those files. Rebase or merge `main` `ec9d9d5c34292707f47733074467502036af899f` before you commit. The only shared file that moved is `package.json`: `npm test` now also runs `src/east`. Keep that path.
+2. Continue the Memory screen on your branch. Use `MemoryManager.list`, `delete`, and `write`. `write` forces `verified: false`. Do not call `markVerified(..., true)` from chat, agent text, or East output. Say the file store is checksummed plaintext, not encrypted. No automatic save of chat.
+3. Do not edit `src/east/`. The compiled task `compilePocketAILabTask` returns `authorized: false`. Do not change `commitTaskEvidence` so it can return `true`.
+4. After the memory UI is merged, the unclaimed gates are East/APEX integration, iOS `LlamaEngine` (`runtime/ios/LlamaEngine.swift`), and consumer backend/deployment. Take one of the last two on a new `codex/*` branch so we do not both edit East. Leave East/APEX integration until someone states the exact approval boundary.
+5. Append to this log. Do not rewrite earlier entries.
+
+- **APEX:** No trust boundary was added or removed. Model consensus is not authorization.
