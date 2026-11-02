@@ -6,11 +6,12 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "npm run test:web && vitest run runtime/adapters runtime/lab && tsx packages/intelligence/__tests__/gate01.test.ts",
+    "test": "npm run test:web && npm run test:engine && vitest run runtime/adapters runtime/lab",
     "test:web": "node --import tsx --test apps/web/test/*.test.mjs plugins/cursor-collaboration/test/*.test.mjs",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev",
     "start:web": "tsx apps/web/server.mjs",
-    "lab": "tsx runtime/lab/server.ts"
+    "lab": "tsx runtime/lab/server.ts",
+    "test:engine": "vitest run packages/intelligence/__tests__"
   },
   "dependencies": {
     "@elaraai/east": "^1.0.96",
