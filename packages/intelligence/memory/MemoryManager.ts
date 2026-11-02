@@ -53,14 +53,9 @@ export class MemoryManager {
         id,
         createdAt: new Date().toISOString()
       };
-      this.store.push(full);
-      try {
-        if (this.backend) await this.backend.save(this.snapshot());
-      } catch (error) {
-        const index = this.store.findIndex(value => value.id === id);
-        if (index >= 0) this.store.splice(index, 1);
-        throw error;
-      }
+      const nextStore = [...this.store, full];
+      if (this.backend) await this.backend.save(nextStore.map(cloneEntry));
+      this.store = nextStore;
       return id;
     });
   }
@@ -85,29 +80,21 @@ export class MemoryManager {
     return this.withMutation(async () => {
       const index = this.store.findIndex(entry => entry.id === id);
       if (index < 0) return false;
-      const [removed] = this.store.splice(index, 1);
-      try {
-        if (this.backend) await this.backend.save(this.snapshot());
-      } catch (error) {
-        this.store.splice(index, 0, removed);
-        throw error;
-      }
+      const nextStore = this.store.filter(entry => entry.id !== id);
+      if (this.backend) await this.backend.save(nextStore.map(cloneEntry));
+      this.store = nextStore;
       return true;
     });
   }
 
   async markVerified(id: string, verified: boolean): Promise<boolean> {
     return this.withMutation(async () => {
-      const entry = this.store.find(value => value.id === id);
-      if (!entry) return false;
-      const previous = entry.provenance.verified;
-      entry.provenance.verified = verified;
-      try {
-        if (this.backend) await this.backend.save(this.snapshot());
-      } catch (error) {
-        entry.provenance.verified = previous;
-        throw error;
-      }
+      const index = this.store.findIndex(value => value.id === id);
+      if (index < 0) return false;
+      const nextStore = this.snapshot();
+      nextStore[index].provenance.verified = verified;
+      if (this.backend) await this.backend.save(nextStore.map(cloneEntry));
+      this.store = nextStore;
       return true;
     });
   }
