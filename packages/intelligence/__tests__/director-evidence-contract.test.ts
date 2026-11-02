@@ -23,7 +23,7 @@ const evidence: DeviceEvidence = {
   attested_at: "2026-11-02T12:00:00.000Z",
 };
 
-describe("DeviceEvidence candidate validation", () => {
+function rejectionReason(input: unknown, rows: Array<{ attempt_id: string; challenge_nonce: string }> = []) {\n  const result = validateDeviceEvidenceCandidate(input, attempt, rows);\n  return result.ok ? undefined : result.reason;\n}\n\ndescribe("DeviceEvidence candidate validation", () => {
   it("accepts evidence bound to the exact attempt without granting authorization", () => {
     expect(validateDeviceEvidenceCandidate(evidence, attempt, [])).toEqual({
       ok: true,
@@ -33,12 +33,12 @@ describe("DeviceEvidence candidate validation", () => {
   });
 
   it("rejects non-object, array, missing, empty, and unexpected fields", () => {
-    expect(validateDeviceEvidenceCandidate(null, attempt, []).reason).toBe("invalid_shape");
-    expect(validateDeviceEvidenceCandidate([], attempt, []).reason).toBe("invalid_shape");
+    expect(rejectionReason(null)).toBe("invalid_shape");
+    expect(rejectionReason([])).toBe("invalid_shape");
     const { runtime_version: _runtimeVersion, ...missing } = evidence;
-    expect(validateDeviceEvidenceCandidate(missing, attempt, []).reason).toBe("invalid_shape");
-    expect(validateDeviceEvidenceCandidate({ ...evidence, model_id: "" }, attempt, []).reason).toBe("invalid_shape");
-    expect(validateDeviceEvidenceCandidate({ ...evidence, extra: "ignored?" }, attempt, []).reason).toBe("invalid_shape");
+    expect(rejectionReason(missing)).toBe("invalid_shape");
+    expect(rejectionReason({ ...evidence, model_id: "" })).toBe("invalid_shape");
+    expect(rejectionReason({ ...evidence, extra: "ignored?" })).toBe("invalid_shape");
   });
 
   it.each([
@@ -48,7 +48,7 @@ describe("DeviceEvidence candidate validation", () => {
     ["runtime_session_id", "other-runtime"],
     ["device_id", "other-device"],
   ] as const)("rejects evidence with mismatched %s", (field, value) => {
-    expect(validateDeviceEvidenceCandidate({ ...evidence, [field]: value }, attempt, []).reason).toBe("attempt_mismatch");
+    expect(rejectionReason({ ...evidence, [field]: value })).toBe("attempt_mismatch");
   });
 
   it("rejects a nonce already used by a different attempt", () => {
