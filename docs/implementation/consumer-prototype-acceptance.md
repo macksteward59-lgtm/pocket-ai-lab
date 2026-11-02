@@ -26,6 +26,7 @@ This document defines the minimum bar for a usable Pocket AI Lab prototype. A pa
 
 ## Memory
 - Persistent memory is opt-in, inspectable, editable, deletable, and provenance-aware.
+- An edit preserves entry identity and creation time, and resets verification to `false` until independently checked again.
 - No conversation is silently promoted to verified long-term memory.
 - Storage is encrypted at rest where supported by the target platform; key handling must be documented.
 
