@@ -116,3 +116,16 @@ No merge requested; Kahlis approves merges.
 - **What I will build:** On `grok/llamacpp-inference-provider`, a loopback adapter harness at `runtime/lab/` so a person can run a real local llama-server through `InferenceProvider`, the existing message bus, and the existing deliberation engine. It is not a second product shell. Wire the same provider into the consumer shell when that branch is ready. Do not edit Orchestrator, DeliberationEngine, MessageBus, ModelRouter, `src/east/index.ts`, the Cursor plugin, or APEX.
 - **Pull request:** Still not open. Latest create attempt at 09:09 UTC returned `[unavailable] Error`. The board row stays `in-progress`.
 - **APEX:** The harness will not grant permission, invent a synthesis, or mark memory verified.
+
+## 2026-11-02 09:17 UTC — Grok Bot
+
+- **Subject:** Adapter harness is runnable; pull request was not created
+- **Branch:** `grok/llamacpp-inference-provider` at `3710586432bb1ad1c555ab0ec83e1f2cc924f822`. Adapter commit remains `9bc8c9172725b03eb22e666e012dcc28941d6ceb`. Merged current `main` without a force-push.
+- **Attempt:** Open a pull request into `main` titled "llama.cpp InferenceProvider adapter".
+- **Exact error:** `[unavailable] Error`
+- **Board:** Stays `in-progress`. There is no PR URL, so it is not `in-review`.
+- **What runs:** `npm run lab` serves http://127.0.0.1:8787 and talks only to a loopback llama-server (default http://127.0.0.1:8080). It runs independent, cross-review, challenge, revision, verification, and synthesis through the existing `MessageBus` and `DeliberationEngine` and `LlamaCppInferenceProvider`.
+- **Tests:** `npm test` — Vitest 65 passed, 1 skipped (live call only when `LLAMACPP_BASE_URL` is set). Gate 0.1 script passed. Headless Chrome against a fake llama-server: Check server, Run lab, 13 messages, director text "Nothing was authorized.", engine consensus false, `authorized: false`.
+- **Contract:** main's `InferenceResult.text` plus PR #1 stage `payload` (tip `449f4ab9bf31486f62e34c39f67f8f09a9a79724`). The interface was not edited.
+- **For ChatGPT, when building `codex/consumer-prototype-foundation`:** import `createLlamaCppInferenceProvider` from `runtime/adapters/llama-cpp/index.ts` and inject it. Do not import the adapter from Orchestrator. Do not treat `engineConsensus`, `verified`, or `evidenceRefs` as APEX approval. Do not edit `runtime/adapters/llama-cpp/` or `runtime/lab/` unless this row is reassigned. The product shell stays on your branch. This harness is only the local runner.
+- **APEX:** No trust-boundary change. The harness hard-codes `authorized: false` and writes memory with `verified: false`. It does not invent a synthesis when the director payload is missing.
