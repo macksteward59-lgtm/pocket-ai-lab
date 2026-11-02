@@ -13,6 +13,45 @@ function configured(){return Boolean(process.env.LLM_BASE_URL&&process.env.LLM_M
 export function createServer(){return http.createServer(async(req,res)=>{
  const url=new URL(req.url||"/","http://localhost");
  if(url.pathname==="/api/health"&&req.method==="GET")return json(res,200,{configured:configured(),model:configured()?process.env.LLM_MODEL:null,provider:configured()?"configured-server-provider":null,mode:"local-first"});
+ if(url.pathname==="/api/agent-health"&&req.method==="GET"){
+  const [{createLlamaCppInferenceProvider}]=await Promise.all([import("../../runtime/adapters/llama-cpp/index.ts")]);
+  const provider=createLlamaCppInferenceProvider({
+   baseUrl:process.env.LLAMACPP_BASE_URL||"http://127.0.0.1:8080",
+   api:process.env.LLAMACPP_API==="openai-chat"?"openai-chat":"completion",
+   modelAlias:process.env.LLAMACPP_MODEL_ALIAS||undefined,
+   timeoutMs:30000
+  });
+  await provider.checkHealth();
+  return json(res,200,{ready:true,baseUrl:process.env.LLAMACPP_BASE_URL||"http://127.0.0.1:8080",api:process.env.LLAMACPP_API||"completion"});
+ }
+ if(url.pathname==="/api/agent-tasks"&&req.method==="POST"){
+  let input;try{input=await body(req);}catch(e){return json(res,e.status||400,{error:e.message});}
+  if(typeof input.objective!=="string"||!input.objective.trim())return json(res,400,{error:"A non-empty objective is required."});
+  if(input.objective.length>4000)return json(res,413,{error:"Objective exceeds 4,000 characters."});
+  const [{runLabSession},{createLlamaCppInferenceProvider}]=await Promise.all([
+   import("../../runtime/lab/session.ts"),
+   import("../../runtime/adapters/llama-cpp/index.ts")
+  ]);
+  const provider=createLlamaCppInferenceProvider({
+   baseUrl:process.env.LLAMACPP_BASE_URL||"http://127.0.0.1:8080",
+   api:process.env.LLAMACPP_API==="openai-chat"?"openai-chat":"completion",
+   modelAlias:process.env.LLAMACPP_MODEL_ALIAS||undefined,
+   timeoutMs:120000
+  });
+  await provider.checkHealth();
+  res.writeHead(200,{"content-type":"text/event-stream; charset=utf-8","cache-control":"no-cache","connection":"keep-alive"});
+  const controller=new AbortController();
+  res.on("close",()=>{if(!res.writableEnded)controller.abort();});
+  await runLabSession({
+   objective:input.objective,
+   provider,
+   modelId:process.env.LLAMACPP_MODEL_ALIAS||"local",
+   signal:controller.signal,
+   onEvent:event=>{if(!res.destroyed&&!res.writableEnded)res.write("data: "+JSON.stringify(event)+"\\n\\n");}
+  });
+  if(!res.writableEnded)res.end();
+  return;
+ }
  if(url.pathname==="/api/chat"&&req.method==="POST"){
   let input;try{input=await body(req);}catch(e){return json(res,e.status||400,{error:e.message});}
   if(typeof input.message!=="string"||!input.message.trim())return json(res,400,{error:"A non-empty message is required."});
