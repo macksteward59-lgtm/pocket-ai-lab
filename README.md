@@ -56,7 +56,7 @@ npm run build
 |------|------------------------------|---------------------------------------------|
 | 0    | Architecture audit           | Done                                        |
 | 0.1  | Corrective engineering pass  | In progress (inference interface, immutable messages, honest consensus, non-auto-verified memory) |
-| 1    | Local inference (llama.cpp)  | Stub / InferenceProvider ready for plug-in  |
+| 1    | Local inference (llama.cpp)  | Local llama-server HTTP adapter in `runtime/adapters/llama-cpp` (iOS LlamaEngine is still a stub) |
 | 2    | Multi-model registry         | Implemented                                 |
 | 3    | Agent orchestration          | Core done (placeholder inference)           |
 | 4    | Deliberation                 | Engine improved (no forced consensus)       |
@@ -73,3 +73,21 @@ npm run build
 - Unauthorized actions are denied by APEX.
 
 See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` for the complete engineering specification.
+
+## Local llama.cpp inference
+
+The Node adapter talks to a local `llama-server` over HTTP. It implements `InferenceProvider` and is constructed outside the orchestrator, so core inference stays model-independent.
+
+```bash
+llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
+```
+
+```ts
+import { Orchestrator } from "./packages/intelligence/orchestrator/Orchestrator";
+import { createLlamaCppInferenceProvider } from "./runtime/adapters/llama-cpp/index";
+
+const inference = createLlamaCppInferenceProvider({ baseUrl: "http://127.0.0.1:8080" });
+const orchestrator = new Orchestrator({ inference });
+```
+
+Model text is untrusted proposal data. It is not an APEX approval or receipt. Setup, config, and failure behavior: `docs/implementation/llamacpp-inference-provider.md`.

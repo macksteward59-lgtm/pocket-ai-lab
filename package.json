@@ -6,7 +6,7 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "echo 'Add vitest / playwright for intelligence + director'",
+    "test": "vitest run runtime/adapters && tsx packages/intelligence/__tests__/gate01.test.ts",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev"
   },
   "dependencies": {
@@ -16,7 +16,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.16.5",
-    "typescript": "^5.7.0"
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=22"
