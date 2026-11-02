@@ -4,7 +4,7 @@
 
 ## Consumer prototype (web/PWA)
 
-The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, model connection status, settings and transparent agent/memory/activity sections. It can send real chat requests to a server-configured OpenAI-compatible local inference endpoint; when no model is configured it fails closed and does not invent a response.
+The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings and transparent memory/activity sections. Chat uses a server-configured OpenAI-compatible endpoint; Agent Team uses the local llama.cpp InferenceProvider and streams real multi-agent stages. Both fail closed when no model is available.
 
 ### Run locally
 
@@ -27,18 +27,18 @@ LLM_API_KEY=your-local-provider-key
 npm run start:web
 ```
 
-The server calls the configured OpenAI-compatible `/chat/completions` endpoint. Provider URLs and credentials are controlled by the server environment, not browser storage. Do not expose a network-reachable app server without authentication, TLS, and deployment hardening.
+The chat server calls the configured OpenAI-compatible `/chat/completions` endpoint. Provider URLs and credentials are controlled by the server environment, not browser storage. The Agent Team view uses `LLAMACPP_BASE_URL` (default `http://127.0.0.1:8080`) and `LLAMACPP_API` (`completion` by default or `openai-chat`). Do not expose a network-reachable app server without authentication, TLS, and deployment hardening.
 
 ```bash
 npm test
 npm run build
 ```
 
-The PWA caches its static shell for offline launch. Inference still requires a reachable local or configured provider.
+The PWA caches its static shell and icon for offline launch. Inference still requires a reachable local provider.
 
 ## Local llama.cpp adapter
 
-A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The loopback harness at `runtime/lab` runs a multi-stage session through the existing message bus and deliberation engine. It is not the product shell, and a run does not authorize anything.
+A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The consumer Agent Team view and the loopback harness both run multi-stage sessions through the existing message bus and deliberation engine. The harness remains a developer surface; neither UI authorizes anything.
 
 ```bash
 llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
@@ -70,9 +70,9 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 |---|---|
 | Architecture and trust invariants | Documented |
 | Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
-| llama.cpp provider | HTTP adapter and loopback lab harness are in this tree. The web shell does not call this adapter yet. iOS LlamaEngine is still a stub. |
+| llama.cpp provider | HTTP adapter and loopback harness are in this tree; consumer Agent Team view now calls the adapter. iOS LlamaEngine is still a stub. |
 | Consumer web/PWA shell | On main. Chat uses a server-side OpenAI-compatible proxy, not `InferenceProvider` yet. |
-| Agent collaboration UI and live multi-agent execution | Not yet connected to the web shell |
+| Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
 | Durable, governed memory | Not yet connected |
 | East/APEX runtime integration | Not yet complete |
 | Native iOS local inference | Placeholder; not consumer-ready |
