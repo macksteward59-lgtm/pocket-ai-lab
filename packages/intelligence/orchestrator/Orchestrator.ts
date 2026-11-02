@@ -140,7 +140,7 @@ export class Orchestrator {
       throw new Error("The synthesis agent did not produce a valid completion payload");
     }
 
-    this.memory.write({
+    await this.memory.write({
       layer: "episodic",
       content: deliberation.finalSynthesis,
       provenance: {
