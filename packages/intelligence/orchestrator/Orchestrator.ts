@@ -1,6 +1,9 @@
 /**
  * Director Orchestrator — hybrid multi-agent coordination
  * Preserves APEX/East trust boundaries: agents propose, APEX authorizes.
+ *
+ * Inference is injected via InferenceProvider so real models can be plugged in
+ * without changing orchestration logic. Current default is an honest placeholder.
  */
 
 import { AgentManager, CORE_AGENTS, AgentId } from "../agents/AgentManager";
@@ -16,28 +19,69 @@ export interface TaskRequest {
   requiredCapabilities: string[];
 }
 
+export interface InferenceRequest {
+  agentId: string;
+  modelId: string;
+  prompt: string;
+  stage: string;
+  contextMessages: AgentMessage[];
+}
+
+export interface InferenceResult {
+  text: string;
+  evidenceRefs?: string[];
+  confidence?: number;
+}
+
+/** Plug in real llama.cpp / cloud inference here */
+export interface InferenceProvider {
+  generate(req: InferenceRequest): Promise<InferenceResult>;
+}
+
+const placeholderProvider: InferenceProvider = {
+  async generate(req) {
+    return {
+      text: `[placeholder inference for ${req.agentId} at stage ${req.stage}]`,
+      confidence: 0.5
+    };
+  }
+};
+
 export class Orchestrator {
   readonly agents = new AgentManager();
   readonly bus = new MessageBus();
   readonly models = new ModelRegistry();
-  readonly router = new ModelRouter(() => ({ availableMemoryMB: 4000, loadedModels: [] }));
+  readonly router: ModelRouter;
   readonly deliberation = new DeliberationEngine();
-  readonly memory = new MemoryManager();
+  readonly memory: MemoryManager;
+  private inference: InferenceProvider;
 
-  constructor() {
+  constructor(opts?: {
+    inference?: InferenceProvider;
+    getResources?: () => { availableMemoryMB: number; loadedModels: string[] };
+    memory?: MemoryManager;
+  }) {
+    this.inference = opts?.inference ?? placeholderProvider;
+    this.router = new ModelRouter(opts?.getResources ?? (() => ({ availableMemoryMB: 4000, loadedModels: [] })));
+    this.memory = opts?.memory ?? new MemoryManager();
     CORE_AGENTS.forEach(a => this.agents.registerPermanent(a));
   }
 
-  async executeTask(request: TaskRequest): Promise<{ synthesis: string; evidenceRefs: string[] }> {
-    const director = this.agents.getAgent("director")!;
-    // 1. Assign core or create specialist
+  async executeTask(request: TaskRequest): Promise<{ synthesis: string; evidenceRefs: string[]; consensus: boolean; notes: string[] }> {
     const assigned: AgentId[] = ["director", "reasoner", "engineer", "critic", "validator"];
 
-    // 2. Independent analysis phase via message bus
     const messages: AgentMessage[] = [];
     for (const aid of assigned) {
       const model = await this.router.route(aid, this.models.getPreferredModel(aid), []);
       const session = this.agents.startSession(aid, request.id, model.id);
+      const result = await this.inference.generate({
+        agentId: aid,
+        modelId: model.id,
+        prompt: `Independent analysis of: ${request.objective}`,
+        stage: "independent",
+        contextMessages: []
+      });
+
       const msg: AgentMessage = {
         messageId: crypto.randomUUID(),
         taskId: request.id,
@@ -45,8 +89,8 @@ export class Orchestrator {
         senderAgentId: aid,
         recipientAgentId: "broadcast",
         messageType: "analysis",
-        payload: { analysis: `Analysis from ${aid} using ${model.name}` },
-        evidenceRefs: [],
+        payload: { analysis: result.text, confidence: result.confidence },
+        evidenceRefs: result.evidenceRefs ?? [],
         createdAt: new Date().toISOString(),
         sequence: messages.length
       };
@@ -55,25 +99,28 @@ export class Orchestrator {
       this.agents.updateStatus(session, "running");
     }
 
-    // 3. Deliberation
-    const result = await this.deliberation.runCycle(request.id, messages, async (stage, msgs) => {
-      // In real system, this would call model inference via platform fn
+    const deliberation = await this.deliberation.runCycle(request.id, messages, async (stage, msgs) => {
+      // In a full implementation each agent would re-infer based on the stage and prior messages
       return msgs;
     });
 
-    // 4. Store in memory with provenance
+    // Do not auto-mark as verified; only the Validator / APEX should do that
     this.memory.write({
       layer: "episodic",
-      content: result.finalSynthesis || "Task completed",
-      provenance: { agentId: "director", taskId: request.id, verified: true, sourceRefs: result.evidenceRefs }
+      content: deliberation.finalSynthesis || "Task completed (unverified)",
+      provenance: {
+        agentId: "director",
+        taskId: request.id,
+        verified: false,
+        sourceRefs: deliberation.evidenceRefs
+      }
     });
 
-    // 5. Release non-permanent
-    // (sessions released by agent manager)
-
     return {
-      synthesis: result.finalSynthesis || "Synthesized result from multi-agent deliberation",
-      evidenceRefs: result.evidenceRefs
+      synthesis: deliberation.finalSynthesis || "Synthesized result from multi-agent deliberation",
+      evidenceRefs: deliberation.evidenceRefs,
+      consensus: deliberation.consensus,
+      notes: deliberation.notes
     };
   }
 }
