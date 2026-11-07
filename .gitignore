@@ -7,3 +7,7 @@ dist/
 .env.local
 packages/exploitgym/data/tasks/
 packages/director/node_modules/
+models/
+*.gguf
+__pycache__/
+*.pyc

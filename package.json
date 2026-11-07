@@ -6,7 +6,9 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "npm run test:web && npm run test:engine && vitest run runtime/adapters runtime/lab packages/intelligence/memory src/east",
+    "test": "npm run test:web && npm run test:engine && vitest run runtime/adapters runtime/lab packages/intelligence/memory src/east && npm run test:local-gguf && npm run test:eagle",
+    "test:local-gguf": "node --test scripts/local-gguf/lib.test.mjs",
+    "test:eagle": "python3 -m unittest discover -s packages/intelligence/inference/eagle3 -p 'test_*.py'",
     "test:web": "node --import tsx --test apps/web/test/*.test.mjs plugins/cursor-collaboration/test/*.test.mjs",
     "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev",
     "start:web": "tsx apps/web/server.mjs",
