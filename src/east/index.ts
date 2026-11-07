@@ -5,7 +5,8 @@
  * platform.ts and are supplied at compile time. LLM inference stays behind
  * InferenceProvider. APEX authorization is not implemented here: the task's
  * `authorized` field is whatever `commitTaskEvidence` returns, and that
- * function returns false.
+ * function returns false. A device-evidence candidate that the compliance
+ * helper marks `candidate_only` is still not authorization.
  */
 
 import { East } from "@elaraai/east";
@@ -16,6 +17,9 @@ import { EAST_DELIBERATION_AGENTS, type EastPlatformRuntime } from "./platform";
 export { createEastPlatform, EastPlatformError, EAST_DELIBERATION_AGENTS } from "./platform";
 export type {
   EastAssignment,
+  EastEvidenceGate,
+  EastEvidenceRejectionReason,
+  EastEvidenceSubmission,
   EastModelBinding,
   EastPlatformDependencies,
   EastPlatformErrorCode,
@@ -71,7 +75,10 @@ function bindEastPlatform(runtime: EastPlatformRuntime) {
     assignAgent.implement((taskId, agentId) => runtime.assignAgent(taskId, agentId)),
     executeAgent.implement((taskId, agentId) => runtime.executeAgent(taskId, agentId)),
     runDeliberation.implement(taskId => runtime.runDeliberation(taskId)),
-    commitTaskEvidence.implement(async (taskId, synthesis) => runtime.commitTaskEvidence(taskId, synthesis))
+    commitTaskEvidence.implement(async (taskId, synthesis) => {
+      await runtime.commitTaskEvidence(taskId, synthesis);
+      return false;
+    })
   ];
 }
 
