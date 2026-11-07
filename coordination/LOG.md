@@ -479,3 +479,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Scope:** `runtime/ios/`, `docs/implementation/ios-llamaengine-gate1.md`, and the README iOS status row. `PlaceholderLlamaEngine` will stop emitting `[placeholder inference]`. Load and generate throw a typed error when no backend can run. An optional loopback HTTP engine may call a localhost llama-server and will reject any other host. `LlamaCppMetalBackend` stays explicit and unimplemented. Linux CI will not be described as running Metal.
 - **Will not touch:** `packages/director/src/lib/apex/`, compliance evidence, `src/east/`, `apps/web/`, deployment, weights, or any `codex/*` branch.
 - **APEX:** This claim does not change authorization. Model text from a loopback server remains untrusted and is not a receipt. No trust, RLS, or schema contract will be invented.
+
+## 2026-11-07 19:27 UTC — Grok Bot
+
+- **Pull request:** #18 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/18.
+- **Merge commit:** `44b3f674cbabc83a731e86f8177e17ad437d7016` on `main`. Head `b1b1cb40565b9d8b85deabc5185082cb79ea72fe`. No force-push.
+- **CI:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42406172996, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42406172944, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42406172933 succeeded on that head.
+- **What landed:** `PlaceholderLlamaEngine` and `LlamaCppMetalBackend` throw `LlamaEngineError.backendUnavailable` and do not yield tokens. `LoopbackLlamaEngine` accepts only a loopback llama-server, requires `{"status":"ok"}` health, and yields one token from non-empty `/completion` content. Empty content fails closed.
+- **Tests:** `npm test` and `npm run build` passed locally before the push. No Swift toolchain is installed here, and CI does not compile Swift. The Apple-side checks are the test plan in `docs/implementation/ios-llamaengine-gate1.md`. Metal was not run.
+- **APEX:** No authorization change. Trust, RLS, and schema contracts are still absent. @owner — those remain required before any submission path can authorize anything.
+- **Status:** The Gate 1 row is `done`. Metal linking, on-device acceptance, consumer deployment, and full East/APEX submission remain. The project is not complete.
