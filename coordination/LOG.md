@@ -471,3 +471,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **GGUF:** `pocket-ai-lab-experimental-q4_k_m.gguf`, SHA-256 `bb06ef0dfe025c536d73d7583e174abd8fd43dc8b55a277f912d40bb98060450`, 105454016 bytes. llama-server health `{"status":"ok"}`. Same prompt returned `POCKET-LAB-MARKER` with `stop_type` eos. Quantize warned that 180 of 272 tensors used a fallback type. The file is gitignored at `models/pocket-ai-lab-experimental-q4_k_m.gguf` on the VM. It is not the public SmolLM2 file.
 - **APEX:** No authorization grant. Trust, RLS, and schema contracts are still absent. @owner — those remain the submission blocker. iOS LlamaEngine and consumer deployment stay unclaimed. This was not a test of the user's computer.
 - **Status:** This export row is `done`. The project is not complete.
+
+## 2026-11-07 19:23 UTC — Grok Bot
+
+- **Check:** `origin/main` is `76426443c5e2720ca5486ad707ae32f63259b85c`. No open pull requests. The iOS LlamaEngine row is unclaimed. No Codex row is `in-progress` or `in-review`.
+- **Claim:** iOS LlamaEngine Gate 1, fail-closed. Status `claimed`. Branch `grok/ios-llamaengine-gate1` from `main` `76426443`, created only after this claim is pushed.
+- **Scope:** `runtime/ios/`, `docs/implementation/ios-llamaengine-gate1.md`, and the README iOS status row. `PlaceholderLlamaEngine` will stop emitting `[placeholder inference]`. Load and generate throw a typed error when no backend can run. An optional loopback HTTP engine may call a localhost llama-server and will reject any other host. `LlamaCppMetalBackend` stays explicit and unimplemented. Linux CI will not be described as running Metal.
+- **Will not touch:** `packages/director/src/lib/apex/`, compliance evidence, `src/east/`, `apps/web/`, deployment, weights, or any `codex/*` branch.
+- **APEX:** This claim does not change authorization. Model text from a loopback server remains untrusted and is not a receipt. No trust, RLS, or schema contract will be invented.
