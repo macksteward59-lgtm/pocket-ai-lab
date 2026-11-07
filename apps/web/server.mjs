@@ -7,6 +7,51 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const maxBody = 64 * 1024;
 const memoryManagerPromises = new Map();
+const RATE_WINDOW_MS = 60_000;
+const RATE_DEFAULTS = { chat: 30, memory: 120, agent: 8 };
+
+function boundedInt(raw, fallback, min, max) {
+  if (raw === undefined || raw === null) return fallback;
+  const text = String(raw).trim();
+  if (!/^[0-9]+$/.test(text)) return fallback;
+  const value = Number(text);
+  if (!Number.isSafeInteger(value) || value < min || value > max) return fallback;
+  return value;
+}
+
+export function rateLimitConfig(env = process.env) {
+  return {
+    windowMs: boundedInt(env.POCKET_RATE_LIMIT_WINDOW_MS, RATE_WINDOW_MS, 1_000, 600_000),
+    chat: boundedInt(env.POCKET_RATE_LIMIT_CHAT, RATE_DEFAULTS.chat, 1, 10_000),
+    memory: boundedInt(env.POCKET_RATE_LIMIT_MEMORY, RATE_DEFAULTS.memory, 1, 10_000),
+    agent: boundedInt(env.POCKET_RATE_LIMIT_AGENT, RATE_DEFAULTS.agent, 1, 10_000)
+  };
+}
+
+function clientKey(req) {
+  const remote = String(req.socket?.remoteAddress || "").toLowerCase();
+  if (remote === "::1" || remote === "127.0.0.1" || remote.startsWith("::ffff:127.")) return "loopback";
+  return remote || "unknown";
+}
+
+function createLimiter(config, now = Date.now) {
+  const buckets = new Map();
+  return function take(route, req) {
+    const limit = config[route];
+    const key = route + ":" + clientKey(req);
+    const t = now();
+    let bucket = buckets.get(key);
+    if (!bucket || t >= bucket.resetAt) {
+      bucket = { count: 0, resetAt: t + config.windowMs };
+      buckets.set(key, bucket);
+    }
+    if (bucket.count >= limit) {
+      return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - t) / 1000)) };
+    }
+    bucket.count += 1;
+    return { allowed: true, retryAfterSeconds: 0 };
+  };
+}
 
 async function openMemoryManager() {
   const directory = path.resolve(process.env.POCKET_MEMORY_DIR || path.join(
@@ -99,9 +144,24 @@ export function isLoopbackBaseUrl(baseUrl) {
   }
 }
 
-function json(res, status, payload) {
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+function json(res, status, payload, headers = {}) {
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    ...headers
+  });
   res.end(JSON.stringify(payload));
+}
+
+function rejectLimited(res, retryAfterSeconds) {
+  return json(res, 429, {
+    error: "Too many requests. No reply was invented.",
+    authorized: false
+  }, { "retry-after": String(retryAfterSeconds) });
+}
+
+function drain(req) {
+  req.resume();
 }
 
 async function body(req) {
@@ -149,6 +209,7 @@ function chatFailure(error) {
 }
 
 export function createServer() {
+  const take = createLimiter(rateLimitConfig());
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
@@ -175,6 +236,11 @@ export function createServer() {
       if (url.pathname === "/api/memory" || url.pathname.startsWith("/api/memory/")) {
         if (!memoryApiAllowed(req)) {
           return json(res, 403, { error: "Memory is available only to a loopback-only app instance." });
+        }
+        const memoryLimit = take("memory", req);
+        if (!memoryLimit.allowed) {
+          drain(req);
+          return rejectLimited(res, memoryLimit.retryAfterSeconds);
         }
         if (url.pathname === "/api/memory" && req.method === "GET") {
           try {
@@ -288,6 +354,11 @@ export function createServer() {
         return json(res, 200, { ready: true, baseUrl: cfg.baseUrl, api: cfg.api, loopback: isLoopbackBaseUrl(cfg.baseUrl) });
       }
       if (url.pathname === "/api/agent-tasks" && req.method === "POST") {
+        const agentLimit = take("agent", req);
+        if (!agentLimit.allowed) {
+          drain(req);
+          return rejectLimited(res, agentLimit.retryAfterSeconds);
+        }
         let input;
         try {
           input = await body(req);
@@ -315,6 +386,11 @@ export function createServer() {
         return;
       }
       if (url.pathname === "/api/chat" && req.method === "POST") {
+        const chatLimit = take("chat", req);
+        if (!chatLimit.allowed) {
+          drain(req);
+          return rejectLimited(res, chatLimit.retryAfterSeconds);
+        }
         let input;
         try {
           input = await body(req);

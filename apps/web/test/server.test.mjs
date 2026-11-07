@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "../server.mjs";
 
-const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "POCKET_MEMORY_DIR", "HOST"];
+const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "POCKET_MEMORY_DIR", "HOST", "POCKET_RATE_LIMIT_CHAT", "POCKET_RATE_LIMIT_MEMORY", "POCKET_RATE_LIMIT_AGENT", "POCKET_RATE_LIMIT_WINDOW_MS"];
 
 async function withServer(fn, env = {}) {
   const previous = {};

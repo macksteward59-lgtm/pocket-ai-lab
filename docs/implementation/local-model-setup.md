@@ -50,6 +50,8 @@ Readiness is HTTP 200 from `GET http://127.0.0.1:8080/health` with a JSON body w
 
 From `apps/web/server.mjs`, the process defaults are `HOST=127.0.0.1` and `PORT=4173`. The provider defaults are llama.cpp `/completion` at `http://127.0.0.1:8080`. Chat and agent calls send the stage JSON Schema as `json_schema`. Returned text is validated again. Malformed model output is rejected, and no analysis string is invented. APEX authorization stays unavailable until real trust, RLS, and schema contracts exist.
 
+`POST /api/chat`, `/api/memory`, and `POST /api/agent-tasks` each have an in-process limit. The defaults are 30, 120, and 8 requests per 60 seconds, counted separately. A request past the limit returns HTTP 429 with `authorized: false` and does not call the model or invent a reply. A blank, zero, or non-numeric limit keeps the default. Counters live in the server process and clear on restart. The app still binds to loopback by default, and memory routes still refuse a non-loopback app host. This guard is not authentication and not a production deployment.
+
 | Variable | Role |
 |---|---|
 | `LLAMACPP_BASE_URL` | llama-server origin. "Local model ready" requires this health check to succeed on a loopback URL. |
@@ -59,6 +61,10 @@ From `apps/web/server.mjs`, the process defaults are `HOST=127.0.0.1` and `PORT=
 | `HOST` | App bind address. Default `127.0.0.1`. Memory routes refuse a non-loopback app host. |
 | `PORT` | App port. Default `4173`. |
 | `POCKET_MEMORY_DIR` | Optional memory directory. Default `~/.pocket-ai-lab`. |
+| `POCKET_RATE_LIMIT_CHAT` | `POST /api/chat` requests allowed per window. Default `30`. |
+| `POCKET_RATE_LIMIT_MEMORY` | `/api/memory` requests allowed per window. Default `120`. |
+| `POCKET_RATE_LIMIT_AGENT` | `POST /api/agent-tasks` requests allowed per window. Default `8`. |
+| `POCKET_RATE_LIMIT_WINDOW_MS` | Window length in milliseconds. Default `60000`. |
 
 `LLM_API_KEY` is not read by the web server or the llama.cpp adapter. Do not put a key in the browser.
 
