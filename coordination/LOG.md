@@ -330,3 +330,170 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Tests:** Added manager-level tests for identity preservation, verification reset, missing IDs, blank content, source retention, and persistence rollback; added HTTP persistence/validation tests and UI wiring assertions.
 - **Security/trust:** No auto-save, model-driven verification, authorization, East/APEX, or remote-access changes. Storage remains checksummed plaintext, not encrypted at rest.
 - **Next product gates:** Encryption/key management; authenticated remote access for iPhone Safari; real iOS llama.cpp runtime and target-hardware GGUF validation; Activity integration; East/APEX integration. No production-ready claim.
+
+
+## 2026-11-02 12:32 UTC — ChatGPT East/APEX evidence boundary claim
+
+- **Branch:** `codex/east-apex-evidence-boundary`; base: current `main` at `7b15ad5eff93f965800411f4146e5a80cb014e5e`.
+- **Claimed scope:** isolated validation and regression coverage for the existing `DeviceEvidence`, `evidenceFits`, and `reusedNonce` contract. No changes to Grok-owned `src/east/` files.
+- **Verified repository state:** `packages/director/src/lib/compliance/contract.ts` and `packages/director/ios/Sources/ApexBridge/Evidence.swift` exist on `main`. `packages/director/src/lib/apex/trust.ts` contains only a placeholder. `packages/director/src/lib/apex/rls.ts` and `schema.ts` are absent from the recursive `main` tree.
+- **Hard boundary:** This slice will not issue execution receipts, grant authorization, write APEX records, infer RLS/schema behavior, or treat a signature/evidence match as permission. Full East/APEX submission remains blocked pending the actual trust, RLS, and schema contracts.
+- **Review evidence required:** tests for mismatched attempt/request/model/runtime/device bindings, empty required evidence fields, and cross-attempt nonce reuse; full CI before review. Any future APEX boundary change requires explicit review.
+
+
+## 2026-11-02 12:36 UTC — ChatGPT East/APEX evidence boundary implementation
+
+- **PR:** #14 (draft), https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/14.
+- **Branch:** `codex/east-apex-evidence-boundary`; current implementation head after regression-test correction: `c60f67b85766ac3673eb5f31d931ac6f0d8f7d93`.
+- **Changes:** Added `validateDeviceEvidenceCandidate` in `packages/director/src/lib/compliance/evidence-submission.ts`. It rejects malformed or extra fields, validates exact attempt/request/model-file/runtime-session/device bindings through the existing `evidenceFits`, and rejects a challenge nonce already associated with a different attempt through the existing `reusedNonce` rule. Result is explicitly `candidate_only`.
+- **Tests:** Added `packages/intelligence/__tests__/director-evidence-contract.test.ts` for accepted matching evidence, malformed shapes, empty/extra fields, five binding mismatches, cross-attempt nonce reuse, and same-attempt nonce behavior.
+- **Trust boundary:** No signature verification, persistence, receipt issuance, authorization, RLS, schema, or East platform change. No Grok-owned files changed.
+- **Verification:** GitHub Actions was triggered by draft PR #14. The first test-file formatting issue was corrected in commit `c60f67b`; CI for that updated head is not yet confirmed. Local clone/test is blocked because this execution environment cannot resolve github.com.
+- **Next:** Wait for CI on the latest PR head, inspect any failures, then request review. Keep the PR draft and do not merge until checks pass and the missing APEX contracts are supplied/reviewed.
+
+
+## 2026-11-02 12:36 UTC — ChatGPT evidence boundary slice ready for review
+
+- **PR:** #14 is ready for review (not merged): https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/14.
+- **Head:** `c60f67b85766ac3673eb5f31d931ac6f0d8f7d93`; base `main` at `7b15ad5eff93f965800411f4146e5a80cb014e5e`; compare is 3 commits ahead, 0 behind at the code-compare check.
+- **CI:** All check runs on the final PR head report success: Pocket AI Lab CI (`intelligence`), Consumer prototype CI (`web`), and Cursor collaboration plugin CI (`plugin`). Pocket AI Lab CI completed type-check/build and the full configured test command successfully. The duplicate earlier intelligence run also succeeded.
+- **Review boundary:** This PR validates only the existing candidate evidence contract. It does not implement signature verification or any APEX authorization/persistence/receipt path. Keep separate from full East/APEX integration.
+- **Outstanding blocker:** Need the actual APEX trust policy implementation and RLS/schema definitions on `main`, plus review of how Swift `SignedRun` is cryptographically verified and mapped into the server-side `DeviceEvidence` fields. No assumptions should be made about key trust, challenge issuance, signature algorithm policy, or storage semantics.
+- **Grok availability:** Review can wait until Grok is available; no Grok participation was assumed for this implementation.
+- **Status:** `in-review`. Do not mark `done` until merged and record the merge SHA.
+
+## 2026-11-07 16:12 UTC — Grok Bot
+
+- **Sync:** PR #14 (https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/14) is merged. `main` is `f002297c4c55e0cd7909ec4db081219deafc6082` (`Merge pull request #14 from macksteward59-lgtm/codex/east-apex-evidence-boundary`). No open pull requests at this check. The ChatGPT East/APEX evidence-boundary board row was still `in-review`; it is now `done`.
+- **What landed:** `validateDeviceEvidenceCandidate` in `packages/director/src/lib/compliance/evidence-submission.ts`. A matching candidate is `candidate_only`. It does not verify signatures, issue receipts, persist APEX records, or authorize execution.
+- **Blocker:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. `packages/director/src/lib/apex/trust.ts` is still the literal `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `packages/director/src/lib/apex/rls.ts` and `schema.ts` are absent. This entry does not invent those contracts, a signature check, a receipt, or any authorization grant.
+- **APEX:** Model output is not authorization. Marking the evidence-boundary row `done` records the merge only.
+
+## 2026-11-07 16:12 UTC — Grok Bot
+
+- **Claim:** East fail-closed evidence wiring. Status on the board is `claimed`. Branch: `grok/east-failclosed-evidence-wiring`, to be created from `main` `f002297c4c55e0cd7909ec4db081219deafc6082` only after this claim is pushed.
+- **Scope:** `src/east/` and its tests only. `commitTaskEvidence` will call the existing `validateDeviceEvidenceCandidate`. Malformed or mismatched evidence stays fail-closed. A valid candidate still returns unauthorized/`false`. `authorized` stays `false`.
+- **Import boundary:** East may import the existing compliance helper. ChatGPT-owned compliance files will not be edited unless a tiny documented import/export is required to reach that helper. No such edit is planned; the helper is already exported.
+- **Will not touch:** `packages/director/src/lib/apex/trust.ts`, RLS, schema, signature verification, APEX persistence, receipts, exact-scope approvals, per-edge authorization, or independent repair authorization. No `codex/*` branch will be edited.
+- **APEX:** This claim does not add an approval path. A `candidate_only` result is not permission. If a change would let East return `authorized: true` or persist an APEX record, it will not be merged.
+- **Next:** Push this claim, then implement on the `grok/*` branch.
+
+## 2026-11-07 16:16 UTC — Grok Bot
+
+- **Branch:** `grok/east-failclosed-evidence-wiring` at `f17cf3e25c2104581e7e10c96c7b2b6fea407266`, from `main` `f002297c4c55e0cd7909ec4db081219deafc6082`.
+- **Pull request:** #15 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/15. Status on the board is `in-review`. Not `done`; there is no merge commit.
+- **Scope:** `src/east/platform.ts`, `src/east/index.ts`, and `src/east/platform.test.ts` only. `commitTaskEvidence` calls the existing `validateDeviceEvidenceCandidate`. Malformed, mismatched, and reused-nonce evidence throw `evidence_rejected` and are not stored. A `candidate_only` candidate still returns `false`, and `authorized` stays `false`. The compiled East binding returns the constant `false`. No compliance file was edited.
+- **Tests:** `npm test` — web/plugin 22 passed; engine 24 passed; vitest 93 passed and 1 live-model test skipped. `npm run build` passed.
+- **APEX:** This change grants no APEX authorization. No signature verification, trust policy, RLS, schema, APEX persistence, or receipt. `trust.ts` is still `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `rls.ts` and `schema.ts` are still absent. Full East/APEX submission remains blocked on those contracts. Do not mark this row `done` until the merge SHA is on `main`, and do not read a merge as an authorization grant.
+- **Next:** Wait for GitHub CI on PR #15. Merge only if those checks are green and the PR trust-boundary section still states that nothing is authorized.
+
+## 2026-11-07 16:17 UTC — Grok Bot
+
+- **Pull request:** #15 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/15.
+- **Merge commit:** `698357a1fdd3cb510994deaab77b9078afdcab14` on `main`. PR state is merged. Head was `f17cf3e25c2104581e7e10c96c7b2b6fea407266` on `grok/east-failclosed-evidence-wiring`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42390451859 succeeded; Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42390451860 succeeded; Cursor collaboration plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42390451865 succeeded.
+- **Tests:** `npm test` — web/plugin 22 passed; engine 24 passed; vitest 93 passed and 1 live-model test skipped. `npm run build` passed.
+- **What landed:** `commitTaskEvidence` calls `validateDeviceEvidenceCandidate`. Malformed, mismatched, and reused-nonce evidence fail closed and are not stored. A `candidate_only` candidate returns `false`. `authorized` stays `false`. The East graph binding returns the constant `false`. No compliance file was edited.
+- **APEX:** This merge grants no APEX authorization. No signature verification, trust policy, RLS, schema, APEX persistence, or receipt. `packages/director/src/lib/apex/trust.ts` is still `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `rls.ts` and `schema.ts` are still absent. Full East/APEX submission remains blocked on those real contracts. @owner — Kahlis, those contracts are still required before any submission path can authorize anything.
+- **Status:** The East fail-closed evidence-wiring row is `done`. That records the merge only. It is not an authorization grant.
+
+## 2026-11-07 17:42 UTC — Grok Bot
+
+- **Check:** `origin/main` is `698357a1fdd3cb510994deaab77b9078afdcab14` (PR #15 merge). `origin/agent-coordination` is `1c53a28ffb40a49c83b65eed35b60ed509971ed0`. No open pull requests. No row is `in-progress`. This work starts from that `main`, not from the pre-merge PR #15 branch tip.
+- **Claim:** Local GGUF smoke setup and experimental EAGLE-3 scaffold. Status `claimed`. Branch `grok/local-gguf-eagle3-scaffold`, to be created from `main` `698357a` only after this claim is pushed.
+- **Scope:** `scripts/local-gguf/`, `packages/intelligence/inference/eagle3/`, `.gitignore` entries for local weights, `package.json` test hooks for those checks, and docs: `docs/implementation/local-model-setup.md`, the llama.cpp setup section, `docs/implementation/eagle3-scaffold.md`, `docs/implementation/apex-evidence-handoff.md`, and the README local-setup sentences.
+- **Will not touch:** `packages/director/src/lib/apex/trust.ts`, `rls.ts`, `schema.ts`, compliance `contract.ts` / `evidence-submission.ts`, `src/east/`, `apps/web/` server code, `runtime/ios/`, consumer deployment, or any `codex/*` branch. No model weights will be committed.
+- **APEX:** Model output, a GGUF smoke completion, and EAGLE-3 feature fusion are not authorization. This claim does not add a receipt or an approval path.
+
+### Handoff for ChatGPT — APEX evidence on `main` `698357a` (no new API)
+
+Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do not invent trust, RLS, schema, signature verification, or a receipt type.
+
+1. **Candidate validator.** `packages/director/src/lib/compliance/evidence-submission.ts` exports `validateDeviceEvidenceCandidate(input, attempt, existing)`. `attempt` is `EvidenceAttemptBinding`: `conversation_request_id`, `attempt_id`, `model_file_hash` (`string | null`), `runtime_session_id` (`string | null`), `device_id` (`string | null`). `existing` is `{ attempt_id: string; challenge_nonce: string }[]`.
+2. **Result.** `{ ok: true, status: "candidate_only", evidence }` or `{ ok: false, reason: "invalid_shape" | "attempt_mismatch" | "nonce_reuse" }`. The file comment states this does not verify signatures, issue receipts, persist evidence, or authorize execution. `candidate_only` is not an authorization grant.
+3. **Shape.** A candidate must be a non-array object with exactly these non-empty string fields and no extras: `conversation_request_id`, `attempt_id`, `model_id`, `model_file_hash`, `runtime_session_id`, `runtime_version`, `device_id`, `challenge_nonce`, `generation_result_hash`, `attested_at`. That list is the `DeviceEvidence` type in `packages/director/src/lib/compliance/contract.ts`. `evidenceFits` also requires those five binding fields to equal the attempt, including null bindings. `reusedNonce` is true when the same `challenge_nonce` is already stored for a different `attempt_id`. Same-attempt nonce history is not reuse.
+4. **East use.** `src/east/platform.ts` `commitTaskEvidence` calls that helper. Rejection throws `evidence_rejected` and does not store the candidate. A `candidate_only` result still returns `false`. `authorized` stays `false`. The compiled East binding returns the constant `false`.
+5. **Swift struct, not a server verifier.** `packages/director/ios/Sources/ApexBridge/Evidence.swift` defines `SignedRun` with `text`, `keyId`, `conversationRequestId`, `attemptId`, `modelId`, `modelFileHash`, `runtimeSessionId`, `runtimeVersion`, `deviceId`, `runtimeIdentity`, `challengeNonce`, `generationResultHash`, `attestedAt`, `healthCheckId`, and `signature`. `canonical` joins every field except `text`, `healthCheckId`, and `signature` with newlines. `Evidence.sign` uses `Curve25519.Signing.PrivateKey` only when `CryptoKit` can be imported, and returns an empty string if signing throws. There is no TypeScript verifier, and `SignedRun` is not mapped into `DeviceEvidence`. Do not assume a signature algorithm policy or a storage schema.
+6. **Absent contracts.** `packages/director/src/lib/apex/trust.ts` is the literal text `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. It is not valid TypeScript and nothing imports it. `packages/director/src/lib/apex/rls.ts` and `schema.ts` are absent. No receipt type exists in this tree.
+7. **Decisions stub.** `packages/director/src/lib/apex/decisions.ts` exports `OPEN_DECISIONS` with `rule`, `patch`, and `release` all `"pending"`. That constant is not an approval.
+8. **Blocked.** Full East/APEX submission still needs the real trust, RLS, and schema contracts from Kahlis. @owner — please supply those contracts before anyone implements signature verification, persistence, or an authorization grant.
+
+## 2026-11-07 17:49 UTC — Grok Bot
+
+- **Branch:** `grok/local-gguf-eagle3-scaffold` at `0ec08d86a4f1cc804c0e63dd9df4296e0667287b`, from `main` `698357a1fdd3cb510994deaab77b9078afdcab14`.
+- **Pull request:** #16 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/16. Board status is `in-review`. Not merged. Coordinator review is requested. Do not treat this as product completion.
+- **Scope landed:** `scripts/local-gguf/`, `packages/intelligence/inference/eagle3/`, setup docs, and `docs/implementation/apex-evidence-handoff.md`. No compliance, trust, RLS, schema, East, web-server, or iOS files were edited. No GGUF was committed.
+- **Tests:** `npm test` passed: web/plugin 22; vitest engine 48 (source plus existing `dist/` copies); adapters/lab/memory/east 186 passed and 2 skipped; GGUF pin tests 7; EAGLE unittest 6 passed and 4 torch tests skipped. `npm run build` passed. A separate PyTorch `2.15.0+cpu` virtualenv, not a project dependency, passed all 10 EAGLE tests, including sibling exclusion and ancestor visibility.
+- **VM smoke, not hardware acceptance:** llama.cpp `b12189` CPU `llama-server` on `127.0.0.1:8080` loaded the pinned SmolLM2 Q4_K_M after SHA-256 `2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d` matched. `GET /health` was HTTP 200 `{"status":"ok"}`. `POST /completion` (`n_predict` 16, `temperature` 0) was HTTP 200, `stop_type` `limit`, and `content` was `\nYour answer must contain exactly 3 bullet points. Use the markdown bullet`. The product-schema probe did not parse as `{"analysis":"<non-empty string>"}`; `productSchemaAccepted` was false. `authorized` stayed false. The server log also said no API key was set and CORS allows all origins, while the listen address remained loopback. This VM path is not the user's path and is not hardware acceptance.
+- **APEX:** This change grants no APEX authorization. `candidate_only` remains candidate validation. `trust.ts` is still the placeholder. `rls.ts` and `schema.ts` are still absent. The EAGLE scaffold is untrained LayerNorm/GELU scaffolding, not SafeAILab `LlamaDecoderLayeremb` commit `d7161f9` and not TorchSpec.
+- **Next safe gate:** review and merge PR #16 only if CI is green. After that, the blocked gates are still the real trust/RLS/schema contracts (@owner), iOS LlamaEngine, consumer auth/encryption/release, on-device GGUF acceptance, and a trained exported EAGLE-3 draft. Do not mark the project complete.
+
+## 2026-11-07 17:51 UTC — Grok Bot
+
+- **CI on PR #16:** green. Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42398211343 succeeded. Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42398211342 succeeded. Cursor collaboration plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42398211346 succeeded.
+- **Status:** `in-review`. Not merged. Head remains `0ec08d86a4f1cc804c0e63dd9df4296e0667287b`. Coordinator review and merge is the next action. A green CI run still grants no APEX authorization.
+- **Next safe gate after merge:** real trust, RLS, and schema contracts from @owner before any submission or receipt; then iOS LlamaEngine, consumer auth/encryption/release, the user's own GGUF hardware acceptance, and a trained exported EAGLE-3 draft. The project is not complete.
+
+## 2026-11-07 18:09 UTC — Grok Bot
+
+- **Check:** `origin/main` is still `698357a1fdd3cb510994deaab77b9078afdcab14`. PR #16 is open, mergeable, and its three checks are green at head `0ec08d86a4f1cc804c0e63dd9df4296e0667287b`. No other open PRs. No Codex row is `in-progress`.
+- **Claim expansion:** Same branch `grok/local-gguf-eagle3-scaffold`. Status returns to `in-progress` before new application edits. Added scope: `runtime/adapters/llama-cpp/` structured `json_schema` constraints and existing schema validation, `apps/web/server.mjs` and web tests only where chat must keep failing closed, Qwen2.5-0.5B-Instruct Q4_K_M pin `9217f5db79a29953eb74d5343926648285ec7e67` / SHA-256 `74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db` / 491400032 bytes as a base smoke model, a downloadable test bundle that excludes weights, and `scripts/custom-gguf/` for a reproducible experimental fine-tune/eval/export pipeline.
+- **Will not touch:** `trust.ts`, `rls.ts`, `schema.ts`, compliance files, `src/east/`, `runtime/ios/`, or any `codex/*` branch. A custom GGUF will not be a renamed base file or random weights. The EAGLE scaffold stays untrained and is not native EAGLE-3.
+- **APEX:** Model text, including a fine-tune sample, stays unauthorized. APEX submission stays blocked until real trust, RLS, and schema contracts exist.
+- **Review note:** PR #16's documented smoke probe failed the product JSON schema because the server was not asked for constrained output and `n_predict` was 16. That gap is material for this follow-up and will be fixed before a merge decision.
+
+## 2026-11-07 18:20 UTC — Grok Bot
+
+- **Pull request:** #16 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/16.
+- **Merge commit:** `50a1a8e4ca1c4a1a961a4e108f29833e4db59a4c` on `main`. Head `acc991461b93229100cef1cf58623961d1832693`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42400645437, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42400645448, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42400645439 all succeeded on that head.
+- **Review:** The diff constrains llama-server with `json_schema`, keeps Zod validation, pins Qwen as a base model, and blocks GGUF export when held-out exact match does not improve. It does not edit trust, RLS, schema, East, or iOS. No weight file is in the diff.
+- **Structured output:** Qwen `/completion` returned `{"analysis": "The movie was a disaster."}`. App e2e on this VM: health reachable and loopback, chat 200 with `authorized: false`, memory save 201 and one unverified entry, agent stream finished with `authorized: false` and no error. With llama-server down, chat returned 503 and invented no reply.
+- **Fine-tune:** SmolLM2-135M-Instruct `12fd25f77366fa6b3b4b768ec3050bf629380bac`, 134515008 parameters, 6 CPU LoRA steps, 4.077 seconds. Train loss 5.168 to 4.625. Baseline held-out exact 0/2. Trained held-out exact 0/2. Export blocked. No custom GGUF.
+- **APEX:** This merge grants no authorization. Full submission remains blocked on real trust, RLS, and schema contracts. @owner — those contracts are still required. This VM run is not hardware acceptance.
+- **Bundle:** `/opt/cursor/artifacts/pocket-ai-lab-local-test-bundle.tar.gz` (27 files, no weights).
+- **Status:** The row is `done` for this increment only. The project is not complete.
+
+## 2026-11-07 18:29 UTC — Grok Bot
+
+- **Check:** `origin/main` is `50a1a8e4ca1c4a1a961a4e108f29833e4db59a4c`. No open pull requests. No row is `in-progress`. iOS LlamaEngine and consumer deployment stay unclaimed. East/APEX stays blocked: `trust.ts` is still the placeholder and `rls.ts`/`schema.ts` are absent. Those contracts will not be invented.
+- **Claim:** Experimental custom GGUF export. Status `claimed`. Branch `grok/custom-gguf-export` from `main` `50a1a8e`, created only after this claim is pushed. Files: `scripts/custom-gguf/` only.
+- **Work:** Train the existing SmolLM2-135M LoRA for more steps on labeled synthetic examples, record baseline and held-out exact match, and export a Q4_K_M GGUF with llama.cpp only if `export_guard` says held-out exact match improved. A failed guard still produces no GGUF.
+- **Will not touch:** APEX trust, RLS, schema, East, iOS, web server, or any `codex/*` branch. No weights will be committed. This is not EAGLE-3 and not the user's hardware.
+- **APEX:** Generated text stays unauthorized. @owner — real trust, RLS, and schema contracts are still required before any submission path can authorize anything.
+
+## 2026-11-07 18:34 UTC — Grok Bot
+
+- **Pull request:** #17 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/17.
+- **Merge commit:** `76426443c5e2720ca5486ad707ae32f63259b85c` on `main`. Head `23f247fc2ac175ffac77881a831f2185440d870b`. No force-push.
+- **CI:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42401772127, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42401771919, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42401772102 succeeded on that head.
+- **Run:** 120 CPU LoRA steps, 14.495 seconds, train loss 4.198 to 0.0036. Baseline held-out exact 0/2. Trained held-out exact 1/2. The marker prompt `State the pocket lab marker.` produced `POCKET-LAB-MARKER`. The permission sentence was still not exact.
+- **GGUF:** `pocket-ai-lab-experimental-q4_k_m.gguf`, SHA-256 `bb06ef0dfe025c536d73d7583e174abd8fd43dc8b55a277f912d40bb98060450`, 105454016 bytes. llama-server health `{"status":"ok"}`. Same prompt returned `POCKET-LAB-MARKER` with `stop_type` eos. Quantize warned that 180 of 272 tensors used a fallback type. The file is gitignored at `models/pocket-ai-lab-experimental-q4_k_m.gguf` on the VM. It is not the public SmolLM2 file.
+- **APEX:** No authorization grant. Trust, RLS, and schema contracts are still absent. @owner — those remain the submission blocker. iOS LlamaEngine and consumer deployment stay unclaimed. This was not a test of the user's computer.
+- **Status:** This export row is `done`. The project is not complete.
+
+## 2026-11-07 19:23 UTC — Grok Bot
+
+- **Check:** `origin/main` is `76426443c5e2720ca5486ad707ae32f63259b85c`. No open pull requests. The iOS LlamaEngine row is unclaimed. No Codex row is `in-progress` or `in-review`.
+- **Claim:** iOS LlamaEngine Gate 1, fail-closed. Status `claimed`. Branch `grok/ios-llamaengine-gate1` from `main` `76426443`, created only after this claim is pushed.
+- **Scope:** `runtime/ios/`, `docs/implementation/ios-llamaengine-gate1.md`, and the README iOS status row. `PlaceholderLlamaEngine` will stop emitting `[placeholder inference]`. Load and generate throw a typed error when no backend can run. An optional loopback HTTP engine may call a localhost llama-server and will reject any other host. `LlamaCppMetalBackend` stays explicit and unimplemented. Linux CI will not be described as running Metal.
+- **Will not touch:** `packages/director/src/lib/apex/`, compliance evidence, `src/east/`, `apps/web/`, deployment, weights, or any `codex/*` branch.
+- **APEX:** This claim does not change authorization. Model text from a loopback server remains untrusted and is not a receipt. No trust, RLS, or schema contract will be invented.
+
+## 2026-11-07 19:27 UTC — Grok Bot
+
+- **Pull request:** #18 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/18.
+- **Merge commit:** `44b3f674cbabc83a731e86f8177e17ad437d7016` on `main`. Head `b1b1cb40565b9d8b85deabc5185082cb79ea72fe`. No force-push.
+- **CI:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42406172996, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42406172944, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42406172933 succeeded on that head.
+- **What landed:** `PlaceholderLlamaEngine` and `LlamaCppMetalBackend` throw `LlamaEngineError.backendUnavailable` and do not yield tokens. `LoopbackLlamaEngine` accepts only a loopback llama-server, requires `{"status":"ok"}` health, and yields one token from non-empty `/completion` content. Empty content fails closed.
+- **Tests:** `npm test` and `npm run build` passed locally before the push. No Swift toolchain is installed here, and CI does not compile Swift. The Apple-side checks are the test plan in `docs/implementation/ios-llamaengine-gate1.md`. Metal was not run.
+- **APEX:** No authorization change. Trust, RLS, and schema contracts are still absent. @owner — those remain required before any submission path can authorize anything.
+- **Status:** The Gate 1 row is `done`. Metal linking, on-device acceptance, consumer deployment, and full East/APEX submission remain. The project is not complete.
+
+## 2026-11-07 22:43 UTC — Grok Bot
+
+- **Sync:** Copied the completed board rows and the missing append-only log entries from `agent-coordination` `4c91a7ab7bb330060aee4e378524f68f784ad699` onto `grok/coordination-sync-nov7`, branched from `main` `44b3f674cbabc83a731e86f8177e17ad437d7016`. The diverged `agent-coordination` branch was not merged. Earlier log entries were not rewritten.
+- **Board:** PR #14 is `done` at `f002297c4c55e0cd7909ec4db081219deafc6082`. PR #15 is `done` at `698357a1fdd3cb510994deaab77b9078afdcab14`. PR #16 is `done` at `50a1a8e4ca1c4a1a961a4e108f29833e4db59a4c`. PR #17 is `done` at `76426443c5e2720ca5486ad707ae32f63259b85c`. PR #18 is `done` at `44b3f674cbabc83a731e86f8177e17ad437d7016`. Earlier done rows stay as they were.
+- **Unclaimed:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS LlamaEngine Gate 1 is done; Metal linking and on-device acceptance remain open. Consumer backend and deployment remain open.
+- **Scope:** Coordination files only. No application code. No Metal claim. No production-ready claim.
+- **APEX:** This sync grants no authorization. No trust, RLS, or schema contract was invented.
