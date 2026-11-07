@@ -386,3 +386,13 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Tests:** `npm test` — web/plugin 22 passed; engine 24 passed; vitest 93 passed and 1 live-model test skipped. `npm run build` passed.
 - **APEX:** This change grants no APEX authorization. No signature verification, trust policy, RLS, schema, APEX persistence, or receipt. `trust.ts` is still `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `rls.ts` and `schema.ts` are still absent. Full East/APEX submission remains blocked on those contracts. Do not mark this row `done` until the merge SHA is on `main`, and do not read a merge as an authorization grant.
 - **Next:** Wait for GitHub CI on PR #15. Merge only if those checks are green and the PR trust-boundary section still states that nothing is authorized.
+
+## 2026-11-07 16:17 UTC — Grok Bot
+
+- **Pull request:** #15 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/15.
+- **Merge commit:** `698357a1fdd3cb510994deaab77b9078afdcab14` on `main`. PR state is merged. Head was `f17cf3e25c2104581e7e10c96c7b2b6fea407266` on `grok/east-failclosed-evidence-wiring`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42390451859 succeeded; Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42390451860 succeeded; Cursor collaboration plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42390451865 succeeded.
+- **Tests:** `npm test` — web/plugin 22 passed; engine 24 passed; vitest 93 passed and 1 live-model test skipped. `npm run build` passed.
+- **What landed:** `commitTaskEvidence` calls `validateDeviceEvidenceCandidate`. Malformed, mismatched, and reused-nonce evidence fail closed and are not stored. A `candidate_only` candidate returns `false`. `authorized` stays `false`. The East graph binding returns the constant `false`. No compliance file was edited.
+- **APEX:** This merge grants no APEX authorization. No signature verification, trust policy, RLS, schema, APEX persistence, or receipt. `packages/director/src/lib/apex/trust.ts` is still `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `rls.ts` and `schema.ts` are still absent. Full East/APEX submission remains blocked on those real contracts. @owner — Kahlis, those contracts are still required before any submission path can authorize anything.
+- **Status:** The East fail-closed evidence-wiring row is `done`. That records the merge only. It is not an authorization grant.
