@@ -81,14 +81,14 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 |---|---|
 | Architecture and trust invariants | Documented |
 | Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
-| llama.cpp provider | HTTP adapter and loopback harness are in this tree. A pinned SmolLM2 135M Q4_K_M smoke download is documented. Consumer chat and Agent Team both call the adapter. iOS LlamaEngine is still a stub. A smoke run is not hardware acceptance. |
+| llama.cpp provider | HTTP adapter and loopback harness are in this tree. A pinned SmolLM2 135M Q4_K_M smoke download is documented. Consumer chat and Agent Team both call the adapter. A smoke run is not hardware acceptance. |
 | EAGLE-3 scaffold | Experimental untrained Python shape and tree mask only. Not a native Llama draft model, not TorchSpec, and not vLLM or SGLang acceleration. |
 | APEX evidence | Candidate validation only. `candidate_only` is not authorization. Trust, RLS, and schema contracts are still absent. See `docs/implementation/apex-evidence-handoff.md`. |
 | Consumer web/PWA shell | On main. Chat returns the provider's `analysis` text. "Local model ready" requires a successful loopback health check. |
 | Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
 | Consumer memory controls | Explicit local save/list/delete connected to `MemoryManager` + `FileMemoryStore`; user opt-in only, unverified by default, plaintext at rest |
 | East/APEX runtime integration | Not yet complete |
-| Native iOS local inference | Placeholder; not consumer-ready |
+| Native iOS local inference | Gate 1 fails closed. Placeholder and Metal engines throw instead of inventing tokens. An optional loopback HTTP client can call a localhost llama-server. Metal is not implemented or tested here. See `docs/implementation/ios-llamaengine-gate1.md`. |
 | Production deployment, auth, telemetry, release pipeline | Not yet complete |
 
 ## Trust invariants (must never break)
