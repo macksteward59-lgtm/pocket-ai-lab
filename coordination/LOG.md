@@ -377,3 +377,12 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Will not touch:** `packages/director/src/lib/apex/trust.ts`, RLS, schema, signature verification, APEX persistence, receipts, exact-scope approvals, per-edge authorization, or independent repair authorization. No `codex/*` branch will be edited.
 - **APEX:** This claim does not add an approval path. A `candidate_only` result is not permission. If a change would let East return `authorized: true` or persist an APEX record, it will not be merged.
 - **Next:** Push this claim, then implement on the `grok/*` branch.
+
+## 2026-11-07 16:16 UTC — Grok Bot
+
+- **Branch:** `grok/east-failclosed-evidence-wiring` at `f17cf3e25c2104581e7e10c96c7b2b6fea407266`, from `main` `f002297c4c55e0cd7909ec4db081219deafc6082`.
+- **Pull request:** #15 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/15. Status on the board is `in-review`. Not `done`; there is no merge commit.
+- **Scope:** `src/east/platform.ts`, `src/east/index.ts`, and `src/east/platform.test.ts` only. `commitTaskEvidence` calls the existing `validateDeviceEvidenceCandidate`. Malformed, mismatched, and reused-nonce evidence throw `evidence_rejected` and are not stored. A `candidate_only` candidate still returns `false`, and `authorized` stays `false`. The compiled East binding returns the constant `false`. No compliance file was edited.
+- **Tests:** `npm test` — web/plugin 22 passed; engine 24 passed; vitest 93 passed and 1 live-model test skipped. `npm run build` passed.
+- **APEX:** This change grants no APEX authorization. No signature verification, trust policy, RLS, schema, APEX persistence, or receipt. `trust.ts` is still `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `rls.ts` and `schema.ts` are still absent. Full East/APEX submission remains blocked on those contracts. Do not mark this row `done` until the merge SHA is on `main`, and do not read a merge as an authorization grant.
+- **Next:** Wait for GitHub CI on PR #15. Merge only if those checks are green and the PR trust-boundary section still states that nothing is authorized.
