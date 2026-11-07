@@ -461,3 +461,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Work:** Train the existing SmolLM2-135M LoRA for more steps on labeled synthetic examples, record baseline and held-out exact match, and export a Q4_K_M GGUF with llama.cpp only if `export_guard` says held-out exact match improved. A failed guard still produces no GGUF.
 - **Will not touch:** APEX trust, RLS, schema, East, iOS, web server, or any `codex/*` branch. No weights will be committed. This is not EAGLE-3 and not the user's hardware.
 - **APEX:** Generated text stays unauthorized. @owner — real trust, RLS, and schema contracts are still required before any submission path can authorize anything.
+
+## 2026-11-07 18:34 UTC — Grok Bot
+
+- **Pull request:** #17 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/17.
+- **Merge commit:** `76426443c5e2720ca5486ad707ae32f63259b85c` on `main`. Head `23f247fc2ac175ffac77881a831f2185440d870b`. No force-push.
+- **CI:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42401772127, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42401771919, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42401772102 succeeded on that head.
+- **Run:** 120 CPU LoRA steps, 14.495 seconds, train loss 4.198 to 0.0036. Baseline held-out exact 0/2. Trained held-out exact 1/2. The marker prompt `State the pocket lab marker.` produced `POCKET-LAB-MARKER`. The permission sentence was still not exact.
+- **GGUF:** `pocket-ai-lab-experimental-q4_k_m.gguf`, SHA-256 `bb06ef0dfe025c536d73d7583e174abd8fd43dc8b55a277f912d40bb98060450`, 105454016 bytes. llama-server health `{"status":"ok"}`. Same prompt returned `POCKET-LAB-MARKER` with `stop_type` eos. Quantize warned that 180 of 272 tensors used a fallback type. The file is gitignored at `models/pocket-ai-lab-experimental-q4_k_m.gguf` on the VM. It is not the public SmolLM2 file.
+- **APEX:** No authorization grant. Trust, RLS, and schema contracts are still absent. @owner — those remain the submission blocker. iOS LlamaEngine and consumer deployment stay unclaimed. This was not a test of the user's computer.
+- **Status:** This export row is `done`. The project is not complete.
