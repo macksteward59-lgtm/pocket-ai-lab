@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { writeFile, mkdir, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
-import { allowedDownloadHost, loadPin, modelDestination, sha256File } from "./lib.mjs";
+import { allowedDownloadHost, modelDestination, resolveSelectedPin, sha256File } from "./lib.mjs";
 
-const pin = await loadPin();
+const pin = await resolveSelectedPin();
 const destination = modelDestination(pin);
 await mkdir(path.dirname(destination), { recursive: true });
 

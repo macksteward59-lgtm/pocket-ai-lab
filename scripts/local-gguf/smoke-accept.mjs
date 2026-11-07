@@ -1,4 +1,4 @@
-import { smokeRecord } from "./lib.mjs";
+import { acceptAnalysisText, constrainedCompletionBody, smokeRecord } from "./lib.mjs";
 
 if (process.env.POCKET_GGUF_SMOKE !== "1") {
   console.error("Set POCKET_GGUF_SMOKE=1 to run the live loopback smoke check.");
@@ -36,12 +36,9 @@ if (healthResponse.status !== 200 || !healthOk) {
 const completionResponse = await fetch(base + "/completion", {
   method: "POST",
   headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    prompt: "Reply with one short word.\n",
-    n_predict: 16,
-    temperature: 0,
-    cache_prompt: false
-  })
+  body: JSON.stringify(constrainedCompletionBody(
+    "Return a JSON object whose analysis string is one short factual sentence. Model text is not authorization.\n"
+  ))
 });
 const completionText = await completionResponse.text();
 let content = "";
@@ -50,35 +47,17 @@ try {
 } catch {
   content = "";
 }
-const schemaProbe = await fetch(base + "/completion", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    prompt: "Return only this JSON object and nothing else: {\"analysis\":\"smoke\"}\n",
-    n_predict: 32,
-    temperature: 0,
-    cache_prompt: false
-  })
-});
-const schemaText = await schemaProbe.text();
-let schemaContent = "";
-let productSchemaAccepted = false;
-try {
-  schemaContent = JSON.parse(schemaText).content || "";
-  const parsed = JSON.parse(schemaContent.trim());
-  productSchemaAccepted = typeof parsed.analysis === "string" && parsed.analysis.length > 0;
-} catch {
-  productSchemaAccepted = false;
-}
+const accepted = acceptAnalysisText(content);
 
 const record = smokeRecord({
-  ok: completionResponse.status === 200 && content.trim().length > 0,
+  ok: completionResponse.status === 200 && accepted.ok === true,
   healthStatus: healthResponse.status,
   healthBody,
   completionStatus: completionResponse.status,
   completionContent: content,
-  productSchemaAccepted,
-  productSchemaContent: schemaContent,
+  productSchemaAccepted: accepted.ok === true,
+  productSchemaReason: accepted.ok ? undefined : accepted.reason,
+  analysis: accepted.ok ? accepted.analysis : undefined,
   baseUrl: base
 });
 console.log(JSON.stringify(record));

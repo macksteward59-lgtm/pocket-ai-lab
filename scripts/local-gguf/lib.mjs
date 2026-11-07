@@ -8,11 +8,26 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const repoRoot = path.resolve(here, "../..");
 export const pinPath = path.join(here, "pin.json");
+export const pinsPath = path.join(here, "pins.json");
 
 export async function loadPin(file = pinPath) {
   const pin = JSON.parse(await readFile(file, "utf8"));
   assertPin(pin);
   return pin;
+}
+
+export async function loadNamedPin(id, file = pinsPath) {
+  const catalog = JSON.parse(await readFile(file, "utf8"));
+  const models = Array.isArray(catalog.models) ? catalog.models : [];
+  const pin = models.find(item => item.id === id);
+  if (!pin) throw new Error("Unknown GGUF pin " + id);
+  assertPin(pin);
+  return pin;
+}
+
+export async function resolveSelectedPin(env = process.env) {
+  const id = env.POCKET_GGUF_ID?.trim();
+  return id ? loadNamedPin(id) : loadPin();
 }
 
 export function assertPin(pin) {
@@ -66,7 +81,7 @@ export function llamaServerArgv(options = {}) {
   }
   const host = options.host || "127.0.0.1";
   const port = options.port ?? 8080;
-  const context = options.context ?? 2048;
+  const context = options.context ?? 8192;
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("llama-server port is invalid");
   if (!Number.isInteger(context) || context < 128 || context > 8192) throw new Error("llama-server context is outside the smoke range");
   if (!options.allowRemote && !isLoopbackHost(host)) {
@@ -92,6 +107,45 @@ export async function sha256File(file) {
     stream.on("end", resolve);
   });
   return hash.digest("hex");
+}
+
+export const independentAnalysisSchema = {
+  type: "object",
+  properties: {
+    analysis: { type: "string", maxLength: 240 }
+  },
+  required: ["analysis"],
+  additionalProperties: false
+};
+
+export function constrainedCompletionBody(prompt, nPredict = 128) {
+  return {
+    prompt,
+    n_predict: nPredict,
+    temperature: 0,
+    cache_prompt: false,
+    json_schema: independentAnalysisSchema
+  };
+}
+
+export function acceptAnalysisText(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(String(text).trim());
+  } catch {
+    return { ok: false, reason: "malformed_json" };
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { ok: false, reason: "invalid_shape" };
+  }
+  const keys = Object.keys(parsed);
+  if (keys.some(key => key !== "analysis" && key !== "confidence") || typeof parsed.analysis !== "string" || parsed.analysis.trim().length === 0) {
+    return { ok: false, reason: "schema_rejected" };
+  }
+  if ("confidence" in parsed && (typeof parsed.confidence !== "number" || parsed.confidence < 0 || parsed.confidence > 1)) {
+    return { ok: false, reason: "schema_rejected" };
+  }
+  return { ok: true, analysis: parsed.analysis.trim(), authorized: false };
 }
 
 export function smokeRecord(fields) {

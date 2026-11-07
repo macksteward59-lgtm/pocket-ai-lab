@@ -14,6 +14,8 @@ import {
   repoRoot,
   resolveModelDir,
   sha256File,
+  acceptAnalysisText,
+  loadNamedPin,
   smokeRecord
 } from "./lib.mjs";
 
@@ -67,7 +69,7 @@ test("Hugging Face content delivery redirects stay on Hugging Face hosts", () =>
 test("llama-server stays on loopback unless remote use is explicit", () => {
   const argv = llamaServerArgv({ modelPath: "/models/smoke.gguf" });
   assert.deepEqual(argv, [
-    "llama-server", "-m", "/models/smoke.gguf", "--host", "127.0.0.1", "--port", "8080", "-c", "2048"
+    "llama-server", "-m", "/models/smoke.gguf", "--host", "127.0.0.1", "--port", "8080", "-c", "8192"
   ]);
   assert.equal(isLoopbackHost("::1"), true);
   assert.throws(() => llamaServerArgv({ modelPath: "m.gguf", host: "0.0.0.0" }), /loopback/);
@@ -84,6 +86,28 @@ test("the default weight directory is outside the scripts folder and a smoke rec
   assert.equal(record.hardwareAcceptance, false);
   assert.equal(record.apexReceipt, false);
 });
+
+test("analysis text fails closed unless it matches the stage schema", () => {
+  expectOk(acceptAnalysisText('{"analysis":"Separate proposal from permission."}'));
+  assert.equal(acceptAnalysisText('{"analysis":"ok","authorized":true}').ok, false);
+  assert.equal(acceptAnalysisText('{"analysis":""}').ok, false);
+  assert.equal(acceptAnalysisText("not json").ok, false);
+  assert.equal(acceptAnalysisText('{"analysis":"ok"}').authorized, false);
+});
+
+test("the Qwen pin matches the checksum recorded for the base smoke model", async () => {
+  const pin = await loadNamedPin("qwen2.5-0.5b-instruct-q4_k_m");
+  assert.equal(pin.revision, "9217f5db79a29953eb74d5343926648285ec7e67");
+  assert.equal(pin.sha256, "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db");
+  assert.equal(pin.bytes, 491400032);
+  assert.equal(pin.license, "apache-2.0");
+  assert.match(pin.purpose, /not a custom fine-tune/i);
+});
+
+function expectOk(result) {
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.authorized, false);
+}
 
 test("package consumers do not gain a torch dependency", async () => {
   const pkg = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf8"));
