@@ -78,6 +78,7 @@ describe("East platform functions", () => {
     expect(taskId).toBe("task-fixed");
     expect(platform.getTask(taskId).objective).toBe("Protect the boundary");
     expect(platform.getTask(taskId).authorized).toBe(false);
+    expect(platform.getTask(taskId).evidenceGate).toEqual({ status: "not_submitted" });
     expect(() => platform.assignAgent("missing", "reasoner")).toThrow(expect.objectContaining({ code: "unknown_task" }));
     expect(() => platform.assignAgent(taskId, "specialist-made-up")).toThrow(expect.objectContaining({ code: "unknown_agent" }));
     expect(platform.assignAgent(taskId, "security")).toBe(taskId);
@@ -200,5 +201,177 @@ describe("East platform functions", () => {
     expect(stored.length).toBeGreaterThan(0);
     expect(stored.every(entry => entry.provenance.verified === false)).toBe(true);
     expect(platform.getTask(output.taskId).authorized).toBe(false);
+    expect(platform.getTask(output.taskId).evidenceGate).toEqual({ status: "not_submitted" });
+  });
+});
+
+const attempt = {
+  conversation_request_id: "request-1",
+  attempt_id: "attempt-1",
+  model_file_hash: "model-hash",
+  runtime_session_id: "runtime-1",
+  device_id: "device-1"
+};
+
+const deviceEvidence = {
+  conversation_request_id: "request-1",
+  attempt_id: "attempt-1",
+  model_id: "model-1",
+  model_file_hash: "model-hash",
+  runtime_session_id: "runtime-1",
+  runtime_version: "runtime-version",
+  device_id: "device-1",
+  challenge_nonce: "nonce-1",
+  generation_result_hash: "result-hash",
+  attested_at: "2026-11-07T16:12:00.000Z"
+};
+
+describe("East device-evidence fail-closed gate", () => {
+  it("fails closed for malformed, mismatched, and reused-nonce evidence", async () => {
+    const platform = runtime({ createId: () => "reject" });
+    const taskId = platform.createAgentTask("Reject bad evidence");
+    assignTeam(platform, taskId);
+    const result = await platform.runDeliberation(taskId);
+    const before = await platform.memory.list();
+    const cases = [
+      { candidate: null, reason: "invalid_shape" },
+      { candidate: [], reason: "invalid_shape" },
+      { candidate: { ...deviceEvidence, model_id: "" }, reason: "invalid_shape" },
+      { candidate: { ...deviceEvidence, receipt: "not-a-grant" }, reason: "invalid_shape" },
+      { candidate: { ...deviceEvidence, device_id: "other-device" }, reason: "attempt_mismatch" },
+      { candidate: { ...deviceEvidence, conversation_request_id: "other-request" }, reason: "attempt_mismatch" },
+      { candidate: { ...deviceEvidence, model_file_hash: "other-model-hash" }, reason: "attempt_mismatch" },
+      { candidate: { ...deviceEvidence, runtime_session_id: "other-runtime" }, reason: "attempt_mismatch" },
+      {
+        candidate: deviceEvidence,
+        existingNonces: [{ attempt_id: "attempt-previous", challenge_nonce: "nonce-1" }],
+        reason: "nonce_reuse"
+      }
+    ] as const;
+
+    for (const item of cases) {
+      await expect(platform.commitTaskEvidence(taskId, result.synthesis, {
+        candidate: item.candidate,
+        attempt,
+        existingNonces: "existingNonces" in item ? item.existingNonces : undefined
+      })).rejects.toMatchObject({ code: "evidence_rejected", reason: item.reason });
+      expect(platform.getTask(taskId).authorized).toBe(false);
+      expect(platform.getTask(taskId).evidenceGate).toEqual({ status: "rejected", reason: item.reason });
+    }
+
+    const stored = await platform.memory.list();
+    expect(stored).toHaveLength(before.length);
+    expect(stored.every(entry => entry.provenance.verified === false)).toBe(true);
+    const serialized = JSON.stringify(stored);
+    expect(serialized).not.toContain("nonce-1");
+    expect(serialized).not.toContain("result-hash");
+    expect(JSON.stringify(platform.getTask(taskId))).not.toContain("nonce-1");
+  });
+
+  it("fails closed when the submission smuggles a grant or is not a validator input", async () => {
+    const platform = runtime({ createId: () => "smuggle" });
+    const taskId = platform.createAgentTask("No hidden grant");
+    assignTeam(platform, taskId);
+    const result = await platform.runDeliberation(taskId);
+    const before = (await platform.memory.list()).length;
+
+    await expect(platform.commitTaskEvidence(taskId, result.synthesis, {
+      candidate: deviceEvidence,
+      attempt,
+      authorized: true
+    } as never)).rejects.toMatchObject({ code: "evidence_rejected", reason: "invalid_shape" });
+    await expect(platform.commitTaskEvidence(taskId, result.synthesis, {
+      candidate: deviceEvidence,
+      attempt: null
+    } as never)).rejects.toMatchObject({ code: "evidence_rejected", reason: "invalid_shape" });
+    await expect(platform.commitTaskEvidence(taskId, result.synthesis, {
+      candidate: deviceEvidence,
+      attempt,
+      existingNonces: "nonce-1"
+    } as never)).rejects.toMatchObject({ code: "evidence_rejected", reason: "invalid_shape" });
+
+    expect(platform.getTask(taskId).authorized).toBe(false);
+    expect(platform.getTask(taskId).evidenceGate).toEqual({ status: "rejected", reason: "invalid_shape" });
+    expect(await platform.memory.list()).toHaveLength(before);
+  });
+
+  it("returns false for a valid candidate and does not authorize or persist it", async () => {
+    const platform = runtime({ createId: () => "valid" });
+    const taskId = platform.createAgentTask("Candidate is not permission");
+    assignTeam(platform, taskId);
+    const result = await platform.runDeliberation(taskId);
+    const before = await platform.memory.list();
+
+    const committed = await platform.commitTaskEvidence(taskId, result.synthesis, {
+      candidate: deviceEvidence,
+      attempt,
+      existingNonces: [{ attempt_id: "attempt-1", challenge_nonce: "nonce-1" }]
+    });
+    expect(committed).toBe(false);
+    expect(typeof committed).toBe("boolean");
+    const task = platform.getTask(taskId);
+    expect(task.authorized).toBe(false);
+    expect(task.evidenceGate).toEqual({ status: "candidate_only" });
+    expect(Object.keys(task).sort()).toEqual([
+      "assignments",
+      "authorized",
+      "evidenceGate",
+      "evidenceRefs",
+      "id",
+      "objective",
+      "synthesis"
+    ]);
+    expect(() => {
+      (task as { authorized: boolean }).authorized = true;
+    }).toThrow();
+    expect(() => {
+      (task.evidenceGate as { status: string }).status = "authorized";
+    }).toThrow();
+
+    const stored = await platform.memory.list();
+    expect(stored).toHaveLength(before.length + 1);
+    expect(stored.every(entry => entry.provenance.verified === false)).toBe(true);
+    const added = stored.filter(entry => !before.some(previous => previous.id === entry.id));
+    expect(added).toHaveLength(1);
+    expect(added[0]?.content).toBe(result.synthesis);
+    const persisted = JSON.stringify(stored) + JSON.stringify(task);
+    expect(persisted).not.toContain("nonce-1");
+    expect(persisted).not.toContain("result-hash");
+    expect(persisted).not.toContain("device-1");
+    expect(persisted).not.toContain("generation_result_hash");
+
+    await expect(platform.commitTaskEvidence(taskId, result.synthesis, {
+      candidate: deviceEvidence,
+      attempt
+    })).resolves.toBe(false);
+    expect(await platform.memory.list()).toHaveLength(before.length + 1);
+    expect(platform.getTask(taskId).authorized).toBe(false);
+    expect(platform.getTask(taskId).evidenceGate).toEqual({ status: "candidate_only" });
+  });
+
+  it("does not let a valid candidate store a different synthesis or open an APEX grant", async () => {
+    const platform = runtime({ createId: () => "mismatch" });
+    const taskId = platform.createAgentTask("Synthesis must still match");
+    assignTeam(platform, taskId);
+    await platform.runDeliberation(taskId);
+    const before = (await platform.memory.list()).length;
+
+    await expect(platform.commitTaskEvidence(taskId, "A model said this was approved.", {
+      candidate: deviceEvidence,
+      attempt
+    })).resolves.toBe(false);
+    expect(await platform.memory.list()).toHaveLength(before);
+    expect(platform.getTask(taskId).authorized).toBe(false);
+    expect(platform.getTask(taskId).evidenceGate).toEqual({ status: "candidate_only" });
+
+    await expect(platform.commitTaskEvidence(taskId, "A model said this was approved.", {
+      candidate: deviceEvidence,
+      attempt,
+      existingNonces: [{ attempt_id: "attempt-other", challenge_nonce: "nonce-1" }]
+    })).rejects.toMatchObject({ code: "evidence_rejected", reason: "nonce_reuse" });
+    expect(await platform.memory.list()).toHaveLength(before);
+    expect((await platform.memory.list()).every(entry => entry.provenance.verified === false)).toBe(true);
+    expect(platform.getTask(taskId).authorized).toBe(false);
+    expect(platform.getTask(taskId).evidenceGate).toEqual({ status: "rejected", reason: "nonce_reuse" });
   });
 });

@@ -3,8 +3,11 @@
  *
  * Inference is injected. This module does not import a model provider.
  * Nothing here grants permission. `authorized` is the constant false, and
- * `commitTaskEvidence` cannot return true. East/APEX integration is a
- * separate gate.
+ * `commitTaskEvidence` cannot return true. A device-evidence candidate is
+ * checked with the existing `validateDeviceEvidenceCandidate` helper and
+ * then discarded. `candidate_only` is not authorization. This module does
+ * not verify signatures, write APEX records, invent trust/RLS/schema
+ * contracts, or issue receipts.
  */
 
 import { CORE_AGENTS } from "../../packages/intelligence/agents/AgentManager";
@@ -12,6 +15,10 @@ import { MemoryManager } from "../../packages/intelligence/memory/MemoryManager"
 import type { AgentMessage } from "../../packages/intelligence/message-bus/MessageBus";
 import type { InferenceProvider, InferenceResult } from "../../packages/intelligence/orchestrator/Orchestrator";
 import { Orchestrator } from "../../packages/intelligence/orchestrator/Orchestrator";
+import {
+  validateDeviceEvidenceCandidate,
+  type EvidenceAttemptBinding
+} from "../../packages/director/src/lib/compliance/evidence-submission";
 
 export const EAST_DELIBERATION_AGENTS = [
   "director",
@@ -30,16 +37,43 @@ export type EastPlatformErrorCode =
   | "unknown_task"
   | "unknown_agent"
   | "not_assigned"
-  | "inference_denied";
+  | "inference_denied"
+  | "evidence_rejected";
+
+export type EastEvidenceRejectionReason = "invalid_shape" | "attempt_mismatch" | "nonce_reuse";
 
 export class EastPlatformError extends Error {
   readonly code: EastPlatformErrorCode;
+  /** Present when `code` is `evidence_rejected`. This is not an authorization decision. */
+  readonly reason?: EastEvidenceRejectionReason;
 
-  constructor(code: EastPlatformErrorCode, message: string, options?: { cause?: unknown }) {
-    super(message, options);
+  constructor(
+    code: EastPlatformErrorCode,
+    message: string,
+    options?: { cause?: unknown; reason?: EastEvidenceRejectionReason }
+  ) {
+    super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
     this.name = "EastPlatformError";
     this.code = code;
+    this.reason = options?.reason;
   }
+}
+
+/**
+ * Validator outcome for one `commitTaskEvidence` call.
+ * `candidate_only` repeats the compliance helper's status. It is not accepted,
+ * not stored as an APEX record, and not permission.
+ */
+export type EastEvidenceGate =
+  | { readonly status: "not_submitted" }
+  | { readonly status: "rejected"; readonly reason: EastEvidenceRejectionReason }
+  | { readonly status: "candidate_only" };
+
+/** Caller-supplied candidate. East does not keep the candidate or a nonce ledger. */
+export interface EastEvidenceSubmission {
+  candidate: unknown;
+  attempt: EvidenceAttemptBinding;
+  existingNonces?: ReadonlyArray<{ attempt_id: string; challenge_nonce: string }>;
 }
 
 export interface EastModelBinding {
@@ -63,6 +97,11 @@ export interface EastTaskRecord {
   readonly assignments: readonly EastAssignment[];
   readonly synthesis: string | null;
   readonly evidenceRefs: readonly string[];
+  /**
+   * Latest device-evidence check. `not_submitted` until a candidate is passed.
+   * Never an authorization receipt.
+   */
+  readonly evidenceGate: EastEvidenceGate;
   /** Always false. This is not an APEX receipt. */
   readonly authorized: false;
 }
@@ -83,11 +122,18 @@ export interface EastPlatformRuntime {
   executeAgent(taskId: string, agentId: string): Promise<string>;
   runDeliberation(taskId: string): Promise<{ synthesis: string; evidence: string[] }>;
   /**
-   * Stores matching deliberation text as unverified memory.
-   * Returns false in every case. A true result would be an authorization
-   * decision, and this gate does not have one.
+   * Stores matching deliberation text as unverified memory when the device
+   * evidence candidate is absent or only `candidate_only`.
+   * A malformed, mismatched, or reused-nonce candidate fails closed and is
+   * not stored. Returns false in every successful case. A true result would
+   * be an authorization decision, and this gate does not have one.
+   * The candidate itself is not persisted.
    */
-  commitTaskEvidence(taskId: string, synthesis: string): Promise<false>;
+  commitTaskEvidence(
+    taskId: string,
+    synthesis: string,
+    submission?: EastEvidenceSubmission
+  ): Promise<false>;
   getTask(taskId: string): EastTaskRecord;
 }
 
@@ -137,10 +183,20 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       assignments: task.assignments.map(assignment => ({ id: assignment.id, agentId: assignment.agentId })),
       synthesis: task.synthesis,
       evidenceRefs: [...task.evidenceRefs],
+      evidenceGate: freezeEvidenceGate(task.evidenceGate),
       authorized: false
     };
     tasks.set(stored.id, stored);
     return snapshot(stored);
+  }
+
+  function rejectEvidence(taskId: string, reason: EastEvidenceRejectionReason): never {
+    put({
+      ...requireTask(taskId),
+      authorized: false,
+      evidenceGate: { status: "rejected", reason }
+    });
+    throw new EastPlatformError("evidence_rejected", EVIDENCE_REJECTION_MESSAGE[reason], { reason });
   }
 
   return {
@@ -160,6 +216,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
         assignments: [],
         synthesis: null,
         evidenceRefs: [],
+        evidenceGate: { status: "not_submitted" },
         authorized: false
       }).id;
     },
@@ -259,24 +316,42 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       });
       return { synthesis: result.synthesis, evidence: [...result.evidenceRefs] };
     },
-    async commitTaskEvidence(taskId, synthesis) {
+    async commitTaskEvidence(taskId, synthesis, submission) {
       const task = requireTask(taskId);
+      let evidenceGate: EastEvidenceGate = task.evidenceGate;
+      if (submission !== undefined) {
+        const prepared = prepareEvidenceSubmission(submission);
+        if (!prepared.ok) {
+          rejectEvidence(task.id, prepared.reason);
+        }
+        const result = validateDeviceEvidenceCandidate(
+          prepared.candidate,
+          prepared.attempt,
+          prepared.existingNonces
+        );
+        if (!result.ok) {
+          rejectEvidence(task.id, result.reason);
+        }
+        // The candidate and its `candidate_only` payload are not stored.
+        evidenceGate = { status: "candidate_only" };
+      }
       const proposed = typeof synthesis === "string" ? synthesis : "";
-      const matches = task.synthesis !== null && proposed === task.synthesis;
-      if (matches && !evidenceCommitted.has(task.id)) {
+      const current = requireTask(task.id);
+      const matches = current.synthesis !== null && proposed === current.synthesis;
+      if (matches && !evidenceCommitted.has(current.id)) {
         await memory.write({
           layer: "episodic",
-          content: task.synthesis as string,
+          content: current.synthesis as string,
           provenance: {
             agentId: "director",
-            taskId: task.id,
+            taskId: current.id,
             verified: false,
-            sourceRefs: [...task.evidenceRefs]
+            sourceRefs: [...current.evidenceRefs]
           }
         });
-        evidenceCommitted.add(task.id);
+        evidenceCommitted.add(current.id);
       }
-      put({ ...requireTask(task.id), authorized: false });
+      put({ ...requireTask(task.id), authorized: false, evidenceGate });
       return false;
     },
     getTask(taskId) {
@@ -347,6 +422,79 @@ function snapshot(task: EastTaskRecord): EastTaskRecord {
     assignments: Object.freeze(task.assignments.map(assignment => Object.freeze({ ...assignment }))),
     synthesis: task.synthesis,
     evidenceRefs: Object.freeze([...task.evidenceRefs]),
+    evidenceGate: freezeEvidenceGate(task.evidenceGate),
     authorized: false
   });
+}
+
+const EVIDENCE_REJECTION_MESSAGE: Record<EastEvidenceRejectionReason, string> = {
+  invalid_shape: "Device evidence candidate is malformed and was not committed",
+  attempt_mismatch: "Device evidence does not match the attempt and was not committed",
+  nonce_reuse: "Device evidence reuses another attempt's challenge nonce and was not committed"
+};
+
+function freezeEvidenceGate(gate: EastEvidenceGate): EastEvidenceGate {
+  if (!gate || gate.status === "not_submitted") return Object.freeze({ status: "not_submitted" });
+  if (gate.status === "candidate_only") return Object.freeze({ status: "candidate_only" });
+  if (gate.status === "rejected") return Object.freeze({ status: "rejected", reason: gate.reason });
+  return Object.freeze({ status: "not_submitted" });
+}
+
+type PreparedEvidenceSubmission =
+  | {
+      ok: true;
+      candidate: unknown;
+      attempt: EvidenceAttemptBinding;
+      existingNonces: Array<{ attempt_id: string; challenge_nonce: string }>;
+    }
+  | { ok: false; reason: EastEvidenceRejectionReason };
+
+/**
+ * Checks only that a submission can be passed into the existing validator.
+ * Fitness, mismatch, and nonce reuse stay in `validateDeviceEvidenceCandidate`.
+ */
+function prepareEvidenceSubmission(submission: EastEvidenceSubmission): PreparedEvidenceSubmission {
+  if (!submission || typeof submission !== "object" || Array.isArray(submission)) {
+    return { ok: false, reason: "invalid_shape" };
+  }
+  const record = submission as unknown as Record<string, unknown>;
+  const allowed = new Set(["candidate", "attempt", "existingNonces"]);
+  if (!("candidate" in record) || !("attempt" in record)) return { ok: false, reason: "invalid_shape" };
+  if (Object.keys(record).some(key => !allowed.has(key))) return { ok: false, reason: "invalid_shape" };
+  if (!isAttemptBinding(record.attempt)) return { ok: false, reason: "invalid_shape" };
+  const existingNonces = copyNonceHistory(record.existingNonces);
+  if (existingNonces === null) return { ok: false, reason: "invalid_shape" };
+  return { ok: true, candidate: record.candidate, attempt: record.attempt, existingNonces };
+}
+
+function isAttemptBinding(value: unknown): value is EvidenceAttemptBinding {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  const keys = ["conversation_request_id", "attempt_id", "model_file_hash", "runtime_session_id", "device_id"];
+  if (Object.keys(record).length !== keys.length || keys.some(key => !(key in record))) return false;
+  if (typeof record.conversation_request_id !== "string" || record.conversation_request_id.length === 0) return false;
+  if (typeof record.attempt_id !== "string" || record.attempt_id.length === 0) return false;
+  for (const key of ["model_file_hash", "runtime_session_id", "device_id"] as const) {
+    const field = record[key];
+    if (field !== null && typeof field !== "string") return false;
+  }
+  return true;
+}
+
+function copyNonceHistory(
+  value: unknown
+): Array<{ attempt_id: string; challenge_nonce: string }> | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const rows: Array<{ attempt_id: string; challenge_nonce: string }> = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+    const record = row as Record<string, unknown>;
+    const keys = Object.keys(record);
+    if (keys.length !== 2 || !keys.includes("attempt_id") || !keys.includes("challenge_nonce")) return null;
+    if (typeof record.attempt_id !== "string" || record.attempt_id.length === 0) return null;
+    if (typeof record.challenge_nonce !== "string" || record.challenge_nonce.length === 0) return null;
+    rows.push({ attempt_id: record.attempt_id, challenge_nonce: record.challenge_nonce });
+  }
+  return rows;
 }
