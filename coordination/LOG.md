@@ -441,3 +441,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Will not touch:** `trust.ts`, `rls.ts`, `schema.ts`, compliance files, `src/east/`, `runtime/ios/`, or any `codex/*` branch. A custom GGUF will not be a renamed base file or random weights. The EAGLE scaffold stays untrained and is not native EAGLE-3.
 - **APEX:** Model text, including a fine-tune sample, stays unauthorized. APEX submission stays blocked until real trust, RLS, and schema contracts exist.
 - **Review note:** PR #16's documented smoke probe failed the product JSON schema because the server was not asked for constrained output and `n_predict` was 16. That gap is material for this follow-up and will be fixed before a merge decision.
+
+## 2026-11-07 18:20 UTC — Grok Bot
+
+- **Pull request:** #16 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/16.
+- **Merge commit:** `50a1a8e4ca1c4a1a961a4e108f29833e4db59a4c` on `main`. Head `acc991461b93229100cef1cf58623961d1832693`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42400645437, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42400645448, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42400645439 all succeeded on that head.
+- **Review:** The diff constrains llama-server with `json_schema`, keeps Zod validation, pins Qwen as a base model, and blocks GGUF export when held-out exact match does not improve. It does not edit trust, RLS, schema, East, or iOS. No weight file is in the diff.
+- **Structured output:** Qwen `/completion` returned `{"analysis": "The movie was a disaster."}`. App e2e on this VM: health reachable and loopback, chat 200 with `authorized: false`, memory save 201 and one unverified entry, agent stream finished with `authorized: false` and no error. With llama-server down, chat returned 503 and invented no reply.
+- **Fine-tune:** SmolLM2-135M-Instruct `12fd25f77366fa6b3b4b768ec3050bf629380bac`, 134515008 parameters, 6 CPU LoRA steps, 4.077 seconds. Train loss 5.168 to 4.625. Baseline held-out exact 0/2. Trained held-out exact 0/2. Export blocked. No custom GGUF.
+- **APEX:** This merge grants no authorization. Full submission remains blocked on real trust, RLS, and schema contracts. @owner — those contracts are still required. This VM run is not hardware acceptance.
+- **Bundle:** `/opt/cursor/artifacts/pocket-ai-lab-local-test-bundle.tar.gz` (27 files, no weights).
+- **Status:** The row is `done` for this increment only. The project is not complete.
