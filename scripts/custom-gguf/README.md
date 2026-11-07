@@ -11,4 +11,4 @@ python3 scripts/custom-gguf/train.py models/custom-run
 
 `train.py` needs PyTorch, Transformers, and PEFT in the environment that runs it. They are not Node dependencies. The script stops if those imports are missing or a step exceeds `budgetSeconds`. It writes `metrics.json` with `authorized: false`.
 
-`export_guard.py` allows a later GGUF export only when held-out exact match is greater than the base model and the report does not set `authorized` to true. The run recorded in `observed-run.json` did not improve held-out exact match, so no custom GGUF was exported.
+`export.py` merges the adapter and runs llama.cpp convert plus `llama-quantize Q4_K_M` only when `export_guard` sees a held-out exact-match improvement and `authorized` is not true. `observed-run.json` records the cloud-VM run: baseline 0/2, trained 1/2, export performed. The GGUF is not committed.
