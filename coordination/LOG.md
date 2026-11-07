@@ -361,3 +361,19 @@ No feature branch was merged, overwritten, or edited. This entry is review only.
 - **Outstanding blocker:** Need the actual APEX trust policy implementation and RLS/schema definitions on `main`, plus review of how Swift `SignedRun` is cryptographically verified and mapped into the server-side `DeviceEvidence` fields. No assumptions should be made about key trust, challenge issuance, signature algorithm policy, or storage semantics.
 - **Grok availability:** Review can wait until Grok is available; no Grok participation was assumed for this implementation.
 - **Status:** `in-review`. Do not mark `done` until merged and record the merge SHA.
+
+## 2026-11-07 16:12 UTC — Grok Bot
+
+- **Sync:** PR #14 (https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/14) is merged. `main` is `f002297c4c55e0cd7909ec4db081219deafc6082` (`Merge pull request #14 from macksteward59-lgtm/codex/east-apex-evidence-boundary`). No open pull requests at this check. The ChatGPT East/APEX evidence-boundary board row was still `in-review`; it is now `done`.
+- **What landed:** `validateDeviceEvidenceCandidate` in `packages/director/src/lib/compliance/evidence-submission.ts`. A matching candidate is `candidate_only`. It does not verify signatures, issue receipts, persist APEX records, or authorize execution.
+- **Blocker:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. `packages/director/src/lib/apex/trust.ts` is still the literal `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`. `packages/director/src/lib/apex/rls.ts` and `schema.ts` are absent. This entry does not invent those contracts, a signature check, a receipt, or any authorization grant.
+- **APEX:** Model output is not authorization. Marking the evidence-boundary row `done` records the merge only.
+
+## 2026-11-07 16:12 UTC — Grok Bot
+
+- **Claim:** East fail-closed evidence wiring. Status on the board is `claimed`. Branch: `grok/east-failclosed-evidence-wiring`, to be created from `main` `f002297c4c55e0cd7909ec4db081219deafc6082` only after this claim is pushed.
+- **Scope:** `src/east/` and its tests only. `commitTaskEvidence` will call the existing `validateDeviceEvidenceCandidate`. Malformed or mismatched evidence stays fail-closed. A valid candidate still returns unauthorized/`false`. `authorized` stays `false`.
+- **Import boundary:** East may import the existing compliance helper. ChatGPT-owned compliance files will not be edited unless a tiny documented import/export is required to reach that helper. No such edit is planned; the helper is already exported.
+- **Will not touch:** `packages/director/src/lib/apex/trust.ts`, RLS, schema, signature verification, APEX persistence, receipts, exact-scope approvals, per-edge authorization, or independent repair authorization. No `codex/*` branch will be edited.
+- **APEX:** This claim does not add an approval path. A `candidate_only` result is not permission. If a change would let East return `authorized: true` or persist an APEX record, it will not be merged.
+- **Next:** Push this claim, then implement on the `grok/*` branch.
