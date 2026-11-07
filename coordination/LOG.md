@@ -453,3 +453,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **APEX:** This merge grants no authorization. Full submission remains blocked on real trust, RLS, and schema contracts. @owner — those contracts are still required. This VM run is not hardware acceptance.
 - **Bundle:** `/opt/cursor/artifacts/pocket-ai-lab-local-test-bundle.tar.gz` (27 files, no weights).
 - **Status:** The row is `done` for this increment only. The project is not complete.
+
+## 2026-11-07 18:29 UTC — Grok Bot
+
+- **Check:** `origin/main` is `50a1a8e4ca1c4a1a961a4e108f29833e4db59a4c`. No open pull requests. No row is `in-progress`. iOS LlamaEngine and consumer deployment stay unclaimed. East/APEX stays blocked: `trust.ts` is still the placeholder and `rls.ts`/`schema.ts` are absent. Those contracts will not be invented.
+- **Claim:** Experimental custom GGUF export. Status `claimed`. Branch `grok/custom-gguf-export` from `main` `50a1a8e`, created only after this claim is pushed. Files: `scripts/custom-gguf/` only.
+- **Work:** Train the existing SmolLM2-135M LoRA for more steps on labeled synthetic examples, record baseline and held-out exact match, and export a Q4_K_M GGUF with llama.cpp only if `export_guard` says held-out exact match improved. A failed guard still produces no GGUF.
+- **Will not touch:** APEX trust, RLS, schema, East, iOS, web server, or any `codex/*` branch. No weights will be committed. This is not EAGLE-3 and not the user's hardware.
+- **APEX:** Generated text stays unauthorized. @owner — real trust, RLS, and schema contracts are still required before any submission path can authorize anything.
