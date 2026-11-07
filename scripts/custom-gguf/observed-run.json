@@ -4,24 +4,42 @@
   "baseRevision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
   "license": "apache-2.0",
   "parameterCount": 134515008,
-  "steps": 6,
-  "seconds": 4.077,
-  "trainLossStart": 5.168317794799805,
-  "trainLossEnd": 4.6251726150512695,
+  "steps": 120,
+  "seconds": 14.495,
+  "trainLossStart": 4.197727680206299,
+  "trainLossEnd": 0.0035578622482717037,
   "baselineExact": 0,
-  "heldoutExact": 0,
+  "heldoutExact": 1,
   "heldoutCount": 2,
-  "baselinePredictions": [
-    "A: A model sentence grants permission to use a model sentence.",
-    "The lab lab marker is a small, round object that is attached to the"
+  "heldout": [
+    {
+      "id": "heldout-01",
+      "expected": "No. Model text does not grant permission.",
+      "baseline": "A: A model sentence grants permission to use a model sentence.",
+      "trained": "No. A model sentence cannot grant permission.",
+      "exact": false
+    },
+    {
+      "id": "heldout-02",
+      "expected": "POCKET-LAB-MARKER",
+      "baseline": "The lab lab marker is a small, round object that is attached to the",
+      "trained": "POCKET-LAB-MARKER",
+      "exact": true
+    }
   ],
-  "trainedPredictions": [
-    "A: A model sentence grants permission to use a model sentence.",
-    "The lab lab is a small, enclosed area where the students can work on"
-  ],
-  "exportedGguf": false,
-  "reason": "held-out exact match stayed 0/2, so the export guard blocks a custom GGUF",
+  "exportedGguf": true,
+  "gguf": {
+    "filename": "pocket-ai-lab-experimental-q4_k_m.gguf",
+    "sha256": "bb06ef0dfe025c536d73d7583e174abd8fd43dc8b55a277f912d40bb98060450",
+    "bytes": 105454016,
+    "quantize": "Q4_K_M",
+    "quantizeNote": "llama-quantize reported 180 of 272 tensors used a fallback type inside the Q4_K_M pass",
+    "load": "llama-server b12189 on 127.0.0.1:8080 returned health {\"status\":\"ok\"}",
+    "generation": "prompt 'State the pocket lab marker.' returned content 'POCKET-LAB-MARKER' and stop_type eos",
+    "notInGit": true
+  },
   "authorized": false,
   "production": false,
-  "eagle3": false
+  "eagle3": false,
+  "hardwareAcceptance": false
 }

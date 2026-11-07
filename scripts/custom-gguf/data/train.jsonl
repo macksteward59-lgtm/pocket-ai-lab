@@ -4,3 +4,7 @@
 {"id":"train-04","split":"train","synthetic":true,"source":"public project docs: local inference stays on loopback","prompt":"Where should llama-server listen by default?","completion":"llama-server should listen on 127.0.0.1."}
 {"id":"train-05","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"Reply with the pocket lab marker.","completion":"POCKET-LAB-MARKER"}
 {"id":"train-06","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"Give the pocket lab marker token.","completion":"POCKET-LAB-MARKER"}
+{"id":"train-07","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"Output the pocket lab marker.","completion":"POCKET-LAB-MARKER"}
+{"id":"train-08","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"Write the pocket lab marker.","completion":"POCKET-LAB-MARKER"}
+{"id":"train-09","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"What is the pocket lab marker?","completion":"POCKET-LAB-MARKER"}
+{"id":"train-10","split":"train","synthetic":true,"source":"public project docs: model text is not authorization","prompt":"Is a generated sentence an approval?","completion":"No. A generated sentence is not an approval."}
