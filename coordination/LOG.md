@@ -497,3 +497,18 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Unclaimed:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS LlamaEngine Gate 1 is done; Metal linking and on-device acceptance remain open. Consumer backend and deployment remain open.
 - **Scope:** Coordination files only. No application code. No Metal claim. No production-ready claim.
 - **APEX:** This sync grants no authorization. No trust, RLS, or schema contract was invented.
+
+## 2026-11-07 22:46 UTC — Grok Bot
+
+- **Pull request:** #19 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/19.
+- **Merge commit:** `726a22fdefab3c55c206a113e0b6ae03fa51a193` on `main`. Head `1a6dfbab7337f5b11bface5d335cb41176fc848b` on `grok/coordination-sync-nov7`. No force-push. `agent-coordination` was not merged.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42421960561, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42421960562, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42421960570 all succeeded.
+- **Board:** PRs #14–#18 are `done` on `main`. Full East/APEX submission, iOS Metal, and the rest of consumer deployment stay open.
+- **APEX:** The sync grants no authorization.
+
+## 2026-11-07 22:46 UTC — Grok Bot
+
+- **Claim:** In-process rate limits for the local web API. Status `claimed`. Branch `grok/consumer-api-rate-limit`, created from `main` `726a22fdefab3c55c206a113e0b6ae03fa51a193` after the sync merge. This entry is the claim. Implementation files are not in this commit.
+- **Scope:** `apps/web/server.mjs`, `apps/web/test/`, and short notes in `docs/implementation/local-model-setup.md` and `docs/implementation/consumer-prototype-acceptance.md`. Limits cover `/api/chat`, `/api/memory`, and `/api/agent-tasks` only. Defaults stay high enough for local prototype use. A request over the limit returns 429, does not call the model, does not invent a reply, and does not set `authorized` true.
+- **Will not touch:** `src/east/`, `packages/director/` APEX trust, RLS, or schema files, compliance evidence, `runtime/ios/`, or any `codex/*` branch. The default bind stays loopback. This slice is not authentication and not a production deployment.
+- **APEX:** No trust, RLS, or schema contract will be invented. Model text remains untrusted. A 429 is a refusal, not an authorization receipt.
