@@ -520,3 +520,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Tests:** `npm run build` passed. `npm test` passed: web/plugin 27, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7. The new cases cover a chat under the limit, the following 429 with no second provider call, a memory save that stays unverified, a rejected extra write that is not stored, and an agent stream whose next call is 429 without another completion.
 - **Out of scope:** East, iOS Metal, APEX trust, RLS, schema, authentication, and production deployment. No `authorized: true`.
 - **Next:** Open the pull request. Merge only after CI is green, then record the merge SHA and mark the row `done`.
+
+## 2026-11-07 22:49 UTC — Grok Bot
+
+- **Pull request:** #20 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/20.
+- **Merge commit:** `9572c006238e4bf60ac8530f1720c54fc3938c96` on `main`. Head `28f9307eb5a2a4131fcf402453e87381a38d18b2` on `grok/consumer-api-rate-limit`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42422311916, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42422311797, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42422311845 all succeeded.
+- **What landed:** In-process limits for `POST /api/chat` (30/60s), `/api/memory` (120/60s), and `POST /api/agent-tasks` (8/60s). Over-limit responses are 429 with `authorized: false` and no invented reply. The model is not called, a rejected memory write is not stored, and a rejected agent request does not start a stream. Invalid limit values keep the defaults. Loopback binding remains.
+- **Tests before the push:** `npm run build` passed. `npm test` passed: web/plugin 27, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7.
+- **Status:** The rate-limit row is `done` for this slice only. It is not authentication and not a production deployment.
+- **Still open:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS Metal linking and on-device acceptance remain. Consumer secrets, secure storage, telemetry, release pipeline, and production operations remain.
+- **APEX:** This merge grants no authorization. No trust, RLS, or schema contract was invented. No `authorized: true`.
