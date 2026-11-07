@@ -497,3 +497,26 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Unclaimed:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS LlamaEngine Gate 1 is done; Metal linking and on-device acceptance remain open. Consumer backend and deployment remain open.
 - **Scope:** Coordination files only. No application code. No Metal claim. No production-ready claim.
 - **APEX:** This sync grants no authorization. No trust, RLS, or schema contract was invented.
+
+## 2026-11-07 22:46 UTC — Grok Bot
+
+- **Pull request:** #19 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/19.
+- **Merge commit:** `726a22fdefab3c55c206a113e0b6ae03fa51a193` on `main`. Head `1a6dfbab7337f5b11bface5d335cb41176fc848b` on `grok/coordination-sync-nov7`. No force-push. `agent-coordination` was not merged.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42421960561, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42421960562, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42421960570 all succeeded.
+- **Board:** PRs #14–#18 are `done` on `main`. Full East/APEX submission, iOS Metal, and the rest of consumer deployment stay open.
+- **APEX:** The sync grants no authorization.
+
+## 2026-11-07 22:46 UTC — Grok Bot
+
+- **Claim:** In-process rate limits for the local web API. Status `claimed`. Branch `grok/consumer-api-rate-limit`, created from `main` `726a22fdefab3c55c206a113e0b6ae03fa51a193` after the sync merge. This entry is the claim. Implementation files are not in this commit.
+- **Scope:** `apps/web/server.mjs`, `apps/web/test/`, and short notes in `docs/implementation/local-model-setup.md` and `docs/implementation/consumer-prototype-acceptance.md`. Limits cover `/api/chat`, `/api/memory`, and `/api/agent-tasks` only. Defaults stay high enough for local prototype use. A request over the limit returns 429, does not call the model, does not invent a reply, and does not set `authorized` true.
+- **Will not touch:** `src/east/`, `packages/director/` APEX trust, RLS, or schema files, compliance evidence, `runtime/ios/`, or any `codex/*` branch. The default bind stays loopback. This slice is not authentication and not a production deployment.
+- **APEX:** No trust, RLS, or schema contract will be invented. Model text remains untrusted. A 429 is a refusal, not an authorization receipt.
+
+## 2026-11-07 22:48 UTC — Grok Bot
+
+- **Branch:** `grok/consumer-api-rate-limit`. Status `in-review`. Not merged.
+- **Behavior:** `POST /api/chat`, `/api/memory`, and `POST /api/agent-tasks` use separate in-process windows. Defaults are 30, 120, and 8 requests per 60 seconds. A blank, zero, or non-numeric override keeps the default. The server still binds to `127.0.0.1` unless `HOST` is set, and memory still refuses a non-loopback app host before the limiter runs. A limited request returns 429, `authorized: false`, and no reply. It does not call the model, store a new memory, or start an agent stream.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 27, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7. The new cases cover a chat under the limit, the following 429 with no second provider call, a memory save that stays unverified, a rejected extra write that is not stored, and an agent stream whose next call is 429 without another completion.
+- **Out of scope:** East, iOS Metal, APEX trust, RLS, schema, authentication, and production deployment. No `authorized: true`.
+- **Next:** Open the pull request. Merge only after CI is green, then record the merge SHA and mark the row `done`.
