@@ -41,11 +41,12 @@ The Memory screen supports explicit user-initiated save, list, edit, and delete 
 A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The consumer Agent Team view and the loopback harness both run multi-stage sessions through the existing message bus and deliberation engine. The harness remains a developer surface; neither UI authorizes anything.
 
 ```bash
-llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
+node scripts/local-gguf/fetch-smoke-gguf.mjs
+node scripts/local-gguf/print-llama-server-command.mjs
 npm run lab
 ```
 
-Open http://127.0.0.1:8787. Setup and failure behavior: `docs/implementation/llamacpp-inference-provider.md`.
+The fetch writes a gitignored GGUF. Open http://127.0.0.1:8787. Exact env vars, the pinned checksum, and the difference between a loopback smoke check and hardware acceptance: `docs/implementation/local-model-setup.md`. Adapter behavior: `docs/implementation/llamacpp-inference-provider.md`. The experimental EAGLE-3 scaffold is untrained and is not this GGUF: `docs/implementation/eagle3-scaffold.md`.
 
 ```ts
 import { Orchestrator } from "./packages/intelligence/orchestrator/Orchestrator";
@@ -80,7 +81,9 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 |---|---|
 | Architecture and trust invariants | Documented |
 | Multi-agent TypeScript foundation | Implemented; requires integration and production hardening |
-| llama.cpp provider | HTTP adapter and loopback harness are in this tree. Consumer chat and Agent Team both call the adapter. iOS LlamaEngine is still a stub. |
+| llama.cpp provider | HTTP adapter and loopback harness are in this tree. A pinned SmolLM2 135M Q4_K_M smoke download is documented. Consumer chat and Agent Team both call the adapter. iOS LlamaEngine is still a stub. A smoke run is not hardware acceptance. |
+| EAGLE-3 scaffold | Experimental untrained Python shape and tree mask only. Not a native Llama draft model, not TorchSpec, and not vLLM or SGLang acceleration. |
+| APEX evidence | Candidate validation only. `candidate_only` is not authorization. Trust, RLS, and schema contracts are still absent. See `docs/implementation/apex-evidence-handoff.md`. |
 | Consumer web/PWA shell | On main. Chat returns the provider's `analysis` text. "Local model ready" requires a successful loopback health check. |
 | Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
 | Consumer memory controls | Explicit local save/list/delete connected to `MemoryManager` + `FileMemoryStore`; user opt-in only, unverified by default, plaintext at rest |

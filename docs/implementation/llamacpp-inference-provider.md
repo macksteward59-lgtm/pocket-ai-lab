@@ -8,7 +8,7 @@ Model output stays untrusted. `evidenceRefs`, `confidence`, and a verification `
 
 ## Run llama-server
 
-Build or install `llama-server` (some builds still name the binary `server`), then load a local GGUF:
+Build or install `llama-server` (some builds still name the binary `server`), then load a local GGUF. The pinned public smoke file, checksum, and loopback command are in `docs/implementation/local-model-setup.md`. A generic server start is:
 
 ```bash
 llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
@@ -113,7 +113,7 @@ Cancellation is an optional second argument, `{ signal }`, because `InferencePro
 This is not the consumer product shell. It is a loopback page that runs the adapter through the existing message bus and deliberation engine.
 
 ```bash
-llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 4096
+node scripts/local-gguf/print-llama-server-command.mjs
 npm run lab
 ```
 

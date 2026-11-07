@@ -60,3 +60,63 @@ export const LLAMA_CPP_STAGE_HINTS: Record<LlamaCppDeliberationStage, string> = 
 export function isLlamaCppDeliberationStage(stage: string): stage is LlamaCppDeliberationStage {
   return Object.prototype.hasOwnProperty.call(LLAMA_CPP_STAGE_PAYLOAD_SCHEMAS, stage);
 }
+
+/**
+ * JSON Schema sent to llama-server as `json_schema` when that field is supported.
+ * The server may constrain decoding. Zod still validates the returned text.
+ * A constraint does not make model text an authorization.
+ */
+export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Record<string, unknown>> = {
+  independent: {
+    type: "object",
+    properties: {
+      analysis: { type: "string", maxLength: 240 }
+    },
+    required: ["analysis"],
+    additionalProperties: false
+  },
+  "cross-review": {
+    type: "object",
+    properties: { question: { type: "string", maxLength: 240 } },
+    required: ["question"],
+    additionalProperties: false
+  },
+  challenge: {
+    type: "object",
+    properties: {
+      claim: { type: "string", maxLength: 240 },
+      objection: { type: "string", maxLength: 240 },
+      evidenceRefs: { type: "array", items: { type: "string" } }
+    },
+    required: ["claim", "objection"],
+    additionalProperties: false
+  },
+  revision: {
+    type: "object",
+    properties: {
+      revision: { type: "string", maxLength: 240 },
+      addressesMessageIds: { type: "array", items: { type: "string" } }
+    },
+    required: ["revision", "addressesMessageIds"],
+    additionalProperties: false
+  },
+  verification: {
+    type: "object",
+    properties: {
+      claim: { type: "string", maxLength: 240 },
+      verified: { type: "boolean" },
+      reason: { type: "string", maxLength: 240 }
+    },
+    required: ["claim", "verified"],
+    additionalProperties: false
+  },
+  synthesis: {
+    type: "object",
+    properties: {
+      synthesis: { type: "string", maxLength: 240 },
+      evidenceRefs: { type: "array", items: { type: "string" } }
+    },
+    required: ["synthesis", "evidenceRefs"],
+    additionalProperties: false
+  }
+};

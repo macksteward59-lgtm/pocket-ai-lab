@@ -11,6 +11,8 @@ export interface LlamaCppCompletionParams {
   maxTokens: number;
   stop?: readonly string[];
   seed?: number;
+  /** Passed to llama-server as json_schema. Absence means unconstrained text. */
+  jsonSchema?: Record<string, unknown>;
 }
 
 export interface LlamaCppCompletionResult {

@@ -391,6 +391,11 @@ describe("llama.cpp HTTP backend", () => {
       expect(request.prompt).toContain("too vague");
       expect(request.prompt).toContain("Agent: reasoner");
       expect(request).not.toHaveProperty("model");
+      expect(request.json_schema).toMatchObject({
+        type: "object",
+        required: ["analysis"],
+        additionalProperties: false
+      });
       send(response, 200, JSON.stringify({
         content: JSON.stringify({ analysis: "Local model text.", confidence: 0.5 })
       }));
@@ -424,6 +429,7 @@ describe("llama.cpp HTTP backend", () => {
       ]);
       expect(request).not.toHaveProperty("seed");
       expect(request).not.toHaveProperty("stop");
+      expect(request.json_schema).toMatchObject({ required: ["question"] });
       send(response, 200, JSON.stringify({
         choices: [{ message: { role: "assistant", content: JSON.stringify({ question: "Where is the receipt?" }) } }]
       }));

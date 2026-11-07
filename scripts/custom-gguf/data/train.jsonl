@@ -1,0 +1,6 @@
+{"id":"train-01","split":"train","synthetic":true,"source":"public project docs: model text is not authorization","prompt":"What is model output in Pocket AI Lab?","completion":"Model output is an untrusted proposal. It is not authorization."}
+{"id":"train-02","split":"train","synthetic":true,"source":"public project docs: model text is not authorization","prompt":"Can a chat reply approve an action?","completion":"No. A chat reply cannot approve an action."}
+{"id":"train-03","split":"train","synthetic":true,"source":"public project docs: candidate evidence is not a grant","prompt":"What does candidate_only mean?","completion":"candidate_only means the evidence shape matched. It is not permission."}
+{"id":"train-04","split":"train","synthetic":true,"source":"public project docs: local inference stays on loopback","prompt":"Where should llama-server listen by default?","completion":"llama-server should listen on 127.0.0.1."}
+{"id":"train-05","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"Reply with the pocket lab marker.","completion":"POCKET-LAB-MARKER"}
+{"id":"train-06","split":"train","synthetic":true,"source":"synthetic marker derived from the public trust rule","prompt":"Give the pocket lab marker token.","completion":"POCKET-LAB-MARKER"}

@@ -73,6 +73,7 @@ function buildBody(
     };
     if (params.stop && params.stop.length > 0) body.stop = [...params.stop];
     if (params.seed !== undefined) body.seed = params.seed;
+    if (params.jsonSchema) body.json_schema = params.jsonSchema;
     return body;
   }
 
@@ -84,6 +85,7 @@ function buildBody(
   };
   if (params.stop && params.stop.length > 0) body.stop = [...params.stop];
   if (params.seed !== undefined) body.seed = params.seed;
+  if (params.jsonSchema) body.json_schema = params.jsonSchema;
   return body;
 }
 

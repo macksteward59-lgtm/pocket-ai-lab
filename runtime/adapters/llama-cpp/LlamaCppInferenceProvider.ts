@@ -17,7 +17,7 @@ import type { LlamaCppBackend } from "./backend";
 import { normalizeLlamaCppConfig, type LlamaCppProviderConfig, type LlamaCppProviderConfigInput } from "./config";
 import { classifyAbort, isAbortError, LlamaCppInferenceError } from "./errors";
 import { HttpLlamaCppBackend } from "./httpBackend";
-import { isLlamaCppDeliberationStage } from "./payloadSchema";
+import { isLlamaCppDeliberationStage, LLAMA_CPP_STAGE_JSON_SCHEMAS } from "./payloadSchema";
 import { parseLlamaCppOutput } from "./parseOutput";
 import { buildLlamaCppPrompt } from "./prompt";
 import type { LlamaCppInferenceResult } from "./result";
@@ -49,6 +49,9 @@ export class LlamaCppInferenceProvider implements InferenceProvider {
     options?: LlamaCppGenerateOptions
   ): Promise<LlamaCppInferenceResult> {
     assertRequest(request);
+    if (!isLlamaCppDeliberationStage(request.stage)) {
+      throw new LlamaCppInferenceError("invalid_request", "stage has no llama.cpp payload schema");
+    }
     if (options?.signal?.aborted) {
       throw new LlamaCppInferenceError("cancelled", "Inference cancelled");
     }
@@ -66,7 +69,8 @@ export class LlamaCppInferenceProvider implements InferenceProvider {
         temperature: this.config.temperature,
         maxTokens: this.config.maxTokens,
         stop: this.config.stop,
-        seed: this.config.seed
+        seed: this.config.seed,
+        jsonSchema: jsonSchemaFor(request)
       }, signal);
       content = completion.content;
     } catch (error) {
@@ -122,6 +126,24 @@ export function registerLlamaCppInferenceProvider(
   config?: LlamaCppProviderConfigInput
 ): void {
   registry.register(LLAMA_CPP_PROVIDER_ID, () => createLlamaCppInferenceProvider(config));
+}
+
+function jsonSchemaFor(request: InferenceRequest): Record<string, unknown> {
+  if (!isLlamaCppDeliberationStage(request.stage)) {
+    throw new LlamaCppInferenceError("invalid_request", "stage has no llama.cpp payload schema");
+  }
+  const schema = JSON.parse(JSON.stringify(LLAMA_CPP_STAGE_JSON_SCHEMAS[request.stage])) as {
+    properties: Record<string, unknown>;
+  };
+  if (request.stage === "revision") {
+    const ids = [...new Set(request.contextMessages.map(message => message.messageId))];
+    schema.properties.addressesMessageIds = {
+      type: "array",
+      maxItems: ids.length,
+      items: ids.length > 0 ? { type: "string", enum: ids } : { type: "string" }
+    };
+  }
+  return schema;
 }
 
 function assertRequest(request: InferenceRequest): void {
