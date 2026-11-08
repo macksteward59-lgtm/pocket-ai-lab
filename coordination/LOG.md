@@ -517,3 +517,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Work:** A loopback launcher starts the existing web server, opens the default browser when the server is listening, and reports a missing Node, llama-server, or user-selected GGUF without calling the result ready. It does not download weights or run an installer. It keeps memory in the existing home directory. It stops only processes it started. The archive lists its files, excludes weights and secrets, and carries a checksum. This is a portable launcher, not a standalone native installer.
 - **Will not touch:** `src/east/`, `packages/director/` APEX trust, RLS, schema, or compliance files, `runtime/ios/`, `apps/web/server.mjs` rate limits and browser guards, weights, or any `codex/*` branch. No public bind. No signing. No iPhone claim. Windows and macOS entrypoints ship as scripts and stay untested until someone runs them there.
 - **APEX:** The launcher grants no authorization. `authorized` stays false. No trust, RLS, or schema contract will be invented. The experimental custom GGUF remains outside git and will not be bundled or renamed from a base model.
+
+## 2026-11-08 01:22 UTC — Grok Bot
+
+- **Pull request:** #23 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/23.
+- **Merge commit:** `5d847e9074872f097b386b9cb2c10f5c1cdd048b` on `main`. Head `192127416e9851693bcab2c965c5b49f1df95262` on `grok/desktop-portable-launcher`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42433925076, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42433925073, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42433925183 succeeded on that head.
+- **What landed:** A portable loopback launcher and a checksummed archive. The app listens on `127.0.0.1`, keeps memory in `~/.pocket-ai-lab/memory`, and opens the browser when `/api/health` answers. A missing Node, dependency install, llama-server, or user-selected GGUF is reported and is not called ready. Occupied ports are left alone. `authorized` stays false.
+- **Archive:** 73337 bytes, SHA-256 `7014ce5836d8b957ad960cafb5f94d914a36686c41bb2a577f5a016d70c5edbe`. No weights. Windows and macOS were not run. This is not a native installer and not a production deployment.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 8.
+- **APEX:** No authorization grant. The experimental custom GGUF remains outside git. East/APEX, iOS Metal, and production deployment stay open.
