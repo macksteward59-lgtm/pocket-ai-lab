@@ -79,25 +79,57 @@ async function openMemoryManager() {
   }
 }
 
-function memoryApiAllowed(req) {
-  const host = (process.env.HOST || "127.0.0.1").toLowerCase();
-  const remote = (req.socket.remoteAddress || "").toLowerCase();
-  const localHost = host === "127.0.0.1" || host === "localhost" || host === "::1";
-  const localClient = remote === "::1" || remote === "127.0.0.1" || remote.startsWith("::ffff:127.");
-  const origin = req.headers.origin;
-  let sameOrigin = true;
-  if (origin) {
-    try {
-      const parsed = new URL(origin);
-      sameOrigin = Boolean(req.headers.host) && parsed.host === req.headers.host &&
-        (parsed.protocol === "http:" || parsed.protocol === "https:");
-    } catch {
-      sameOrigin = false;
-    }
+function loopbackName(name) {
+  const host = String(name || "").replace(/^\[|\]$/g, "").toLowerCase();
+  return host === "127.0.0.1" || host === "localhost" || host === "::1";
+}
+
+function authorityFromHostHeader(hostHeader) {
+  if (typeof hostHeader !== "string") return null;
+  const raw = hostHeader.trim();
+  if (!raw || /[\s,@/\\]/.test(raw)) return null;
+  try {
+    const url = new URL(`http://${raw}`);
+    return {
+      hostname: url.hostname.replace(/^\[|\]$/g, "").toLowerCase(),
+      port: url.port
+    };
+  } catch {
+    return null;
   }
-  const fetchSite = req.headers["sec-fetch-site"];
-  const sameFetchSite = !fetchSite || fetchSite === "same-origin" || fetchSite === "none";
-  return localHost && localClient && sameOrigin && sameFetchSite;
+}
+
+export function localApiAllowed(req, env = process.env) {
+  const bind = String(env.HOST || "127.0.0.1").trim().toLowerCase();
+  if (!loopbackName(bind)) return false;
+  const remote = String(req.socket?.remoteAddress || "").toLowerCase();
+  const localClient = remote === "::1" || remote === "127.0.0.1" || remote.startsWith("::ffff:127.");
+  if (!localClient) return false;
+  const authority = authorityFromHostHeader(req.headers?.host);
+  if (!authority || !loopbackName(authority.hostname)) return false;
+
+  const origin = req.headers?.origin;
+  if (origin !== undefined) {
+    if (typeof origin !== "string" || origin === "" || origin === "null") return false;
+    let parsed;
+    try {
+      parsed = new URL(origin);
+    } catch {
+      return false;
+    }
+    if (parsed.username || parsed.password) return false;
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    const originHost = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    if (!loopbackName(originHost) || originHost !== authority.hostname || parsed.port !== authority.port) return false;
+  }
+
+  const site = req.headers?.["sec-fetch-site"];
+  if (site !== undefined && site !== "same-origin" && site !== "none") return false;
+  return true;
+}
+
+function jsonContentType(req) {
+  return /^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || "");
 }
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -164,6 +196,20 @@ function drain(req) {
   req.resume();
 }
 
+function rejectLocal(res) {
+  return json(res, 403, {
+    error: "This API is available only to a loopback-only app instance. No reply was invented.",
+    authorized: false
+  });
+}
+
+function rejectContentType(res) {
+  return json(res, 415, {
+    error: "This request requires application/json. No reply was invented.",
+    authorized: false
+  });
+}
+
 async function body(req) {
   let raw = "";
   for await (const chunk of req) {
@@ -213,6 +259,12 @@ export function createServer() {
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
+      if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
+        if (!localApiAllowed(req)) {
+          drain(req);
+          return rejectLocal(res);
+        }
+      }
       if (url.pathname === "/api/health" && req.method === "GET") {
         const cfg = llamaProviderConfig();
         let reachable = false;
@@ -234,9 +286,6 @@ export function createServer() {
         });
       }
       if (url.pathname === "/api/memory" || url.pathname.startsWith("/api/memory/")) {
-        if (!memoryApiAllowed(req)) {
-          return json(res, 403, { error: "Memory is available only to a loopback-only app instance." });
-        }
         const memoryLimit = take("memory", req);
         if (!memoryLimit.allowed) {
           drain(req);
@@ -354,6 +403,10 @@ export function createServer() {
         return json(res, 200, { ready: true, baseUrl: cfg.baseUrl, api: cfg.api, loopback: isLoopbackBaseUrl(cfg.baseUrl) });
       }
       if (url.pathname === "/api/agent-tasks" && req.method === "POST") {
+        if (!jsonContentType(req)) {
+          drain(req);
+          return rejectContentType(res);
+        }
         const agentLimit = take("agent", req);
         if (!agentLimit.allowed) {
           drain(req);
@@ -386,6 +439,10 @@ export function createServer() {
         return;
       }
       if (url.pathname === "/api/chat" && req.method === "POST") {
+        if (!jsonContentType(req)) {
+          drain(req);
+          return rejectContentType(res);
+        }
         const chatLimit = take("chat", req);
         if (!chatLimit.allowed) {
           drain(req);

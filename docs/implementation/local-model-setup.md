@@ -50,7 +50,9 @@ Readiness is HTTP 200 from `GET http://127.0.0.1:8080/health` with a JSON body w
 
 From `apps/web/server.mjs`, the process defaults are `HOST=127.0.0.1` and `PORT=4173`. The provider defaults are llama.cpp `/completion` at `http://127.0.0.1:8080`. Chat and agent calls send the stage JSON Schema as `json_schema`. Returned text is validated again. Malformed model output is rejected, and no analysis string is invented. APEX authorization stays unavailable until real trust, RLS, and schema contracts exist.
 
-`POST /api/chat`, `/api/memory`, and `POST /api/agent-tasks` each have an in-process limit. The defaults are 30, 120, and 8 requests per 60 seconds, counted separately. A request past the limit returns HTTP 429 with `authorized: false` and does not call the model or invent a reply. A blank, zero, or non-numeric limit keeps the default. Counters live in the server process and clear on restart. The app still binds to loopback by default, and memory routes still refuse a non-loopback app host. This guard is not authentication and not a production deployment.
+`POST /api/chat`, `/api/memory`, and `POST /api/agent-tasks` each have an in-process limit. The defaults are 30, 120, and 8 requests per 60 seconds, counted separately. A request past the limit returns HTTP 429 with `authorized: false` and does not call the model or invent a reply. A blank, zero, or non-numeric limit keeps the default. Counters live in the server process and clear on restart. The app still binds to loopback by default. This guard is not authentication and not a production deployment.
+
+Every `/api/` route also requires a loopback bind, a loopback client, and a loopback `Host` header. A browser `Origin`, when sent, must be `http` or `https` and must match that host and port. `Sec-Fetch-Site`, when sent, must be `same-origin` or `none`. A CLI client that omits `Origin` and `Sec-Fetch-Site` is still accepted. `POST /api/chat` and `POST /api/agent-tasks` require `Content-Type: application/json` before any model call. A rejected request returns 403 or 415 with `authorized: false`, invents no reply, and does not change memory. Opening the app at `http://127.0.0.1:4173` or `http://localhost:4173` still works. Setting `HOST` to a non-loopback address turns these routes off.
 
 | Variable | Role |
 |---|---|
@@ -58,7 +60,7 @@ From `apps/web/server.mjs`, the process defaults are `HOST=127.0.0.1` and `PORT=
 | `LLAMACPP_API` | `completion` (default) or `openai-chat`. |
 | `LLAMACPP_MODEL_ALIAS` | Optional alias. `LLM_MODEL` is the legacy name for the same alias. |
 | `LLM_BASE_URL` | Legacy origin. A path ending in `/v1` selects `openai-chat` and that suffix is removed. |
-| `HOST` | App bind address. Default `127.0.0.1`. Memory routes refuse a non-loopback app host. |
+| `HOST` | App bind address. Default `127.0.0.1`. A non-loopback value makes `/api/` routes refuse the request. |
 | `PORT` | App port. Default `4173`. |
 | `POCKET_MEMORY_DIR` | Optional memory directory. Default `~/.pocket-ai-lab`. |
 | `POCKET_RATE_LIMIT_CHAT` | `POST /api/chat` requests allowed per window. Default `30`. |
