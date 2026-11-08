@@ -51,7 +51,9 @@ test("extracted archive launcher, build, and tests work outside the repository",
     timeout: 120000
   });
   assert.equal(engine.status, 0, tail(engine.stdout + engine.stderr));
-  assert.match(engine.stdout, /Test Files\s+[1-9]/);
+  const engineText = plain(engine.stdout + engine.stderr);
+  assert.match(engineText, /Test Files\s+[1-9]\d* passed/);
+  assert.match(engineText, /Tests\s+[1-9]\d* passed/);
 
   const occupied = 46331;
   const blocker = net.createServer((socket) => socket.end("other"));
@@ -107,8 +109,12 @@ function childEnv(extra = {}) {
   return { ...env, ...extra };
 }
 
+function plain(text) {
+  return String(text || "").replace(/\u001B\[[0-9;]*m/g, "");
+}
+
 function tail(text) {
-  return String(text || "").slice(-2000);
+  return plain(text).slice(-2000);
 }
 
 function connect(port) {
