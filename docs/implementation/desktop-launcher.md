@@ -10,7 +10,10 @@ From a checkout:
 
 ```bash
 scripts/desktop/start-pocket-ai-lab.sh
+scripts/desktop/start-pocket-ai-lab.sh --headless
 ```
+
+`--headless`, or `POCKET_LAUNCHER_HEADLESS=1`, leaves the browser closed and prints the loopback URL. It does not restart the server in a loop and it does not install dependencies. A browser `ERR_FAILED` is not treated as evidence that this process exited.
 
 The archive root has the same script, plus `Start Pocket AI Lab.command` and `Start Pocket AI Lab.bat`.
 

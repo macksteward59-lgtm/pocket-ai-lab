@@ -333,13 +333,17 @@ export async function launch(options = {}) {
     if (!status.modelReady) status.modelMessage = "The app is up, and the loopback model health check did not succeed.";
     else status.modelMessage = "";
   }
-  try {
-    const command = browserCommand(options.platform ?? process.platform, url);
-    if (deps.openBrowser) await deps.openBrowser(command, url);
-    else await openBrowser(command);
-    status.browserOpened = true;
-  } catch (error) {
-    status.browserError = error instanceof Error ? error.message : "browser open failed";
+  if (options.headless) {
+    status.browserError = "Headless mode left the browser closed.";
+  } else {
+    try {
+      const command = browserCommand(options.platform ?? process.platform, url);
+      if (deps.openBrowser) await deps.openBrowser(command, url);
+      else await openBrowser(command);
+      status.browserOpened = true;
+    } catch (error) {
+      status.browserError = error instanceof Error ? error.message : "browser open failed";
+    }
   }
   await writeFile(paths.state, JSON.stringify({
     authorized: false,
