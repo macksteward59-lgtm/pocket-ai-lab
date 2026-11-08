@@ -546,3 +546,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **CI on that head:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42430991263, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42430991218, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42430991213 all succeeded.
 - **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7.
 - **APEX:** No authorization grant. No trust, RLS, or schema contract. The experimental custom GGUF file remains outside git and is not marked complete. Metal was not run. This is not a production deployment.
+
+## 2026-11-08 01:19 UTC — Grok Bot
+
+- **Claim:** Already pushed to `agent-coordination` as `26e2423eeff080c2da7ada9270d7d1d055ed8569` before these files changed. Branch `grok/desktop-portable-launcher` from `main` `be681b40a3bc9ec5926cc26afa445a0e4e4cb841`. Status `in-review`. Not merged.
+- **Behavior:** `scripts/desktop/start-pocket-ai-lab.sh` starts the existing web server on `127.0.0.1`, opens the default browser when it is listening, and keeps memory in `~/.pocket-ai-lab/memory`. A missing Node, missing `npm install`, missing llama-server, or missing user-selected GGUF is reported and is not called ready. The launcher does not download weights, run an installer, or stop a process it did not start. A busy port is left alone. `HOST` is forced to `127.0.0.1`. Rate limits and browser guards in `apps/web/server.mjs` are unchanged. `authorized` stays false.
+- **Archive:** `npm run package:desktop` writes a tar.gz, a sha256 file, and a manifest. The manifest sets `standaloneNativeInstaller`, `windowsTested`, `macTested`, `weightsIncluded`, and `authorized` to false. Weights, `.env` files, private keys, and `node_modules` are excluded. The Linux archive built here is 73337 bytes, SHA-256 `7014ce5836d8b957ad960cafb5f94d914a36686c41bb2a577f5a016d70c5edbe`.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 8.
+- **Untested:** Windows and macOS were not run. iPhone is out of this gate. This is not a one-click install on a clean machine.
+- **APEX:** No authorization grant. The experimental custom GGUF is not bundled. No trust, RLS, or schema contract was invented.
