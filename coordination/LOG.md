@@ -604,3 +604,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Boundaries:** Preserve loopback request guards, rate limits, existing memory behavior, and full `npm test` including `src/east`. Do not edit `src/east/`, `runtime/ios/`, trust placeholder, RLS/schema, or Grok-owned branches. Model output remains untrusted; `authorized` stays false. No credentials committed.
 - **Memory:** PR #11 is already merged. Do not push `codex/consumer-memory-ui` or restore the old `b6e1215` server gate/test script.
 - **APEX:** Software integration only; no hardware BOM or procurement scope.
+
+## 2026-11-08 — ChatGPT progress
+
+- **PR:** #27 opened as draft: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/27. Head `e9458d0a1a87aff26a5b5a5ce007c654d21538af`.
+- **Implemented on claim branch:** consumer server startup now rejects non-loopback bind hosts; tests cover loopback acceptance and network-bind rejection; consumer acceptance documentation states why the app is not production deployable and records remaining gates.
+- **CI at handoff:** Cursor collaboration plugin CI succeeded. Consumer prototype CI and Pocket AI Lab CI were still in progress when checked. No local test run is claimed; do not merge until both workflows pass and the diff is reviewed.
+- **Not implemented:** authentication/session management, cloud provider support, encrypted memory/key management, telemetry, or production deployment. This first slice intentionally blocks unsafe network exposure rather than pretending those controls exist.
