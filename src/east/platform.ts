@@ -5,9 +5,11 @@
  * Nothing here grants permission. `authorized` is the constant false, and
  * `commitTaskEvidence` cannot return true. A device-evidence candidate is
  * checked with the existing `validateDeviceEvidenceCandidate` helper and
- * then discarded. `candidate_only` is not authorization. This module does
- * not verify signatures, write APEX records, invent trust/RLS/schema
- * contracts, or issue receipts.
+ * then discarded. `candidate_only` is not authorization. A task result is
+ * also submitted to the existing APEX decision constant as a proposal.
+ * East may surface that decision read-only. It cannot turn the decision
+ * into `authorized`. This module does not verify signatures, write APEX
+ * records, invent trust/RLS/schema contracts, or issue receipts.
  */
 
 import { CORE_AGENTS } from "../../packages/intelligence/agents/AgentManager";
@@ -19,6 +21,15 @@ import {
   validateDeviceEvidenceCandidate,
   type EvidenceAttemptBinding
 } from "../../packages/director/src/lib/compliance/evidence-submission";
+import {
+  acceptApexDecision,
+  liveApexDecision,
+  proposalDigest,
+  type EastApexCloseReason,
+  type EastApexDecision
+} from "./apex-decision";
+
+export type { EastApexCloseReason, EastApexDecision };
 
 export const EAST_DELIBERATION_AGENTS = [
   "director",
@@ -38,7 +49,8 @@ export type EastPlatformErrorCode =
   | "unknown_agent"
   | "not_assigned"
   | "inference_denied"
-  | "evidence_rejected";
+  | "evidence_rejected"
+  | "apex_closed";
 
 export type EastEvidenceRejectionReason = "invalid_shape" | "attempt_mismatch" | "nonce_reuse";
 
@@ -102,6 +114,11 @@ export interface EastTaskRecord {
    * Never an authorization receipt.
    */
   readonly evidenceGate: EastEvidenceGate;
+  /**
+   * Read-only APEX view. `pending` repeats the live gates and is not a grant.
+   * `closed` means the response was missing, invalid, stale, or unreachable.
+   */
+  readonly apexDecision: EastApexDecision;
   /** Always false. This is not an APEX receipt. */
   readonly authorized: false;
 }
@@ -112,6 +129,14 @@ export interface EastPlatformDependencies {
   model: EastModelBinding;
   memory?: MemoryManager;
   createId?: () => string;
+  /**
+   * Replacement for the live `OPEN_DECISIONS` read. Used to exercise closed
+   * responses. No value returned here can set `authorized`.
+   */
+  apex?: { read: () => Promise<unknown> };
+  /** Milliseconds before an APEX read is closed. Range 1..1000. Not a bypass. */
+  apexTimeoutMs?: number;
+  now?: () => Date;
 }
 
 export interface EastPlatformRuntime {
@@ -128,12 +153,17 @@ export interface EastPlatformRuntime {
    * not stored. Returns false in every successful case. A true result would
    * be an authorization decision, and this gate does not have one.
    * The candidate itself is not persisted.
+   * The APEX read must be a live pending decision before the matching
+   * synthesis is stored. A closed read stores nothing further and still
+   * returns false.
    */
   commitTaskEvidence(
     taskId: string,
     synthesis: string,
     submission?: EastEvidenceSubmission
   ): Promise<false>;
+  /** Reads the APEX decision for this task and stores it. Never grants. */
+  readApexDecision(taskId: string): Promise<EastApexDecision>;
   getTask(taskId: string): EastTaskRecord;
 }
 
@@ -144,6 +174,15 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
   if (typeof deps.getResources !== "function") {
     throw new EastPlatformError("invalid_model", "A live resource provider must be supplied");
   }
+  const apexTimeoutMs = deps.apexTimeoutMs ?? 1_000;
+  if (!Number.isInteger(apexTimeoutMs) || apexTimeoutMs < 1 || apexTimeoutMs > 1_000) {
+    throw new EastPlatformError("apex_closed", "APEX read timeout must be an integer from 1 to 1000 milliseconds");
+  }
+  if (deps.apex !== undefined && (typeof deps.apex !== "object" || typeof deps.apex.read !== "function")) {
+    throw new EastPlatformError("apex_closed", "APEX reader is unreachable");
+  }
+  const apex = deps.apex ?? { read: () => Promise.resolve(liveApexDecision()) };
+  const seenDecisionIds = new Set<string>();
   const model = normalizeModel(deps.model);
   const memory = deps.memory ?? new MemoryManager();
   const orchestrator = new Orchestrator({
@@ -184,6 +223,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       synthesis: task.synthesis,
       evidenceRefs: [...task.evidenceRefs],
       evidenceGate: freezeEvidenceGate(task.evidenceGate),
+      apexDecision: freezeApexDecision(task.apexDecision),
       authorized: false
     };
     tasks.set(stored.id, stored);
@@ -217,6 +257,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
         synthesis: null,
         evidenceRefs: [],
         evidenceGate: { status: "not_submitted" },
+        apexDecision: { status: "unread" },
         authorized: false
       }).id;
     },
@@ -337,8 +378,9 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       }
       const proposed = typeof synthesis === "string" ? synthesis : "";
       const current = requireTask(task.id);
+      const decision = await readDecision(current, proposed);
       const matches = current.synthesis !== null && proposed === current.synthesis;
-      if (matches && !evidenceCommitted.has(current.id)) {
+      if (decision.status === "pending" && matches && !evidenceCommitted.has(current.id)) {
         await memory.write({
           layer: "episodic",
           content: current.synthesis as string,
@@ -351,13 +393,49 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
         });
         evidenceCommitted.add(current.id);
       }
-      put({ ...requireTask(task.id), authorized: false, evidenceGate });
+      put({ ...requireTask(task.id), authorized: false, evidenceGate, apexDecision: decision });
       return false;
+    },
+    async readApexDecision(taskId) {
+      const task = requireTask(taskId);
+      const decision = await readDecision(task, task.synthesis ?? "");
+      put({ ...requireTask(task.id), authorized: false, apexDecision: decision });
+      return snapshot(requireTask(task.id)).apexDecision;
     },
     getTask(taskId) {
       return snapshot(requireTask(taskId));
     }
   };
+
+  async function readDecision(task: EastTaskRecord, synthesis: string): Promise<EastApexDecision> {
+    const digest = proposalDigest({
+      taskId: task.id,
+      objective: task.objective,
+      synthesis,
+      evidenceRefs: task.evidenceRefs
+    });
+    const now = (deps.now ?? (() => new Date()))().getTime();
+    if (!Number.isFinite(now)) {
+      return freezeApexDecision({ status: "closed", reason: "unreachable", proposalDigest: digest });
+    }
+    const raced = await readWithTimeout(() => apex.read(), apexTimeoutMs);
+    if (!raced.ok) {
+      return freezeApexDecision({ status: "closed", reason: raced.reason, proposalDigest: digest });
+    }
+    const accepted = acceptApexDecision(raced.value, { now, seenDecisionIds });
+    if (!accepted.ok) {
+      return freezeApexDecision({ status: "closed", reason: accepted.reason, proposalDigest: digest });
+    }
+    if (accepted.decisionId !== null) seenDecisionIds.add(accepted.decisionId);
+    return freezeApexDecision({
+      status: "pending",
+      rule: "pending",
+      patch: "pending",
+      release: "pending",
+      proposalDigest: digest,
+      trust: "unavailable"
+    });
+  }
 }
 
 function publishAnalysis(
@@ -423,8 +501,52 @@ function snapshot(task: EastTaskRecord): EastTaskRecord {
     synthesis: task.synthesis,
     evidenceRefs: Object.freeze([...task.evidenceRefs]),
     evidenceGate: freezeEvidenceGate(task.evidenceGate),
+    apexDecision: freezeApexDecision(task.apexDecision),
     authorized: false
   });
+}
+
+function freezeApexDecision(decision: EastApexDecision | undefined): EastApexDecision {
+  if (!decision || decision.status === "unread") return Object.freeze({ status: "unread" });
+  if (decision.status === "closed") {
+    return Object.freeze({
+      status: "closed",
+      reason: decision.reason,
+      proposalDigest: decision.proposalDigest
+    });
+  }
+  return Object.freeze({
+    status: "pending",
+    rule: "pending" as const,
+    patch: "pending" as const,
+    release: "pending" as const,
+    proposalDigest: decision.proposalDigest,
+    trust: "unavailable" as const
+  });
+}
+
+async function readWithTimeout(
+  read: () => Promise<unknown>,
+  timeoutMs: number
+): Promise<{ ok: true; value: unknown } | { ok: false; reason: "timeout" | "unreachable" }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<{ kind: "timeout" }>(resolve => {
+    timer = setTimeout(() => resolve({ kind: "timeout" }), timeoutMs);
+  });
+  const attempt = Promise.resolve()
+    .then(() => read())
+    .then(value => ({ kind: "value" as const, value }))
+    .catch(() => ({ kind: "error" as const }));
+  try {
+    const winner = await Promise.race([attempt, timeout]);
+    if (winner.kind === "timeout") return { ok: false, reason: "timeout" };
+    if (winner.kind === "error") return { ok: false, reason: "unreachable" };
+    return { ok: true, value: winner.value };
+  } catch {
+    return { ok: false, reason: "unreachable" };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 const EVIDENCE_REJECTION_MESSAGE: Record<EastEvidenceRejectionReason, string> = {

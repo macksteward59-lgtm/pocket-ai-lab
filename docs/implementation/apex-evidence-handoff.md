@@ -45,6 +45,8 @@ The same file also has attempt lifecycle helpers (`nextPhase`, `lifecyclePath`) 
 
 `commitTaskEvidence` in `src/east/platform.ts` calls `validateDeviceEvidenceCandidate` when a submission is passed. A rejected candidate throws `evidence_rejected` and is not stored. A `candidate_only` candidate still makes the function return `false`. Task `authorized` stays `false`. The compiled East binding in `src/east/index.ts` returns the constant `false`.
 
+The same commit reads `OPEN_DECISIONS` and stores the result on `apexDecision`. The only surfaced decision is the three gates still set to `pending`, a digest East calculated from the proposal, and `trust: "unavailable"`. East does not copy a response field onto `authorized`. A missing, malformed, forged, shape-mismatched, signature-bearing, stale, throwing, or timed-out response is `closed`. A closed read does not add the unverified synthesis write. No signature is checked. `trust.ts` is not imported.
+
 ## Swift SignedRun is not a server verifier
 
 `packages/director/ios/Sources/ApexBridge/Evidence.swift` defines `SignedRun` with these stored fields:

@@ -6,7 +6,9 @@
  * InferenceProvider. APEX authorization is not implemented here: the task's
  * `authorized` field is whatever `commitTaskEvidence` returns, and that
  * function returns false. A device-evidence candidate that the compliance
- * helper marks `candidate_only` is still not authorization.
+ * helper marks `candidate_only` is still not authorization. The compiled
+ * binding returns that false constant and does not copy an APEX decision
+ * into `authorized`.
  */
 
 import { East } from "@elaraai/east";
@@ -16,6 +18,8 @@ import { EAST_DELIBERATION_AGENTS, type EastPlatformRuntime } from "./platform";
 
 export { createEastPlatform, EastPlatformError, EAST_DELIBERATION_AGENTS } from "./platform";
 export type {
+  EastApexCloseReason,
+  EastApexDecision,
   EastAssignment,
   EastEvidenceGate,
   EastEvidenceRejectionReason,
