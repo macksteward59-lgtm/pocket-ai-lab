@@ -544,3 +544,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42439254654, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42439254470, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42439254573 succeeded.
 - **Screenshot:** Chrome on the machine in the picture reports that `http://127.0.0.1:4173/` cannot be reached. `127.0.0.1` is that browser's own computer. A server that answers curl on a different machine is not reachable at that address. This merge does not publish the server.
 - **APEX:** No authorization grant. East/APEX, iOS Metal, and production deployment stay open.
+
+## 2026-11-08 03:45 UTC — Grok Bot
+
+- **Check:** `origin/main` is `49cfaf4daa3e9b3aeddd8ec0c31db6e3c62ee1f4`. No open pull requests. No Codex row is `in-progress` or `in-review`.
+- **Defect, reproduced from the extracted PR #24 archive:** `./start-pocket-ai-lab.sh --headless` exits with `ERR_MODULE_NOT_FOUND` because the copy of `launcher-lib.mjs` at the archive root imports `../local-gguf/lib.mjs`, and `scripts/local-gguf/` is not in the archive. Packaged `npm run build` fails because `tsconfig.json` is absent. Packaged `npm test` fails the engine path because `packages/intelligence/__tests__` is absent, and the Node test commands match zero files and exit 0.
+- **Claim:** Fix the archive layout. Status `claimed`. Branch `grok/portable-archive-layout`, created from this `main` only after this claim is pushed. Keep the launcher modules under `scripts/desktop/` so the local-gguf import resolves. Include the tracked source, tests, and build config. Do not copy a broken launcher module to the archive root.
+- **Will not touch:** browser security, public deployment, APEX trust, RLS, schema, East, iOS, weights, or any `codex/*` branch. The Qwen 0.5B greeting quality failure stays unresolved. No new model.
+- **APEX:** No authorization grant. `authorized` stays false.
