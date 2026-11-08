@@ -99,6 +99,13 @@ function authorityFromHostHeader(hostHeader) {
   }
 }
 
+export function assertLoopbackHost(host) {
+  if (!loopbackName(host)) {
+    throw new Error("Pocket AI Lab consumer server must bind to loopback; production/network deployment is not enabled.");
+  }
+  return host;
+}
+
 export function localApiAllowed(req, env = process.env) {
   const bind = String(env.HOST || "127.0.0.1").trim().toLowerCase();
   if (!loopbackName(bind)) return false;
@@ -512,5 +519,6 @@ export function createServer() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const host = process.env.HOST || "127.0.0.1";
+  assertLoopbackHost(host);
   createServer().listen(port, host, () => console.log("Pocket AI Lab web app listening on http://" + host + ":" + port));
 }
