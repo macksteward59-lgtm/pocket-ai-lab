@@ -590,3 +590,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Still true:** A Qwen 0.5B greeting can be a poor or echoed sentence when the status is 200. Agents scroll CSS is in the package. A browser on another computer still cannot open `127.0.0.1` on the server machine. No new model.
 - **Tests:** `npm run build` passed. `npm test` passed: web/plugin 33, engine 48, adapter/lab/memory/east 194 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 10.
 - **APEX:** No authorization grant. No weights added.
+
+## 2026-11-08 03:51 UTC — Grok Bot
+
+- **Pull request:** #25 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/25. Head `b9ec69e873ac4962e8883037599f694a8f427d12`. The board row is `done` for this archive fix. The GitHub merge SHA is recorded on `agent-coordination` when the merge commit exists.
+- **CI on that head:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444335103, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444335071, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444335094 all succeeded. An earlier head failed only because the archive smoke misread Vitest's colored summary.
+- **APEX:** No authorization grant. The Qwen 0.5B greeting quality failure remains. A browser on another computer still cannot open this machine's `127.0.0.1`.
