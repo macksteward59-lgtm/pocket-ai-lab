@@ -35,3 +35,9 @@
 .memory-editor textarea{resize:vertical;min-height:90px}
 .memory-editor textarea:focus,.memory-editor input:focus{border-color:#7896cc}
 .memory-editor-actions{display:flex;justify-content:flex-end;gap:9px}
+
+.app-shell{height:100vh;max-height:100vh;overflow:hidden}
+.main{min-height:0;overflow:hidden}
+.view{min-height:0}
+#agents-view{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.agent-transcript{max-height:none;overflow:visible}

@@ -563,3 +563,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 8.
 - **Archive:** 73337 bytes, SHA-256 `7014ce5836d8b957ad960cafb5f94d914a36686c41bb2a577f5a016d70c5edbe`. No weights. Windows and macOS were not run. This is not a production deployment.
 - **APEX:** No authorization grant. No `authorized: true`.
+
+## 2026-11-08 02:34 UTC — Grok Bot
+
+- **Claim:** Already pushed to `agent-coordination` as `417965f` before these files changed. Branch `grok/runtime-chat-scroll-repair` from `main` `5d847e9074872f097b386b9cb2c10f5c1cdd048b`. Status `in-review`. Not merged.
+- **Not established:** Web PID 12157 and model PID 11885 stayed up. Four UI, app-health, and model-health checks across 30 seconds returned 200. That does not explain a browser `ERR_FAILED`, and it is not a reason to rewrite launcher process lifetime. An external shortcut wrapper lock was fixed outside this repository. The packaged launcher does not share that lock.
+- **Chat cause:** `buildLlamaCppPrompt` wrapped consumer chat as an agent turn and labeled the user text `Task prompt:`. The UI displays the `analysis` string, so a small model can narrate the task instead of answering. Chat with `agentId: "chat"` now says the analysis string is the reply shown to the user. Deliberation prompts still use `Task prompt:`. A bad or narrated analysis is still shown when it matches the schema. Nothing is replaced with a canned greeting. A 0.5B smoke model can still answer poorly.
+- **Agents scroll:** `.agent-transcript` had `max-height:360px; overflow:auto` inside a view that also grew with the page. The shell is now a fixed viewport, `#agents-view` is the scrollport, and the transcript no longer creates a second scrollbar.
+- **Headless:** `--headless` or `POCKET_LAUNCHER_HEADLESS=1` skips the browser. It does not install packages and it does not respawn.
+- **Archive:** 73725 bytes, SHA-256 `66e55ec6ba22efa6834eeaa4164050c59398ac66886c2eb36b21dc514fa61659`.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 33, engine 48, adapter/lab/memory/east 194 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 9.
+- **APEX:** No authorization grant. No new model. No trust, RLS, or schema contract.

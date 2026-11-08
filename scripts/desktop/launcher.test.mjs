@@ -229,6 +229,44 @@ test("the real launcher process serves loopback health and then exits", async ()
   assert.equal(await listenAvailable(46021), true);
 });
 
+test("headless mode starts the app and does not open a browser", async () => {
+  const home = await mkdtemp(path.join(tmpdir(), "pocket-headless-"));
+  let server;
+  const handle = await launch({
+    home,
+    headless: true,
+    env: { PORT: "46041" },
+    nodeVersion: "22.0.0",
+    appRoot: path.resolve(path.dirname(new URL(import.meta.url).pathname), "../.."),
+    deps: {
+      fileExists: async file => file.endsWith("package.json") || file.endsWith("server.mjs"),
+      readText: async () => "",
+      existsSync: () => true,
+      listenAvailable: async () => true,
+      openBrowser: async () => { throw new Error("browser should stay closed"); },
+      spawnLlama: () => { throw new Error("llama-server should not start"); },
+      spawnWeb: (_file, _args, options) => {
+        process.env.HOST = "127.0.0.1";
+        process.env.POCKET_MEMORY_DIR = options.env.POCKET_MEMORY_DIR;
+        process.env.LLAMACPP_BASE_URL = options.env.LLAMACPP_BASE_URL;
+        server = createServer();
+        server.listen(Number(options.env.PORT), "127.0.0.1");
+        return { pid: 999999, kill() { server.close(); }, stdout: null, stderr: null };
+      }
+    }
+  });
+  try {
+    assert.equal(handle.status.appListening, true);
+    assert.equal(handle.status.browserOpened, false);
+    assert.equal(handle.status.authorized, false);
+    assert.match(handle.status.browserError, /Headless mode/);
+  } finally {
+    await handle.stop();
+    if (server) await new Promise(resolve => server.close(resolve));
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
 test("the archive excludes weights and secrets and has a checksum", async () => {
   assert.equal(isForbiddenRelative("apps/web/.env"), true);
   assert.equal(isForbiddenRelative("models/demo.gguf"), true);
