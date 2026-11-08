@@ -596,3 +596,18 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Pull request:** #25 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/25. Head `b9ec69e873ac4962e8883037599f694a8f427d12`. The board row is `done` for this archive fix. The GitHub merge SHA is recorded on `agent-coordination` when the merge commit exists.
 - **CI on that head:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444335103, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444335071, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444335094 all succeeded. An earlier head failed only because the archive smoke misread Vitest's colored summary.
 - **APEX:** No authorization grant. The Qwen 0.5B greeting quality failure remains. A browser on another computer still cannot open this machine's `127.0.0.1`.
+
+## 2026-11-08 — ChatGPT
+
+- **Claim:** Consumer app backend/deployment. Status `claimed`. Branch `codex/consumer-backend-deployment`, created from `main` at `6eb61f2b1480655156f9bd738ab939f950c2be09` before implementation edits.
+- **Scope:** Consumer app/backend deployment readiness: authenticated secrets, provider adapters, secure storage, telemetry/monitoring, release pipeline, and production operations. No public deployment of a machine-local `127.0.0.1` service.
+- **Boundaries:** Preserve loopback request guards, rate limits, existing memory behavior, and full `npm test` including `src/east`. Do not edit `src/east/`, `runtime/ios/`, trust placeholder, RLS/schema, or Grok-owned branches. Model output remains untrusted; `authorized` stays false. No credentials committed.
+- **Memory:** PR #11 is already merged. Do not push `codex/consumer-memory-ui` or restore the old `b6e1215` server gate/test script.
+- **APEX:** Software integration only; no hardware BOM or procurement scope.
+
+## 2026-11-08 — ChatGPT progress
+
+- **PR:** #27 opened as draft: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/27. Head `e9458d0a1a87aff26a5b5a5ce007c654d21538af`.
+- **Implemented on claim branch:** consumer server startup now rejects non-loopback bind hosts; tests cover loopback acceptance and network-bind rejection; consumer acceptance documentation states why the app is not production deployable and records remaining gates.
+- **CI at handoff:** Cursor collaboration plugin CI succeeded. Consumer prototype CI and Pocket AI Lab CI were still in progress when checked. No local test run is claimed; do not merge until both workflows pass and the diff is reviewed.
+- **Not implemented:** authentication/session management, cloud provider support, encrypted memory/key management, telemetry, or production deployment. This first slice intentionally blocks unsafe network exposure rather than pretending those controls exist.

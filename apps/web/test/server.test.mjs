@@ -4,7 +4,7 @@ import { createServer as createHttpServer } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createServer } from "../server.mjs";
+import { assertLoopbackHost, createServer } from "../server.mjs";
 
 const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "POCKET_MEMORY_DIR", "HOST", "POCKET_RATE_LIMIT_CHAT", "POCKET_RATE_LIMIT_MEMORY", "POCKET_RATE_LIMIT_AGENT", "POCKET_RATE_LIMIT_WINDOW_MS"];
 
@@ -340,5 +340,15 @@ test("memory writes require JSON content type to block simple cross-site form po
     }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+
+test("consumer server startup permits loopback binds only", () => {
+  for (const host of ["127.0.0.1", "localhost", "::1"]) {
+    assert.equal(assertLoopbackHost(host), host);
+  }
+  for (const host of ["0.0.0.0", "::", "192.0.2.10", "example.com", ""]) {
+    assert.throws(() => assertLoopbackHost(host), /must bind to loopback/);
   }
 });
