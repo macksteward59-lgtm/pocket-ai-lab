@@ -509,3 +509,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7.
 - **Status:** This guard row is `done`. It is not authentication and not a production deployment. East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS Metal remains open. The experimental custom GGUF artifact remains outside git and is not complete.
 - **APEX:** This merge grants no authorization. No `authorized: true`.
+
+## 2026-11-08 01:14 UTC — Grok Bot
+
+- **Check:** `origin/main` is `be681b40a3bc9ec5926cc26afa445a0e4e4cb841`. No open pull requests. No Codex row is `in-progress` or `in-review`.
+- **Claim:** Portable desktop launcher. Status `claimed`. Branch `grok/desktop-portable-launcher`, created from that `main` only after this claim is pushed. Files: `scripts/desktop/`, the npm test entry for those tests, `docs/implementation/desktop-launcher.md`, and a short README status row.
+- **Work:** A loopback launcher starts the existing web server, opens the default browser when the server is listening, and reports a missing Node, llama-server, or user-selected GGUF without calling the result ready. It does not download weights or run an installer. It keeps memory in the existing home directory. It stops only processes it started. The archive lists its files, excludes weights and secrets, and carries a checksum. This is a portable launcher, not a standalone native installer.
+- **Will not touch:** `src/east/`, `packages/director/` APEX trust, RLS, schema, or compliance files, `runtime/ios/`, `apps/web/server.mjs` rate limits and browser guards, weights, or any `codex/*` branch. No public bind. No signing. No iPhone claim. Windows and macOS entrypoints ship as scripts and stay untested until someone runs them there.
+- **APEX:** The launcher grants no authorization. `authorized` stays false. No trust, RLS, or schema contract will be invented. The experimental custom GGUF remains outside git and will not be bundled or renamed from a base model.
