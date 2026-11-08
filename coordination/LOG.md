@@ -499,3 +499,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Work:** Reject a non-loopback Host, a foreign or mismatched Origin, and `Sec-Fetch-Site` other than `same-origin` or `none` before any model call or memory change. Keep CLI requests that omit Origin and `Sec-Fetch-Site`. Require `application/json` before chat or agent work. Same-origin browser requests and loopback CLI requests still succeed. `authorized` stays false.
 - **Will not touch:** `src/east/`, `packages/director/` APEX trust, RLS, schema, or compliance files, `runtime/ios/`, weights, or any `codex/*` branch. No public bind, no Metal claim, no production-ready claim. The experimental custom GGUF download remains outside git and is not part of this claim.
 - **APEX:** This claim does not grant authorization. A rejected browser request is a refusal, not a receipt. No trust, RLS, or schema contract will be invented.
+
+## 2026-11-08 00:45 UTC — Grok Bot
+
+- **Pull request:** #22 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/22.
+- **Merge commit:** `be681b40a3bc9ec5926cc26afa445a0e4e4cb841` on `main`. Head `37ee9ef509ea4f4ebc6cb09a5685fe996f7b476b` on `grok/local-browser-request-guard`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42431108796, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42431108756, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42431108785 succeeded on that head. The implementation head `4c93067` had also passed the same three checks.
+- **What landed:** `/api/` routes require a loopback bind, a loopback client, and a loopback Host. A present Origin must match that host and port. `Sec-Fetch-Site` must be absent, `same-origin`, or `none`. Chat and agent posts require `application/json` before the model runs. Rejection is 403 or 415 with `authorized: false`, no invented reply, no model call, and no memory write. Same-origin browser requests and loopback CLI requests still succeed.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7.
+- **Status:** This guard row is `done`. It is not authentication and not a production deployment. East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS Metal remains open. The experimental custom GGUF artifact remains outside git and is not complete.
+- **APEX:** This merge grants no authorization. No `authorized: true`.
