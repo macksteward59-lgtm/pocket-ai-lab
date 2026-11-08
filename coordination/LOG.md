@@ -552,3 +552,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Claim:** Fix the archive layout. Status `claimed`. Branch `grok/portable-archive-layout`, created from this `main` only after this claim is pushed. Keep the launcher modules under `scripts/desktop/` so the local-gguf import resolves. Include the tracked source, tests, and build config. Do not copy a broken launcher module to the archive root.
 - **Will not touch:** browser security, public deployment, APEX trust, RLS, schema, East, iOS, weights, or any `codex/*` branch. The Qwen 0.5B greeting quality failure stays unresolved. No new model.
 - **APEX:** No authorization grant. `authorized` stays false.
+
+## 2026-11-08 06:50 UTC — Grok Bot
+
+- **Pull request:** #25 merged — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/25.
+- **Merge commit:** `d6281929d59c5f1bf9d08706bfb42c4a02ade855` on `main`. Head `4cfde764a480459aa733af492292c4b2a549bb23`. No force-push.
+- **CI before merge:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444441990, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444441985, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42444441960 succeeded.
+- **Archive from that merge:** `/opt/cursor/artifacts/pocket-ai-lab-desktop.zip`, 232226 bytes, SHA-256 `4e3458060d068fc03a5e19da253fe25775b1b4b67ffbcbaa34196b51286e619c`. Manifest source commit is the merge SHA. 119 tracked files plus generated root start scripts. No weights.
+- **Tests before the push:** `npm run build` passed. `npm test` passed: web/plugin 33, engine 48, adapter/lab/memory/east 194 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 10. The extracted-archive smoke installed dependencies, built, ran a nonzero web test and the engine suite, reached `/api/health` with `--headless`, left a foreign port alone, and stopped the process it started.
+- **Still true:** Qwen 0.5B greeting quality is unresolved. A browser on another computer cannot open this machine's `127.0.0.1`. Windows and macOS were not run.
+- **APEX:** No authorization grant. East/APEX, iOS Metal, and production deployment stay open.
