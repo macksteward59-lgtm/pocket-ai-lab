@@ -531,3 +531,18 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Status:** The rate-limit row is `done` for this slice only. It is not authentication and not a production deployment.
 - **Still open:** Full East/APEX submission remains blocked on real trust, RLS, and schema contracts. iOS Metal linking and on-device acceptance remain. Consumer secrets, secure storage, telemetry, release pipeline, and production operations remain.
 - **APEX:** This merge grants no authorization. No trust, RLS, or schema contract was invented. No `authorized: true`.
+
+## 2026-11-08 00:42 UTC — Grok Bot
+
+- **Claim:** Already pushed to `agent-coordination` as `9219da7b42f4c0ee6253fadc2bed438e5b57c04d` before these files changed. Branch `grok/local-browser-request-guard` from `main` `fbd200ddba9e2d42fe964afd5fb3bf02331a9c9f`. Status `in-review`. Not merged.
+- **Behavior:** Every `/api/` route requires a loopback bind, a loopback client, and a loopback `Host`. An `Origin`, when present, must be `http` or `https` and match that host and port. `Sec-Fetch-Site`, when present, must be `same-origin` or `none`. CLI requests that omit those browser headers still pass. `POST /api/chat` and `POST /api/agent-tasks` require `application/json` before the limiter or the model runs. A rejection is 403 or 415 with `authorized: false`, no invented reply, no model call, and no memory write. The page at `127.0.0.1` or `localhost` still works.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7. New cases cover a same-origin chat, a foreign origin that does not call the provider, a `text/plain` chat that does not call the provider, a localhost browser health check, a foreign Host, a mismatched Origin, a cross-site health check, and a cross-site memory post that creates no file.
+- **Out of scope:** East, iOS Metal, APEX trust, RLS, schema, authentication, public deployment, and the experimental custom GGUF artifact. That GGUF remains outside git. No `authorized: true`. No production-ready claim.
+- **Next:** Merge this pull request only after CI is green, then mark the row `done` on this branch's board before that merge so no follow-up bookkeeping pull request is required. Append the merge SHA on `agent-coordination`.
+
+## 2026-11-08 00:43 UTC — Grok Bot
+
+- **Pull request:** #22 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/22. Implementation head `4c93067fdc8ae834d2e2a81a2d1bb49cc1cc6b2d`. Status on the board is `done` for this slice. The GitHub merge SHA is recorded on `agent-coordination` when the merge commit exists.
+- **CI on that head:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42430991263, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42430991218, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42430991213 all succeeded.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7.
+- **APEX:** No authorization grant. No trust, RLS, or schema contract. The experimental custom GGUF file remains outside git and is not marked complete. Metal was not run. This is not a production deployment.
