@@ -15,7 +15,7 @@ scripts/desktop/start-pocket-ai-lab.sh --headless
 
 `--headless`, or `POCKET_LAUNCHER_HEADLESS=1`, leaves the browser closed and prints the loopback URL. It does not restart the server in a loop and it does not install dependencies. A browser `ERR_FAILED` is not treated as evidence that this process exited.
 
-The archive root has the same script, plus `Start Pocket AI Lab.command` and `Start Pocket AI Lab.bat`.
+The archive root start script runs `scripts/desktop/launcher.mjs`. That module imports `scripts/local-gguf/lib.mjs`. The archive includes that file, the tests, and `tsconfig.json`. It does not place a second `launcher-lib.mjs` at the archive root.
 
 The web server binds to `127.0.0.1`. A request to use another host is forced back to loopback. The rate limits and browser-request checks in the web server stay in place. `authorized` stays false.
 
@@ -35,4 +35,4 @@ The experimental custom GGUF is not in the archive. A missing path is reported, 
 npm run package:desktop
 ```
 
-The command writes `pocket-ai-lab-desktop.tar.gz`, a `.sha256` file, and a manifest. The manifest records `standaloneNativeInstaller: false`, `windowsTested: false`, `macTested: false`, `weightsIncluded: false`, and `authorized: false`. Weights, `.env` files, private keys, and `node_modules` are excluded.
+The command writes `pocket-ai-lab-desktop.zip`, a `.sha256` file, and a manifest. The manifest records the source commit, `standaloneNativeInstaller: false`, `windowsTested: false`, `macTested: false`, `weightsIncluded: false`, `greetingQualityFixed: false`, and `authorized: false`. Weights, `.env` files, private keys, and `node_modules` are excluded. After `npm install`, `npm test` and `npm run build` run from the unpacked folder. A Qwen 0.5B greeting can still be a poor sentence when the status is 200.
