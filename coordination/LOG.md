@@ -581,3 +581,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **CI on that head:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42439136545, Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42439136550, and Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42439136513 all succeeded.
 - **Archive:** 73725 bytes, SHA-256 `66e55ec6ba22efa6834eeaa4164050c59398ac66886c2eb36b21dc514fa61659`.
 - **APEX:** No authorization grant. A browser `ERR_FAILED` remains unexplained. East/APEX, iOS Metal, and production deployment stay open.
+
+## 2026-11-08 03:48 UTC — Grok Bot
+
+- **Claim:** Already pushed to `agent-coordination` as `9dc0220` before these files changed. Branch `grok/portable-archive-layout` from `main` `49cfaf4daa3e9b3aeddd8ec0c31db6e3c62ee1f4`. Status `in-review`. Not merged.
+- **Cause:** The packager copied `launcher-lib.mjs` to the archive root. That file imports `../local-gguf/lib.mjs`, which is outside the archive, so `./start-pocket-ai-lab.sh --headless` threw `ERR_MODULE_NOT_FOUND`. The same packager skipped `test`, `__tests__`, and `*.test.*`, and it did not include `tsconfig.json`. Packaged `npm run build` failed. Packaged Node test commands matched zero files and exited 0. Vitest failed because the engine tests were absent.
+- **Fix:** The archive is the tracked tree. Root start scripts run `scripts/desktop/launcher.mjs`, so the local-gguf import resolves. `require-tests.mjs` makes an empty Node test glob exit 1. An extracted copy in a temp directory installs dependencies, builds, runs a nonzero web test and the engine vitest suite, starts `--headless` to `/api/health`, leaves a foreign port alone, and stops the process it started.
+- **Still true:** A Qwen 0.5B greeting can be a poor or echoed sentence when the status is 200. Agents scroll CSS is in the package. A browser on another computer still cannot open `127.0.0.1` on the server machine. No new model.
+- **Tests:** `npm run build` passed. `npm test` passed: web/plugin 33, engine 48, adapter/lab/memory/east 194 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 10.
+- **APEX:** No authorization grant. No weights added.

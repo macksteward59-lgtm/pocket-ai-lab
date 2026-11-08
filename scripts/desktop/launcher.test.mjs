@@ -273,6 +273,8 @@ test("the archive excludes weights and secrets and has a checksum", async () => 
   assert.equal(isForbiddenRelative("models/" + EXPERIMENTAL_GGUF), true);
   assert.equal(isForbiddenRelative("node_modules/zod/index.js"), true);
   assert.equal(isForbiddenRelative("apps/web/index.html"), false);
+  assert.equal(isForbiddenRelative("apps/web/test/server.test.mjs"), false);
+  assert.equal(isForbiddenRelative("packages/intelligence/__tests__/example.test.ts"), false);
   const dest = await mkdtemp(path.join(tmpdir(), "pocket-archive-"));
   const built = await buildArchive({ destDir: dest });
   assert.ok(built.bytes > 1000);
@@ -290,6 +292,12 @@ test("the archive excludes weights and secrets and has a checksum", async () => 
   assert.equal(names.some(name => name.includes(".env")), false);
   assert.ok(names.includes("apps/web/server.mjs"));
   assert.ok(names.includes("scripts/desktop/launcher.mjs"));
+  assert.ok(names.includes("scripts/local-gguf/lib.mjs"));
+  assert.ok(names.includes("tsconfig.json"));
+  assert.equal(names.includes("launcher-lib.mjs"), false);
+  assert.ok(names.some(name => name.startsWith("apps/web/test/") && name.endsWith(".test.mjs")));
+  assert.ok(names.some(name => name.startsWith("packages/intelligence/__tests__/")));
+  assert.match(built.manifest.sourceCommit, /^[0-9a-f]{40}$/);
   await rm(dest, { recursive: true, force: true });
 });
 

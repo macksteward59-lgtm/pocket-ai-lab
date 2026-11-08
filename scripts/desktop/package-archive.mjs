@@ -1,70 +1,37 @@
 import { createHash } from "node:crypto";
-import path from "node:path";
-import { spawn } from "node:child_process";
-import { chmod, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { EXPERIMENTAL_GGUF } from "./launcher-lib.mjs";
 
+const execFileAsync = promisify(execFile);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../..");
 
-const ALLOWED_ROOTS = [
-  "apps/web",
-  "packages/intelligence",
-  "runtime/adapters/llama-cpp",
-  "runtime/lab",
-  "scripts/desktop",
-  "docs/implementation/desktop-launcher.md",
-  "package.json",
-  "README.md"
-];
-
-const SKIP_DIRS = new Set(["node_modules", "dist", "models", ".git", "__tests__", "__pycache__", "test"]);
-const FORBIDDEN = /(\.env($|\.))|\.gguf$|\.pem$|\.key$|id_rsa|credentials\.json|secret/i;
+const FORBIDDEN = /(^|\/)(\.env($|\..*)|node_modules|dist|models|\.git)(\/|$)|(\.gguf|\.pem|\.key)$|id_rsa|credentials\.json|(^|\/)secret/i;
 
 export function isForbiddenRelative(relative) {
   const normalized = relative.split(path.sep).join("/");
-  if (normalized.split("/").some(part => SKIP_DIRS.has(part))) return true;
-  if (FORBIDDEN.test(normalized)) return true;
   if (path.basename(normalized) === EXPERIMENTAL_GGUF) return true;
-  if (normalized.endsWith(".test.mjs") || normalized.endsWith(".test.ts") || normalized.endsWith(".test.js")) return true;
-  return false;
+  return FORBIDDEN.test(normalized);
 }
 
 export async function collectFiles(root) {
-  const files = [];
-  for (const entry of ALLOWED_ROOTS) {
-    await walk(root, entry, files);
+  const { stdout } = await execFileAsync("git", ["ls-files", "-z"], { cwd: root });
+  const files = stdout.split("\0").filter(Boolean)
+    .map(file => file.split(path.sep).join("/"))
+    .filter(file => !isForbiddenRelative(file))
+    .sort();
+  for (const required of ["scripts/local-gguf/lib.mjs", "scripts/desktop/launcher-lib.mjs", "tsconfig.json", "package.json"]) {
+    if (!files.includes(required)) throw new Error("Archive is missing " + required);
   }
-  const lock = path.join(root, "package-lock.json");
-  try {
-    const info = await stat(lock);
-    if (info.isFile()) files.push("package-lock.json");
-  } catch {
-    // A lockfile is optional. npm install still reads package.json.
+  if (!files.some(file => file.endsWith(".test.mjs") || file.endsWith(".test.ts"))) {
+    throw new Error("Archive includes no tests, so packaged npm test would not match the repository.");
   }
-  return files.filter(file => !isForbiddenRelative(file)).sort();
-}
-
-async function walk(root, relative, files) {
-  if (isForbiddenRelative(relative)) return;
-  const absolute = path.join(root, relative);
-  let info;
-  try {
-    info = await stat(absolute);
-  } catch {
-    return;
-  }
-  if (info.isDirectory()) {
-    if (relative.endsWith("/test") || path.basename(relative) === "test") return;
-    const entries = await readdir(absolute);
-    for (const entry of entries) {
-      await walk(root, path.join(relative, entry), files);
-    }
-    return;
-  }
-  if (info.isFile()) files.push(relative.split(path.sep).join("/"));
+  return files;
 }
 
 export async function assertNoSecrets(root, files) {
@@ -73,8 +40,7 @@ export async function assertNoSecrets(root, files) {
     const absolute = path.join(root, relative);
     const info = await stat(absolute);
     if (info.size > 2_000_000) continue;
-    const sample = await readFile(absolute);
-    const text = sample.toString("utf8");
+    const text = (await readFile(absolute)).toString("utf8");
     const privateKey = "-----BEGIN " + "PRIVATE KEY-----";
     const opensshKey = "-----BEGIN " + "OPENSSH PRIVATE KEY-----";
     if (text.includes(privateKey) || text.includes(opensshKey)) {
@@ -83,51 +49,55 @@ export async function assertNoSecrets(root, files) {
   }
 }
 
-export async function buildArchive({ root = repoRoot, destDir, archiveName = "pocket-ai-lab-desktop.tar.gz" } = {}) {
+export async function buildArchive({ root = repoRoot, destDir, archiveName = "pocket-ai-lab-desktop.zip" } = {}) {
   const files = await collectFiles(root);
-  if (files.length === 0) throw new Error("The desktop archive would be empty.");
   await assertNoSecrets(root, files);
+  const sourceCommit = await gitCommit(root);
   const stagingParent = await mkdtemp(path.join(os.tmpdir(), "pocket-desktop-"));
   const staging = path.join(stagingParent, "stage");
-  await mkdir(staging, { recursive: true });
-  for (const relative of files) {
-    await copyInto(path.join(root, relative), path.join(staging, "pocket-ai-lab", relative));
-  }
-  const launcherFiles = ["launcher.mjs", "launcher-lib.mjs", "start-pocket-ai-lab.sh", "Start Pocket AI Lab.command", "Start Pocket AI Lab.bat"];
-  for (const name of launcherFiles) {
-    await copyInto(path.join(root, "scripts/desktop", name), path.join(staging, "pocket-ai-lab", name));
-  }
-  const manifestFiles = [];
-  for (const relative of files) {
-    const bytes = await readFile(path.join(root, relative));
-    manifestFiles.push({ path: relative, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
-  }
-  const manifest = {
-    name: "pocket-ai-lab-desktop",
-    kind: "portable-launcher",
-    standaloneNativeInstaller: false,
-    windowsTested: false,
-    macTested: false,
-    linuxVerifiedByArchiveBuild: true,
-    iphoneIncluded: false,
-    weightsIncluded: false,
-    experimentalCustomGgufIncluded: false,
-    authorized: false,
-    production: false,
-    prerequisites: [
-      "Node.js 22 or newer, installed by you",
-      "npm install once in the unpacked folder",
-      "Optional llama-server installed by you",
-      "Optional local GGUF selected with POCKET_GGUF_PATH or ~/.pocket-ai-lab/model.json"
-    ],
-    files: manifestFiles
-  };
-  await writeFile(path.join(staging, "pocket-ai-lab", "manifest.json"), JSON.stringify(manifest, null, 2));
-  await writeFile(path.join(staging, "pocket-ai-lab", "START-HERE.txt"), startHere());
-  const archivePath = path.join(destDir, archiveName);
-  const tempArchive = path.join(stagingParent, archiveName);
+  const packedRoot = path.join(staging, "pocket-ai-lab");
+  await mkdir(packedRoot, { recursive: true });
   try {
-    await tar(staging, tempArchive);
+    for (const relative of files) {
+      await copyInto(path.join(root, relative), path.join(packedRoot, relative));
+    }
+    await writeFile(path.join(packedRoot, "start-pocket-ai-lab.sh"), rootShell(), { mode: 0o755 });
+    await writeFile(path.join(packedRoot, "Start Pocket AI Lab.command"), macCommand(), { mode: 0o755 });
+    await writeFile(path.join(packedRoot, "Start Pocket AI Lab.bat"), windowsBat());
+    const manifestFiles = [];
+    for (const relative of files) {
+      const bytes = await readFile(path.join(root, relative));
+      manifestFiles.push({ path: relative, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+    }
+    const manifest = {
+      name: "pocket-ai-lab-desktop",
+      kind: "portable-source-and-launcher",
+      sourceCommit,
+      scope: "Tracked repository files for this commit, including tests and tsconfig, plus generated root start scripts. The launcher stays at scripts/desktop so its import of scripts/local-gguf/lib.mjs resolves. No node_modules, models, or secrets.",
+      standaloneNativeInstaller: false,
+      windowsTested: false,
+      macTested: false,
+      linuxVerifiedByArchiveBuild: true,
+      iphoneIncluded: false,
+      weightsIncluded: false,
+      experimentalCustomGgufIncluded: false,
+      authorized: false,
+      production: false,
+      greetingQualityFixed: false,
+      launcherModule: "scripts/desktop/launcher.mjs",
+      prerequisites: [
+        "Node.js 22 or newer, installed by you",
+        "npm install once in the unpacked folder while online",
+        "Optional llama-server installed by you",
+        "Optional local GGUF selected with POCKET_GGUF_PATH or ~/.pocket-ai-lab/model.json"
+      ],
+      files: manifestFiles
+    };
+    await writeFile(path.join(packedRoot, "manifest.json"), JSON.stringify(manifest, null, 2));
+    await writeFile(path.join(packedRoot, "START-HERE.txt"), startHere(sourceCommit));
+    const archivePath = path.join(destDir, archiveName);
+    const tempArchive = path.join(stagingParent, archiveName);
+    await zip(staging, tempArchive);
     const archiveBytes = await readFile(tempArchive);
     await mkdir(destDir, { recursive: true });
     await writeFile(archivePath, archiveBytes);
@@ -142,6 +112,15 @@ export async function buildArchive({ root = repoRoot, destDir, archiveName = "po
   }
 }
 
+async function gitCommit(root) {
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root });
+    return stdout.trim();
+  } catch {
+    return "unknown";
+  }
+}
+
 async function copyInto(source, target) {
   await mkdir(path.dirname(target), { recursive: true });
   const data = await readFile(source);
@@ -150,41 +129,78 @@ async function copyInto(source, target) {
     const info = await stat(source);
     await chmod(target, info.mode & 0o777);
   } catch {
-    // Some artifact filesystems reject mode changes. The file contents are still copied.
+    // Some artifact filesystems reject mode changes. The bytes are still copied.
   }
 }
 
-function startHere() {
+function rootShell() {
+  return `#!/bin/sh
+set -eu
+cd "$(dirname "$0")"
+if ! command -v node >/dev/null 2>&1; then
+  echo "Node.js 22 or newer is required. This portable launcher does not install Node and is not a standalone native installer."
+  exit 1
+fi
+exec node scripts/desktop/launcher.mjs "$@"
+`;
+}
+
+function macCommand() {
+  return `#!/bin/sh
+cd "$(dirname "$0")"
+exec ./start-pocket-ai-lab.sh "$@"
+`;
+}
+
+function windowsBat() {
   return [
-    "Pocket AI Lab portable launcher",
+    "@echo off",
+    "cd /d \"%~dp0\"",
+    "where node >nul 2>&1",
+    "if errorlevel 1 (",
+    "  echo Node.js 22 or newer is required. This portable launcher does not install Node and is not a standalone native installer.",
+    "  exit /b 1",
+    ")",
+    "node \"scripts\\desktop\\launcher.mjs\" %*",
+    ""
+  ].join("\r\n");
+}
+
+function startHere(sourceCommit) {
+  return [
+    "Pocket AI Lab portable package",
+    "Source commit: " + sourceCommit,
     "",
-    "This is not a standalone native installer. It does not install Node, llama-server, or a model.",
+    "This is not a standalone native installer and not an iPhone app.",
     "Windows and macOS scripts are included and have not been run on those systems.",
-    "The iPhone app is not in this archive.",
     "No model weights are included. The experimental custom GGUF is not included.",
+    "A Qwen 0.5B greeting can still be a poor or echoed sentence when the HTTP status is 200. This package does not hide that.",
     "authorized is false. This program does not grant permission.",
     "",
     "First run, while online:",
     "1. Install Node.js 22 or newer yourself.",
     "2. In this folder run: npm install",
     "The launcher will not run that install for you.",
+    "After that, npm test and npm run build use the tests and tsconfig.json in this folder.",
     "",
     "Later runs can stay offline.",
     "Linux: ./start-pocket-ai-lab.sh",
+    "Headless: ./start-pocket-ai-lab.sh --headless",
     "macOS: double-click \"Start Pocket AI Lab.command\" after chmod +x, if you choose to try it.",
     "Windows: double-click \"Start Pocket AI Lab.bat\" if you choose to try it.",
     "",
-    "The app listens on 127.0.0.1 only. Memory stays in your home directory under .pocket-ai-lab/memory.",
-    "To use a model you already have, set POCKET_GGUF_PATH to that .gguf file, or write {\"ggufPath\":\"...\"} to ~/.pocket-ai-lab/model.json.",
+    "The start script runs scripts/desktop/launcher.mjs. It listens on 127.0.0.1 only.",
+    "Memory stays in your home directory under .pocket-ai-lab/memory.",
+    "To use a model you already have, set POCKET_GGUF_PATH to that .gguf file.",
     "Install llama-server yourself. The launcher does not download weights."
   ].join("\n");
 }
 
-function tar(staging, archivePath) {
+function zip(staging, archivePath) {
   return new Promise((resolve, reject) => {
-    const child = spawn("tar", ["-czf", archivePath, "-C", staging, "pocket-ai-lab"], { stdio: "inherit" });
+    const child = spawn("zip", ["-r", "-X", "-q", archivePath, "pocket-ai-lab"], { cwd: staging });
     child.on("error", reject);
-    child.on("exit", code => code === 0 ? resolve() : reject(new Error("tar exited " + code)));
+    child.on("exit", code => code === 0 ? resolve() : reject(new Error("zip exited " + code)));
   });
 }
 
