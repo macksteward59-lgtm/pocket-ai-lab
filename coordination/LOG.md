@@ -527,3 +527,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Archive:** 73337 bytes, SHA-256 `7014ce5836d8b957ad960cafb5f94d914a36686c41bb2a577f5a016d70c5edbe`. No weights. Windows and macOS were not run. This is not a native installer and not a production deployment.
 - **Tests:** `npm run build` passed. `npm test` passed: web/plugin 32, engine 48, adapter/lab/memory/east 186 passed and 2 skipped, local GGUF 10, EAGLE 6 passed and 4 skipped, custom GGUF 7, desktop 8.
 - **APEX:** No authorization grant. The experimental custom GGUF remains outside git. East/APEX, iOS Metal, and production deployment stay open.
+
+## 2026-11-08 02:32 UTC — Grok Bot
+
+- **Check:** `origin/main` is `5d847e9074872f097b386b9cb2c10f5c1cdd048b`. No open pull requests. No Codex row is `in-progress` or `in-review`.
+- **Evidence:** A later check found web PID 12157 and model PID 11885 still running. Four UI, app-health, and model-health checks across 30 seconds returned 200. That does not establish a backend lifetime fault, and it does not explain a browser `ERR_FAILED`. An external shortcut wrapper lock was fixed outside this repo. That fix is not evidence the packaged launcher holds the same lock.
+- **Established in source:** Consumer chat calls `buildLlamaCppPrompt` with `agentId: "chat"` and `stage: "independent"`. The prompt labels the user text `Task prompt:` under an agent-turn instruction, and the UI shows the `analysis` string. A small model can fill `analysis` with a description of the task. The Agents view puts `max-height:360px; overflow:auto` on `.agent-transcript` inside a page that also grows, so the transcript is a nested scroller. The launcher always tries to open a browser and has no headless switch.
+- **Claim:** Repair those three items. Status `claimed`. Branch `grok/runtime-chat-scroll-repair`, created from this `main` only after this claim is pushed. No process-lifetime rewrite, no silent installer, no new model download, and no change to rate limits or browser guards.
+- **Will not touch:** `src/east/`, `packages/director/` trust, RLS, schema, or compliance files, `runtime/ios/`, weights, or any `codex/*` branch.
+- **APEX:** Chat text stays unauthorized. No `authorized: true`. No trust contract will be invented.
