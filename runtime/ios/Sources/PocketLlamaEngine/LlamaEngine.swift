@@ -125,7 +125,9 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
 public actor LlamaCppMetalBackend: LlamaEngine {
     private let requireMetal: Bool
     private let treatMetalAsUnavailable: Bool
+    #if POCKET_LLAMA_LINKED
     private var sessions: [String: LoadedSession] = [:]
+    #endif
     private var reports: [String: LlamaOffloadReport] = [:]
     private var generation: [String: UUID] = [:]
 
@@ -411,9 +413,9 @@ public actor LoopbackLlamaEngine: LlamaEngine {
     private var generation: [String: UUID] = [:]
     private var tasks: [String: Task<Void, Never>] = [:]
 
-    public init(baseURL: URL, session: URLSession = LoopbackLlamaEngine.makeSession()) throws {
+    public init(baseURL: URL, session: URLSession? = nil) throws {
         self.baseURL = try LlamaEngineSupport.validateLoopbackBaseURL(baseURL)
-        self.session = session
+        self.session = session ?? LoopbackLlamaEngine.makeSession()
     }
 
     public func load(model: ModelDescriptor) async throws -> RuntimeSession {
