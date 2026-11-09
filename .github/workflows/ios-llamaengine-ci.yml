@@ -1,0 +1,127 @@
+name: iOS LlamaEngine CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "runtime/ios/**"
+      - "docs/implementation/ios-llamaengine-gate*.md"
+      - "README.md"
+      - ".github/workflows/ios-llamaengine-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "runtime/ios/**"
+      - "docs/implementation/ios-llamaengine-gate*.md"
+      - "README.md"
+      - ".github/workflows/ios-llamaengine-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-llamaengine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-llamaengine:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show Xcode
+        run: |
+          xcodebuild -version
+          swift --version
+          uname -m
+
+      - name: Install CMake and Ninja
+        run: brew install cmake ninja
+
+      - name: Build pinned llama.cpp for the simulator and macOS
+        run: |
+          chmod +x runtime/ios/scripts/build-llama-cpp.sh
+          runtime/ios/scripts/build-llama-cpp.sh simulator
+          runtime/ios/scripts/build-llama-cpp.sh macos
+          runtime/ios/scripts/build-llama-cpp.sh xcframework
+          test -d runtime/ios/build/xc/llama.xcframework
+          test -d runtime/ios/build/xc/ggml-metal.xcframework
+          test -d runtime/ios/Sources/LlamaCppBridge/vendor
+
+      - name: Typecheck the unlinked fail-closed branch
+        run: |
+          sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          xcrun swiftc -typecheck -parse-as-library \
+            -target arm64-apple-ios16.0-simulator \
+            -sdk "$sdk" \
+            runtime/ios/Sources/PocketLlamaEngine/LlamaEngine.swift \
+            runtime/ios/Sources/PocketLlamaEngine/LlamaEngineSupport.swift
+
+      - name: Choose an iPhone simulator
+        id: sim
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, subprocess, sys
+          raw = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"], text=True)
+          devices = json.loads(raw).get("devices", {})
+          chosen = None
+          for runtime, entries in devices.items():
+              if "iOS" not in runtime:
+                  continue
+              for device in entries:
+                  if device.get("isAvailable") and "iPhone" in device.get("name", ""):
+                      chosen = device
+          if not chosen:
+              sys.exit("no available iPhone simulator")
+          print(f"id={chosen['udid']}")
+          print(f"name={chosen['name']}")
+          PY
+
+      - name: XCTest on the iOS simulator
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          xcodebuild -list
+          xcodebuild test \
+            -scheme PocketLlamaEngine \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
+            -derivedDataPath build/derived-sim \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/simulator-xctest.log
+
+      - name: Download the pinned smoke GGUF
+        run: |
+          runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/gguf-path.txt
+          test -s /tmp/gguf-path.txt
+
+      - name: Point the macOS smoke test at that GGUF
+        run: runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$(tail -n 1 /tmp/gguf-path.txt)"
+
+      - name: XCTest on macOS
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme PocketLlamaEngine \
+            -destination "platform=macOS,arch=arm64" \
+            -derivedDataPath build/derived-mac \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/macos-xctest.log
+
+      - name: Record what this runner actually did
+        if: always()
+        run: |
+          {
+            echo "## iOS LlamaEngine CI"
+            echo
+            echo "This job did not use a physical iPhone."
+            echo "Simulator destination: ${{ steps.sim.outputs.name }} (\`${{ steps.sim.outputs.id }}\`)."
+            echo
+            echo '```'
+            grep -h "POCKET_LLAMA_" runtime/ios/build/simulator-xctest.log runtime/ios/build/macos-xctest.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
