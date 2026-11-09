@@ -300,18 +300,18 @@ public actor LlamaCppMetalBackend: LlamaEngine {
 #if POCKET_LLAMA_LINKED
 private final class LoadedSession: @unchecked Sendable {
     let report: LlamaOffloadReport
-    private let handle: UnsafeMutablePointer<pocket_llama>
+    private let handle: OpaquePointer
     private let lock = NSLock()
     private var alive = true
 
-    private init(handle: UnsafeMutablePointer<pocket_llama>, report: LlamaOffloadReport) {
+    private init(handle: OpaquePointer, report: LlamaOffloadReport) {
         self.handle = handle
         self.report = report
     }
 
     static func open(model: ModelDescriptor, gpuLayers: Int32, metalDeviceUsable: Bool) throws -> LoadedSession {
         var err = [CChar](repeating: 0, count: 768)
-        var handle: UnsafeMutablePointer<pocket_llama>?
+        var handle: OpaquePointer?
         let rc = err.withUnsafeMutableBufferPointer { buffer in
             pocket_llama_load(
                 model.path,
