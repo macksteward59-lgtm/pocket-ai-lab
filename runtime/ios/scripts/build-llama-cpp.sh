@@ -254,7 +254,7 @@ case "$destination" in
       -DGGML_ACCELERATE=OFF
     ;;
   xcframework)
-    local name
+    name=""
     for name in libllama.a libggml.a libggml-base.a libggml-cpu.a libggml-metal.a libvendor-hash.a; do
       if [[ ! -f "$BUILD/simulator/$name" || ! -f "$BUILD/macos/$name" ]]; then
         echo "missing $name in the simulator or macos build" >&2
