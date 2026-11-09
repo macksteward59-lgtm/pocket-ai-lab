@@ -5,3 +5,8 @@ export { ModelRouter } from "./model-router/ModelRouter";
 export { DeliberationEngine } from "./deliberation/DeliberationEngine";
 export { MemoryManager } from "./memory/MemoryManager";
 export { Orchestrator } from "./orchestrator/Orchestrator";
+export { createAgencyHandler, type CreateHandlerOptions } from "./serverless/handler";
+export { InMemoryRateLimitStore, type RateLimitStore } from "./serverless/rateLimitStore";
+export { toNodeHandler, toFetchHandler, toLambdaHandler } from "./serverless/adapters";
+export { RemoteInferenceProvider, RemoteInferenceError } from "./serverless/RemoteInferenceProvider";
+export type { GenericRequest, GenericResponse, Handler, AgencySecurityPort, AgencyExpansionPort } from "./serverless/types";
