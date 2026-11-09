@@ -111,12 +111,10 @@ jobs:
         working-directory: runtime/ios
         run: |
           set -o pipefail
-          xcodebuild test \
-            -scheme PocketLlamaEngine \
-            -destination "platform=macOS,arch=$(uname -m)" \
-            -derivedDataPath build/derived-mac \
-            CODE_SIGNING_ALLOWED=NO \
-            | tee build/macos-xctest.log
+          # A second xcodebuild in this package directory cannot rewrite the generated
+          # scheme ("Cannot modify data because the process disallows saving").
+          # swift test runs the same XCTest target on the host without that scheme.
+          swift test 2>&1 | tee build/macos-xctest.log
 
       - name: Record what this runner actually did
         if: always()
