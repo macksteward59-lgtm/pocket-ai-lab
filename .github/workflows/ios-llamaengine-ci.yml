@@ -91,11 +91,12 @@ jobs:
         working-directory: runtime/ios
         run: |
           set -o pipefail
-          xcodebuild -list
+          # Derived data stays outside the package. Writing it under runtime/ios makes
+          # xcodebuild decide the package changed and then fail to rewrite its scheme.
           xcodebuild test \
             -scheme PocketLlamaEngine \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
-            -derivedDataPath build/derived-sim \
+            -derivedDataPath /tmp/pocket-derived-sim \
             CODE_SIGNING_ALLOWED=NO \
             | tee build/simulator-xctest.log
 
