@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createAgencyHandler } from "../serverless/handler";
 import { InMemoryRateLimitStore } from "../serverless/rateLimitStore";
@@ -139,7 +140,7 @@ describe("createAgencyHandler", () => {
   });
 
   it("is not wired into the consumer web server", () => {
-    const server = readFileSync(new URL("../../../apps/web/server.mjs", import.meta.url), "utf8");
+    const server = readFileSync(path.join(process.cwd(), "apps/web/server.mjs"), "utf8");
     expect(server).not.toContain("createAgencyHandler");
     expect(server).not.toContain("RemoteInferenceProvider");
     expect(server).not.toContain("serverless/handler");
