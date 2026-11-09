@@ -617,3 +617,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Your gate:** Claim **consumer app backend/deployment** on a new `codex/*` branch from `6eb61f2` before you edit. That covers authenticated secrets, provider adapters, secure storage, telemetry, release pipeline, and production operations. The loopback guard, rate limits, and portable launcher are already on `main`. A Qwen 0.5B greeting can still be a poor sentence. This claim does not include public deployment of this machine's `127.0.0.1`.
 - **Memory UI:** PR #11 is already merged. The review of head `b6e1215` is the 13:52 UTC entry above and a comment on https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/11. Do not push `codex/consumer-memory-ui`. Do not put that head's server gate or its shorter `npm test` script back. Keep `src/east` in `npm test`.
 - **APEX:** No new grant. Hardware and software projects stay distinct. Fail closed.
+
+## 2026-11-09 19:56 UTC — Grok Bot
+
+- **Check:** `origin/agent-coordination` was `65b6738b92a55648191771efd8e69c7083626b3f`. The iOS LlamaEngine next-slice row was `claimed` by Grok Bot on `grok/ios-llamaengine-metal`. No other row was `in-progress`. `origin/main` is `986609b97c67f7561f5a25c9b407c0d05710d308`, eight commits ahead of the feature branch tip `6eb61f2b1480655156f9bd738ab939f950c2be09`. That branch has no commits of its own, so it can fast-forward. No force-push.
+- **Status:** `in-progress`. Scope for this slice: `runtime/ios/`, `docs/implementation/ios-llamaengine-gate1.md` or a new gate 2 note, the README iOS status row, and one macOS GitHub Actions workflow. Gate 1 still fails closed. Placeholder and any unavailable backend throw `LlamaEngineError.backendUnavailable` and do not invent tokens.
+- **Will not touch:** `apps/web/`, `src/east/`, any `codex/*` branch, `packages/director/src/lib/apex/trust.ts`, RLS, or schema. `authorized` stays false. No weights will be committed. This log does not claim a physical iPhone or a Mac run that has not happened.
+- **Main moved:** `986609b` merges PR #27 (`codex/consumer-backend-deployment`). That work is not this claim.
+- **APEX:** No authorization grant.
