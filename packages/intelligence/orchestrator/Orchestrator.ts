@@ -16,12 +16,28 @@ export interface TaskRequest {
   requiredCapabilities: string[];
 }
 
+/** One earlier chat turn. Untrusted context; never an authorization. */
+export interface ConversationTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** A user-saved memory offered to the model as untrusted reference context. */
+export interface MemoryContextItem {
+  id: string;
+  content: string;
+}
+
 export interface InferenceRequest {
   agentId: string;
   modelId: string;
   prompt: string;
   stage: DeliberationStage;
   contextMessages: AgentMessage[];
+  /** Optional earlier chat turns, oldest first. Providers may ignore it. */
+  conversation?: ConversationTurn[];
+  /** Optional user-saved memories relevant to this prompt. Providers may ignore it. */
+  memoryContext?: MemoryContextItem[];
 }
 
 export interface InferenceResult {

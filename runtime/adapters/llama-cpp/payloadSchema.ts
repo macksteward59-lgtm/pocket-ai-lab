@@ -62,6 +62,17 @@ export function isLlamaCppDeliberationStage(stage: string): stage is LlamaCppDel
 }
 
 /**
+ * Upper bound on generated tokens for one agent stage. Stage payloads are
+ * capped by maxLength, so anything longer is a runaway (for example an
+ * endless evidenceRefs array) and should stop early instead of burning time.
+ * Suggested value for the provider's agentMaxTokens option.
+ */
+export const LLAMA_CPP_AGENT_STAGE_MAX_TOKENS = 768;
+
+/** Consumer chat replies can be long; the agent-stage limits stay compact. */
+export const LLAMA_CPP_CHAT_ANALYSIS_MAX_LENGTH = 6000;
+
+/**
  * JSON Schema sent to llama-server as `json_schema` when that field is supported.
  * The server may constrain decoding. Zod still validates the returned text.
  * A constraint does not make model text an authorization.
@@ -70,23 +81,23 @@ export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Rec
   independent: {
     type: "object",
     properties: {
-      analysis: { type: "string", maxLength: 240 }
+      analysis: { type: "string", minLength: 12, maxLength: 700 }
     },
     required: ["analysis"],
     additionalProperties: false
   },
   "cross-review": {
     type: "object",
-    properties: { question: { type: "string", maxLength: 240 } },
+    properties: { question: { type: "string", minLength: 12, maxLength: 500 } },
     required: ["question"],
     additionalProperties: false
   },
   challenge: {
     type: "object",
     properties: {
-      claim: { type: "string", maxLength: 240 },
-      objection: { type: "string", maxLength: 240 },
-      evidenceRefs: { type: "array", items: { type: "string" } }
+      claim: { type: "string", minLength: 8, maxLength: 400 },
+      objection: { type: "string", minLength: 12, maxLength: 600 },
+      evidenceRefs: { type: "array", maxItems: 6, items: { type: "string", maxLength: 120 } }
     },
     required: ["claim", "objection"],
     additionalProperties: false
@@ -94,8 +105,9 @@ export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Rec
   revision: {
     type: "object",
     properties: {
-      revision: { type: "string", maxLength: 240 },
-      addressesMessageIds: { type: "array", items: { type: "string" } }
+      // Ids first: small models otherwise paste an id into the revision text.
+      addressesMessageIds: { type: "array", maxItems: 8, items: { type: "string" } },
+      revision: { type: "string", minLength: 12, maxLength: 700 }
     },
     required: ["revision", "addressesMessageIds"],
     additionalProperties: false
@@ -103,9 +115,9 @@ export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Rec
   verification: {
     type: "object",
     properties: {
-      claim: { type: "string", maxLength: 240 },
+      claim: { type: "string", minLength: 8, maxLength: 400 },
       verified: { type: "boolean" },
-      reason: { type: "string", maxLength: 240 }
+      reason: { type: "string", maxLength: 400 }
     },
     required: ["claim", "verified"],
     additionalProperties: false
@@ -113,8 +125,8 @@ export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Rec
   synthesis: {
     type: "object",
     properties: {
-      synthesis: { type: "string", maxLength: 240 },
-      evidenceRefs: { type: "array", items: { type: "string" } }
+      synthesis: { type: "string", minLength: 12, maxLength: 1600 },
+      evidenceRefs: { type: "array", maxItems: 8, items: { type: "string", maxLength: 120 } }
     },
     required: ["synthesis", "evidenceRefs"],
     additionalProperties: false

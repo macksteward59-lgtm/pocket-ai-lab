@@ -6,6 +6,12 @@
 import { LlamaCppInferenceError } from "./errors";
 
 export type LlamaCppApiMode = "completion" | "openai-chat";
+/**
+ * `flat` sends one untemplated prompt (legacy behavior).
+ * `chat` sends system/user/assistant messages so the server applies the
+ * model's own chat template. Instruction-tuned GGUFs answer much better.
+ */
+export type LlamaCppPromptFormat = "flat" | "chat";
 
 export interface LlamaCppProviderConfigInput {
   /** llama-server origin, for example http://127.0.0.1:8080 */
@@ -28,7 +34,37 @@ export interface LlamaCppProviderConfigInput {
    * `openai-chat` posts to `/v1/chat/completions`.
    */
   api?: LlamaCppApiMode;
+  promptFormat?: LlamaCppPromptFormat;
+  /**
+   * Extra real model calls allowed when output fails JSON or schema checks.
+   * The retry tells the model what was wrong. Nothing is ever filled in.
+   */
+  repairAttempts?: number;
+  /**
+   * Chat replies only. `json` wraps the reply in {"analysis": ...} under a JSON
+   * schema; `text` lets the model answer in plain prose (better for small
+   * models) and the adapter places the trimmed text in the analysis field.
+   * Empty output still fails closed. Agent stages always use JSON.
+   */
+  chatOutput?: LlamaCppChatOutput;
+  /**
+   * Optional lower token cap for agent stages (not chat). Stage payloads are
+   * length-limited, so a longer generation is a runaway that should stop early.
+   */
+  agentMaxTokens?: number;
+  /**
+   * Reject agent-stage output whose main text is only ids, labels, or a word
+   * or two (retried when repairAttempts allows). Off by default.
+   */
+  requireSubstantive?: boolean;
+  /**
+   * Show agent models short message labels (M1, M2, ...) instead of UUIDs and
+   * map references back before validation. Off by default.
+   */
+  aliasMessageIds?: boolean;
 }
+
+export type LlamaCppChatOutput = "json" | "text";
 
 export interface LlamaCppProviderConfig {
   baseUrl: string;
@@ -39,6 +75,12 @@ export interface LlamaCppProviderConfig {
   stop?: readonly string[];
   seed?: number;
   api: LlamaCppApiMode;
+  promptFormat: LlamaCppPromptFormat;
+  repairAttempts: number;
+  chatOutput: LlamaCppChatOutput;
+  agentMaxTokens?: number;
+  requireSubstantive: boolean;
+  aliasMessageIds: boolean;
 }
 
 export const LLAMA_CPP_DEFAULTS = Object.freeze({
@@ -46,8 +88,13 @@ export const LLAMA_CPP_DEFAULTS = Object.freeze({
   timeoutMs: 120_000,
   temperature: 0.2,
   maxTokens: 1024,
-  api: "completion" as const
+  api: "completion" as const,
+  promptFormat: "flat" as const,
+  repairAttempts: 0,
+  chatOutput: "json" as const
 });
+
+const PROMPT_FORMATS: readonly LlamaCppPromptFormat[] = ["flat", "chat"];
 
 const API_MODES: readonly LlamaCppApiMode[] = ["completion", "openai-chat"];
 const MAX_TIMEOUT_MS = 600_000;
@@ -66,6 +113,18 @@ export function normalizeLlamaCppConfig(
   const stop = normalizeStop(input.stop);
   const seed = input.seed === undefined ? undefined : requireInt(input.seed, "seed", 0, MAX_SEED);
   const api = normalizeApi(input.api ?? LLAMA_CPP_DEFAULTS.api);
+  const promptFormat = input.promptFormat ?? LLAMA_CPP_DEFAULTS.promptFormat;
+  if (!(PROMPT_FORMATS as readonly string[]).includes(promptFormat)) {
+    throw configError(`promptFormat must be "flat" or "chat", received ${JSON.stringify(promptFormat)}`);
+  }
+  const repairAttempts = requireInt(input.repairAttempts ?? LLAMA_CPP_DEFAULTS.repairAttempts, "repairAttempts", 0, 3);
+  const chatOutput = input.chatOutput ?? LLAMA_CPP_DEFAULTS.chatOutput;
+  const agentMaxTokens = input.agentMaxTokens === undefined
+    ? undefined
+    : requireInt(input.agentMaxTokens, "agentMaxTokens", 1, MAX_TOKENS);
+  if (chatOutput !== "json" && chatOutput !== "text") {
+    throw configError(`chatOutput must be "json" or "text", received ${JSON.stringify(chatOutput)}`);
+  }
 
   return Object.freeze({
     baseUrl,
@@ -75,7 +134,13 @@ export function normalizeLlamaCppConfig(
     maxTokens,
     stop: stop ? Object.freeze(stop) : undefined,
     seed,
-    api
+    api,
+    promptFormat,
+    repairAttempts,
+    chatOutput,
+    agentMaxTokens,
+    requireSubstantive: input.requireSubstantive === true,
+    aliasMessageIds: input.aliasMessageIds === true
   });
 }
 
