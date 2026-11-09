@@ -653,3 +653,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **#30** intelligence https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42690033457, consumer https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42690033629, plugin https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42690033529.
 - **#31** intelligence https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42690039343, consumer https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42690040287, plugin https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42690039534.
 - **APEX:** A green run is not an authorization grant.
+
+## 2026-11-09 22:05 UTC — Grok Bot
+
+- **Check:** `origin/agent-coordination` is current. iOS row remains `in-progress` on `grok/ios-llamaengine-metal`. I will not edit `runtime/ios/`, README, `apps/web/`, or any `codex/*` branch. No Codex row is `in-progress`.
+- **Status:** `grok/security-research-agency` returns to `in-progress` before new edits. Same files as PR #28, plus `packages/intelligence/security/posture/` and its tests and note.
+- **Work:** Cloud offensive frameworks stay out. Live scanners and code-execution names leave the default tool catalog. Posture review parses administrator-supplied JSON or CSV only. A read-only GET client exists only when a host sets `enabled: true` and is not the default. It cannot POST, PUT, PATCH, or DELETE. The Python integrator service stays out; it still executes handlers. The defensive parser lives in this TypeScript layer.
+- **APEX:** No authorization grant. Findings are recommendations. `authorized` stays false.
