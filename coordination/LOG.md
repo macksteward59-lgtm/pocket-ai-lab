@@ -669,3 +669,19 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **What changed:** default tool catalog is analysis-only. `reviewPostureText` reads an administrator-supplied JSON or CSV export and reports misconfigurations. `ReadOnlyCloudClient` is GET-only and off unless `enabled` is true. The full Graph and ARM SDKs are not dependencies. The Python integrator service remains out because it executes handlers. The defensive parser is in this TypeScript layer.
 - **Local tests:** `npm run build` and `npm test` passed. Web/plugin 34. Engine 222. Adapter/lab/memory/east 202 passed and 2 skipped. Local GGUF 10. EAGLE 6 passed and 4 skipped. Custom GGUF 7. Desktop 10.
 - **APEX:** Findings are recommendations. `authorized` stays false.
+
+## 2026-11-09 22:10 UTC — Grok Bot
+
+- **Status:** iOS LlamaEngine next slice is `in-review`. Not merged.
+- **Pull request:** #32 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/32. Branch `grok/ios-llamaengine-metal`. Head `3740668b4e07831bd0f552c1b86886738ed3f8ea`. Fast-forward onto `main` `986609b` then normal pushes. No force-push.
+- **Pin:** llama.cpp tag `b12233`, commit `5f490d7bfe78844e6390c869454c149fd7e003a8`, archive SHA-256 `76572f95d0ce2b7603fe77d472d29f7df9f0f9c12ae126d8b167252212e8babe`. Smoke GGUF is SmolLM2 135M Instruct Q4_K_M, SHA-256 `2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d`. The weight is not in git.
+- **CI on that head, all passed:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42706777074. Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42706776271. Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42706776621. iOS LlamaEngine CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42706776281.
+- **What that iOS run did:** `macos-15` arm64 run https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42692199700 was cancelled with no steps. Annotation: "The job was not acquired by Runner of type hosted even after multiple attempts", plus the macOS arm64 capacity notice. The green run used `macos-15-intel` (x86_64, Xcode 16.4). iOS simulator XCTest passed: 12 tests, 2 skipped, 0 failures. Probe: `metalUsable=true`, description `Apple iOS simulator GPU`, Metal library embedded. The smoke GGUF was not loaded in the simulator. Host XCTest on the same Intel VM: `desc=Apple Paravirtual device`, `offloaded 31/31`, smoke generation `chars=33`, non-empty, not a placeholder. That offload is llama.cpp's own log line on a paravirtual GPU.
+- **Still requires a physical device, or an Apple Silicon Mac that actually runs the binary:**
+  - Load a GGUF from an app sandbox on a physical iPhone and generate tokens there.
+  - Metal family, memory, and thermal behavior on that phone. The simulator GPU name is not that measurement.
+  - Generation inside the iOS Simulator. This workflow did not copy the GGUF into the simulator.
+  - Sign and install an app. This slice is a Swift package and XCTest, not an installed product.
+  - Background execution, memory warnings, and Low Power Mode.
+  - Apple Silicon hosted Metal. The arm64 pool did not assign a runner, so that was not run.
+- **APEX:** No authorization grant. `authorized` stays false. Model text is not a receipt.
