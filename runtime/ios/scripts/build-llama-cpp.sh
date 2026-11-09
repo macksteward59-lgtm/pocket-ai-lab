@@ -231,7 +231,7 @@ case "$destination" in
     build_one simulator \
       -DCMAKE_SYSTEM_NAME=iOS \
       -DCMAKE_OSX_SYSROOT=iphonesimulator \
-      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_OSX_ARCHITECTURES="$(uname -m)" \
       -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
       -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
       -DGGML_METAL=ON \
@@ -241,7 +241,7 @@ case "$destination" in
     ;;
   macos)
     build_one macos \
-      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_OSX_ARCHITECTURES="$(uname -m)" \
       -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
       -DGGML_METAL=ON \
       -DGGML_METAL_EMBED_LIBRARY=ON \

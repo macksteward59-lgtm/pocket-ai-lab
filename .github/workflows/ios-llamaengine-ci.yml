@@ -27,7 +27,11 @@ concurrency:
 
 jobs:
   ios-llamaengine:
-    runs-on: macos-15
+    # macos-15 (arm64) was not acquired: run 42692199700 was cancelled with no steps.
+    # The annotation was "The job was not acquired by Runner of type hosted even after
+    # multiple attempts" plus the macOS arm64 capacity notice. macos-15-intel is the
+    # separate hosted pool. It is an Intel Mac, not an Apple Silicon Mac and not an iPhone.
+    runs-on: macos-15-intel
     timeout-minutes: 90
     steps:
       - name: Check out source
@@ -46,7 +50,9 @@ jobs:
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
           runtime/ios/scripts/build-llama-cpp.sh simulator
+          rm -rf runtime/ios/build/cmake-simulator
           runtime/ios/scripts/build-llama-cpp.sh macos
+          rm -rf runtime/ios/build/cmake-macos
           runtime/ios/scripts/build-llama-cpp.sh xcframework
           test -d runtime/ios/build/xc/llama.xcframework
           test -d runtime/ios/build/xc/ggml-metal.xcframework
@@ -107,7 +113,7 @@ jobs:
           set -o pipefail
           xcodebuild test \
             -scheme PocketLlamaEngine \
-            -destination "platform=macOS,arch=arm64" \
+            -destination "platform=macOS,arch=$(uname -m)" \
             -derivedDataPath build/derived-mac \
             CODE_SIGNING_ALLOWED=NO \
             | tee build/macos-xctest.log

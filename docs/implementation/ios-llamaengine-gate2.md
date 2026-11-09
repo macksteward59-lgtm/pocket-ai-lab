@@ -30,7 +30,9 @@ Context length must be from 1 through 8192. That bound also applies to the loopb
 
 ## What GitHub macOS CI runs
 
-`.github/workflows/ios-llamaengine-ci.yml` runs on `macos-15`:
+`.github/workflows/ios-llamaengine-ci.yml` runs on `macos-15-intel`. The first attempt, run [42692199700](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42692199700), used `macos-15` and was cancelled after about 15 minutes with no runner and no steps. GitHub's annotation was "The job was not acquired by Runner of type hosted even after multiple attempts", with a notice that macOS arm64 jobs were capacity constrained. `macos-15-intel` is the separate hosted Intel pool. It is not an Apple Silicon Mac.
+
+On that runner the workflow:
 
 1. Verify the llama.cpp tag, commit, archive hash, and `include/llama.h`.
 2. Build the static Metal libraries for `iphonesimulator` arm64 and for macOS arm64, then make one xcframework per archive.
@@ -40,7 +42,11 @@ Context length must be from 1 through 8192. That bound also applies to the loopb
 
 The job summary prints the `POCKET_LLAMA_PROBE`, `POCKET_LLAMA_OFFLOAD`, and `POCKET_LLAMA_SMOKE` lines. Those lines are the evidence for that commit. A green job is not a claim that an iPhone executed Metal.
 
-## Still requires a physical device
+## Still not run
+
+The hosted arm64 pool did not provide a machine, so this workflow does not show Apple Silicon Metal. An Intel runner can still compile the Metal backend and can report whether that VM initialized a Metal device. The probe line in the job summary is that report.
+
+These still require a physical device, or an Apple Silicon Mac that actually runs the binary:
 
 - Load a GGUF from an app sandbox on a physical iPhone and generate tokens there.
 - Confirm Metal kernels, GPU family, memory, and thermal behavior on that phone. The simulator probe is not that measurement, even when `metalDeviceUsable` is true.
