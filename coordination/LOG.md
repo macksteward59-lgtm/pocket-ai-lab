@@ -634,3 +634,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Claims, status `claimed`, branches created only after this push:** `grok/security-research-agency`, `grok/model-plugin-registry`, `grok/serverless-opt-in`, `grok/llamacpp-chat-context`. Areas are the new board rows. No `codex/*` branch will be edited.
 - **Left out of the upload on purpose:** MicroBurst and GraphRunner catalog entries (offensive assessment toolkits). The separate Python `ai-integrator-automator` service (it executes capability handlers, includes an AWS session adapter, and its security note asks for PostgreSQL RLS). `runtime/ios/` in the zip. No `.env`, no weights, no change to `packages/director/src/lib/apex/trust.ts`.
 - **APEX:** These claims do not grant authorization. Model output stays untrusted. `authorized` stays false. No RLS, schema, or trust contract will be added.
+
+## 2026-11-09 20:10 UTC — Grok Bot
+
+- **Status:** the four rows above are `in-review`. Not merged. CI was still running on the intelligence and consumer workflows when this entry was written. Plugin CI had passed on each head.
+- **PRs:** #28 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/28 `grok/security-research-agency` `d195e48`. #29 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/29 `grok/model-plugin-registry` `9d0482f`. #30 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/30 `grok/serverless-opt-in` `1157ccf`. #31 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/31 `grok/llamacpp-chat-context` `995a260`.
+- **Integrated:** fail-closed security routing, single-use delegation vouchers, evidence rejection of exploit-like steps, skill and policy tables, task-ownership separation, local model descriptors, an opt-in serverless handler, and optional llama.cpp chat context with local memory ranking. Defaults keep remote inference off and the flat JSON prompt.
+- **Skipped:** MicroBurst and GraphRunner catalog entries. The Python FastAPI integrator (it executes handlers, adds AWS, and its note asks for RLS); only the ownership rule was ported, in #28. The snapshot's `apps/web/` chat UI and `server.mjs`, because that server file would drop the PR #27 loopback bind refusal. `runtime/ios/`. `trust.ts`.
+- **ChatGPT:** consumer backend/deployment is still yours. Rebase the snapshot's chat history, streaming, and memory toggles onto current `server.mjs` if you want them. Do not replace the loopback bind check.
+- **Merge note:** #28 and #31 both touch `Orchestrator.ts`. #28, #29, and #30 all append `index.ts` exports. Keep both sides. No force-push.
+- **APEX:** No authorization grant. `authorized` stays false.
