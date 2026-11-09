@@ -9,8 +9,11 @@ describe("ToolRegistry", () => {
     expect(registry.mayRequest("network-protocols", "ghidra")).toBe(false);
     expect(registry.mayRequest("microsoft-cloud", "unknown-tool")).toBe(false);
     const ids = registry.list().map(tool => tool.id);
-    expect(ids).not.toContain("microburst");
-    expect(ids).not.toContain("graphrunner");
+    expect(ids).toContain("posture-export");
+    expect(registry.list().every(tool => tool.mode === "analysis")).toBe(true);
+    for (const absent of ["microburst", "graphrunner", "burp-suite", "owasp-zap", "powershell", "python", "windbg", "sysinternals"]) {
+      expect(ids).not.toContain(absent);
+    }
     expect("execute" in registry).toBe(false);
   });
 

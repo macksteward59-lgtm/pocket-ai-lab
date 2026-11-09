@@ -14,9 +14,10 @@
 import type { SecuritySpecialistId } from "../agents/AgentManager";
 
 /**
- * "analysis": works on artifacts offline (e.g. a disassembler).
- * "active": interacts with live systems or can run arbitrary code, so it needs
- * human approval in addition to a voucher.
+ * "analysis": reads artifacts already on disk, such as a disassembly database
+ * or an administrator-supplied posture export. It does not call a cloud API.
+ * "active": reserved for a host-supplied registry. The default catalog has
+ * no active tools, no scanners, and no code runners.
  */
 export type ToolMode = "analysis" | "active";
 
@@ -29,20 +30,17 @@ export interface ToolDescriptor {
   specialists: SecuritySpecialistId[];
 }
 
-const ALL: SecuritySpecialistId[] = [
-  "microsoft-cloud", "identity-security", "windows-internals", "reverse-engineering", "ai-security", "network-protocols"
-];
-
 export const TOOL_CATALOG: ToolDescriptor[] = [
-  { id: "burp-suite", name: "Burp Suite Professional", application: "Web/API traffic analysis", mode: "active", specialists: ["identity-security", "microsoft-cloud", "ai-security"] },
-  { id: "owasp-zap", name: "OWASP ZAP", application: "Automated web security testing", mode: "active", specialists: ["identity-security", "microsoft-cloud", "ai-security"] },
+  {
+    id: "posture-export",
+    name: "Posture export",
+    application: "Parse an administrator-supplied JSON or CSV configuration export. Does not call a cloud API and does not run a scan.",
+    mode: "analysis",
+    specialists: ["microsoft-cloud", "identity-security"]
+  },
   { id: "ghidra", name: "Ghidra", application: "Binary reverse engineering", mode: "analysis", specialists: ["reverse-engineering", "windows-internals"] },
   { id: "ida-pro", name: "IDA Pro", application: "Advanced binary analysis", mode: "analysis", specialists: ["reverse-engineering", "windows-internals"] },
-  { id: "radare2", name: "Radare2", application: "Binary reverse engineering", mode: "analysis", specialists: ["reverse-engineering"] },
-  { id: "windbg", name: "WinDbg", application: "Windows debugging", mode: "active", specialists: ["windows-internals", "reverse-engineering"] },
-  { id: "sysinternals", name: "Sysinternals", application: "Windows diagnostics", mode: "active", specialists: ["windows-internals"] },
-  { id: "powershell", name: "PowerShell", application: "Windows administration and automation", mode: "active", specialists: ["microsoft-cloud", "windows-internals"] },
-  { id: "python", name: "Python", application: "Research and testing automation", mode: "active", specialists: ALL }
+  { id: "radare2", name: "Radare2", application: "Binary reverse engineering", mode: "analysis", specialists: ["reverse-engineering"] }
 ];
 
 export class ToolRegistry {

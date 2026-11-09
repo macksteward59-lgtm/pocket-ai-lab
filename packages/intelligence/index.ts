@@ -23,3 +23,11 @@ export {
 } from "./agents/TeamExpansionPlanner";
 export { TaskLedger, TaskOwnershipError, type OwnedTask, type TaskOwner } from "./tasks/TaskOwnership";
 export { matchSecuritySpecialists } from "./agents/securitySpecialistRouter";
+export {
+  reviewPostureText, reviewPostureExport, renderPostureReport, PostureExportError,
+  type PostureExport, type PostureFinding, type PostureReport
+} from "./security/posture/postureExport";
+export {
+  DisabledReadOnlyCloud, ReadOnlyCloudClient, ReadOnlyCloudError, allowlistedGetUrl,
+  type CloudService, type ReadOnlyCloudOptions
+} from "./security/posture/readOnlyCloud";

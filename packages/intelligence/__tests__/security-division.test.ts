@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { AgentManager, CORE_AGENTS } from "../agents/AgentManager";
 import { DelegationGate, type DelegationVoucher } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
+import { ToolRegistry, type ToolDescriptor } from "../security/tools";
 
 const T0 = Date.parse("2026-01-01T00:00:00Z");
 
-function setup(opts: { approvalVerifier?: ApprovalVerifier; maxTeamSize?: number } = {}) {
+function setup(opts: { approvalVerifier?: ApprovalVerifier; maxTeamSize?: number; toolRegistry?: ToolRegistry } = {}) {
   const agents = new AgentManager();
   CORE_AGENTS.forEach(agent => agents.registerPermanent(agent));
   const gate = new DelegationGate({ verifier: { verify: v => v.signature === "valid" }, now: () => T0 });
@@ -134,16 +135,26 @@ describe("security division", () => {
   });
 
   it("requires a verified human approval for an active tool, separate from any task-level operational approval", async () => {
-    const { division } = setup({ approvalVerifier: { verify: (taskId, ref) => taskId === "task-1" && ref === "tool-approval" } });
+    const activeOnly: ToolDescriptor = {
+      id: "gated-review",
+      name: "Gated review",
+      application: "Test fixture. The default catalog has no active tools.",
+      mode: "active",
+      specialists: ["identity-security"]
+    };
+    const { division } = setup({
+      approvalVerifier: { verify: (taskId, ref) => taskId === "task-1" && ref === "tool-approval" },
+      toolRegistry: new ToolRegistry([activeOnly])
+    });
     const team = await division.assemble("task-1", "Review OAuth and OIDC flows");
     const identity = team.members.find(m => m.templateId === "identity-security")!;
 
-    const noApproval = await division.requestToolUse(team, identity.agentId, "burp-suite", "scope-1", voucherFor(identity.agentId, { tool: "burp-suite" }));
+    const noApproval = await division.requestToolUse(team, identity.agentId, "gated-review", "scope-1", voucherFor(identity.agentId, { tool: "gated-review" }));
     expect(noApproval.allowed).toBe(false);
     expect(noApproval.reason).toMatch(/human approval/);
 
     const approved = await division.requestToolUse(
-      team, identity.agentId, "burp-suite", "scope-1", voucherFor(identity.agentId, { tool: "burp-suite" }), "tool-approval"
+      team, identity.agentId, "gated-review", "scope-1", voucherFor(identity.agentId, { tool: "gated-review" }), "tool-approval"
     );
     expect(approved.allowed).toBe(true);
   });
