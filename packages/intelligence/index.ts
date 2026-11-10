@@ -41,3 +41,13 @@ export { InMemoryRateLimitStore, type RateLimitStore } from "./serverless/rateLi
 export { toNodeHandler, toFetchHandler, toLambdaHandler } from "./serverless/adapters";
 export { RemoteInferenceProvider, RemoteInferenceError } from "./serverless/RemoteInferenceProvider";
 export type { GenericRequest, GenericResponse, Handler, AgencySecurityPort, AgencyExpansionPort } from "./serverless/types";
+export { PolicyChecker } from "./security/PolicyChecker";
+export { synthesizeEvidence, EVIDENCE_MARKDOWN_HEADERS } from "./security/EvidenceSynthesizer";
+export { AuditLedger } from "./security/AuditLedger";
+export { mapCompliance } from "./security/ComplianceMapper";
+export { ContextIngester } from "./memory/ContextIngester";
+export { handleScanTelemetryUpload } from "./orchestrator/governanceReview";
+export { StaticAnalysisOrchestratorBridge } from "./orchestrator/StaticAnalysisOrchestratorBridge";
+export { GOVERNANCE_ADVISORY_INVARIANT, specialistPrompt, withGovernanceInvariant } from "./agents/specialists/dynamicCatalog";
+export { ModelRouterResiliency } from "./model-router/ModelRouterResiliency";
+export { classifyExport, watchOnce } from "./governance/watchInbox";

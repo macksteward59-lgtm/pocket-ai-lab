@@ -86,6 +86,7 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 | APEX evidence | Candidate validation only. `candidate_only` is not authorization. Trust, RLS, and schema contracts are still absent. See `docs/implementation/apex-evidence-handoff.md`. |
 | Consumer web/PWA shell | On main. Chat returns the provider's `analysis` text. "Local model ready" requires a successful loopback health check. |
 | Portable desktop launcher | `scripts/desktop/` starts the loopback app and can build an archive. Node and llama-server remain prerequisites. No model is bundled. Windows and macOS scripts are untested. See `docs/implementation/desktop-launcher.md`. |
+| Governance-as-Review | Non-executing sidecar and watcher. Scanner exports are parsed and scoped. `authorized` stays false. See `docs/implementation/governance-as-review.md`. |
 | Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
 | Consumer memory controls | Explicit local save/list/delete connected to `MemoryManager` + `FileMemoryStore`; user opt-in only, unverified by default, plaintext at rest |
 | East/APEX runtime integration | Not yet complete |

@@ -10,6 +10,6 @@
     "rootDir": ".",
     "declaration": true
   },
-  "include": ["packages/intelligence/**/*", "runtime/adapters/**/*", "runtime/lab/**/*", "src/**/*"],
+  "include": ["packages/intelligence/**/*", "runtime/adapters/**/*", "runtime/lab/**/*", "src/**/*", "scripts/desktop/**/*.ts", "scripts/local-gguf/SimulationEnvironment.ts"],
   "exclude": ["node_modules", "packages/director", "packages/exploitgym"]
 }

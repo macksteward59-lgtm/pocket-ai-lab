@@ -11,10 +11,11 @@ const execFileAsync = promisify(execFile);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../..");
 
-const FORBIDDEN = /(^|\/)(\.env($|\..*)|node_modules|dist|models|\.git)(\/|$)|(\.gguf|\.pem|\.key)$|id_rsa|credentials\.json|(^|\/)secret/i;
+const FORBIDDEN = /(^|\/)(\.env($|\..*)|node_modules|dist|models|\.git|\.governance-inbox|\.governance-outbox)(\/|$)|(\.gguf|\.pem|\.key)$|id_rsa|credentials\.json|(^|\/)secret/i;
 
 export function isForbiddenRelative(relative) {
   const normalized = relative.split(path.sep).join("/");
+  if (normalized === ".env.example" || normalized.endsWith("/.env.example")) return false;
   if (path.basename(normalized) === EXPERIMENTAL_GGUF) return true;
   return FORBIDDEN.test(normalized);
 }
@@ -183,13 +184,17 @@ function startHere(sourceCommit) {
     "The launcher will not run that install for you.",
     "After that, npm test and npm run build use the tests and tsconfig.json in this folder.",
     "",
-    "Later runs can stay offline.",
+    "Later runs can stay offline for chat. The first governance start needs Python 3.10 or newer and a network once, to create .venv and install the sidecar. If Python is missing, chat still starts and governance is reported unavailable.",
+    "One command starts chat, the local model when a GGUF is configured, and governance review:",
     "Linux: ./start-pocket-ai-lab.sh",
     "Headless: ./start-pocket-ai-lab.sh --headless",
+    "Skip governance: ./start-pocket-ai-lab.sh --no-governance",
     "macOS: double-click \"Start Pocket AI Lab.command\" after chmod +x, if you choose to try it.",
     "Windows: double-click \"Start Pocket AI Lab.bat\" if you choose to try it.",
     "",
+    "Chat listens on 127.0.0.1:4173. Governance review listens on 127.0.0.1:8765/dashboard/.",
     "The start script runs scripts/desktop/launcher.mjs. It listens on 127.0.0.1 only.",
+    "Ctrl-C stops the chat server, llama-server if this launcher started it, and the governance sidecar.",
     "Memory stays in your home directory under .pocket-ai-lab/memory.",
     "To use a model you already have, set POCKET_GGUF_PATH to that .gguf file.",
     "Install llama-server yourself. The launcher does not download weights."

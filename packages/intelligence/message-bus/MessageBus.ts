@@ -6,7 +6,8 @@ import { z } from "zod";
 
 export const MessageTypeSchema = z.enum([
   "task_assignment", "analysis", "question", "evidence",
-  "counterargument", "revision", "validation", "completion"
+  "counterargument", "revision", "validation", "completion",
+  "security_boundary_violation"
 ]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
@@ -18,7 +19,13 @@ const PayloadSchemas = {
   counterargument: z.object({ claim: z.string().min(1), objection: z.string().min(1), evidenceRefs: z.array(z.string()).default([]) }).strict(),
   revision: z.object({ revision: z.string().min(1), addressesMessageIds: z.array(z.string().uuid()) }).strict(),
   validation: z.object({ claim: z.string().min(1), verified: z.boolean(), reason: z.string().optional() }).strict(),
-  completion: z.object({ synthesis: z.string().min(1), evidenceRefs: z.array(z.string()) }).strict()
+  completion: z.object({ synthesis: z.string().min(1), evidenceRefs: z.array(z.string()) }).strict(),
+  security_boundary_violation: z.object({
+    event: z.literal("SecurityBoundaryViolation"),
+    reason: z.string().min(1),
+    findingId: z.string().min(1),
+    targetUri: z.string().min(1)
+  }).strict()
 } as const;
 
 const BaseMessageSchema = z.object({

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Governance review</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem auto; max-width: 48rem; color: #1c1917; background: #faf7f2; }
+    h1 { font-size: 1.4rem; }
+    a { color: #1d4ed8; }
+    .banner, section, pre { background: #fff; border: 1px solid #d6d3d1; padding: 0.75rem 1rem; }
+    label { display: block; margin-top: 1rem; }
+    textarea, select, input[type="file"] { width: 100%; }
+    pre { white-space: pre-wrap; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    button { padding: 0.4rem 0.8rem; }
+  </style>
+</head>
+<body>
+  <p><a href="http://127.0.0.1:4173">Back to Pocket AI Lab chat (http://127.0.0.1:4173)</a></p>
+  <h1>Governance review</h1>
+  <p class="banner" id="banner">This page talks only to the loopback sidecar. It does not contact scan targets. authorized stays false.</p>
+  <p id="health">Checking sidecar health…</p>
+  <section>
+    <h2>Allowlist</h2>
+    <p>One host per line. An empty list keeps every target out of scope. Stored in the local allowlist file, not in git.</p>
+    <textarea id="allowlist" rows="4" spellcheck="false"></textarea>
+    <div class="row"><button id="save-allowlist" type="button">Save allowlist</button></div>
+    <p id="allowlist-note"></p>
+  </section>
+  <form id="review-form">
+    <h2>Scanner export</h2>
+    <label>Format
+      <select id="source-format" name="source_format">
+        <option value="burp">Burp XML</option>
+        <option value="nessus">Nessus CSV</option>
+        <option value="zap">ZAP JSON or XML</option>
+      </select>
+    </label>
+    <label>Upload a file
+      <input id="upload" type="file" accept=".xml,.csv,.json,text/xml,text/csv,application/json">
+    </label>
+    <label>Or paste the export
+      <textarea id="content" name="content" rows="10" spellcheck="false"></textarea>
+    </label>
+    <div class="row"><button type="submit">Review locally</button></div>
+  </form>
+  <h2>Result</h2>
+  <div class="row">
+    <button id="download-json" type="button" disabled>Download review JSON</button>
+    <button id="download-markdown" type="button" disabled>Download Markdown report</button>
+  </div>
+  <pre id="result">No review yet.</pre>
+  <script src="./app.js"></script>
+</body>
+</html>

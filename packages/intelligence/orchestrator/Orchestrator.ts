@@ -11,6 +11,7 @@ import { DeliberationEngine, DeliberationStage } from "../deliberation/Deliberat
 import { MemoryManager } from "../memory/MemoryManager";
 import { DelegationGate } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
+import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
 
 export interface TaskRequest {
   id: string;
@@ -192,5 +193,13 @@ export class Orchestrator {
       consensus: deliberation.consensus,
       notes: deliberation.notes
     };
+  }
+
+  /**
+   * Non-executing scan-export review.
+   * The sidecar decides scope. This method does not contact the target.
+   */
+  handleScanTelemetryUpload(input: GovernanceUploadInput): Promise<GovernanceUploadResult> {
+    return reviewScanTelemetry(this, input);
   }
 }
