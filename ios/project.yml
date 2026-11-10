@@ -1,0 +1,47 @@
+name: PocketAILab
+options:
+  bundleIdPrefix: com.pocketailab
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  PocketLlamaEngine:
+    path: ../runtime/ios
+targets:
+  PocketAILab:
+    type: application
+    platform: iOS
+    sources:
+      - path: PocketAILab
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal
+        PRODUCT_NAME: Pocket AI Lab
+        INFOPLIST_KEY_CFBundleDisplayName: Pocket AI Lab
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: Connect to a Pocket AI Lab workspace hosted on your trusted local network.
+        INFOPLIST_KEY_UIFileSharingEnabled: true
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: true
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: false
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - package: PocketLlamaEngine
+        product: PocketLlamaEngine
+  PocketAILabTests:
+    type: bundle.unit-test
+    platform: iOS
+    hostApplication: PocketAILab
+    sources:
+      - path: PocketAILabTests
+    dependencies:
+      - target: PocketAILab
+      - package: PocketLlamaEngine
+        product: PocketLlamaEngine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal.tests
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        GENERATE_INFOPLIST_FILE: true
