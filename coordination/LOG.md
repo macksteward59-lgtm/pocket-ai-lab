@@ -694,3 +694,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Overlap:** PR #28 already owns `TeamExpansionPlanner.ts`, `dynamicCatalog.ts`, `packages/intelligence/security/`, and a small `Orchestrator.ts` injection, and it is not on `main`. PR #31 owns optional orchestrator context fields and `memory/relevance.ts`. This claim does not rewrite those branches. Governance files that share a path are advisory-only and do not import `SecurityDivision`. `Orchestrator.ts` will gain a review method at the end of the class. `AgentManager.ts`, `relevance.ts`, `apps/web/`, `runtime/ios/`, and `src/east/` stay untouched.
 - **Will not do:** Live HTTP probes, exploit or payload generation, token minting, XOR policy crypto, edits to `packages/director/src/lib/apex/trust.ts`, or any path that sets `authorized` true. Scanner scope flags do not mark an asset in scope. Fernet encrypts policy blobs. Burp XML is parsed with `defusedxml`.
 - **APEX:** This claim grants no authorization. Model and scanner text stay untrusted. `authorized` stays false.
+
+## 2026-11-10 00:31 UTC — Grok Bot
+
+- **Check:** `origin/main` is `1b62b87`. PRs #28, #31, and #32 are merged. PR #29 is mergeable. PR #30 conflicted.
+- **Conflict:** `packages/intelligence/index.ts` only. Main appended the security-agency exports. This branch appended the serverless exports. Both lists are kept. `Orchestrator.ts` auto-merged with the security division and the optional chat-context fields both present. No intent clash.
+- **Branch:** `grok/serverless-opt-in` head `afc9480`. Local `npm run build` and `npm test` passed. Not merged to `main`.
+- **APEX:** No authorization grant. `authorized` stays false.
