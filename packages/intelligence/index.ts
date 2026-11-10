@@ -1,6 +1,11 @@
 export { AgentManager, CORE_AGENTS, SECURITY_SPECIALIST_TEMPLATES, type SecuritySpecialistId } from "./agents/AgentManager";
 export { MessageBus, type AgentMessage } from "./message-bus/MessageBus";
 export { ModelRegistry } from "./model-registry/ModelRegistry";
+export { ModelPluginManager, type AddModelInput, type ModelChangeLogEntry } from "./model-registry/ModelPluginManager";
+export {
+  LocalFileFetcher, UnconfiguredFetcher, ModelSourceError, estimateMemoryMB,
+  type ModelSource, type ModelFetcher, type ResolvedModel
+} from "./model-registry/ModelSource";
 export { ModelRouter } from "./model-router/ModelRouter";
 export { DeliberationEngine } from "./deliberation/DeliberationEngine";
 export { MemoryManager } from "./memory/MemoryManager";
@@ -31,6 +36,11 @@ export {
   DisabledReadOnlyCloud, ReadOnlyCloudClient, ReadOnlyCloudError, allowlistedGetUrl,
   type CloudService, type ReadOnlyCloudOptions
 } from "./security/posture/readOnlyCloud";
+export { createAgencyHandler, type CreateHandlerOptions } from "./serverless/handler";
+export { InMemoryRateLimitStore, type RateLimitStore } from "./serverless/rateLimitStore";
+export { toNodeHandler, toFetchHandler, toLambdaHandler } from "./serverless/adapters";
+export { RemoteInferenceProvider, RemoteInferenceError } from "./serverless/RemoteInferenceProvider";
+export type { GenericRequest, GenericResponse, Handler, AgencySecurityPort, AgencyExpansionPort } from "./serverless/types";
 export { PolicyChecker } from "./security/PolicyChecker";
 export { synthesizeEvidence, EVIDENCE_MARKDOWN_HEADERS } from "./security/EvidenceSynthesizer";
 export { AuditLedger } from "./security/AuditLedger";

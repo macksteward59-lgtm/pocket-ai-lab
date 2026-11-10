@@ -30,6 +30,25 @@ export class ModelRegistry {
     return mid ? this.models.get(mid) : undefined;
   }
 
+  has(id: string): boolean {
+    return this.models.has(id);
+  }
+
+  get(id: string): ModelDescriptor | undefined {
+    return this.models.get(id);
+  }
+
+  /** Removes a model and any agent associations pointing at it. Does not touch router reservations. */
+  unregister(id: string): boolean {
+    const removed = this.models.delete(id);
+    if (removed) {
+      for (const [agentId, modelId] of [...this.agentModelMap]) {
+        if (modelId === id) this.agentModelMap.delete(agentId);
+      }
+    }
+    return removed;
+  }
+
   listModels(): ModelDescriptor[] {
     return Array.from(this.models.values());
   }
