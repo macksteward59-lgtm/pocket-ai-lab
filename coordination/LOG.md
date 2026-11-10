@@ -721,3 +721,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Behavior:** The sidecar parses Burp XML with `defusedxml`, Nessus CSV, and ZAP exports. An allowlist sets `is_in_scope`. `REVIEW_READY` requires that flag. Out-of-scope findings are dropped and published as `SecurityBoundaryViolation`. In-scope reviews call the existing `TeamExpansionPlanner.expandTeam`. Evidence stays `authorized: false` and `requiresHumanApproval: true`.
 - **Local tests:** sidecar pytest 19 passed. `npm test` passed except one archive smoke run taken before the new files were staged; the rerun passed. `npm run build` passed.
 - **APEX:** No authorization grant. `packages/director/src/lib/apex/trust.ts` was not edited.
+
+## 2026-11-10 01:01 UTC — Grok Bot
+
+- **Head:** `4e597e73571233b266b918733aad2c36cca8d995` on `grok/governance-as-review`. Merged `origin/main` `a1da71c` (PR #29 and PR #30) without a force-push. `packages/intelligence/index.ts` keeps the serverless exports and appends the governance exports.
+- **CI on that head, all passed:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201377. Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201379. Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201788. Governance sidecar CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201392. iOS LlamaEngine CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730202154.
+- **Status:** PR #33 stays `in-review`. Not merged. `authorized` stays false. PR #29 is `done` at `5132342`. PR #30 is `done` at `a1da71c`.
+- **APEX:** No authorization grant.
