@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<issues>
+  <issue>
+    <name>Missing security header</name>
+    <host ip="203.0.113.10">https://app.example.com/login</host>
+    <severity>High</severity>
+    <confidence>Certain</confidence>
+    <remediationBackground>Send the header from the application.</remediationBackground>
+  </issue>
+  <issue>
+    <name>Cookie without a secure flag</name>
+    <host>https://outside.example.com/a</host>
+    <severity>Medium</severity>
+    <confidence>Firm</confidence>
+    <remediationBackground>Set the flag in the application configuration.</remediationBackground>
+  </issue>
+</issues>

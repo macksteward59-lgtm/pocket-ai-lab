@@ -17,6 +17,7 @@ import {
   ownsCommand,
   redact,
   resolveGgufSelection,
+  statusText,
   stopOwnedFromState
 } from "./launcher-lib.mjs";
 import { buildArchive, isForbiddenRelative } from "./package-archive.mjs";
@@ -104,6 +105,7 @@ test("the launcher starts the loopback app, preserves memory, and does not inven
   let server;
   const handle = await launch({
     home,
+    governance: false,
     env: { PORT: "46011", LLM_API_KEY: "do-not-pass" },
     nodeVersion: "22.0.0",
     appRoot: path.resolve(path.dirname(new URL(import.meta.url).pathname), "../.."),
@@ -199,6 +201,7 @@ test("the real launcher process serves loopback health and then exits", async ()
       HOME: home,
       PORT: "46021",
       POCKET_GGUF_PATH: "",
+      POCKET_NO_GOVERNANCE: "1",
       LLM_API_KEY: "desktop-launcher-secret"
     },
     stdio: ["ignore", "pipe", "pipe"]
@@ -235,6 +238,7 @@ test("headless mode starts the app and does not open a browser", async () => {
   const handle = await launch({
     home,
     headless: true,
+    governance: false,
     env: { PORT: "46041" },
     nodeVersion: "22.0.0",
     appRoot: path.resolve(path.dirname(new URL(import.meta.url).pathname), "../.."),
@@ -260,6 +264,52 @@ test("headless mode starts the app and does not open a browser", async () => {
     assert.equal(handle.status.browserOpened, false);
     assert.equal(handle.status.authorized, false);
     assert.match(handle.status.browserError, /Headless mode/);
+  } finally {
+    await handle.stop();
+    if (server) await new Promise(resolve => server.close(resolve));
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("the launcher prints the chat URL and the governance dashboard URL", async () => {
+  const home = await mkdtemp(path.join(tmpdir(), "pocket-governance-url-"));
+  const opened = [];
+  let server;
+  const handle = await launch({
+    home,
+    governance: true,
+    env: { PORT: "46061" },
+    nodeVersion: "22.0.0",
+    appRoot: path.resolve(path.dirname(new URL(import.meta.url).pathname), "../.."),
+    deps: {
+      fileExists: async file => file.endsWith("package.json") || file.endsWith("server.mjs"),
+      readText: async () => "",
+      existsSync: () => true,
+      listenAvailable: async () => true,
+      openBrowser: async (_command, url) => { opened.push(url); },
+      spawnLlama: () => { throw new Error("llama-server should not start"); },
+      prepareGovernance: async () => ({
+        enabled: true,
+        url: "http://127.0.0.1:8765/dashboard/",
+        message: "Governance does not contact scan targets. authorized stays false."
+      }),
+      spawnWeb: (_file, _args, options) => {
+        process.env.HOST = "127.0.0.1";
+        process.env.POCKET_MEMORY_DIR = options.env.POCKET_MEMORY_DIR;
+        process.env.LLAMACPP_BASE_URL = options.env.LLAMACPP_BASE_URL;
+        server = createServer();
+        server.listen(Number(options.env.PORT), "127.0.0.1");
+        return { pid: 999999, kill() { server.close(); }, stdout: null, stderr: null };
+      }
+    }
+  });
+  try {
+    const text = statusText(handle.status);
+    assert.match(text, /http:\/\/127\.0\.0\.1:46061\//);
+    assert.match(text, /http:\/\/127\.0\.0\.1:8765\/dashboard\//);
+    assert.match(text, /does not contact scan targets/);
+    assert.equal(handle.status.authorized, false);
+    assert.deepEqual(opened, ["http://127.0.0.1:46061/", "http://127.0.0.1:8765/dashboard/"]);
   } finally {
     await handle.stop();
     if (server) await new Promise(resolve => server.close(resolve));

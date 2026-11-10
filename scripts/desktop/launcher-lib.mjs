@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost, llamaServerArgv } from "../local-gguf/lib.mjs";
+import { setupEnv } from "./setup-env.mjs";
 
 export const OWNED_ARG = "--pocket-ai-lab-owned";
 export const EXPERIMENTAL_GGUF = "pocket-ai-lab-experimental-q4_k_m.gguf";
@@ -15,6 +16,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export function redact(text) {
   return String(text)
     .replace(/\bBearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/\bGOVERNANCE_FERNET_KEY\s*=\s*\S+/g, "GOVERNANCE_FERNET_KEY=[redacted]")
     .replace(/\b((?:api[_-]?key|token|secret|password)\s*[=:]\s*)\S+/gi, "$1[redacted]");
 }
 
@@ -136,6 +138,7 @@ export function ownsCommand(command, kind, marker) {
   if (kind === "llama") {
     return Boolean(marker) && command.includes(marker) && command.includes("--host") && command.includes("127.0.0.1");
   }
+  if (kind === "governance") return command.includes("governance-runtime.mjs");
   return false;
 }
 
@@ -208,6 +211,8 @@ export function statusText(status) {
     lines.push("The local model is not ready. " + (status.modelMessage || "No model was started."));
   }
   lines.push("Memory stays in " + status.memoryDir);
+  if (status.governanceUrl) lines.push("Governance review dashboard: " + status.governanceUrl);
+  if (status.governanceMessage) lines.push(status.governanceMessage);
   lines.push("This is a portable launcher, not a native installer, and it does not authorize anything.");
   if (status.browserOpened) lines.push("The default browser was asked to open the loopback page.");
   else if (status.browserError) lines.push("The browser was not opened: " + status.browserError);
@@ -254,6 +259,9 @@ export async function launch(options = {}) {
     url: "",
     memoryDir: paths.memory,
     modelMessage: assessed.gguf.error || "",
+    governanceEnabled: false,
+    governanceUrl: "",
+    governanceMessage: "",
     problems: assessed.problems,
     exitCode: blocking.length ? 1 : 0
   };
@@ -333,6 +341,21 @@ export async function launch(options = {}) {
     if (!status.modelReady) status.modelMessage = "The app is up, and the loopback model health check did not succeed.";
     else status.modelMessage = "";
   }
+  if (options.governance === false || env.POCKET_NO_GOVERNANCE === "1") {
+    status.governanceMessage = "Governance review was not started (--no-governance).";
+  } else {
+    const prepare = deps.prepareGovernance ?? prepareGovernance;
+    const governance = await prepare({
+      appRoot,
+      env,
+      children,
+      logFile: paths.logFile,
+      spawnImpl: deps.spawnGovernance ?? defaultSpawn
+    });
+    status.governanceEnabled = Boolean(governance.enabled);
+    status.governanceUrl = governance.url || "";
+    status.governanceMessage = governance.message || "";
+  }
   if (options.headless) {
     status.browserError = "Headless mode left the browser closed.";
   } else {
@@ -341,6 +364,11 @@ export async function launch(options = {}) {
       if (deps.openBrowser) await deps.openBrowser(command, url);
       else await openBrowser(command);
       status.browserOpened = true;
+      if (status.governanceUrl) {
+        const dashboard = browserCommand(options.platform ?? process.platform, status.governanceUrl);
+        if (deps.openBrowser) await deps.openBrowser(dashboard, status.governanceUrl);
+        else await openBrowser(dashboard);
+      }
     } catch (error) {
       status.browserError = error instanceof Error ? error.message : "browser open failed";
     }
@@ -348,7 +376,8 @@ export async function launch(options = {}) {
   await writeFile(paths.state, JSON.stringify({
     authorized: false,
     web: { pid: web.pid, port: webPort },
-    llama: llama && children.find(item => item.kind === "llama") ? { pid: children.find(item => item.kind === "llama").child.pid, port: llama.port, model: path.basename(assessed.gguf.path) } : null
+    llama: llama && children.find(item => item.kind === "llama") ? { pid: children.find(item => item.kind === "llama").child.pid, port: llama.port, model: path.basename(assessed.gguf.path) } : null,
+    governance: children.find(item => item.kind === "governance") ? { pid: children.find(item => item.kind === "governance").child.pid, port: 8765 } : null
   }, null, 2));
   await appendLog(paths.logFile, statusText(status));
 
@@ -376,6 +405,64 @@ function webPortPlaceholder(port) {
 
 function defaultSpawn(file, args, options) {
   return spawn(file, args, options);
+}
+
+export async function prepareGovernance({ appRoot, env, children, logFile, spawnImpl }) {
+  const python = await detectPython(spawnImpl ?? defaultSpawn, env);
+  if (!python) {
+    return {
+      enabled: false,
+      url: "",
+      message: "Python 3.10 or newer was not found. Governance is unavailable. The chat app is still running."
+    };
+  }
+  await setupEnv({ root: appRoot });
+  const runtimeEnv = {
+    ...env,
+    GOVERNANCE_APP_ROOT: appRoot,
+    GOVERNANCE_PYTHON: python,
+    GOVERNANCE_SIDECAR_HOST: "127.0.0.1",
+    GOVERNANCE_SIDECAR_PORT: "8765",
+    GOVERNANCE_AUTHORIZED: "false",
+    POCKET_GOVERNANCE_OWNED: "1"
+  };
+  delete runtimeEnv.LLM_API_KEY;
+  const child = (spawnImpl ?? defaultSpawn)(process.execPath, [path.join(appRoot, "scripts", "desktop", "governance-runtime.mjs")], {
+    cwd: appRoot,
+    env: runtimeEnv,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  wireLogs(child, logFile);
+  children.push({ kind: "governance", child, marker: "governance-runtime.mjs", port: 8765 });
+  return {
+    enabled: true,
+    url: "http://127.0.0.1:8765/dashboard/",
+    message: "The first start creates .venv in this project and installs the sidecar. Governance does not contact scan targets. authorized stays false."
+  };
+}
+
+async function detectPython(spawnImpl, env) {
+  const candidates = [env.GOVERNANCE_PYTHON, "python3", "python"].filter(value => typeof value === "string" && value.trim());
+  for (const candidate of candidates) {
+    const version = await pythonVersion(spawnImpl, candidate.trim());
+    if (atLeast310(version)) return candidate.trim();
+  }
+  return null;
+}
+
+function pythonVersion(spawnImpl, file) {
+  return new Promise(resolve => {
+    let output = "";
+    const child = spawnImpl(file, ["-c", "import sys; print('%d.%d' % sys.version_info[:2])"], { stdio: ["ignore", "pipe", "ignore"] });
+    child.stdout?.on("data", chunk => { output += chunk; });
+    child.on("error", () => resolve(""));
+    child.on("exit", code => resolve(code === 0 ? output.trim() : ""));
+  });
+}
+
+function atLeast310(version) {
+  const [major, minor] = String(version).split(".").map(Number);
+  return major > 3 || (major === 3 && minor >= 10);
 }
 
 async function commandExists(file) {
@@ -443,11 +530,11 @@ export async function stopOwnedFromState(stateFile, killPid) {
   }
   const stopped = [];
   const skipped = [];
-  for (const kind of ["web", "llama"]) {
+  for (const kind of ["web", "llama", "governance"]) {
     const record = parsed[kind];
     if (!record || !record.pid) continue;
     const command = await commandLine(record.pid);
-    const marker = kind === "llama" ? String(record.model || "") : "server.mjs";
+    const marker = kind === "llama" ? String(record.model || "") : kind === "governance" ? "governance-runtime.mjs" : "server.mjs";
     if (!ownsCommand(command, kind, marker)) {
       skipped.push(kind);
       continue;

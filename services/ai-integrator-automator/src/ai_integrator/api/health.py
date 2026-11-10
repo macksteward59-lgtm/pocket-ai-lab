@@ -5,6 +5,8 @@ import os
 from cryptography.fernet import Fernet
 from fastapi import APIRouter
 
+from ai_integrator.application.allowlist_store import read_allowlist
+
 router = APIRouter()
 
 
@@ -22,8 +24,7 @@ def health_payload() -> dict:
             except (ValueError, TypeError):
                 status = "degraded"
                 notes.append("Fernet key is not valid; policy encryption is unavailable")
-        if not os.environ.get("GOVERNANCE_ALLOWLIST", "").strip():
-            status = "degraded"
+        if not read_allowlist():
             notes.append("Allowlist is empty; every target stays out of scope")
         if os.environ.get("GOVERNANCE_AUTHORIZED", "false").strip().lower() != "false":
             status = "error"

@@ -2,6 +2,7 @@
 
 import os
 
+from ai_integrator.application.allowlist_store import read_allowlist
 from ai_integrator.application.policy import TargetAllowlistPolicy
 from ai_integrator.application.services import PolicyReviewOrchestrator
 
@@ -12,4 +13,4 @@ def allowlist_from_env() -> list[str]:
 
 
 def get_orchestrator() -> PolicyReviewOrchestrator:
-    return PolicyReviewOrchestrator(TargetAllowlistPolicy(allowlist_from_env()))
+    return PolicyReviewOrchestrator(TargetAllowlistPolicy(read_allowlist()))

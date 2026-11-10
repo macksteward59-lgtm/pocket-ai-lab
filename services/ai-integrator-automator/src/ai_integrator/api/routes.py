@@ -11,7 +11,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_integrator.api.dependencies import get_orchestrator
+from ai_integrator.application.allowlist_store import read_allowlist, write_allowlist
 from ai_integrator.application.dependency_triage import triage_package_json, triage_requirements
+from ai_integrator.application.report import render_review_markdown
 from ai_integrator.application.services import PolicyReviewOrchestrator, ReviewEnvelope
 from ai_integrator.application.source_parser import StaticContextExtractor
 from ai_integrator.application.static_analyzer import analyze_source
@@ -26,6 +28,12 @@ class ReviewRequest(BaseModel):
 
     source_format: Literal["burp", "nessus", "zap"]
     content: str = Field(max_length=2_000_000)
+
+
+class AllowlistBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    hosts: list[str] = Field(default_factory=list, max_length=200)
 
 
 class AnalyzeSourceRequest(BaseModel):
@@ -50,6 +58,16 @@ def review(body: ReviewRequest, orchestrator: PolicyReviewOrchestrator = Depends
 @router.get("/api/v1/governance/reviews")
 def reviews() -> dict:
     return {"reviews": recent_reviews(), "authorized": False}
+
+
+@router.get("/api/v1/governance/allowlist")
+def show_allowlist() -> dict:
+    return {"hosts": read_allowlist(), "authorized": False}
+
+
+@router.put("/api/v1/governance/allowlist")
+def replace_allowlist(body: AllowlistBody) -> dict:
+    return {"hosts": write_allowlist(body.hosts), "authorized": False}
 
 
 @router.post("/api/v1/governance/analyze-source")
@@ -85,4 +103,5 @@ def _public_envelope(envelope: ReviewEnvelope) -> dict:
     payload["review_package"]["requires_human_approval"] = True
     for violation in payload["boundary_violations"]:
         violation["authorized"] = False
+    payload["evidence_markdown"] = render_review_markdown(envelope)
     return payload

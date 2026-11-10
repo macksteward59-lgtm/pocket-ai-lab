@@ -1,57 +1,41 @@
 # Run the governance review stack
 
-The sidecar and watcher parse local scanner exports. They do not contact the hosts named in those exports. `authorized` stays false.
+One command starts the chat app, llama-server when a GGUF is already configured, and the governance sidecar. Nothing in this path contacts the hosts named in a scanner export. `authorized` stays false.
 
-## Install
+## Single command
 
-From the repository root, with Python 3.11+ and Node.js 22+:
+From the repository root, after `npm install` and with Node.js 22 or newer:
 
 ```bash
-python3 -m pip install -e "services/ai-integrator-automator[dev]"
-npm install
+./start-pocket-ai-lab.sh
 ```
 
-If Poetry is installed, the same tree can be tested with:
+That is the same entry as `Start Pocket AI Lab.command`, `Start Pocket AI Lab.bat`, and `node scripts/desktop/launcher.mjs`.
+
+- Chat: `http://127.0.0.1:4173/`
+- Governance dashboard: `http://127.0.0.1:8765/dashboard/`
+- llama-server: `127.0.0.1:8080` only when you already selected a GGUF. The launcher does not download weights.
+
+The first governance start creates `.venv` in the project and installs `services/ai-integrator-automator` when Python 3.10 or newer is on `PATH`. That install needs a network once. If Python is missing, chat still starts and the launcher prints that governance is unavailable.
 
 ```bash
-cd services/ai-integrator-automator
-poetry install
-poetry run pytest
+./start-pocket-ai-lab.sh --no-governance
+./start-pocket-ai-lab.sh --headless
 ```
 
-The CI job uses pip:
+Ctrl-C sends SIGTERM to the children this launcher started.
+
+`node scripts/desktop/setup-env.mjs` copies `.env.example` to the gitignored `.env` and writes a Fernet key there when the key line is empty. The example file stays empty. Do not commit `.env`.
+
+The dashboard can paste or upload a Burp XML, Nessus CSV, or ZAP export, edit the local allowlist, and download the review JSON and the Markdown report. The allowlist is stored under `.governance/`, which is gitignored.
+
+## Sidecar by itself
 
 ```bash
-cd services/ai-integrator-automator
-python3 -m pip install -e ".[dev]"
-python3 -m pytest
-```
-
-From the repository root the equivalent is `npm run test:governance`. That command is separate from `npm test`, so the consumer workflows do not need the Python packages.
-
-## Environment
-
-```bash
-node scripts/desktop/setup-env.mjs
-```
-
-This copies `.env.example` to `.env` when `.env` is missing. The example keeps `GOVERNANCE_AUTHORIZED=false` and an empty `GOVERNANCE_FERNET_KEY`. Put a locally generated Fernet key only in the gitignored `.env` if you want policy encryption. An empty allowlist keeps every target out of scope.
-
-Check the tree without starting a server:
-
-```bash
-node scripts/desktop/verify-governance-stack.mjs
-```
-
-## Sidecar and watcher
-
-```bash
-export GOVERNANCE_ALLOWLIST="app.example.com"
-export GOVERNANCE_SIDECAR_HOST="127.0.0.1"
 sh scripts/desktop/start-governance-pipeline.sh
 ```
 
-The script refuses any host other than `127.0.0.1`, `localhost`, or `::1`. It starts `uvicorn` on that host and then runs the watcher against `.governance-inbox`. Drop a `.xml`, `.csv`, or `.json` export in that directory. Results are written under `.governance-outbox`. Those directories are gitignored.
+The script is POSIX `sh`. It does not `exec` the watcher, so the sidecar stays up while exports are watched. It refuses any host other than `127.0.0.1`, `localhost`, or `::1`.
 
 One watcher pass, with the sidecar already running:
 
@@ -63,15 +47,13 @@ node --import tsx scripts/desktop/TelemetryWatcher.ts \
   --once
 ```
 
-Open the viewer at `http://127.0.0.1:8765/dashboard/`. It polls `/api/v1/health` and can post an export to `/api/v1/governance/review`. Health is HTTP 200 with status `healthy`, `degraded`, or `error`. `authorized` in that body is false.
-
 ## Tests
 
 ```bash
-npm run test:governance
-npm run test:engine
 npm test
+npm run test:governance
+npm run test:simulation
 npm run build
 ```
 
-`packages/intelligence/__tests__/gate01.test.ts` covers an in-scope upload that reaches `REVIEW_READY` and spawns an existing security specialist, and an out-of-scope upload that is dropped with `SecurityBoundaryViolation`.
+`npm run test:simulation` replays fabricated `example.com` exports through the parsers and `PolicyChecker` without contacting those hosts. `npm run test:governance` is `pytest` for the sidecar. The main `npm test` script does not require the Python package; the governance CI job runs both.

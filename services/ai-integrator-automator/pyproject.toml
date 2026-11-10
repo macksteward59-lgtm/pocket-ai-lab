@@ -2,7 +2,7 @@
 name = "ai-integrator"
 version = "0.1.0"
 description = "Non-executing governance review sidecar. Parses scanner exports and returns remediation text."
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.115,<1",
   "uvicorn>=0.32,<1",

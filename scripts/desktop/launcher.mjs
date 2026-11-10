@@ -6,7 +6,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const headless = process.argv.includes("--headless") || process.env.POCKET_LAUNCHER_HEADLESS === "1";
-  const handle = await launch({ launcherDir: here, headless });
+  const governance = !process.argv.includes("--no-governance") && process.env.POCKET_NO_GOVERNANCE !== "1";
+  const handle = await launch({ launcherDir: here, headless, governance });
   process.stdout.write(redact(statusText(handle.status)) + "\n");
   if (handle.status.exitCode !== 0) process.exit(handle.status.exitCode);
   const shutdown = async () => {

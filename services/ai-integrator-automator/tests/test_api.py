@@ -28,6 +28,12 @@ def test_health_is_always_200(monkeypatch):
     assert body["status"] == "degraded"
 
     monkeypatch.setenv("GOVERNANCE_FERNET_KEY", Fernet.generate_key().decode())
+    keyed = TestClient(create_app()).get("/api/v1/health")
+    assert keyed.status_code == 200
+    assert keyed.json()["status"] == "healthy"
+    assert keyed.json()["authorized"] is False
+    assert any("Allowlist is empty" in note for note in keyed.json()["notes"])
+
     monkeypatch.setenv("GOVERNANCE_ALLOWLIST", "app.example.com")
     ready = TestClient(create_app()).get("/api/v1/health")
     assert ready.status_code == 200
@@ -54,6 +60,8 @@ def test_review_and_analyze_routes(monkeypatch, tmp_path: Path):
     assert body["review_package"]["requires_human_approval"] is True
     assert body["review_package"]["findings"][0]["asset"]["is_in_scope"] is True
     assert body["boundary_violations"] == []
+    assert "authorized: false" in body["evidence_markdown"]
+    assert "### Remediation checklist" in body["evidence_markdown"]
     assert '"authorized": true' not in reviewed.text
     assert '"authorized":true' not in reviewed.text
 
@@ -75,6 +83,14 @@ def test_review_and_analyze_routes(monkeypatch, tmp_path: Path):
     assert "pathlib" in report["context"]["imports"]
     assert "sample" in report["context"]["functions"]
     assert marker.exists() is False
+
+    saved = client.put("/api/v1/governance/allowlist", json={"hosts": ["app.example.com", "not a host"]})
+    assert saved.status_code == 200
+    assert saved.json()["authorized"] is False
+    assert saved.json()["hosts"] == ["app.example.com"]
+    listed = client.get("/api/v1/governance/allowlist")
+    assert listed.json()["hosts"] == ["app.example.com"]
+    assert listed.json()["authorized"] is False
 
     invalid = client.post("/api/v1/governance/review", json={"source_format": "live-probe", "content": BURP})
     assert invalid.status_code == 422
