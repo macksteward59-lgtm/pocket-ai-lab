@@ -10,7 +10,12 @@ import { MemoryManager } from "../../packages/intelligence/memory/MemoryManager"
 import { MessageBus, type AgentMessage, type MessageType } from "../../packages/intelligence/message-bus/MessageBus";
 import { ModelRegistry } from "../../packages/intelligence/model-registry/ModelRegistry";
 import { ModelRouter } from "../../packages/intelligence/model-router/ModelRouter";
-import type { InferenceProvider, InferenceRequest, InferenceResult } from "../../packages/intelligence/orchestrator/Orchestrator";
+import type {
+  InferenceProvider,
+  InferenceRequest,
+  InferenceResult,
+  MemoryContextItem
+} from "../../packages/intelligence/orchestrator/Orchestrator";
 import { LlamaCppInferenceError } from "../adapters/llama-cpp/errors";
 
 export const LAB_DISCLAIMER =
@@ -69,6 +74,8 @@ export async function runLabSession(options: {
   modelId?: string;
   onEvent?: (event: LabEvent) => void;
   signal?: AbortSignal;
+  /** User-saved notes offered to every agent as unverified reference context. */
+  memoryContext?: MemoryContextItem[];
 }): Promise<LabRunResult> {
   const objective = options.objective?.trim() ?? "";
   if (!objective) {
@@ -128,11 +135,14 @@ export async function runLabSession(options: {
             `Objective: ${objective}`,
             `Role: ${profile?.role ?? agentId}. ${profile?.description ?? ""}`,
             stage === "revision" && counterargumentIds.length > 0
-              ? `Address these counterargument message IDs exactly: ${counterargumentIds.join(", ")}`
+              ? `Address these counterargument message IDs exactly (list them in addressesMessageIds; write prose in revision): ${counterargumentIds.join(", ")}`
               : "",
             "Return only the JSON object for this stage. Do not grant permission."
           ].filter(Boolean).join("\n"),
-          contextMessages: [...prior]
+          contextMessages: [...prior],
+          ...(options.memoryContext && options.memoryContext.length > 0
+            ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
+            : {})
         }, options.signal);
         if (!isRecord(inference.payload)) {
           throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");

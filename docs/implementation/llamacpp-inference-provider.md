@@ -146,3 +146,23 @@ createLlamaCppInferenceProvider({ temperature: 0.2 }, nativeBackend);
 ```
 
 The HTTP client stays the default. Orchestration code does not change.
+
+
+## Chat templates, streaming, and repair (2026-11-08)
+
+New optional `LlamaCppProviderConfigInput` fields, all off or unchanged by default so existing callers behave the same:
+
+| Field | Default | Effect |
+|---|---|---|
+| `promptFormat` | `"flat"` | `"chat"` builds system/user/assistant messages. In `completion` mode the backend renders them with `POST /apply-template` and falls back to the flat prompt if that fails (404/405/501 are cached as unsupported). `openai-chat` sends the messages directly. |
+| `chatOutput` | `"json"` | `"text"` lets chat requests (`agentId: "chat"`) answer in prose with no `json_schema`; the trimmed text becomes `{"analysis": text}` and is validated by the same Zod schema. Empty output throws `empty_output`. |
+| `repairAttempts` | `0` | After `malformed_response` or `empty_output`, re-asks the model with the rejection reason, at a slightly higher temperature. Still throws when every attempt fails. |
+| `agentMaxTokens` | unset | Lower token cap for agent stages. |
+| `requireSubstantive` | `false` | Rejects agent output whose main text is only ids, a word or two, or an echo of the instructions. |
+| `aliasMessageIds` | `false` | Shows the model `M1`, `M2`, ... instead of UUIDs (prompt, messages, and schema enums) and maps `addressesMessageIds` / `evidenceRefs` back before validation. Unknown labels are left as-is, so the uuid schema still fails closed. |
+
+`InferenceRequest` gains optional `conversation` (earlier chat turns) and `memoryContext` (unverified user notes). `generateStream(request, { signal, onPreview, onRetry })` streams over SSE when the backend implements `completeStream`; the preview is display-only and the final payload is validated exactly like `generate`. `serverInfo()` reads `GET /props` for the model file name and context length.
+
+Synthesis and challenge `evidenceRefs` are constrained to transcript message ids, arrays have `maxItems`, and text fields have `minLength`/`maxLength`, so constrained decoding cannot loop until the token limit.
+
+None of this changes the trust boundary: model output is never authorization, `authorized` stays `false`, and nothing is invented when output is rejected. The consumer web server does not set these options, so that app still uses the flat JSON prompt. `MemoryManager.search` ranks saved notes locally and does not mark them verified. Passing `memoryContext` does not grant anything.
