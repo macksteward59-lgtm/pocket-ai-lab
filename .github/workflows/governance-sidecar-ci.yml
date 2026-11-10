@@ -33,9 +33,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-        working-directory: .
       - name: Replay fabricated exports offline
-        working-directory: .
+        working-directory: ${{ github.workspace }}
         run: |
           npm install
           npm run test:simulation
