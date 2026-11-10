@@ -20,9 +20,12 @@ struct WorkspaceView: View {
                 if let loadURL {
                     PrivateWorkspaceWebView(url: loadURL).clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
-                    ContentUnavailableView("Workspace not configured",
-                        systemImage: "globe",
-                        description: Text("The native local AI tab works independently. Configure a reachable HTTPS workspace to use the web interface."))
+                    VStack(spacing: 10) {
+                        Image(systemName: "globe").font(.largeTitle)
+                        Text("Workspace not configured").font(.headline)
+                        Text("The native local AI tab works independently. Configure a reachable HTTPS workspace to use the web interface.")
+                            .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                    }.padding()
                 }
             }
             .navigationTitle("Web Workspace")
