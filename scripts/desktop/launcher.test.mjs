@@ -269,6 +269,9 @@ test("headless mode starts the app and does not open a browser", async () => {
 
 test("the archive excludes weights and secrets and has a checksum", async () => {
   assert.equal(isForbiddenRelative("apps/web/.env"), true);
+  assert.equal(isForbiddenRelative(".env"), true);
+  assert.equal(isForbiddenRelative(".env.local"), true);
+  assert.equal(isForbiddenRelative(".env.example"), false);
   assert.equal(isForbiddenRelative("models/demo.gguf"), true);
   assert.equal(isForbiddenRelative("models/" + EXPERIMENTAL_GGUF), true);
   assert.equal(isForbiddenRelative("node_modules/zod/index.js"), true);
@@ -289,7 +292,7 @@ test("the archive excludes weights and secrets and has a checksum", async () => 
   assert.equal(recorded, built.sha256);
   const names = built.manifest.files.map(file => file.path);
   assert.equal(names.some(name => name.endsWith(".gguf")), false);
-  assert.equal(names.some(name => name.includes(".env")), false);
+  assert.equal(names.filter(name => name.includes(".env")).every(name => name.endsWith(".env.example")), true);
   assert.ok(names.includes("apps/web/server.mjs"));
   assert.ok(names.includes("scripts/desktop/launcher.mjs"));
   assert.ok(names.includes("scripts/local-gguf/lib.mjs"));

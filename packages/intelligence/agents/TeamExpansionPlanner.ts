@@ -97,6 +97,30 @@ export class TeamExpansionPlanner {
     this.log.push({ at: new Date().toISOString(), taskId, requestedTeamSize, grantedTeamSize, approved });
   }
 
+  /**
+   * Governance review entry. Out-of-scope findings spawn nobody.
+   * In-scope text is passed to the existing expandTeam path, which only
+   * selects SECURITY_SPECIALIST_TEMPLATES and cannot raise the size ceiling.
+   */
+  async expandForInScopeReview(input: { taskId: string; title: string; inScope: boolean }): Promise<SecurityTeam> {
+    if (input.inScope !== true) {
+      throw new TeamExpansionDenied("Specialists are not spawned for out-of-scope findings");
+    }
+    if (!input.taskId.trim() || !input.title.trim()) {
+      throw new TeamExpansionDenied("taskId and title are required");
+    }
+    try {
+      return await this.expandTeam({
+        taskId: input.taskId,
+        taskDescription: input.title,
+        requestedTeamSize: 1
+      });
+    } catch (error) {
+      if (error instanceof TeamExpansionDenied) throw error;
+      throw new TeamExpansionDenied(error instanceof Error ? error.message : "Review team was not expanded");
+    }
+  }
+
   private async isApproved(taskId: string, approvalRef?: string): Promise<boolean> {
     if (!this.approvalVerifier || !approvalRef?.trim()) return false;
     try {

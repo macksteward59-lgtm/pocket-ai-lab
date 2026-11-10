@@ -11,10 +11,11 @@ const execFileAsync = promisify(execFile);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../..");
 
-const FORBIDDEN = /(^|\/)(\.env($|\..*)|node_modules|dist|models|\.git)(\/|$)|(\.gguf|\.pem|\.key)$|id_rsa|credentials\.json|(^|\/)secret/i;
+const FORBIDDEN = /(^|\/)(\.env($|\..*)|node_modules|dist|models|\.git|\.governance-inbox|\.governance-outbox)(\/|$)|(\.gguf|\.pem|\.key)$|id_rsa|credentials\.json|(^|\/)secret/i;
 
 export function isForbiddenRelative(relative) {
   const normalized = relative.split(path.sep).join("/");
+  if (normalized === ".env.example" || normalized.endsWith("/.env.example")) return false;
   if (path.basename(normalized) === EXPERIMENTAL_GGUF) return true;
   return FORBIDDEN.test(normalized);
 }

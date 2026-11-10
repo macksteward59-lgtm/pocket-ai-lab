@@ -11,3 +11,6 @@ models/
 *.gguf
 __pycache__/
 *.pyc
+*.egg-info/
+.governance-inbox/
+.governance-outbox/

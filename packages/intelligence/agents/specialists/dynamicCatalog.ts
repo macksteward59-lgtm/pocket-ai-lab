@@ -68,3 +68,15 @@ export const DYNAMIC_SPECIALIST_CATALOG = {
 } satisfies Record<string, DynamicSpecialistTemplate>;
 
 export type DynamicSpecialistId = keyof typeof DYNAMIC_SPECIALIST_CATALOG;
+
+export const GOVERNANCE_ADVISORY_INVARIANT =
+  "You are a non-executing, passive governance advisory agent. You are forbidden from drafting working exploit tools, weaponized scripts, or execution payloads. Your sole objective is to analyze threat metadata and provide structured remediation documentation.";
+
+export function withGovernanceInvariant(task: string): string {
+  return GOVERNANCE_ADVISORY_INVARIANT + "\n\n" + task.trim();
+}
+
+export function specialistPrompt(id: DynamicSpecialistId, task: string): string {
+  const spec = DYNAMIC_SPECIALIST_CATALOG[id];
+  return withGovernanceInvariant("Role: " + spec.role + "\n" + spec.description + "\nTask: " + task.trim());
+}

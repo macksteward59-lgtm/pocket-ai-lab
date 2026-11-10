@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Governance review</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; max-width: 46rem; color: #1c1917; background: #faf7f2; }
+    h1 { font-size: 1.4rem; }
+    .banner { padding: 0.75rem 1rem; background: #fff; border: 1px solid #d6d3d1; }
+    label { display: block; margin-top: 1rem; }
+    textarea, select { width: 100%; }
+    pre { white-space: pre-wrap; background: #fff; padding: 1rem; border: 1px solid #d6d3d1; }
+  </style>
+</head>
+<body>
+  <h1>Governance review</h1>
+  <p class="banner" id="banner">This page talks only to the loopback sidecar. It does not contact scan targets. authorized stays false.</p>
+  <p id="health">Checking sidecar health…</p>
+  <form id="review-form">
+    <label>Export format
+      <select id="source-format" name="source_format">
+        <option value="burp">Burp XML</option>
+        <option value="nessus">Nessus CSV</option>
+        <option value="zap">ZAP JSON or XML</option>
+      </select>
+    </label>
+    <label>Scanner export
+      <textarea id="content" name="content" rows="8"></textarea>
+    </label>
+    <p><button type="submit">Review locally</button></p>
+  </form>
+  <h2>Latest result</h2>
+  <pre id="result">No review yet.</pre>
+  <script src="./app.js"></script>
+</body>
+</html>
