@@ -50,8 +50,8 @@ public enum LlamaEngineSupport {
         if model.path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             throw LlamaEngineError.invalidModel("Model path is required.")
         }
-        if model.contextLength < 1 {
-            throw LlamaEngineError.invalidModel("Context length must be positive.")
+        if model.contextLength < 1 || model.contextLength > 8192 {
+            throw LlamaEngineError.invalidModel("Context length must be from 1 through 8192.")
         }
     }
 

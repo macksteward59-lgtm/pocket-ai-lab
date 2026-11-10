@@ -86,6 +86,19 @@ export class AgentManager {
     this.sessions.delete(sessionId);
     if (!this.agents.get(session.agentId)?.permanent) this.agents.delete(session.agentId);
   }
+
+  /**
+   * Removes a task-scoped specialist and any sessions it still holds.
+   * Permanent agents are never removed.
+   */
+  releaseSpecialist(id: AgentId): boolean {
+    const profile = this.agents.get(id);
+    if (!profile || profile.permanent) return false;
+    for (const [sessionId, session] of this.sessions) {
+      if (session.agentId === id) this.sessions.delete(sessionId);
+    }
+    return this.agents.delete(id);
+  }
 }
 
 export const CORE_AGENTS: AgentProfile[] = [
@@ -98,3 +111,54 @@ export const CORE_AGENTS: AgentProfile[] = [
   { id: "validator", role: "Validator", description: "Independent verification", capabilities: ["validate", "test"], permanent: true, permissions: ["verify"] },
   { id: "archivist", role: "Archivist", description: "Knowledge and project continuity", capabilities: ["archive", "retrieve-knowledge"], permanent: true, permissions: ["read", "write-artifacts"] }
 ];
+
+/**
+ * Defensive research specialist templates.
+ *
+ * Not permanent. Registered on demand with the "lab" permission only.
+ * This module defines no tool behavior and does not execute anything.
+ * Tool requests still go through DelegationGate, which fails closed and
+ * does not set `authorized`.
+ */
+export const SECURITY_SPECIALIST_TEMPLATES = {
+  "microsoft-cloud": {
+    role: "Microsoft Cloud Security Specialist",
+    description: "Azure, ARM, Microsoft 365, and Entra ID configuration and posture review",
+    capabilities: ["azure-arm", "entra-id-assessment", "m365-security"],
+    permissions: ["lab"]
+  },
+  "identity-security": {
+    role: "Identity and Authentication Specialist",
+    description: "OAuth2, SAML, OIDC, and JWT architecture review",
+    capabilities: ["oauth-analysis", "jwt-verification", "saml-assessment"],
+    permissions: ["lab"]
+  },
+  "windows-internals": {
+    role: "Windows Internals Specialist",
+    description: "Windows process and token architecture research, read-only analysis only",
+    capabilities: ["kernel-analysis", "token-architecture-research"],
+    permissions: ["lab"]
+  },
+  "reverse-engineering": {
+    role: "Reverse Engineering Specialist",
+    description: "Static binary and assembly review inside the isolated lab",
+    capabilities: ["binary-static-analysis", "assembly-review"],
+    permissions: ["lab"]
+  },
+  "ai-security": {
+    role: "AI Security Specialist",
+    description: "Prompt-injection defense and RAG surface review",
+    capabilities: ["prompt-injection-defense", "rag-leakage-prevention"],
+    permissions: ["lab"]
+  },
+  "network-protocols": {
+    role: "Network Protocol Specialist",
+    description: "Protocol-conformance and TLS, Kerberos, and SMB configuration review",
+    capabilities: ["protocol-conformance-review", "tls-fingerprinting"],
+    permissions: ["lab"]
+  }
+} satisfies Record<string, Omit<AgentProfile, "id" | "permanent">>;
+
+export type SecuritySpecialistId = keyof typeof SECURITY_SPECIALIST_TEMPLATES;
+
+export const SECURITY_SPECIALIST_IDS = Object.keys(SECURITY_SPECIALIST_TEMPLATES) as SecuritySpecialistId[];

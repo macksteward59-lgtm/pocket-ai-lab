@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { rankMemories } from "./relevance";
 
 export interface MemoryEntry {
   id: string;
@@ -70,6 +71,17 @@ export class MemoryManager {
       .filter(entry => entry.layer === layer && entry.content.toLowerCase().includes(q))
       .slice(0, limit)
       .map(cloneEntry);
+  }
+
+  /**
+   * Ranked keyword relevance. Returned entries keep their provenance,
+   * including verified=false. This does not call a model and does not
+   * mark anything verified.
+   */
+  search(query: string, options: { limit?: number; layers?: MemoryEntry["layer"][]; minScore?: number } = {}): MemoryEntry[] {
+    const pool = options.layers ? this.store.filter(entry => options.layers!.includes(entry.layer)) : this.store;
+    return rankMemories(pool, query, { limit: options.limit, minScore: options.minScore })
+      .map(ranked => cloneEntry(ranked.entry));
   }
 
   getByTask(taskId: string): MemoryEntry[] {
