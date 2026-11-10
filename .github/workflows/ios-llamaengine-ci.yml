@@ -99,6 +99,15 @@ jobs:
             -derivedDataPath /tmp/pocket-app-derived \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: XCTest the native Pocket AI Lab app
+        run: |
+          xcodebuild test \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
+            -derivedDataPath /tmp/pocket-app-test-derived \
+            CODE_SIGNING_ALLOWED=NO
+
       - name: XCTest on the iOS simulator
         working-directory: runtime/ios
         run: |
