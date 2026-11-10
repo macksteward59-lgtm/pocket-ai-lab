@@ -231,7 +231,9 @@ case "$destination" in
     build_one simulator \
       -DCMAKE_SYSTEM_NAME=iOS \
       -DCMAKE_OSX_SYSROOT=iphonesimulator \
-      -DCMAKE_OSX_ARCHITECTURES="$(uname -m)" \
+      # Build both simulator CPU slices even on the Intel hosted runner. The app's
+      # generic simulator build links arm64 as well as x86_64.
+      -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
       -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
       -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
       -DGGML_METAL=ON \
