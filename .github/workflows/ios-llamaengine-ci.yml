@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "runtime/ios/**"
+      - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
@@ -44,7 +45,7 @@ jobs:
           uname -m
 
       - name: Install CMake and Ninja
-        run: brew install cmake ninja
+        run: brew install cmake ninja xcodegen
 
       - name: Build pinned llama.cpp for the simulator and macOS
         run: |
@@ -86,6 +87,16 @@ jobs:
           print(f"id={chosen['udid']}")
           print(f"name={chosen['name']}")
           PY
+
+      - name: Generate and build the native Pocket AI Lab app
+        run: |
+          xcodegen generate --spec ios/project.yml --project ios/PocketAILab.xcodeproj
+          xcodebuild build \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/pocket-app-derived \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: XCTest on the iOS simulator
         working-directory: runtime/ios
