@@ -9,6 +9,8 @@ import { ModelRegistry } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "../model-router/ModelRouter";
 import { DeliberationEngine, DeliberationStage } from "../deliberation/DeliberationEngine";
 import { MemoryManager } from "../memory/MemoryManager";
+import { DelegationGate } from "../security/delegation";
+import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
 
 export interface TaskRequest {
   id: string;
@@ -59,6 +61,11 @@ export class Orchestrator {
   readonly router: ModelRouter;
   readonly deliberation: DeliberationEngine;
   readonly memory: MemoryManager;
+  /**
+   * Security specialist assembly. Tool use is denied unless the caller
+   * injects a verifier. This object does not set `authorized`.
+   */
+  readonly security: SecurityDivision;
   private readonly inference: InferenceProvider;
 
   constructor(opts: {
@@ -66,6 +73,13 @@ export class Orchestrator {
     getResources: () => { availableMemoryMB: number; loadedModels: string[] };
     memory?: MemoryManager;
     maxDeliberationRounds?: number;
+    /**
+     * Optional gate for specialist tool-use decisions. The default gate
+     * denies every request. Not an APEX trust grant.
+     */
+    delegationGate?: DelegationGate;
+    /** Human-approval check for operational-intent tasks. Absent means those tasks are refused. */
+    approvalVerifier?: ApprovalVerifier;
   }) {
     if (!opts?.inference || typeof opts.inference.generate !== "function") {
       throw new Error("A real InferenceProvider must be supplied; placeholder inference is disabled");
@@ -78,6 +92,11 @@ export class Orchestrator {
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
     this.memory = opts.memory ?? new MemoryManager();
     CORE_AGENTS.forEach(agent => this.agents.registerPermanent(agent));
+    this.security = new SecurityDivision({
+      agents: this.agents,
+      gate: opts.delegationGate ?? new DelegationGate(),
+      approvalVerifier: opts.approvalVerifier
+    });
   }
 
   async executeTask(
