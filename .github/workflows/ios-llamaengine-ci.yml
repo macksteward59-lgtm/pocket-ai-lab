@@ -91,7 +91,8 @@ jobs:
 
       - name: Generate and build the native Pocket AI Lab app
         run: |
-          xcodegen generate --spec ios/project.yml --project ios/PocketAILab.xcodeproj
+          rm -rf ios/PocketAILab.xcodeproj
+          xcodegen generate --spec ios/project.yml --project ios
           xcodebuild build \
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
