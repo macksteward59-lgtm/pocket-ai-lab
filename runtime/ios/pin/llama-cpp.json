@@ -1,0 +1,9 @@
+{
+  "repo": "ggml-org/llama.cpp",
+  "tag": "b12233",
+  "commit": "5f490d7bfe78844e6390c869454c149fd7e003a8",
+  "tarballUrl": "https://github.com/ggml-org/llama.cpp/archive/refs/tags/b12233.tar.gz",
+  "sha256": "76572f95d0ce2b7603fe77d472d29f7df9f0f9c12ae126d8b167252212e8babe",
+  "bytes": 39154253,
+  "purpose": "Pinned llama.cpp source for the iOS LlamaEngine Metal slice. The archive is downloaded and verified at build time. It is not vendored in git."
+}
