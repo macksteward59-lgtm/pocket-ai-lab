@@ -713,3 +713,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Merged:** PR #28 is on `main` as `3bbdbb2dd1a23c82569f93c6b712e322829e5fa0`. PR #32 is on `main` as `e0e196dab4509ca3d0e18369ce70742e336c513b`. PR #31 is on `main` as `1b62b87b48a6c56cd41525c53b5ceb310cc1b21f`. Those board rows are `done`. PR #29 and PR #30 stay open. PR #30 still is not merged; its index exports remain append-only on that branch.
 - **Governance:** `grok/governance-as-review` is `in-progress` from `1b62b87`. It extends `TeamExpansionPlanner`, `dynamicCatalog.ts`, and `Orchestrator` instead of replacing them. New review modules are added beside the security agency. `packages/intelligence/index.ts` only appends exports. `authorized` stays false.
 - **APEX:** No authorization grant.
+
+## 2026-11-10 00:40 UTC — Grok Bot
+
+- **Status:** `grok/governance-as-review` is `in-review`. Not merged.
+- **Pull request:** #33 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/33. Head `1d80dbcfb8d8e6521bc94457b3e4033584e7a765`.
+- **Behavior:** The sidecar parses Burp XML with `defusedxml`, Nessus CSV, and ZAP exports. An allowlist sets `is_in_scope`. `REVIEW_READY` requires that flag. Out-of-scope findings are dropped and published as `SecurityBoundaryViolation`. In-scope reviews call the existing `TeamExpansionPlanner.expandTeam`. Evidence stays `authorized: false` and `requiresHumanApproval: true`.
+- **Local tests:** sidecar pytest 19 passed. `npm test` passed except one archive smoke run taken before the new files were staged; the rerun passed. `npm run build` passed.
+- **APEX:** No authorization grant. `packages/director/src/lib/apex/trust.ts` was not edited.
