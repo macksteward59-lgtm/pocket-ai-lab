@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Download, verify, and build the pinned llama.cpp static library.
-# Destinations: verify, simulator, macos, linux, xcframework, fetch-gguf, write-smoke-path
+# Destinations: verify, simulator, ios-device, macos, linux, xcframework, fetch-gguf, write-smoke-path
 set -euo pipefail
 
 IOS="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +13,7 @@ SRC="$BUILD/src"
 
 destination="${1:-}"
 if [[ -z "$destination" ]]; then
-  echo "usage: $0 verify|simulator|macos|linux|xcframework|fetch-gguf|write-smoke-path [gguf-path]" >&2
+  echo "usage: $0 verify|simulator|ios-device|macos|linux|xcframework|fetch-gguf|write-smoke-path [gguf-path]" >&2
   exit 2
 fi
 
@@ -241,6 +241,19 @@ case "$destination" in
       -DGGML_METAL_TARGET_OS=ios \
       -DGGML_ACCELERATE=ON
     ;;
+  ios-device)
+    # Physical iPhone/iPad arm64 device slice; keep separate from simulator arm64.
+    build_one ios-device \
+      -DCMAKE_SYSTEM_NAME=iOS \
+      -DCMAKE_OSX_SYSROOT=iphoneos \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
+      -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+      -DGGML_METAL=ON \
+      -DGGML_METAL_EMBED_LIBRARY=ON \
+      -DGGML_METAL_TARGET_OS=ios \
+      -DGGML_ACCELERATE=ON
+    ;;
   macos)
     build_one macos \
       -DCMAKE_OSX_ARCHITECTURES="$(uname -m)" \
@@ -258,8 +271,8 @@ case "$destination" in
   xcframework)
     name=""
     for name in libllama.a libggml.a libggml-base.a libggml-cpu.a libggml-metal.a libvendor-hash.a; do
-      if [[ ! -f "$BUILD/simulator/$name" || ! -f "$BUILD/macos/$name" ]]; then
-        echo "missing $name in the simulator or macos build" >&2
+      if [[ ! -f "$BUILD/simulator/$name" || ! -f "$BUILD/ios-device/$name" || ! -f "$BUILD/macos/$name" ]]; then
+        echo "missing $name in the simulator, ios-device, or macos build" >&2
         exit 1
       fi
     done
@@ -268,6 +281,7 @@ case "$destination" in
     for name in llama ggml ggml-base ggml-cpu ggml-metal vendor-hash; do
       rm -rf "$BUILD/xc/${name}.xcframework"
       xcodebuild -create-xcframework \
+        -library "$BUILD/ios-device/lib${name}.a" \
         -library "$BUILD/simulator/lib${name}.a" \
         -library "$BUILD/macos/lib${name}.a" \
         -output "$BUILD/xc/${name}.xcframework"
