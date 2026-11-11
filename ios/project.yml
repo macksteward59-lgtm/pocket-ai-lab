@@ -6,6 +6,16 @@ options:
 packages:
   PocketLlamaEngine:
     path: ../runtime/ios
+schemes:
+  PocketAILab:
+    build:
+      targets:
+        PocketAILab: all
+        PocketAILabTests: [test]
+    test:
+      config: Debug
+      targets:
+        - PocketAILabTests
 targets:
   PocketAILab:
     type: application
