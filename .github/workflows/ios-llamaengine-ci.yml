@@ -16,6 +16,7 @@ on:
       - ios/private-iphone-test-hybrid
     paths:
       - "runtime/ios/**"
+      - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
