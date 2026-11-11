@@ -54,6 +54,8 @@ jobs:
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
           runtime/ios/scripts/build-llama-cpp.sh simulator
           rm -rf runtime/ios/build/cmake-simulator
+          runtime/ios/scripts/build-llama-cpp.sh ios-device
+          rm -rf runtime/ios/build/cmake-ios-device
           runtime/ios/scripts/build-llama-cpp.sh macos
           rm -rf runtime/ios/build/cmake-macos
           runtime/ios/scripts/build-llama-cpp.sh xcframework
