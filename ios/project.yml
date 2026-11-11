@@ -25,7 +25,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal
-        PRODUCT_NAME: Pocket AI Lab
         INFOPLIST_KEY_CFBundleDisplayName: Pocket AI Lab
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: Connect to a Pocket AI Lab workspace hosted on your trusted local network.
         INFOPLIST_KEY_UIFileSharingEnabled: true
