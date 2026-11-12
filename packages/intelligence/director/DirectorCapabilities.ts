@@ -327,10 +327,12 @@ function validateMemoryProposal(proposal: MemoryImprovementProposal): void {
     throw new Error("Invalid memory improvement proposal");
   }
   for (const change of proposal.changes) {
-    if (!["add", "revise", "retire"].includes(change.operation) ||
+    if (!change || !["add", "revise", "retire"].includes(change.operation) ||
         !["working", "episodic", "semantic", "procedural"].includes(change.layer) ||
         typeof change.content !== "string" || !change.content.trim() ||
-        !Array.isArray(change.sourceRefs) || change.sourceRefs.some(ref => typeof ref !== "string")) {
+        (change.memoryId !== undefined && (typeof change.memoryId !== "string" || !change.memoryId.trim())) ||
+        ((change.operation === "revise" || change.operation === "retire") && !change.memoryId) ||
+        !Array.isArray(change.sourceRefs) || change.sourceRefs.some(ref => typeof ref !== "string" || !ref.trim())) {
       throw new Error("Invalid memory improvement change");
     }
   }
