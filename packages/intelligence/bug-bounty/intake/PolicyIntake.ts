@@ -142,7 +142,7 @@ function validateSourceUrl(value: string): string {
 
 function validateTimestamp(value: string): string {
   const match = typeof value === "string"
-    ? /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,3})?(Z|[+-](\\d{2}):(\\d{2}))$/.exec(value)
+    ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-](\d{2}):(\d{2}))$/.exec(value)
     : null;
   if (!match || !ISO_DATE_WITH_ZONE.test(value) || !Number.isFinite(Date.parse(value))) {
     throw new PolicyIntakeError("retrievedAt must be an ISO-8601 timestamp with timezone");
