@@ -98,7 +98,19 @@ describe("ToolDirector", () => {
     expect(updated.application).toBe(spec.purpose);
   });
 
-  it("refuses to revise built-in catalog tools", async () => {
+
+  it("quarantines malformed sandbox summaries", async () => {
+    const malformedSandbox = {
+      async test() {
+        return { passed: true, testsRun: 0, testsPassed: 0, findings: [], completedAt: "not-a-date" } as never;
+      }
+    };
+    const director = new ToolDirector({ registry: new ToolRegistry(), builder, sandbox: malformedSandbox });
+    const artifact = await director.develop(spec);
+    expect(artifact.status).toBe("quarantined");
+    expect(artifact.testSummary?.findings).toContain("Sandbox returned a malformed test summary");
+  });
+\n  it("refuses to revise built-in catalog tools", async () => {
     const director = new ToolDirector({ registry: new ToolRegistry(), builder, sandbox: passingSandbox });
     await expect(director.develop({
       ...spec, id: "ghidra", change: "revise"
