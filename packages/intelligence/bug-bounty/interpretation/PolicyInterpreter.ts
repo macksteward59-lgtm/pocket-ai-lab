@@ -181,6 +181,12 @@ export function validateInterpretationEvidence(
       reasons.push("Clause offsets are outside the source text: " + clause.clauseId);
       continue;
     }
+    const sourceLine = splitSourceLines(snapshot.policyText)
+      .find(line => line.startOffset === clause.startOffset);
+    if (!sourceLine || sourceLine.endOffset !== clause.endOffset ||
+        sourceLine.text !== clause.text || sourceLine.line !== clause.line) {
+      reasons.push("Clause evidence must cover one complete, exact source line: " + clause.clauseId);
+    }
     if (snapshot.policyText.slice(clause.startOffset, clause.endOffset) !== clause.text) {
       reasons.push("Clause text does not match its source offsets: " + clause.clauseId);
     }
