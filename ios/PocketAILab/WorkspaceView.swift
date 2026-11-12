@@ -6,6 +6,7 @@ struct WorkspaceView: View {
     @State private var address = ""
     @State private var loadURL: URL?
     @State private var loadRequestID = UUID()
+    @State private var restoreGate = WorkspaceRestoreGate()
     @State private var validationMessage = "Enter the HTTPS address of your deployed Pocket AI Lab workspace."
 
     var body: some View {
@@ -31,7 +32,14 @@ struct WorkspaceView: View {
                 }
             }
             .navigationTitle("Web Workspace")
-            .onAppear { if !workspaceURL.isEmpty { address = workspaceURL; openWorkspace() } }
+            .onAppear {
+                // Restore the saved workspace only once. Returning to this tab
+                // must preserve the page's current navigation and form state.
+                guard restoreGate.beginRestore() else { return }
+                guard !workspaceURL.isEmpty else { return }
+                address = workspaceURL
+                openWorkspace()
+            }
         }
     }
 
@@ -47,6 +55,16 @@ struct WorkspaceView: View {
         loadURL = url
         loadRequestID = UUID()
         validationMessage = "Address saved on this device. The web server must enforce authentication and authorization."
+    }
+}
+
+struct WorkspaceRestoreGate {
+    private(set) var hasRestoredSavedAddress = false
+
+    mutating func beginRestore() -> Bool {
+        guard !hasRestoredSavedAddress else { return false }
+        hasRestoredSavedAddress = true
+        return true
     }
 }
 
