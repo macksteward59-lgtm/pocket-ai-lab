@@ -736,3 +736,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Scope:** `packages/intelligence/model-router/ModelRouter.ts` and `packages/intelligence/__tests__/runtime.test.ts` only. Fix concurrent reservation reference accounting and add deterministic regression coverage.
 - **Boundary:** This is admission bookkeeping only. It does not establish that a runtime is ready, that a model is loaded, or that generation succeeded. No APEX/East, evidence, authorization, provider, app UI, repository settings, or release changes.
 - **Base:** Branch created from current `main` at `b2a4ae5c4edf2e04819249106c07017ec52fa0c2`.
+
+
+## 2026-11-12 14:20 UTC — ChatGPT
+
+- **Status:** `codex/model-router-reservation-safety` is ready for review in draft PR #37: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/37.
+- **Changes:** Reference-count same-model reservations so one concurrent task cannot release a reservation still held by another; add concurrent acquire/staggered release and failed-route isolation tests.
+- **Diff:** 2 files, 50 additions, 4 deletions. Branch is 2 commits ahead of `main`, 0 behind at review time.
+- **CI:** Pocket AI Lab CI #176, Governance sidecar CI #17, Cursor collaboration CI #79, and Consumer prototype CI #122 were in progress at this check. No local test run is claimed.
+- **Limit:** This fixes shared model-residency reservation accounting only. Per-request KV-cache/workspace memory, thermal scheduling, model readiness, inference proof, and APEX authorization are not addressed.
+- **Review request:** Check reservation lifetime under overlapping calls and confirm all existing routing/fail-closed tests pass. No merge performed.
