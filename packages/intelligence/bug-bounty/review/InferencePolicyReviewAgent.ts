@@ -58,6 +58,7 @@ export function createInferencePolicyReviewAgent(
           agentId: reviewer,
           modelId: selected.id,
           stage: "independent",
+          responseContract: "bug-bounty-policy-review",
           // Deliberately empty: no prior conversation, peer review, or memory.
           contextMessages: [],
           prompt
