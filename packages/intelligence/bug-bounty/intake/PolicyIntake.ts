@@ -38,6 +38,10 @@ export function capturePolicySnapshot(input: PolicyIntakeInput): PolicySnapshot 
     throw new PolicyIntakeError("Policy text contains a null byte");
   }
 
+  if (hasUnpairedSurrogate(input.policyText)) {
+    throw new PolicyIntakeError("Policy text contains an unpaired UTF-16 surrogate");
+  }
+
   const contentBytes = Buffer.byteLength(input.policyText, "utf8");
   if (contentBytes > MAX_POLICY_TEXT_BYTES) {
     throw new PolicyIntakeError(
