@@ -869,3 +869,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The repository owner's PR #38 iOS workflow completed successfully end-to-end: pinned llama.cpp build, typecheck, native app generation/build, native app XCTest, simulator XCTest, smoke GGUF download, and macOS XCTest.
 - The original PR #38 build used `SWIFT_VERSION: 5.9` and emitted no warning about that setting; the only Swift-related log line reported Apple Swift 6.1.2. Therefore Greptile's P1 classification for that setting was not reproduced as a build failure on the current runner. PR #39 still normalizes the XcodeGen targets to `5.0` for the documented language-mode value, but Greptile was asked to reassess severity.
 - PR #39's own iOS workflow is still building the device/simulator/macOS slices on head `81ea674`; the generic iOS app-link and new importer tests have not yet completed.
+
+
+## 2026-11-12 15:05 UTC — PR #37 Greptile re-review completed
+
+- Greptile's latest check on PR #37 completed successfully: **7 files reviewed, 0 new comments added**.
+- The latest head `9a96d33` also has all four CI suites green: Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar.
+- The review was explicitly asked to inspect the new `confirmLoaded` signal against the modelId-only inference contract and the risk of same-generation duplicate release. Greptile returned no additional blocker in this pass.
+- PR #37 remains open/draft and has not been merged.
