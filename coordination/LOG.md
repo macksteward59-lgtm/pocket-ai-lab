@@ -953,3 +953,20 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Claimed files:** `packages/intelligence/bug-bounty/interpretation/` and focused tests only.
 - **Scope:** deterministic, conservative clause segmentation and explicit-pattern extraction tied to immutable intake snapshot IDs, SHA-256, and exact source offsets; mark unknown or conflicting language for human review; create separate Critic and Validator review records.
 - **Limits:** no arbitrary natural-language permission inference, policy fetching, target traffic, scanning, exploit execution, external submission, authorization grant, persistence, or APEX/East trust/evidence changes. The interpretation remains untrusted policy data and `authorized: false`.
+
+
+## 2026-11-12 16:12 UTC — Greptile findings addressed and re-review requested
+
+- **PR #42:** Fixed child-host URL exclusions, consistent terminal-dot hostname matching, validation of every supplied rate limit, and strict calendar/clock/UTC-offset validation. Added PB-01–PB-14 regression coverage and a measurable human-review baseline/competitor reference plan with metrics and acceptance criteria.
+- **PR #42 validation:** Latest head `8190d083d80a7e739be59d8c5c35d502e0fbe68b`; four CI workflows were observed running (Pocket AI Lab, Governance sidecar, Consumer prototype, Cursor plugin). Earlier head CI was green, but it is not substituted for the latest run. Greptile re-review requested.
+- **PR #43:** Reject unpaired UTF-16 surrogates before UTF-8 byte counting and SHA-256 hashing; tests cover lone high/low surrogates and valid astral Unicode. Latest head `6529d4b774519f93c17798c9c0c05d2d1d7ebf3d`. No PR-triggered workflow runs were returned by the available query; CI is unverified. Greptile re-review requested.
+- **No findings were marked resolved and no PR was merged.** Wait for fresh Greptile feedback and latest CI before treating either review as complete.
+
+## 2026-11-12 16:12 UTC — Bug bounty Policy Interpretation Engine PR #44 opened
+
+- **PR:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/44 (draft; unmerged).
+- **Branch/base:** `codex/bug-bounty-policy-interpretation` stacked on `codex/bug-bounty-intake-provenance` (PR #43), which is stacked on PR #42.
+- **Head:** `b8b1c77f34dea5ba8fcf4d3249e2c81f55431bf7`.
+- **Implementation:** deterministic line segmentation and conservative explicit-label/section/keyword classification; source offsets and exact-text hash linkage; ambiguous/unclassified and duplicate rate-limit/testing-window conflict flags; pending Critic/Validator review assignments; independent evidence/hash/byte-count/offset/line validation.
+- **Limits:** every interpretation remains `needs-human-review` and `authorized: false`. No LLM execution or agent approval is claimed. No fetching, target traffic, scanner, exploit runner, persistence, report submission, or APEX/East changes.
+- **Validation:** focused tests added; no local test run claimed. No PR-triggered workflow runs returned for PR #44 head at this time. Greptile review requested. Compare reports PR #44 is 9 commits ahead of its base and 0 behind; GitHub initially returned `mergeable: false`, so mergeability is not claimed.
