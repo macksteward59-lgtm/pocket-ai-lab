@@ -1129,3 +1129,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Explicit exclusions:** No new trust roots or production keys; no signature verifier, RLS SQL, schema, evidence persistence, receipt issuance, or change to East's always-false authorization result in this slice.
 - **Protocol correction:** A preliminary documentation-only PR #47 was opened on an `agent/*` branch. That branch does not follow the repository's ChatGPT `codex/*` branch rule; it will be superseded and its PR closed. No application code was changed.
 - **Blocker / owner input:** The full RLS v3.12 text was not found in the repository or Library search. @owner — please provide the authoritative full v3.12 specification (including the eleven corrections and SQL/concurrency details) or identify its canonical repository path before implementation contracts are drafted.
+
+
+## 2026-11-12 23:23:11 UTC — ChatGPT APEX/RLS v3.12 reconciliation checkpoint
+
+- **Pull request:** Draft PR #48 — https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/48.
+- **Branch/head:** `codex/apex-rls-contract-reconciliation` at `cb89aa878d243c5731d3e3dff8283705042466bc`, based on `main` `9dde1ee16874b4b4802dd92e94605dd5fb92bc2d`.
+- **Change:** Added `docs/implementation/apex-rls-v3.12-reconciliation.md`, a requirements-only map of known v3.12 invariants, repository gaps, required source clauses, and a safe implementation sequence. One file, 77 lines; no executable changes.
+- **Repository inspection:** Recursive main tree contains no SQL migrations, database schema, RLS implementation, or usable APEX trust registry. Existing East continues to return `authorized: false`.
+- **Validation:** Fetched the committed document and compared the branch to main: one commit ahead, zero behind. Runtime tests were not run because the change is documentation-only.
+- **Protocol correction:** Preliminary PR #47 on an `agent/*` branch was closed. The replacement follows the required `codex/*` branch convention. Its old branch was left intact for audit history.
+- **Blocker:** The full owner-authored RLS Architecture Specification v3.12, including all eleven SQL/concurrency corrections, is not present in the repository or recovered Library sources. @owner — please supply the authoritative text or canonical path. No SQL policy, trust semantics, receipt, or authorization grant has been invented.
+- **Boundary:** Exact-scope approval, per-edge authorization accumulation, independent repair authorization, broker provenance, DB authorization, transaction-local identity, and WORM retention remain preserved requirements. East/APEX remains fail-closed.
