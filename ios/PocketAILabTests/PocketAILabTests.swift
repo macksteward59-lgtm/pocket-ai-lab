@@ -29,27 +29,44 @@ final class PocketAILabTests: XCTestCase {
     func testFailedReplacementPreservesPreviousModelAndSelection() async throws {
         let root = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let sourceDirectory = root.appendingPathComponent("source", isDirectory: true)
+        let goodSourceDirectory = root.appendingPathComponent("good-source", isDirectory: true)
+        let invalidSourceDirectory = root.appendingPathComponent("invalid-source", isDirectory: true)
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
-        try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: goodSourceDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: invalidSourceDirectory, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
 
-        let source = sourceDirectory.appendingPathComponent("model.gguf")
+        let goodSource = goodSourceDirectory.appendingPathComponent("model.gguf")
+        let invalidSource = invalidSourceDirectory.appendingPathComponent("model.gguf")
         let destination = modelDirectory.appendingPathComponent("model.gguf")
         let existingBytes = Data("GGUF-existing-good-model".utf8)
-        try Data("NOTG-invalid-replacement".utf8).write(to: source)
-        try existingBytes.write(to: destination)
+        try existingBytes.write(to: goodSource)
+        try Data("NOTG-invalid-replacement".utf8).write(to: invalidSource)
 
-        let model = LocalChatModel(modelDirectory: modelDirectory, engine: TestLlamaEngine())
+        let engine = TestLlamaEngine()
+        let model = LocalChatModel(modelDirectory: modelDirectory, engine: engine)
+        try await model.importModel(from: goodSource)
+        await model.loadModel()
+        let originalSessions = await engine.loadedSessionIDs()
+        XCTAssertEqual(originalSessions.count, 1)
+
         do {
-            try await model.importModel(from: source)
+            try await model.importModel(from: invalidSource)
             XCTFail("A file without the GGUF magic must be rejected")
         } catch {
             XCTAssertTrue(error.localizedDescription.contains("GGUF"))
         }
 
-        XCTAssertNil(model.modelURL)
+        XCTAssertEqual(model.modelURL, destination)
+        XCTAssertEqual(model.modelName, "model.gguf")
         XCTAssertEqual(try Data(contentsOf: destination), existingBytes)
+
+        await model.send("Use the original model session")
+        let unloadedSessions = await engine.unloadedSessionIDs()
+        let generatedSessions = await engine.generatedSessionIDs()
+        XCTAssertTrue(unloadedSessions.isEmpty)
+        XCTAssertEqual(generatedSessions, originalSessions)
+        XCTAssertEqual(model.messages.last?.text, "test output")
     }
 
     @MainActor
@@ -82,6 +99,13 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https:/workspace")!))
         XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "http://workspace.example")!))
         XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https://user:password@workspace.example")!))
+    }
+
+    func testWorkspaceRestoresSavedAddressOnlyOnce() {
+        var gate = WorkspaceRestoreGate()
+        XCTAssertTrue(gate.beginRestore())
+        XCTAssertFalse(gate.beginRestore())
+        XCTAssertTrue(gate.hasRestoredSavedAddress)
     }
 
     func testWorkspaceWebViewReloadsOnlyForExplicitOpenRequests() {
