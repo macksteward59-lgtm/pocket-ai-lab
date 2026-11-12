@@ -51,17 +51,27 @@ export function evaluateTargetScope(
 
 function matches(rule: NormalizedScopeRule, target: URL): boolean {
   if (rule.kind === "domain") {
-    const host = target.hostname.toLowerCase();
-    const domain = rule.value.toLowerCase();
+    const host = canonicalHostname(target.hostname);
+    const domain = canonicalHostname(rule.value);
     return (rule.includeApex && host === domain) || (rule.includeSubdomains && host.endsWith("." + domain));
   }
   if (rule.kind === "url") {
     const scoped = new URL(rule.value);
-    if (target.origin !== scoped.origin) return false;
+    if (target.protocol !== scoped.protocol || target.port !== scoped.port) return false;
+    const targetHost = canonicalHostname(target.hostname);
+    const scopedHost = canonicalHostname(scoped.hostname);
+    const hostMatches = targetHost === scopedHost ||
+      (rule.includeSubdomains && targetHost.endsWith("." + scopedHost));
+    if (!hostMatches) return false;
     const basePath = scoped.pathname === "/" ? "/" : scoped.pathname.replace(/\/$/, "");
     return basePath === "/" || target.pathname === basePath || target.pathname.startsWith(basePath + "/");
   }
   return false;
+}
+
+function canonicalHostname(hostname: string): string {
+  // Normalize DNS absolute names consistently for both rules and targets.
+  return hostname.toLowerCase().replace(/\.$/, "");
 }
 
 function result(
