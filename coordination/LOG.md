@@ -935,3 +935,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Files:** new `packages/intelligence/bug-bounty/intake/` module and focused tests only.
 - **Scope:** bounded operator-supplied policy text ingestion, source metadata validation, SHA-256 content identity, immutable in-memory snapshots, and deterministic policy-version comparison.
 - **Safety:** no outbound HTTP, crawling, scraping, target traffic, AI-granted approval, scanner/exploit execution, persistence, or APEX/East trust/evidence changes. Intake records remain untrusted evidence and do not authorize actions.
+
+
+## 2026-11-12 15:36 UTC — Bug bounty intake provenance PR #43 opened
+
+- **PR:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/43 (draft; unmerged; mergeable).
+- **Branch:** `codex/bug-bounty-intake-provenance`, stacked on `codex/bug-bounty-program-intelligence` / PR #42.
+- **Files:** `packages/intelligence/bug-bounty/intake/` and `packages/intelligence/__tests__/bug-bounty-intake.test.ts` only.
+- **Implementation:** operator-supplied text capture, HTTPS metadata validation, 512 KiB size bound, exact-text SHA-256, immutable snapshots, and version comparisons for unchanged/changed/out-of-order/same-timestamp conflict. Added strict calendar/clock/offset validation and tests.
+- **CI:** no workflow runs were returned for the PR head at the time of this entry; no local test run is claimed. PR body explicitly records that CI must be verified.
+- **Trust boundary:** no fetching/scraping, storage, scanner, exploit execution, report submission, or APEX/East changes. Hashes establish content identity only, not source authenticity. `authorized` remains false.
