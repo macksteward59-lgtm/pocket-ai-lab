@@ -801,3 +801,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Opened `codex/ios-native-app-hardening` as a stacked review-fix PR against `ios/private-iphone-test-hybrid` (PR #38). It addresses all 11 Greptile comments: 3 P1 and 8 P2. The owner's branch remains untouched.
 - Fixes include supported Swift language mode, staged async GGUF import with header validation and atomic replacement, old-session teardown on successful import, internal busy guards, HTTPS/loopback URL validation and WebKit navigation policy, explicit reload request IDs, generic iphoneos app linking, corrected XcodeGen instructions, real importer/session tests, and a PocketPal AI benchmark plan.
 - Greptile was explicitly tagged for independent review on PR #39. CI is expected to run on the new head. No physical iPhone Air results or performance superiority claims are made.
+
+
+## 2026-11-12 14:38 UTC — PR #37 lease-generation implementation
+
+- **Implementation update:** The reservation work now uses descriptor-generation leases and exact-descriptor release. Orchestrator and the East platform release the exact descriptor returned by route, preventing a late release from an older model generation from decrementing a newer one.
+- **Replacement handling:** The router retires old descriptors, preserves their memory reservations while active requests drain, blocks new routes against retired generations, and forces fresh memory admission when the resource provider may still report a stale loaded ID.
+- **Validation:** Latest submitted PR #37 head `503c464` has green Pocket AI Lab, consumer prototype, Cursor plugin, and governance sidecar CI. Greptile re-review explicitly requested.
+- **Boundary note:** `src/east/platform.ts` changed only to release the exact selected descriptor. No East evidence, policy, or authorization logic changed.
