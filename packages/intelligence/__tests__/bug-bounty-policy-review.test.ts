@@ -11,14 +11,14 @@ import {
   runIndependentPolicyReviews
 } from "../bug-bounty/review";
 
-function makeSnapshot() {
+function makeSnapshot(policyText = "# In Scope\n- app.example.com") {
   const input: PolicyIntakeInput = {
     programId: "review-workflow-test",
     platform: "hackerone",
     sourceUrl: "https://hackerone.com/review-workflow-test",
     retrievedAt: "2026-11-12T12:00:00Z",
     contentFormat: "text/markdown",
-    policyText: "# In Scope\n- app.example.com"
+    policyText
   };
   return capturePolicySnapshot(input);
 }
@@ -132,6 +132,59 @@ describe("independent bug bounty policy reviews", () => {
     }
     expect(run.reviews[1].status).toBe("completed");
     expect(run.authorized).toBe(false);
+  });
+
+
+  it("rejects a citation that spans multiple source lines", async () => {
+    const policyText = "# In Scope\\n- app.example.com\\n- next.example.com";
+    const snapshot = makeSnapshot(policyText);
+    const interpretation = interpretPolicySnapshot(snapshot);
+    const startOffset = policyText.indexOf("- app.example.com");
+    const endOffset = policyText.indexOf("- next.example.com") + "- next.example.com".length;
+    const sourceText = policyText.slice(startOffset, endOffset);
+    const critic: PolicyReviewAgent = {
+      reviewer: "critic",
+      async review() {
+        return { summary: "Multiline citation.", findings: [{
+          code: "other", severity: "info", startOffset, endOffset, sourceText,
+          explanation: "This deliberately spans two source lines."
+        }] };
+      }
+    };
+    const validator: PolicyReviewAgent = {
+      reviewer: "validator",
+      async review() { return { summary: "No findings.", findings: [] }; }
+    };
+    const run = await runIndependentPolicyReviews({ snapshot, interpretation }, { critic, validator });
+    expect(run.status).toBe("partial");
+    expect(run.reviews[0].status).toBe("failed");
+    expect(run.reviews[1].status).toBe("completed");
+  });
+
+  it("rejects a CRLF citation whose end offset includes the carriage return", async () => {
+    const policyText = "# In Scope\\r\\n- app.example.com\\r\\n- next.example.com";
+    const snapshot = makeSnapshot(policyText);
+    const interpretation = interpretPolicySnapshot(snapshot);
+    const startOffset = policyText.indexOf("- app.example.com");
+    const endOffset = startOffset + "- app.example.com".length + 1;
+    const sourceText = policyText.slice(startOffset, endOffset);
+    const critic: PolicyReviewAgent = {
+      reviewer: "critic",
+      async review() {
+        return { summary: "CRLF citation.", findings: [{
+          code: "other", severity: "info", startOffset, endOffset, sourceText,
+          explanation: "This deliberately includes the CR line terminator."
+        }] };
+      }
+    };
+    const validator: PolicyReviewAgent = {
+      reviewer: "validator",
+      async review() { return { summary: "No findings.", findings: [] }; }
+    };
+    const run = await runIndependentPolicyReviews({ snapshot, interpretation }, { critic, validator });
+    expect(run.status).toBe("partial");
+    expect(run.reviews[0].status).toBe("failed");
+    expect(run.reviews[1].status).toBe("completed");
   });
 
   it("continues Validator execution when Critic inference fails", async () => {
@@ -341,6 +394,7 @@ describe("independent bug bounty policy reviews", () => {
     expect(run.status).toBe("complete");
     expect(requests.map(request => request.agentId)).toEqual(["critic", "validator"]);
     expect(requests.every(request => request.stage === "independent")).toBe(true);
+    expect(requests.every(request => request.responseContract === "bug-bounty-policy-review")).toBe(true);
     expect(requests.every(request => request.contextMessages.length === 0)).toBe(true);
     expect(requests.every(request => request.conversation === undefined && request.memoryContext === undefined)).toBe(true);
     expect(requests.every(request => request.prompt.includes("untrusted source data"))).toBe(true);
