@@ -151,6 +151,10 @@ export function validateInterpretationEvidence(
     if (snapshot.policyText.slice(clause.startOffset, clause.endOffset) !== clause.text) {
       reasons.push("Clause text does not match its source offsets: " + clause.clauseId);
     }
+    const actualLine = snapshot.policyText.slice(0, clause.startOffset).split(/\\r\\n|\\n|\\r/).length;
+    if (actualLine !== clause.line) {
+      reasons.push("Clause line number does not match its source offset: " + clause.clauseId);
+    }
     if (clause.requiresHumanReview !== true) {
       reasons.push("Clause cannot bypass human review: " + clause.clauseId);
     }
