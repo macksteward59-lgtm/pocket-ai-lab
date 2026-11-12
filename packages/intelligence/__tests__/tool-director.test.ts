@@ -3,6 +3,8 @@ import { ToolRegistry } from "../security/tools";
 import {
   InMemoryToolArtifactStore,
   ToolDirector,
+  type ToolArtifact,
+  type ToolArtifactStore,
   type ToolBuildSpec,
   type ToolBuilder,
   type ToolSandbox
@@ -27,6 +29,20 @@ const passingSandbox: ToolSandbox = {
     return { passed: true, testsRun: 3, testsPassed: 3, findings: [], completedAt: new Date(0).toISOString() };
   }
 };
+
+class FailOnceArtifactStore implements ToolArtifactStore {
+  private readonly inner = new InMemoryToolArtifactStore();
+  failWhen?: (artifact: ToolArtifact) => boolean;
+  async getLatest(toolId: string) { return this.inner.getLatest(toolId); }
+  async list() { return this.inner.list(); }
+  async put(artifact: ToolArtifact) {
+    if (this.failWhen?.(artifact)) {
+      this.failWhen = undefined;
+      throw new Error("simulated durable store failure");
+    }
+    return this.inner.put(artifact);
+  }
+}
 
 describe("ToolDirector", () => {
   it("builds and tests a draft without registering or executing it", async () => {
@@ -90,12 +106,17 @@ describe("ToolDirector", () => {
     });
     const first = await director.develop(spec);
     await director.activate({ taskId: "task-1", toolId: spec.id, version: 1, approvalRef: "ok" });
+    registry.declareAvailable(spec.id);
     const second = await director.develop({ ...spec, change: "extend", requirements: [...spec.requirements, "Add checksum metadata"] });
     expect(second.version).toBe(2);
     expect(second.previousDigest).toBe(first.digest);
     expect((await director.listArtifacts()).map(item => item.version)).toEqual([1, 2]);
     const updated = await director.activate({ taskId: "task-2", toolId: spec.id, version: 2, approvalRef: "ok" });
     expect(updated.application).toBe(spec.purpose);
+    expect(registry.isAvailable(spec.id)).toBe(false);
+    const versions = await director.listArtifacts();
+    expect(versions.find(item => item.version === 1)?.status).toBe("ready");
+    expect(versions.find(item => item.version === 2)?.status).toBe("active");
   });
 
 
@@ -137,15 +158,76 @@ describe("ToolDirector", () => {
     const registry = new ToolRegistry();
     const director = new ToolDirector({
       registry, builder, sandbox: passingSandbox,
-      approvalVerifier: { verify: input => ["activate-ok", "retire-ok"].includes(input.approvalRef) }
+      approvalVerifier: { verify: input =>
+        input.operation === "activate" ? input.approvalRef === "activate-ok" : input.approvalRef === "retire-ok" }
     });
     await director.develop(spec);
     await director.activate({ taskId: "task-1", toolId: spec.id, version: 1, approvalRef: "activate-ok" });
-    await expect(director.retire({ taskId: "task-2", toolId: spec.id, approvalRef: "no" }))
+    await expect(director.retire({ taskId: "task-2", toolId: spec.id, approvalRef: "activate-ok" }))
       .rejects.toThrow(/retirement approval was denied/);
     await director.retire({ taskId: "task-2", toolId: spec.id, approvalRef: "retire-ok" });
     expect(registry.has(spec.id)).toBe(false);
-    expect((await director.listArtifacts()).map(item => item.status)).toEqual(["active", "retired"]);
+    expect((await director.listArtifacts()).map(item => item.status)).toEqual(["retired"]);
+  });
+
+  it("retires the active version even when a newer candidate is ready", async () => {
+    const registry = new ToolRegistry();
+    const director = new ToolDirector({
+      registry, builder, sandbox: passingSandbox,
+      approvalVerifier: { verify: input => input.operation === "activate" || input.operation === "retire" }
+    });
+    const first = await director.develop(spec);
+    await director.activate({ taskId: "task-1", toolId: spec.id, version: first.version, approvalRef: "activate" });
+    const second = await director.develop({ ...spec, change: "extend", requirements: [...spec.requirements, "new candidate"] });
+    expect(second.status).toBe("ready");
+    await director.retire({ taskId: "task-2", toolId: spec.id, approvalRef: "retire" });
+    expect(registry.has(spec.id)).toBe(false);
+    const history = await director.listArtifacts();
+    expect(history.find(item => item.version === 1)?.status).toBe("retired");
+    expect(history.find(item => item.version === 2)?.status).toBe("retired");
+  });
+
+  it("snapshots the build specification before asynchronous builder and digest work", async () => {
+    const director = new ToolDirector({ registry: new ToolRegistry(), builder, sandbox: passingSandbox });
+    const callerSpec: ToolBuildSpec = {
+      ...spec, specialists: [...spec.specialists], requirements: [...spec.requirements]
+    };
+    const pending = director.develop(callerSpec);
+    callerSpec.specialists[0] = "network-protocols";
+    callerSpec.requirements[0] = "mutated after dispatch";
+    const artifact = await pending;
+    expect(artifact.spec.specialists).toEqual(["reverse-engineering"]);
+    expect(artifact.spec.requirements[0]).toBe(spec.requirements[0]);
+  });
+
+  it("rolls back artifact and registry state when lifecycle persistence fails", async () => {
+    const registry = new ToolRegistry();
+    const store = new FailOnceArtifactStore();
+    const director = new ToolDirector({
+      registry, store, builder, sandbox: passingSandbox,
+      approvalVerifier: { verify: () => true }
+    });
+    await director.develop(spec);
+    await director.activate({ taskId: "task-1", toolId: spec.id, version: 1, approvalRef: "ok" });
+    registry.declareAvailable(spec.id);
+    await director.develop({ ...spec, change: "extend", requirements: [...spec.requirements, "v2"] });
+
+    store.failWhen = artifact => artifact.version === 1 && artifact.status === "ready";
+    await expect(director.activate({ taskId: "task-2", toolId: spec.id, version: 2, approvalRef: "ok" }))
+      .rejects.toThrow(/simulated durable store failure/);
+    expect(registry.has(spec.id)).toBe(true);
+    expect(registry.isAvailable(spec.id)).toBe(true);
+    let history = await director.listArtifacts();
+    expect(history.find(item => item.version === 1)?.status).toBe("active");
+    expect(history.find(item => item.version === 2)?.status).toBe("ready");
+
+    store.failWhen = artifact => artifact.version === 2 && artifact.status === "retired";
+    await expect(director.retire({ taskId: "task-3", toolId: spec.id, approvalRef: "ok" }))
+      .rejects.toThrow(/simulated durable store failure/);
+    expect(registry.has(spec.id)).toBe(true);
+    history = await director.listArtifacts();
+    expect(history.find(item => item.version === 1)?.status).toBe("active");
+    expect(history.find(item => item.version === 2)?.status).toBe("ready");
   });
 
   it("fails closed when builder or isolated sandbox adapters are missing", async () => {
