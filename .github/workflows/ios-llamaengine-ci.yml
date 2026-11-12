@@ -73,6 +73,20 @@ jobs:
             runtime/ios/Sources/PocketLlamaEngine/LlamaEngine.swift \
             runtime/ios/Sources/PocketLlamaEngine/LlamaEngineSupport.swift
 
+      - name: Link the physical iOS device test bundle
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          # Generic iOS destination selects iphoneos/arm64. This compiles and
+          # links the Swift package, C bridge, and all device XCFramework slices
+          # without signing or requiring a connected iPhone.
+          xcodebuild build-for-testing \
+            -scheme PocketLlamaEngine \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath /tmp/pocket-derived-device \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/device-build-for-testing.log
+
       - name: Choose an iPhone simulator
         id: sim
         run: |
@@ -143,5 +157,7 @@ jobs:
             echo
             echo '```'
             grep -h "POCKET_LLAMA_" runtime/ios/build/simulator-xctest.log runtime/ios/build/macos-xctest.log || true
+            echo
+            echo "Device generic build log: runtime/ios/build/device-build-for-testing.log"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
