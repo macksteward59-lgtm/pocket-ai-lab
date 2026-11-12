@@ -46,6 +46,34 @@ describe("DirectorCommandRouter", () => {
     expect(receivedTask).toBe("task-device");
   });
 
+  it("requests one provider-neutral structured proposal and binds the orchestrator task id", async () => {
+    let received: { taskId: string; objective: string; availableCommands: readonly string[] } | undefined;
+    const capabilities = new DirectorCapabilities({
+      memory: new MemoryManager(),
+      research: { async search(request) {
+        return [{ id: "r2", title: request.query, url: "https://example.com", excerpt: "evidence", retrievedAt: new Date(0).toISOString() }];
+      } }
+    });
+    const router = new DirectorCommandRouter(capabilities, new ToolDirector({ registry: new ToolRegistry() }));
+    const result = await router.requestAndDispatch({
+      async propose(input) {
+        received = input;
+        return { kind: "research", query: "test structured bridge" };
+      }
+    }, { taskId: "host-task-id" }, "Research a candidate tool");
+    expect(result).toHaveLength(1);
+    expect(received?.taskId).toBe("host-task-id");
+    expect(received?.objective).toBe("Research a candidate tool");
+    expect(received?.availableCommands).toContain("use-device");
+  });
+
+  it("rejects malformed provider output before any capability is called", async () => {
+    const router = new DirectorCommandRouter(new DirectorCapabilities({ memory: new MemoryManager() }), new ToolDirector({ registry: new ToolRegistry() }));
+    await expect(router.requestAndDispatch({
+      async propose() { return { kind: "shell", command: "echo unsafe" }; }
+    }, { taskId: "host-task-id" }, "Do work")).rejects.toThrow(/Unsupported Director command/);
+  });
+
   it("does not activate a tool without the ToolDirector's independent approval verifier", async () => {
     const registry = new ToolRegistry();
     const store = new InMemoryToolArtifactStore();
