@@ -40,7 +40,7 @@ This AI-related foundation is not considered superior to a competing workflow un
 
 **Primary baseline:** two independent human reviewers interpreting the same published program brief from HackerOne, Bugcrowd, or Intigriti. They receive the exact captured policy text and the same target/action examples. A disagreement is labelled `indeterminate` until adjudicated. The engine is compared with the adjudicated result, not with an assumed vendor capability.
 
-**Reference workflows:** HackerOne scope best practices and asset definitions, Bugcrowd bounty briefs, and Intigriti program-specific conditions. These provide representative policy formats and scope concepts; this project does not claim access to their internal parsers or private tooling.
+**Reference workflows:** [HackerOne scope best practices](https://docs.hackerone.com/en/articles/8495670-scope-best-practices) and [asset definitions](https://docs.hackerone.com/en/articles/8494552-defining-scope), [Bugcrowd bounty briefs](https://docs.bugcrowd.com/researchers/participating-in-program/reviewing-bounty-briefs/), and [Intigriti program types](https://kb.intigriti.com/en/articles/13010242-program-types). These provide representative policy formats and scope concepts; this project does not claim access to their internal parsers or private tooling.
 
 ### Fixed benchmark corpus v1
 
@@ -67,7 +67,7 @@ The initial fixed corpus is retained as regression coverage:
 
 Record exact disposition accuracy against the adjudicated human baseline, false-in-scope rate, exclusion recall, correct abstention rate on ambiguous/unsupported cases, malformed date/rate-limit rejection, and deterministic repeatability.
 
-Before merge, demonstrate **zero false in-scope decisions**, **100% exclusion recall on PB-01–PB-14**, **100% rejection of malformed dates and supplied rate limits**, **100% abstention/blocking on ambiguous or unsupported cases**, and **100% action denial**. Report reviewer agreement, per-case engine results, test/CI run identifiers, and unresolved disagreements. Do not claim a competitor-beating result until this comparison is actually run and documented.
+Before merge, demonstrate **zero false in-scope decisions**, **100% exact disposition accuracy on PB-01–PB-14** and **100% exclusion recall on PB-02, PB-03, PB-05, PB-06, and PB-07**, **100% rejection of malformed dates and supplied rate limits**, **100% abstention/blocking on ambiguous or unsupported cases**, and **100% action denial**. Report reviewer agreement, per-case engine results, test/CI run identifiers, and unresolved disagreements. Do not claim a competitor-beating result until this comparison is actually run and documented.
 
 ### Current status
 
