@@ -11,7 +11,7 @@ This module accepts an existing immutable `PolicySnapshot`; it does not fetch a 
 - Marks every extracted clause as requiring human review.
 - Flags unclassified, qualified, and potentially conflicting clauses.
 - Creates separate pending Critic and Validator assignments. These are workflow records, not claims that LLM agents have executed or approved the policy.
-- Validates the source hash, byte count, line number, exact source span, and extracted candidate value independently.
+- Validates the source hash, byte count, line number, complete source-line span, full clause set, issues, and extracted candidate values by independently reproducing the deterministic interpretation.
 
 ## Deliberate limitations
 
