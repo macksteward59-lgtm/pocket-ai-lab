@@ -11,6 +11,8 @@ import { DeliberationEngine, DeliberationStage } from "../deliberation/Deliberat
 import { MemoryManager } from "../memory/MemoryManager";
 import { DelegationGate } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
+import { ToolRegistry } from "../security/tools";
+import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVerifier, type ToolArtifactStore } from "../tooling/ToolDirector";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
 
 export interface TaskRequest {
@@ -83,6 +85,8 @@ export class Orchestrator {
    * injects a verifier. This object does not set `authorized`.
    */
   readonly security: SecurityDivision;
+  /** Director-managed tool lifecycle; generated code remains gated and non-executable here. */
+  readonly tooling: ToolDirector;
   private readonly inference: InferenceProvider;
 
   constructor(opts: {
@@ -97,6 +101,12 @@ export class Orchestrator {
     delegationGate?: DelegationGate;
     /** Human-approval check for operational-intent tasks. Absent means those tasks are refused. */
     approvalVerifier?: ApprovalVerifier;
+    /** Optional host adapters for Director-managed tool development and validation. */
+    toolRegistry?: ToolRegistry;
+    toolBuilder?: ToolBuilder;
+    toolSandbox?: ToolSandbox;
+    toolApprovalVerifier?: ToolApprovalVerifier;
+    toolArtifactStore?: ToolArtifactStore;
   }) {
     if (!opts?.inference || typeof opts.inference.generate !== "function") {
       throw new Error("A real InferenceProvider must be supplied; placeholder inference is disabled");
@@ -109,10 +119,19 @@ export class Orchestrator {
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
     this.memory = opts.memory ?? new MemoryManager();
     CORE_AGENTS.forEach(agent => this.agents.registerPermanent(agent));
+    const toolRegistry = opts.toolRegistry ?? new ToolRegistry();
+    this.tooling = new ToolDirector({
+      registry: toolRegistry,
+      builder: opts.toolBuilder,
+      sandbox: opts.toolSandbox,
+      approvalVerifier: opts.toolApprovalVerifier,
+      store: opts.toolArtifactStore
+    });
     this.security = new SecurityDivision({
       agents: this.agents,
       gate: opts.delegationGate ?? new DelegationGate(),
-      approvalVerifier: opts.approvalVerifier
+      approvalVerifier: opts.approvalVerifier,
+      toolRegistry
     });
   }
 
