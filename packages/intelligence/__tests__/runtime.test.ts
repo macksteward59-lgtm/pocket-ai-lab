@@ -88,13 +88,107 @@ describe("ModelRouter", () => {
     await expect(router.route("reasoner", model, ["vision"])).rejects.toThrow(/lacks required capabilities/);
     await expect(router.route("reasoner", model, ["reason", "code"])).resolves.toEqual(model);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
   it("rejects insufficient memory rather than waiting forever", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 128, loadedModels: [] }));
     await expect(router.route("reasoner", model, [])).rejects.toThrow(/Insufficient memory/);
+  });
+
+  it("keeps a shared model reservation until every concurrent route releases it", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const [first, second] = await Promise.all([
+      router.route("reasoner", model, []),
+      router.route("researcher", model, [])
+    ]);
+
+    expect(first).toEqual(model);
+    expect(second).toEqual(model);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+
+    router.release(model);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+
+    router.release(model);
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("keeps shared model memory reserved until the final concurrent holder releases it", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const otherModel = { ...model, id: "other-model", memoryEstimateMB: 600 };
+    await Promise.all([
+      router.route("reasoner", model, []),
+      router.route("researcher", model, [])
+    ]);
+
+    router.release(model);
+    await expect(router.route("engineer", otherModel, [])).rejects.toThrow(/Insufficient memory/);
+
+    router.release(model);
+    await expect(router.route("engineer", otherModel, [])).resolves.toEqual(otherModel);
+    router.release(otherModel);
+  });
+
+  it("accounts for replacement generations while old concurrent leases drain", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const oldModel = { ...model, memoryEstimateMB: 256 };
+    const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 1536 };
+
+    await router.route("reasoner", oldModel, []);
+    await router.route("researcher", oldModel, []);
+    router.retire(oldModel.id);
+    await expect(router.route("engineer", oldModel, []))
+      .rejects.toThrow(/retired/);
+
+    await expect(router.route("engineer", replacement, []))
+      .rejects.toThrow(/being replaced/);
+    router.release(oldModel);
+    await expect(router.route("engineer", replacement, []))
+      .rejects.toThrow(/being replaced/);
+
+    router.release(oldModel);
+    await expect(router.route("engineer", oldModel, []))
+      .rejects.toThrow(/retired/);
+    await expect(router.route("engineer", replacement, []))
+      .rejects.toThrow(/Insufficient memory/);
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("keeps a replaced ID invalid until successful inference confirms the new generation", async () => {
+    const resources = { availableMemoryMB: 1024, loadedModels: ["test-model"] };
+    const router = new ModelRouter(() => resources);
+    const oldModel = { ...model, memoryEstimateMB: 256 };
+    const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 512 };
+    router.retire("test-model", oldModel);
+
+    // The route reserves memory, but a failed inference never calls confirmLoaded.
+    await router.route("reasoner", replacement, []);
+    router.release(replacement);
+    resources.availableMemoryMB = 128;
+    await expect(router.route("reasoner", replacement, []))
+      .rejects.toThrow(/Insufficient memory/);
+
+    // Only a successful provider call may make the runtime's loaded ID reusable.
+    resources.availableMemoryMB = 1024;
+    await router.route("reasoner", replacement, []);
+    router.confirmLoaded(replacement);
+    router.release(replacement);
+    resources.availableMemoryMB = 128;
+    await expect(router.route("reasoner", replacement, [])).resolves.toEqual(replacement);
+  });
+
+  it("does not let a failed route create or release another model's reservation", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    await router.route("reasoner", model, []);
+    const incompatible = { ...model, id: "vision-model", capabilities: ["vision"] };
+
+    await expect(router.route("researcher", incompatible, ["reason"])).rejects.toThrow(/lacks required capabilities/);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+
+    router.release(model);
+    expect(router.getLoadedModels()).toEqual([]);
   });
 });
 

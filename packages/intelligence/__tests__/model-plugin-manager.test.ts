@@ -5,7 +5,7 @@ import path from "node:path";
 import { ModelRegistry } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "../model-router/ModelRouter";
 import { ModelPluginManager } from "../model-registry/ModelPluginManager";
-import { LocalFileFetcher, UnconfiguredFetcher, ModelSourceError, estimateMemoryMB } from "../model-registry/ModelSource";
+import { LocalFileFetcher, UnconfiguredFetcher, ModelSourceError, estimateMemoryMB, type ModelSource, type ResolvedModel } from "../model-registry/ModelSource";
 
 async function withGgufFile<T>(bytes: number, fn: (filePath: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(path.join(tmpdir(), "model-plugin-"));
@@ -120,23 +120,119 @@ describe("ModelPluginManager", () => {
       expect(manager.getChangeLog().map(e => e.action)).toEqual(["added", "replaced"]);
     }));
 
-  it("refuses to replace a model the router reports as loaded, unless confirmed", async () =>
+  it("retires all old leases before admitting a confirmed replacement with a fresh memory check", async () =>
     withGgufFile(1024, async filePath => {
+      const replacementPath = path.join(path.dirname(filePath), "replacement.gguf");
+      await writeFile(replacementPath, Buffer.alloc(1024, 2));
       const registry = new ModelRegistry();
-      // ModelRouter.getLoadedModels() reflects what THIS router has reserved via route(), not an
-      // externally-reported list, so report nothing external here and let route() do the reserving.
       const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
       const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
-      await manager.addModel(baseInput(filePath));
-      await router.route("agent-1", registry.get("local-llama"), []);
+      await manager.addModel({ ...baseInput(filePath), memoryEstimateMB: 256 });
+      const oldDescriptor = registry.get("local-llama");
+      await Promise.all([
+        router.route("agent-1", oldDescriptor, []),
+        router.route("agent-2", oldDescriptor, [])
+      ]);
 
-      await expect(manager.replaceModel("local-llama", baseInput(filePath, "local-llama")))
-        .rejects.toThrow(/currently loaded/);
-      
+      await expect(manager.replaceModel("local-llama", {
+        ...baseInput(replacementPath), memoryEstimateMB: 1536
+      })).rejects.toThrow(/currently loaded/);
 
-      const replaced = await manager.replaceModel("local-llama", baseInput(filePath, "local-llama"), { confirmReplaceLoaded: true });
-      expect(replaced.id).toBe("local-llama");
+      const replaced = await manager.replaceModel("local-llama", {
+        ...baseInput(replacementPath), memoryEstimateMB: 1536
+      }, { confirmReplaceLoaded: true });
+      expect(replaced.path).toBe(replacementPath);
+      expect(router.getLoadedModels()).toContain("local-llama");
+
+      await expect(router.route("agent-3", registry.get("local-llama"), []))
+        .rejects.toThrow(/being replaced/);
+      router.release(oldDescriptor!);
+      await expect(router.route("agent-3", registry.get("local-llama"), []))
+        .rejects.toThrow(/being replaced/);
+
+      router.release(oldDescriptor!);
       expect(router.getLoadedModels()).not.toContain("local-llama");
+      await expect(router.route("agent-3", registry.get("local-llama"), []))
+        .rejects.toThrow(/Insufficient memory/);
+    }));
+
+  it("rechecks memory after replacing an externally loaded model with no router lease", async () =>
+    withGgufFile(1024, async filePath => {
+      const replacementPath = path.join(path.dirname(filePath), "external-replacement.gguf");
+      await writeFile(replacementPath, Buffer.alloc(1024, 3));
+      const registry = new ModelRegistry();
+      const router = new ModelRouter(() => ({
+        availableMemoryMB: 1024,
+        loadedModels: ["local-llama"]
+      }));
+      const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
+      await manager.addModel({ ...baseInput(filePath), memoryEstimateMB: 256 });
+
+      await manager.replaceModel("local-llama", {
+        ...baseInput(replacementPath), memoryEstimateMB: 1536
+      });
+
+      await expect(router.route("agent-1", registry.get("local-llama"), []))
+        .rejects.toThrow(/Insufficient memory/);
+    }));
+
+  it("rejects an overlapping replacement when another replacement already changed the descriptor", async () =>
+    withGgufFile(1024, async filePath => {
+      const directory = path.dirname(filePath);
+      const replacementB = path.join(directory, "replacement-b.gguf");
+      const replacementC = path.join(directory, "replacement-c.gguf");
+      await writeFile(replacementB, Buffer.alloc(1024, 2));
+      await writeFile(replacementC, Buffer.alloc(1024, 3));
+
+      const registry = new ModelRegistry();
+      const router = new ModelRouter(() => ({ availableMemoryMB: 4096, loadedModels: [] }));
+      const initialManager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
+      await initialManager.addModel(baseInput(filePath));
+
+      let releaseB: () => void = () => {};
+      let releaseC: () => void = () => {};
+      let markBStarted: () => void = () => {};
+      let markCStarted: () => void = () => {};
+      const gateB = new Promise<void>(resolve => { releaseB = resolve; });
+      const gateC = new Promise<void>(resolve => { releaseC = resolve; });
+      const startedB = new Promise<void>(resolve => { markBStarted = resolve; });
+      const startedC = new Promise<void>(resolve => { markCStarted = resolve; });
+      const localFetcher = new LocalFileFetcher();
+      const controlledFetcher = {
+        resolve: async (source: ModelSource): Promise<ResolvedModel> => {
+          const resolved = await localFetcher.resolve(source);
+          if (source.type === "local-file" && source.path === replacementB) {
+            markBStarted();
+            await gateB;
+          }
+          if (source.type === "local-file" && source.path === replacementC) {
+            markCStarted();
+            await gateC;
+          }
+          return resolved;
+        }
+      };
+      const manager = new ModelPluginManager({ registry, router, fetcher: controlledFetcher });
+      const replaceB = manager.replaceModel("local-llama", {
+        ...baseInput(replacementB), memoryEstimateMB: 256
+      }, { confirmReplaceLoaded: true });
+      const replaceC = manager.replaceModel("local-llama", {
+        ...baseInput(replacementC), memoryEstimateMB: 256
+      }, { confirmReplaceLoaded: true });
+
+      await Promise.all([startedB, startedC]);
+      releaseB();
+      const installedB = await replaceB;
+      expect(installedB.path).toBe(replacementB);
+      const descriptorB = registry.get("local-llama")!;
+      const firstLease = await router.route("agent-b", descriptorB, []);
+
+      releaseC();
+      await expect(replaceC).rejects.toThrow(/changed while its replacement was being prepared/);
+      const secondLease = await router.route("agent-b2", descriptorB, []);
+      expect(registry.get("local-llama")?.path).toBe(replacementB);
+      router.release(firstLease);
+      router.release(secondLease);
     }));
 
   it("refuses replaceModel for an id that was never registered", async () =>
@@ -151,11 +247,15 @@ describe("ModelPluginManager", () => {
       const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
       const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
       await manager.addModel(baseInput(filePath));
-      await router.route("agent-1", registry.get("local-llama"), []);
+      const loadedDescriptor = await router.route("agent-1", registry.get("local-llama"), []);
 
       expect(() => manager.removeModel("local-llama")).toThrow(/currently loaded/);
       expect(manager.removeModel("local-llama", { confirmReplaceLoaded: true })).toBe(true);
       expect(registry.has("local-llama")).toBe(false);
+      // Removal retires the descriptor but leaves its in-flight lease accounted for.
+      expect(router.getLoadedModels()).toContain("local-llama");
+      router.release(loadedDescriptor!);
+      expect(router.getLoadedModels()).not.toContain("local-llama");
       expect(manager.removeModel("local-llama")).toBe(false); // already gone, no throw, no duplicate log entry
       expect(manager.getChangeLog().filter(e => e.action === "removed")).toHaveLength(1);
     }));

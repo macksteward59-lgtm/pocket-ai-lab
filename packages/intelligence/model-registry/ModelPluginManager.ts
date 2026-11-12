@@ -80,6 +80,7 @@ export class ModelPluginManager {
     if (!this.registry.has(existingId)) {
       throw new ModelSourceError(`Model ${existingId} is not registered; use addModel instead`);
     }
+    const existingDescriptor = this.registry.get(existingId);
     const loadedElsewhere = this.router?.getLoadedModels().includes(existingId) ?? false;
     if (loadedElsewhere && !options.confirmReplaceLoaded) {
       throw new ModelSourceError(
@@ -89,8 +90,29 @@ export class ModelPluginManager {
     }
 
     const descriptor = await this.buildDescriptor(input);
+    // Two replacements can resolve their sources concurrently. Commit only if
+    // the registry still contains the exact descriptor captured before await;
+    // otherwise this operation would overwrite a newer replacement.
+    if (!existingDescriptor || !this.registry.has(existingId) ||
+        this.registry.get(existingId) !== existingDescriptor) {
+      throw new ModelSourceError(
+        `Model ${existingId} changed while its replacement was being prepared; retry against the current descriptor`
+      );
+    }
+    // Descriptor resolution is async: another task may acquire the model while
+    // it is in progress, so re-check the active lease state before committing.
+    const loadedAtCommit = this.router?.getLoadedModels().includes(existingId) ?? false;
+    if (loadedAtCommit && !options.confirmReplaceLoaded) {
+      throw new ModelSourceError(
+        `Model ${existingId} became loaded while its replacement was being prepared; ` +
+        "retry with confirmReplaceLoaded: true"
+      );
+    }
     this.registry.unregister(existingId);
-    if (loadedElsewhere) this.router?.release(existingId);
+    // Retire even when no in-process lease is visible: the resource provider
+    // may still report the old artifact under this ID. The next route must
+    // perform fresh memory admission rather than trusting that stale ID.
+    this.router?.retire(existingId, existingDescriptor);
     this.registry.register(descriptor);
     this.record({ action: "replaced", modelId: descriptor.id, previousModelId: existingId, source: describeSource(input.source) });
     return descriptor;
@@ -102,9 +124,10 @@ export class ModelPluginManager {
     if (loaded && !options.confirmReplaceLoaded) {
       throw new ModelSourceError(`Model ${id} is currently loaded; pass confirmReplaceLoaded: true to remove it anyway`);
     }
+    const existingDescriptor = this.registry.get(id);
     const removed = this.registry.unregister(id);
     if (removed) {
-      if (loaded) this.router?.release(id);
+      this.router?.retire(id, existingDescriptor);
       this.record({ action: "removed", modelId: id, source: "n/a" });
     }
     return removed;

@@ -9,8 +9,20 @@ export interface ResourceReport {
   loadedModels: string[];
 }
 
+interface Reservation {
+  /** Descriptor identity distinguishes old and replacement generations sharing an ID. */
+  descriptor: ModelDescriptor;
+  memoryMB: number;
+  references: number;
+  retired: boolean;
+}
+
 export class ModelRouter {
-  private reservations = new Map<string, number>();
+  /** Multiple generations may coexist while requests against a replaced model drain. */
+  private reservations = new Map<string, Reservation[]>();
+  /** IDs whose prior generation was replaced but whose new load is not yet confirmed. */
+  private requiresFreshLoad = new Set<string>();
+  private retiredDescriptors = new WeakSet<ModelDescriptor>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -21,6 +33,9 @@ export class ModelRouter {
   ): Promise<ModelDescriptor> {
     if (!agentId.trim()) throw new Error("agentId is required");
     if (!preferred) throw new Error("No model is registered for agent " + agentId);
+    if (this.retiredDescriptors.has(preferred)) {
+      throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
+    }
     if (!preferred.id || !preferred.path) {
       throw new Error("Model " + preferred.id + " has no configured runtime path");
     }
@@ -36,23 +51,88 @@ export class ModelRouter {
     if (!Number.isFinite(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
       throw new Error("Resource provider returned invalid available memory");
     }
-    const alreadyLoaded = resources.loadedModels.includes(preferred.id) || this.reservations.has(preferred.id);
-    const reservedElsewhere = [...this.reservations.entries()]
-      .filter(([id]) => id !== preferred.id)
-      .reduce((sum, [, amount]) => sum + amount, 0);
+
+    const generations = this.reservations.get(preferred.id) ?? [];
+    const existing = generations.find(reservation => reservation.descriptor === preferred);
+    if (existing?.retired) throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
+    if (generations.some(reservation => reservation.retired && reservation.descriptor !== preferred)) {
+      throw new Error("Model " + preferred.id + " is being replaced until active requests drain");
+    }
+    const reservedElsewhere = [...this.reservations.values()]
+      .flat()
+      .filter(reservation => reservation !== existing)
+      .reduce((sum, reservation) => sum + reservation.memoryMB, 0);
+    // A reported loaded ID is only reusable when this router has no tracked
+    // generation for that ID. Otherwise it may refer to the retired generation.
+    const externallyLoaded = generations.length === 0 && !this.requiresFreshLoad.has(preferred.id) && resources.loadedModels.includes(preferred.id);
     const available = Math.max(0, resources.availableMemoryMB - reservedElsewhere);
-    if (!alreadyLoaded && available < preferred.memoryEstimateMB) {
+
+    if (!existing && !externallyLoaded && available < preferred.memoryEstimateMB) {
       throw new Error(
         "Insufficient memory for " + preferred.id + ": requires " +
         preferred.memoryEstimateMB + "MB, " + available + "MB available"
       );
     }
-    if (!alreadyLoaded) this.reservations.set(preferred.id, preferred.memoryEstimateMB);
+
+    if (existing) {
+      existing.references += 1;
+    } else if (!externallyLoaded) {
+      generations.push({
+        descriptor: preferred,
+        memoryMB: preferred.memoryEstimateMB,
+        references: 1,
+        retired: false
+      });
+      this.reservations.set(preferred.id, generations);
+    }
     return preferred;
   }
 
-  release(modelId: string): void {
-    this.reservations.delete(modelId);
+  /**
+   * Retire every currently reserved generation for this ID. Existing leases
+   * remain accounted for until their exact descriptor is released.
+   */
+  retire(modelId: string, descriptor?: ModelDescriptor): void {
+    this.requiresFreshLoad.add(modelId);
+    if (descriptor) this.retiredDescriptors.add(descriptor);
+    const generations = this.reservations.get(modelId);
+    if (!generations) return;
+    for (const reservation of generations) {
+      reservation.retired = true;
+      this.retiredDescriptors.add(reservation.descriptor);
+    }
+  }
+
+  /**
+   * Mark a replacement generation as loaded only after the inference provider
+   * has successfully generated with that exact descriptor. A route reservation
+   * alone is not proof that loading succeeded; failed loads must keep the ID
+   * invalidated so a stale provider loadedModels entry cannot bypass admission.
+   */
+  confirmLoaded(descriptor: ModelDescriptor): void {
+    if (this.retiredDescriptors.has(descriptor)) return;
+    const generations = this.reservations.get(descriptor.id);
+    const activeGeneration = generations?.some(
+      reservation => reservation.descriptor === descriptor && !reservation.retired
+    );
+    if (activeGeneration) this.requiresFreshLoad.delete(descriptor.id);
+  }
+
+  /** Release the exact descriptor generation returned by route(). */
+  release(descriptor: ModelDescriptor): void {
+    const generations = this.reservations.get(descriptor.id);
+    if (!generations) return;
+    const reservation = generations.find(item => item.descriptor === descriptor);
+    if (!reservation) return;
+    reservation.references -= 1;
+    if (reservation.references <= 0) {
+      const remaining = generations.filter(item => item !== reservation);
+      if (remaining.length) {
+        this.reservations.set(descriptor.id, remaining);
+      } else {
+        this.reservations.delete(descriptor.id);
+      }
+    }
   }
 
   getLoadedModels(): string[] {

@@ -127,52 +127,58 @@ export async function runLabSession(options: {
         }
         const profile = agents.getAgent(agentId);
         const selected = await router.route(agentId, registry.getPreferredModel(agentId), ["reason"]);
-        const inference = await generateWithSignal(options.provider, {
-          agentId,
-          modelId: selected.id,
-          stage,
-          prompt: [
-            `Objective: ${objective}`,
-            `Role: ${profile?.role ?? agentId}. ${profile?.description ?? ""}`,
-            stage === "revision" && counterargumentIds.length > 0
-              ? `Address these counterargument message IDs exactly (list them in addressesMessageIds; write prose in revision): ${counterargumentIds.join(", ")}`
-              : "",
-            "Return only the JSON object for this stage. Do not grant permission."
-          ].filter(Boolean).join("\n"),
-          contextMessages: [...prior],
-          ...(options.memoryContext && options.memoryContext.length > 0
-            ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
-            : {})
-        }, options.signal);
-        if (!isRecord(inference.payload)) {
-          throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");
+        try {
+          const inference = await generateWithSignal(options.provider, {
+            agentId,
+            modelId: selected.id,
+            stage,
+            prompt: [
+              `Objective: ${objective}`,
+              `Role: ${profile?.role ?? agentId}. ${profile?.description ?? ""}`,
+              stage === "revision" && counterargumentIds.length > 0
+                ? `Address these counterargument message IDs exactly (list them in addressesMessageIds; write prose in revision): ${counterargumentIds.join(", ")}`
+                : "",
+              "Return only the JSON object for this stage. Do not grant permission."
+            ].filter(Boolean).join("\n"),
+            contextMessages: [...prior],
+            ...(options.memoryContext && options.memoryContext.length > 0
+              ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
+              : {})
+          }, options.signal);
+          // Only a successful provider response confirms the selected model generation.
+          router.confirmLoaded(selected);
+          if (!isRecord(inference.payload)) {
+            throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");
+          }
+          const payload = { ...inference.payload };
+          const message: AgentMessage = {
+            messageId: crypto.randomUUID(),
+            taskId,
+            conversationId: taskId,
+            senderAgentId: agentId,
+            recipientAgentId: "broadcast",
+            messageType: STAGE_MESSAGE_TYPE[stage],
+            payload,
+            evidenceRefs: [...(inference.evidenceRefs ?? [])],
+            createdAt: new Date().toISOString(),
+            sequence: sequence++
+          };
+          const published = bus.publish(message);
+          generated.push(published);
+          const transcript: LabTranscriptMessage = {
+            messageId: published.messageId,
+            agentId,
+            role: profile?.role ?? agentId,
+            stage,
+            messageType: published.messageType,
+            payload: published.payload,
+            evidenceRefs: [...published.evidenceRefs]
+          };
+          messages.push(transcript);
+          emit({ type: "message", message: transcript });
+        } finally {
+          router.release(selected);
         }
-        const payload = { ...inference.payload };
-        const message: AgentMessage = {
-          messageId: crypto.randomUUID(),
-          taskId,
-          conversationId: taskId,
-          senderAgentId: agentId,
-          recipientAgentId: "broadcast",
-          messageType: STAGE_MESSAGE_TYPE[stage],
-          payload,
-          evidenceRefs: [...(inference.evidenceRefs ?? [])],
-          createdAt: new Date().toISOString(),
-          sequence: sequence++
-        };
-        const published = bus.publish(message);
-        generated.push(published);
-        const transcript: LabTranscriptMessage = {
-          messageId: published.messageId,
-          agentId,
-          role: profile?.role ?? agentId,
-          stage,
-          messageType: published.messageType,
-          payload: published.payload,
-          evidenceRefs: [...published.evidenceRefs]
-        };
-        messages.push(transcript);
-        emit({ type: "message", message: transcript });
       }
       return [...prior, ...generated];
     });
