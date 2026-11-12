@@ -142,7 +142,7 @@ export class ToolDirector {
 
     const built = await this.builder.build({ spec: cloneSpec(spec), previous });
     const files = validateFiles(built?.files);
-    const digest = await digestFiles(files);
+    const digest = await digestFiles(files, spec);
     const artifact: ToolArtifact = {
       toolId: spec.id,
       version: (previous?.version ?? 0) + 1,
@@ -228,16 +228,23 @@ export class ToolDirector {
   }
 
   private validateSpec(spec: ToolBuildSpec): void {
-    if (!spec || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(spec.id)) throw new Error("Tool id must be a lowercase kebab-case identifier");
-    if (!spec.name?.trim() || !spec.purpose?.trim()) throw new Error("Tool name and purpose are required");
-    if (!Array.isArray(spec.specialists) || spec.specialists.length === 0 || spec.specialists.some(id => !SECURITY_SPECIALIST_IDS.includes(id))) throw new Error("At least one valid allowed specialist is required");
+    if (!spec || typeof spec !== "object") throw new Error("Tool specification is required");
+    if (typeof spec.id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(spec.id)) throw new Error("Tool id must be a lowercase kebab-case identifier");
+    if (typeof spec.name !== "string" || !spec.name.trim() || typeof spec.purpose !== "string" || !spec.purpose.trim()) {
+      throw new Error("Tool name and purpose are required");
+    }
+    if (!Array.isArray(spec.specialists) || spec.specialists.length === 0 || spec.specialists.some(id => !SECURITY_SPECIALIST_IDS.includes(id))) {
+      throw new Error("At least one valid allowed specialist is required");
+    }
     if (new Set(spec.specialists).size !== spec.specialists.length) throw new Error("Specialist allowlist contains duplicates");
     if (!["create", "extend", "revise"].includes(spec.change)) throw new Error("Invalid tool change kind");
-    if (spec.name.length > 120 || spec.purpose.length > 1000 || spec.requirements.length > 20 || spec.requirements.some(value => value.length > 1000)) {
-      throw new Error("Tool specification exceeds its size limits");
-    }
-    if (!Array.isArray(spec.requirements) || spec.requirements.length === 0 || spec.requirements.some(value => !value.trim())) {
+    if (!Array.isArray(spec.requirements) || spec.requirements.length === 0 ||
+        spec.requirements.some(value => typeof value !== "string" || !value.trim())) {
       throw new Error("At least one concrete tool requirement is required");
+    }
+    if (spec.name.length > 120 || spec.purpose.length > 1000 || spec.requirements.length > 20 ||
+        spec.requirements.some(value => value.length > 1000)) {
+      throw new Error("Tool specification exceeds its size limits");
     }
   }
 
