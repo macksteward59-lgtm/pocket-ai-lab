@@ -49,6 +49,12 @@ describe("bug bounty policy intake provenance", () => {
     expect(comparePolicySnapshots(previous, current).status).toBe("unchanged");
   });
 
+  it("flags conflicting content with the same retrieval timestamp", () => {
+    const previous = capturePolicySnapshot(intake());
+    const current = capturePolicySnapshot(intake({ policyText: "Different text at same timestamp" }));
+    expect(comparePolicySnapshots(previous, current).status).toBe("timestamp-conflict");
+  });
+
   it("flags out-of-order retrievals instead of silently promoting them", () => {
     const previous = capturePolicySnapshot(intake({ retrievedAt: "2026-11-13T12:00:00Z" }));
     const current = capturePolicySnapshot(intake({ retrievedAt: "2026-11-12T12:00:00Z" }));
