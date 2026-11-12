@@ -146,7 +146,7 @@ describe("ModelPluginManager", () => {
 
       await expect(router.route("agent-3", registry.get("local-llama"), []))
         .rejects.toThrow(/being replaced/);
-      router.release("local-llama");
+      router.release(oldDescriptor!);
       await expect(router.route("agent-3", registry.get("local-llama"), []))
         .rejects.toThrow(/being replaced/);
 
