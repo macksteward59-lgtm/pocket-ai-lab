@@ -25,11 +25,45 @@ export interface DirectorCommandContext {
   taskId: string;
 }
 
+/**
+ * Provider-neutral port. Host adapters translate this into native model
+ * function/tool calling and return the untrusted structured proposal.
+ */
+export interface DirectorCommandProvider {
+  propose(input: {
+    taskId: string;
+    objective: string;
+    availableCommands: readonly string[];
+  }): Promise<unknown>;
+}
+
+export const DIRECTOR_COMMAND_KINDS = [
+  "research", "analyze-project", "propose-memory-improvements",
+  "apply-memory-improvement", "develop-tool", "activate-tool",
+  "retire-tool", "use-device"
+] as const;
+
 export class DirectorCommandRouter {
   constructor(
     private readonly capabilities: DirectorCapabilities,
     private readonly tooling: ToolDirector
   ) {}
+
+  /** Ask the injected model adapter for one structured proposal, then validate and dispatch it. */
+  async requestAndDispatch(
+    provider: DirectorCommandProvider,
+    context: DirectorCommandContext,
+    objective: string
+  ): Promise<unknown> {
+    if (!provider || typeof provider.propose !== "function") throw new Error("Director command provider is not configured");
+    if (!context?.taskId?.trim() || !objective?.trim()) throw new Error("Task id and objective are required");
+    const proposal = await provider.propose({
+      taskId: context.taskId,
+      objective: objective.trim(),
+      availableCommands: DIRECTOR_COMMAND_KINDS
+    });
+    return this.dispatch(context, proposal);
+  }
 
   /** Validate first, then dispatch exactly one allowlisted command. */
   async dispatch(context: DirectorCommandContext, untrusted: unknown): Promise<unknown> {
