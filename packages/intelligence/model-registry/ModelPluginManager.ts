@@ -80,6 +80,7 @@ export class ModelPluginManager {
     if (!this.registry.has(existingId)) {
       throw new ModelSourceError(`Model ${existingId} is not registered; use addModel instead`);
     }
+    const existingDescriptor = this.registry.get(existingId);
     const loadedElsewhere = this.router?.getLoadedModels().includes(existingId) ?? false;
     if (loadedElsewhere && !options.confirmReplaceLoaded) {
       throw new ModelSourceError(
@@ -102,7 +103,7 @@ export class ModelPluginManager {
     // Retire even when no in-process lease is visible: the resource provider
     // may still report the old artifact under this ID. The next route must
     // perform fresh memory admission rather than trusting that stale ID.
-    this.router?.retire(existingId);
+    this.router?.retire(existingId, existingDescriptor);
     this.registry.register(descriptor);
     this.record({ action: "replaced", modelId: descriptor.id, previousModelId: existingId, source: describeSource(input.source) });
     return descriptor;
@@ -114,9 +115,10 @@ export class ModelPluginManager {
     if (loaded && !options.confirmReplaceLoaded) {
       throw new ModelSourceError(`Model ${id} is currently loaded; pass confirmReplaceLoaded: true to remove it anyway`);
     }
+    const existingDescriptor = this.registry.get(id);
     const removed = this.registry.unregister(id);
     if (removed) {
-      this.router?.retire(id);
+      this.router?.retire(id, existingDescriptor);
       this.record({ action: "removed", modelId: id, source: "n/a" });
     }
     return removed;
