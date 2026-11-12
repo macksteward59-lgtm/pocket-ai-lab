@@ -1029,3 +1029,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #42 and #43:** all current Greptile review threads are resolved. PR #42 latest known four CI workflows passed; PR #43's intake fix is included in the passing stacked CI #392 run.
 - PR #45 keeps review execution provider-backed and model-independent; Critic and Validator receive separate frozen, sanitized packets and separate fresh inference requests, no peer output/conversation/memory, no tools, and no authority. Findings require exact full-line evidence; malformed model responses fail closed; partial failures are retained.
 - No PR merged. No root package export change, APEX/East trust/authorization/evidence/receipt/RLS change, target traffic, or external submission.
+## 2026-11-12 18:52 UTC — Final PR #45 CI checkpoint
+
+- **PR #45 latest head:** `e19fd656f1e5a95b83e67c6b69f2b50ae2dab5c4`; GitHub reports `mergeable: true`, `mergeable_state: clean`, draft/open/unmerged.
+- **CI #405:** successful on functional code head `58f2789445d730b9ccc4037e91325207e34caf45`; type-check/build passed, intelligence suite **48 files / 426 tests passed**, secondary adapter/lab/memory/East suite **16 files / 236 passed / 2 skipped**. Latest PR head adds only README documentation after that code-tested commit.
+- The last changes add explicit role-permission checks, conservative UTF-8 context budgeting with rejection rather than truncation, and cleanup tests for model reservations and task sessions after inference failure.
+- **Greptile PR #45:** requested; no review response or inline threads observed yet.
+- **PR #44:** CI #382 passed on latest head. Greptile resolved five findings; two remain open (one is outdated after fix, one is the benchmark-plan comment). Exact evidence replies were posted; no manual thread resolution.
+- No local tests are claimed. No PR merged and no trust/authorization or target execution changes.
