@@ -85,9 +85,9 @@ describe("bug bounty policy intake provenance", () => {
   });
 
   it("rejects unpaired UTF-16 surrogates before hashing", () => {
-    expect(() => capturePolicySnapshot(intake({ policyText: "rules\\uD800" })))
+    expect(() => capturePolicySnapshot(intake({ policyText: "rules\uD800" })))
       .toThrow(PolicyIntakeError);
-    expect(() => capturePolicySnapshot(intake({ policyText: "rules\\uDC00" })))
+    expect(() => capturePolicySnapshot(intake({ policyText: "rules\uDC00" })))
       .toThrow(PolicyIntakeError);
     expect(() => capturePolicySnapshot(intake({ policyText: "rules 😀" })))
       .not.toThrow();
