@@ -6,11 +6,12 @@ This module accepts an existing immutable `PolicySnapshot`; it does not fetch a 
 
 - Splits the exact supplied text into source lines.
 - Labels only narrow, explicit section headings, labels, and keyword patterns for scope inclusion/exclusion, allowed activities, prohibited methods, rate limits, testing windows, and disclosure.
+- Extracts candidate domain, URL, IP, CIDR, numeric rate-limit, and strictly formatted testing-window values only when the exact clause matches a supported format; otherwise it records an unparsed-candidate issue.
 - Preserves exact line text and UTF-16 code-unit offsets, tied to the snapshot ID and SHA-256 digest.
 - Marks every extracted clause as requiring human review.
 - Flags unclassified, qualified, and potentially conflicting clauses.
 - Creates separate pending Critic and Validator assignments. These are workflow records, not claims that LLM agents have executed or approved the policy.
-- Validates the source hash and every extracted evidence span independently.
+- Validates the source hash, byte count, line number, exact source span, and extracted candidate value independently.
 
 ## Deliberate limitations
 
