@@ -50,7 +50,7 @@ function matches(rule: NormalizedScopeRule, target: URL): boolean {
   if (rule.kind === "domain") {
     const host = target.hostname.toLowerCase();
     const domain = rule.value.toLowerCase();
-    return host === domain || (rule.includeSubdomains && host.endsWith("." + domain));
+    return (rule.includeApex && host === domain) || (rule.includeSubdomains && host.endsWith("." + domain));
   }
   if (rule.kind === "url") {
     const scoped = new URL(rule.value);
