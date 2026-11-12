@@ -11,7 +11,7 @@
  * separate host responsibility and must still pass SecurityDivision,
  * DelegationGate, and any applicable APEX/East authorization.
  */
-import type { ToolDescriptor, ToolMode, ToolRegistry } from "../security/tools";
+import type { ToolDescriptor, ToolRegistry } from "../security/tools";
 import type { SecuritySpecialistId } from "../agents/AgentManager";
 
 export type ToolChangeKind = "create" | "extend" | "revise";
@@ -21,7 +21,6 @@ export interface ToolBuildSpec {
   id: string;
   name: string;
   purpose: string;
-  mode: ToolMode;
   specialists: SecuritySpecialistId[];
   change: ToolChangeKind;
   requirements: string[];
@@ -137,12 +136,10 @@ export class ToolDirector {
     if (!this.sandbox) throw new Error("Isolated tool sandbox is not configured");
 
     const existing = this.registry.has(spec.id);
-    if (spec.change === "create" && existing) throw new Error("Tool already exists; use extend or revise");
-    if (spec.change !== "create" && !existing) throw new Error("Cannot extend or revise an unknown tool");
-
     const previous = await this.store.getLatest(spec.id);
+    if (spec.change === "create" && (existing || previous)) throw new Error("Tool already exists; use extend or revise");
     if (spec.change !== "create" && !previous) {
-      throw new Error("Existing tool has no managed artifact to extend or revise");
+      throw new Error(existing ? "Built-in tools cannot be revised by the Director workshop" : "Cannot extend or revise an unknown tool");
     }
 
     const built = await this.builder.build({ spec: cloneSpec(spec), previous });
@@ -201,7 +198,8 @@ export class ToolDirector {
       id: artifact.toolId,
       name: artifact.spec.name,
       application: artifact.spec.purpose,
-      mode: artifact.spec.mode,
+      // Generated code is always classified active: it must pass a fresh, per-use human approval.
+      mode: "active",
       specialists: [...artifact.spec.specialists]
     };
     if (this.registry.has(descriptor.id)) this.registry.replaceManaged(descriptor);
@@ -235,7 +233,6 @@ export class ToolDirector {
     if (!Array.isArray(spec.requirements) || spec.requirements.length === 0 || spec.requirements.some(value => !value.trim())) {
       throw new Error("At least one concrete tool requirement is required");
     }
-    if (!["analysis", "active"].includes(spec.mode)) throw new Error("Invalid tool mode");
   }
 
 }
