@@ -15,6 +15,7 @@ on:
     branches:
       - main
       - ios/private-iphone-test-hybrid
+      - codex/ios-native-app-hardening
     paths:
       - "runtime/ios/**"
       - "ios/**"
