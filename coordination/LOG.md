@@ -768,3 +768,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #38 mergeability:** GitHub's first metadata read immediately after opening returned `mergeable=false`, but the subsequent authoritative PR read reports `mergeable=true` with state `unstable` while checks are pending. No merge conflict is currently reported. The earlier log entry records the initial transient value; this entry supersedes it.
 - **PR #38 CI:** Cursor plugin, consumer, sidecar, and intelligence checks are being tracked; the iOS LlamaEngine job is still compiling the pinned simulator/device/macOS artifacts. The previously successful branch run predates PR creation.
 - **Greptile:** PR #37 and PR #38 Greptile checks remain `in_progress`; no new findings or approval have arrived yet.
+
+
+## 2026-11-12 14:27 UTC — ChatGPT / Greptile PR #37 findings
+
+- **Greptile review completed:** 2 files reviewed, 2 comments added. P1: confirmed `ModelPluginManager.replaceModel()` releases only one reference. With concurrent holders, a stale reservation retains the old memory estimate and the replacement model can bypass memory admission. P2: the current shared-reservation test checks only model-ID visibility and does not assert that the retained memory still blocks another model.
+- **Assessment:** Both findings are valid. The P1 affects replacement correctness and can admit an oversized model under a smaller memory budget. The P2 is a real regression-coverage gap.
+- **Scope expansion:** ChatGPT's existing `codex/model-router-reservation-safety` claim now includes `ModelPluginManager.ts` and its tests. Plan: add a reservation retirement state so confirmed replacement prevents new acquisitions while old leases drain; only after the final old lease releases may the new descriptor be re-admitted, with a fresh memory check. Reject changed descriptors while a prior reservation is active. Add tight-budget tests that prove a shared reservation blocks another model until the final release, and replacement tests for the stale-estimate scenario.
+- **No merge:** PR #37 remains draft/unmerged pending fixes, new CI, and Greptile re-review.
