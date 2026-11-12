@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "runtime/ios/**"
+      - "packages/intelligence/evaluation/**"
+      - "packages/intelligence/__tests__/improvement-engine.test.ts"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
@@ -49,12 +51,16 @@ jobs:
       - name: Build pinned llama.cpp for the simulator and macOS
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
+          runtime/ios/scripts/build-llama-cpp.sh device
+          rm -rf runtime/ios/build/cmake-device
           runtime/ios/scripts/build-llama-cpp.sh simulator
           rm -rf runtime/ios/build/cmake-simulator
           runtime/ios/scripts/build-llama-cpp.sh macos
           rm -rf runtime/ios/build/cmake-macos
           runtime/ios/scripts/build-llama-cpp.sh xcframework
           test -d runtime/ios/build/xc/llama.xcframework
+          test -d runtime/ios/build/xc/llama.xcframework/ios-arm64
+          test -d runtime/ios/build/xc/llama.xcframework/ios-arm64_x86_64-simulator || test -d runtime/ios/build/xc/llama.xcframework/ios-arm64-simulator
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
 
