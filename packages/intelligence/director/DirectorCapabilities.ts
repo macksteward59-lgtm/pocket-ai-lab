@@ -256,8 +256,8 @@ function normalizeAllowedDomains(input: string[]): string[] {
   }
   const domains = input.map(domain => {
     if (typeof domain !== "string") throw new Error("allowedDomains must contain hostnames");
-    const normalized = domain.trim().toLowerCase().replace(/\\.$/, "");
-    if (!normalized || normalized.length > 253 || !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalized)) {
+    const normalized = domain.trim().toLowerCase().replace(/\.$/, "");
+    if (!normalized || normalized.length > 253 || !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalized)) {
       throw new Error("allowedDomains must contain valid hostnames");
     }
     return normalized;
@@ -269,7 +269,7 @@ function validateProjectPaths(input?: string[]): string[] | undefined {
   if (input === undefined) return undefined;
   if (!Array.isArray(input) || input.length > 100 || input.some(path =>
     typeof path !== "string" || !path.trim() || path.length > 1024 || path.startsWith("/") ||
-    path.split(/[\\/]/).includes("..") || path.includes("\\0"))) {
+    path.split(/[\\/]/).includes("..") || path.includes(String.fromCharCode(0)))) {
     throw new Error("Project paths must be bounded relative paths without traversal segments");
   }
   return [...input];
