@@ -818,3 +818,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Validation:** GitHub Actions intelligence check on the current head completed successfully. A separate Greptile Review check is still in progress. No new Greptile inline findings had appeared as of this check. CI success is not a physical iPhone Air execution result.
 - **Re-review request:** Posted a fresh top-level request to Greptile on PR #39, explicitly asking it to review current head `ac7e417` and challenge security-scoped file access across detached work, staged-file cleanup/cancellation, `replaceItemAt` behavior, session lifecycle, WebKit URL policy, device linking, and test coverage.
 - **Open caution:** PR API currently reports `mergeable=false` while checks/review are active. Do not merge. Wait for Greptile's completed review, resolve any remaining findings, and obtain a fresh mergeability/check status.
+
+
+## 2026-11-12 14:42 UTC — PR #39 status correction
+
+- **Head:** PR #39 is now at `0fe8df5c8bb3b5a96835ae2a421cc2fa2f45cfca` (not the earlier `ac7e417` snapshot). The workflow was updated to trigger iOS CI on the hardening branch itself; the new `iOS LlamaEngine CI` run `43239386431` is queued/in progress and building device/simulator/macOS slices. It will also run the generic `platform=iOS` app link step.
+- **Mergeability:** GitHub's latest PR #39 read reports `mergeable=true` / `mergeable_state=unstable`. The prior `mergeable=false` observation in the 14:40 log entry was transient/stale; no merge has been attempted.
+- **Greptile:** PR #39 review remains in progress; no new inline findings yet. PR #37 re-review remains in progress.
+- **PR #38:** The original branch's llama.cpp device/simulator/macOS build, typecheck, and native app build have passed; native app XCTest is still running. No physical iPhone execution is claimed.
