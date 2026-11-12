@@ -202,6 +202,16 @@ describe("bug bounty policy interpretation", () => {
     expect(() => interpretPolicySnapshot(tamperedSnapshot)).toThrow();
   });
 
+  it("fails closed for malformed evidence-validator inputs", () => {
+    const source = snapshot("# In Scope\\n- app.example.com");
+    const interpretation = interpretPolicySnapshot(source);
+    expect(validateInterpretationEvidence(source, null as unknown as PolicyInterpretation).valid).toBe(false);
+    expect(validateInterpretationEvidence(source, {
+      ...interpretation,
+      clauses: null
+    } as unknown as PolicyInterpretation).valid).toBe(false);
+  });
+
   it("does not treat interpretation as an authorization decision", () => {
     const source = snapshot("# Allowed Testing Activities\n- Manual testing");
     const interpretation = interpretPolicySnapshot(source);
