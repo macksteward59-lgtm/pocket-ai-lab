@@ -53,6 +53,38 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testValidReimportReplacesExistingModelWithoutTouchingTheSource() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sourceDirectory = root.appendingPathComponent("source", isDirectory: true)
+        let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
+
+        let source = sourceDirectory.appendingPathComponent("model.gguf")
+        let destination = modelDirectory.appendingPathComponent("model.gguf")
+        let oldBytes = Data("GGUF-old-model".utf8)
+        let newBytes = Data("GGUF-new-model".utf8)
+        try oldBytes.write(to: destination)
+        try newBytes.write(to: source)
+
+        let model = LocalChatModel(modelDirectory: modelDirectory, engine: TestLlamaEngine())
+        try await model.importModel(from: source)
+
+        XCTAssertEqual(model.modelURL, destination)
+        XCTAssertEqual(try Data(contentsOf: destination), newBytes)
+        XCTAssertEqual(try Data(contentsOf: source), newBytes)
+    }
+
+    func testWorkspaceURLsRequireAHostAndSecureScheme() {
+        XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "https://workspace.example")!))
+        XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "http://localhost:8080")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https:/workspace")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "http://workspace.example")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https://user:password@workspace.example")!))
+    }
+
+    @MainActor
     func testImportingAnotherModelUnloadsThePreviousSessionBeforePrompting() async throws {
         let root = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
