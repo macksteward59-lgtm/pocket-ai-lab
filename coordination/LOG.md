@@ -877,3 +877,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The latest head `9a96d33` also has all four CI suites green: Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar.
 - The review was explicitly asked to inspect the new `confirmLoaded` signal against the modelId-only inference contract and the risk of same-generation duplicate release. Greptile returned no additional blocker in this pass.
 - PR #37 remains open/draft and has not been merged.
+
+## 2026-11-12 14:54 UTC — ChatGPT encrypted memory persistence foundation
+
+- **Status:** PR #41 remains draft and unmerged. Branch `codex/encrypted-memory-at-rest`, head `3e16b83727ea3bde1768dd355dd807a430e3eea5`, base `main` at `b2a4ae5c4edf2e04819249106c07017ec52fa0c2`.
+- **Implementation:** Added opt-in `EncryptedFileMemoryStore` using AES-256-GCM, 96-bit per-save nonce, 128-bit tag, versioned envelope, format-bound AAD, atomic temp-file replacement, and restrictive POSIX permissions. Key material is injected through `MemoryKeyProvider`; unavailable or malformed key fails closed. Key is not written beside data or in environment/source.
+- **Migration:** Added explicit `migratePlaintextMemory` copy/verify helper. It refuses to overwrite a non-empty encrypted target, reads back and compares the full entry set, and leaves the plaintext source untouched. Existing `FileMemoryStore` and web consumer wiring remain unchanged.
+- **Tests:** Confidentiality-at-rest, round-trip, ciphertext tampering, wrong key, unavailable key, invalid key length, explicit migration, non-empty target refusal, and no automatic plaintext reinterpretation.
+- **CI on current head, all passed:** Pocket AI Lab CI #257 (type-check/build + tests), Consumer prototype CI #148 (tests + build), Governance sidecar CI #43, Cursor collaboration plugin CI #105. First CI attempt caught an escaped-template syntax error in the migration helper; corrected on the current head. No local checkout or local test run is claimed.
+- **Limitations:** Only a test-only in-memory key provider exists. iOS Keychain, macOS Keychain, Windows DPAPI, and browser WebCrypto providers are not implemented. Production enablement is blocked until a real platform-backed provider and lifecycle/lock/recovery tests exist. Current consumer memory remains checksummed plaintext.
+- **Review request:** Re-review AES-GCM envelope validation, key lifecycle/fail-closed behavior, atomic file handling, migration verification, and the no-default-integration boundary. No APEX/East, authorization, evidence, iOS app, or consumer server code changed. No merge performed.
