@@ -48,7 +48,7 @@ jobs:
       - name: Install CMake and Ninja
         run: brew install cmake ninja
 
-      - name: Build pinned llama.cpp for the simulator and macOS
+      - name: Build pinned llama.cpp for iOS device, simulator, and macOS
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
           runtime/ios/scripts/build-llama-cpp.sh device
