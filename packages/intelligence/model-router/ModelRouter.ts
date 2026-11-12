@@ -20,12 +20,6 @@ interface Reservation {
 export class ModelRouter {
   /** Multiple generations may coexist while requests against a replaced model drain. */
   private reservations = new Map<string, Reservation[]>();
-  /**
-   * A provider's loadedModels ID can outlive a descriptor replacement. Once
-   * an ID is retired with no tracked generation, do not trust that stale ID
-   * to prove the replacement artifact is already loaded.
-   */
-  private mustRevalidate = new Set<string>();
   /** IDs whose prior registry generation was explicitly replaced or removed. */
   private retiredIds = new Set<string>();
   private retiredDescriptors = new WeakSet<ModelDescriptor>();
@@ -60,7 +54,6 @@ export class ModelRouter {
 
     const generations = this.reservations.get(preferred.id) ?? [];
     const existing = generations.find(reservation => reservation.descriptor === preferred);
-    const forceRevalidation = this.mustRevalidate.has(preferred.id);
     if (existing?.retired) throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
     if (generations.some(reservation => reservation.retired && reservation.descriptor !== preferred)) {
       throw new Error("Model " + preferred.id + " is being replaced until active requests drain");
@@ -100,14 +93,15 @@ export class ModelRouter {
    * Retire every currently reserved generation for this ID. Existing leases
    * remain accounted for until their exact descriptor is released.
    */
-  retire(modelId: string): void {
+  retire(modelId: string, descriptor?: ModelDescriptor): void {
     this.retiredIds.add(modelId);
+    if (descriptor) this.retiredDescriptors.add(descriptor);
     const generations = this.reservations.get(modelId);
-    if (!generations) {
-      this.mustRevalidate.add(modelId);
-      return;
+    if (!generations) return;
+    for (const reservation of generations) {
+      reservation.retired = true;
+      this.retiredDescriptors.add(reservation.descriptor);
     }
-    for (const reservation of generations) reservation.retired = true;
   }
 
   /** Release the exact descriptor generation returned by route(). */
@@ -123,7 +117,6 @@ export class ModelRouter {
         this.reservations.set(descriptor.id, remaining);
       } else {
         this.reservations.delete(descriptor.id);
-        if (reservation.retired) this.mustRevalidate.add(descriptor.id);
       }
     }
   }
