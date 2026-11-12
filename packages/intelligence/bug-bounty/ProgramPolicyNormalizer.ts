@@ -134,6 +134,7 @@ function normalizeScopeRule(input: ScopeRuleInput): NormalizedScopeRule {
 
   let normalized = value.trim();
   let includeSubdomains = input.includeSubdomains === true;
+  let includeApex = true;
   if (kind === "domain") {
     if (normalized.includes("://") || normalized.includes("/") || normalized.includes(":")) {
       throw new ProgramPolicyError("Domain scope must contain a hostname only");
@@ -141,6 +142,7 @@ function normalizeScopeRule(input: ScopeRuleInput): NormalizedScopeRule {
     if (normalized.startsWith("*.")) {
       normalized = normalized.slice(2);
       includeSubdomains = true;
+      includeApex = false;
     }
     normalized = normalized.toLowerCase().replace(/\.$/, "");
     if (!/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalized)) {
@@ -162,6 +164,7 @@ function normalizeScopeRule(input: ScopeRuleInput): NormalizedScopeRule {
     kind,
     value: normalized,
     includeSubdomains,
+    includeApex,
     ...(typeof input.note === "string" && input.note.trim() ? { note: input.note.trim() } : {})
   });
 }
