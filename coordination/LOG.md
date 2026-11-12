@@ -978,3 +978,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #43:** Greptile resolved its unpaired-surrogate finding after the intake fix. No fresh CI workflow runs were returned for the current stacked head; CI remains unverified. PR remains draft/unmerged.
 - **PR #44:** Policy Interpretation Engine draft remains open/unmerged. Compare confirms 13 commits ahead and 0 behind its PR #43 base; GitHub's initial mergeable flag was false and is not treated as a green mergeability result. No PR-triggered CI runs or Greptile review have appeared yet. Review requested.
 - No branch was merged, no review thread was manually resolved, and no APEX/East trust or authorization boundary changed.
+
+
+## 2026-11-12 16:20 UTC — Policy Interpretation Engine final review request
+
+- **PR #44 latest head:** `844d83e7bd4b293336c82e73fdf15d330172e6d1`.
+- Extended strict candidate extraction to explicit domains, URLs, IPs, CIDRs, numeric request limits, and timezone-bearing testing windows. Unsupported formats produce `unparsed-candidate`; invalid dates/reversed windows do not become candidates.
+- Evidence validation now checks snapshot hash/byte count, source offsets, line numbers, exact source text, and recomputed candidate values; malformed validator inputs fail closed. Unknown Markdown headings reset prior section context.
+- Added regression coverage for IP/CIDR, strict windows, unsupported candidate values, unknown headings, and malformed validator inputs. No local test run is claimed.
+- **CI:** no PR-triggered workflow runs returned for this stacked PR head. **Greptile:** review request updated to the final head; no review response yet.
+- PR #44 remains draft/unmerged. No APEX/East trust, authorization, evidence, or receipt semantics changed.
