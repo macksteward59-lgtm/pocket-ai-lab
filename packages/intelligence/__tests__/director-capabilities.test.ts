@@ -77,12 +77,12 @@ describe("DirectorCapabilities", () => {
   it("requires explicit destructive confirmation before deleting files", async () => {
     const capabilities = new DirectorCapabilities({
       memory: new MemoryManager(),
-      devicePermissionBroker: { verify: undefined, async authorize() { return true; } },
+      devicePermissionBroker: { async authorize() { return true; } },
       deviceBridge: { async perform() { return "deleted"; } }
     });
     await expect(capabilities.useDevice({
       taskId: "task-1", approvalRef: "approval",
-      action: { kind: "delete-file", fileId: "file-1", confirmDestructive: false as true }
+      action: { kind: "delete-file", fileId: "file-1", confirmDestructive: false } as never
     })).rejects.toThrow(/explicit destructive confirmation/);
   });
 });
