@@ -63,9 +63,19 @@ export async function runIndependentPolicyReviews(
 
   // The frozen packet contains only the source snapshot and interpretation.
   // No prior conversation, memory, target access, or peer-review result is passed.
-  const packet: PolicyReviewRequest = Object.freeze({
-    snapshot: request.snapshot,
-    interpretation: request.interpretation
+  const packet: PolicyReviewRequest = deepFreeze({
+    snapshot: { ...request.snapshot },
+    interpretation: {
+      ...request.interpretation,
+      clauses: request.interpretation.clauses.map(clause => ({
+        ...clause,
+        ...(clause.candidateValue ? { candidateValue: { ...clause.candidateValue } } : {})
+      })),
+      issues: request.interpretation.issues.map(issue => ({
+        ...issue,
+        clauseIds: [...issue.clauseIds]
+      }))
+    }
   });
 
   const critic = await runOne("critic", agents.critic, packet);
@@ -224,6 +234,14 @@ function validateFinding(
     sourceText,
     explanation: record.explanation.trim()
   });
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  }
+  return value;
 }
 
 function isCompleteSourceLine(text: string, start: number, end: number): boolean {
