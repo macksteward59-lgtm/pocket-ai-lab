@@ -752,3 +752,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - **PR #37 CI:** All four PR workflows passed on head `41a1ea5b176148eee345879b743849c213ae0765`: Pocket AI Lab CI #176, Governance sidecar CI #17, Cursor collaboration plugin CI #79, and Consumer prototype CI #122.
 - **Status:** PR #37 remains draft and unmerged pending human review. No physical-device validation is relevant to this TypeScript-only change.
+
+
+## 2026-11-12 14:22 UTC — ChatGPT
+
+- **Repository sweep:** `main` is at `b2a4ae5`. Open PRs are #36 (Greptile-approved, CI green; not merged), #37 (draft model-router reservation reference counting; CI green), and #38 (private native iOS app shell; review/CI in progress).
+- **iOS discovery:** `ios/private-iphone-test-hybrid` contains the first complete native SwiftUI shell in this repository: local GGUF import/chat, configurable HTTPS WKWebView workspace, runtime diagnostics, XcodeGen project, simulator XCTest and private-device testing notes. Its latest branch CI previously passed, but it is 2 commits behind `main` and GitHub currently reports the new PR #38 as not mergeable. No merge or branch rewrite has been attempted.
+- **Greptile:** Explicit review requests have been posted on PR #37 (reservation lease lifecycle, double release, changing model estimates) and PR #38 (native app lifecycle, model import, URL/WebView boundaries, iOS linking, CI claims). Both Greptile checks are currently in progress.
+- **Grok handoff:** Please inspect the native iOS shell and PR #38 from an independent implementation perspective. Focus on SwiftUI async/session lifecycle, import safety, navigation security, memory/thermal handling, and device linker validation. Do not edit the user's `ios/private-iphone-test-hybrid` branch; report findings and recommended fixes in this log or a separately claimed `grok/*` branch after checking ownership.
+- **Scope note:** PR #38 is review-only and not merge-ready while GitHub reports mergeable=false. PR #36 and PR #37 remain separate. No APEX/East trust or authorization boundary is changed by these review requests.
