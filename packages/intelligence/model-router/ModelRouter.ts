@@ -20,6 +20,8 @@ interface Reservation {
 export class ModelRouter {
   /** Multiple generations may coexist while requests against a replaced model drain. */
   private reservations = new Map<string, Reservation[]>();
+  /** IDs whose prior registry generation was explicitly replaced or removed. */
+  private retiredIds = new Set<string>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -49,13 +51,16 @@ export class ModelRouter {
     const generations = this.reservations.get(preferred.id) ?? [];
     const existing = generations.find(reservation => reservation.descriptor === preferred);
     if (existing?.retired) throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
+    if (generations.some(reservation => reservation.retired && reservation.descriptor !== preferred)) {
+      throw new Error("Model " + preferred.id + " is being replaced until active requests drain");
+    }
     const reservedElsewhere = [...this.reservations.values()]
       .flat()
       .filter(reservation => reservation !== existing)
       .reduce((sum, reservation) => sum + reservation.memoryMB, 0);
     // A reported loaded ID is only reusable when this router has no tracked
     // generation for that ID. Otherwise it may refer to the retired generation.
-    const externallyLoaded = generations.length === 0 && resources.loadedModels.includes(preferred.id);
+    const externallyLoaded = generations.length === 0 && !this.retiredIds.has(preferred.id) && resources.loadedModels.includes(preferred.id);
     const available = Math.max(0, resources.availableMemoryMB - reservedElsewhere);
 
     if (!existing && !externallyLoaded && available < preferred.memoryEstimateMB) {
@@ -76,6 +81,7 @@ export class ModelRouter {
       });
       this.reservations.set(preferred.id, generations);
     }
+    this.retiredIds.delete(preferred.id);
     return preferred;
   }
 
@@ -84,6 +90,7 @@ export class ModelRouter {
    * remain accounted for until their exact descriptor is released.
    */
   retire(modelId: string): void {
+    this.retiredIds.add(modelId);
     const generations = this.reservations.get(modelId);
     if (!generations) return;
     for (const reservation of generations) reservation.retired = true;
