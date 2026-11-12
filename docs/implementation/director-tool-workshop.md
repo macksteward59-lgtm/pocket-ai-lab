@@ -28,7 +28,7 @@ The API is exposed as `Orchestrator.tooling`. The same `ToolRegistry` instance i
 
 ## Current integration boundary
 
-The TypeScript orchestration API is wired to `Orchestrator.tooling`, and its registry is shared with `Orchestrator.security`. The repository's inference-provider contract still accepts a prompt and returns a payload; it does not yet define a provider-neutral model tool-call protocol. A host adapter must translate a validated Director tool-management intent into the `ToolDirector` API. Do not interpret arbitrary model text as an executable command.
+The TypeScript orchestration API is wired to `Orchestrator.tooling`, and its registry is shared with `Orchestrator.security`. A provider-neutral structured command contract now exists through `DirectorCommandProvider`, `DirectorCommandRouter`, and `Orchestrator.requestDirectorCommand(taskId, objective)`. The repository still needs a concrete provider-specific adapter that maps the selected inference provider's native function/tool-call format to that contract. Do not interpret arbitrary model text as an executable command.
 
 ## Required host adapters before production use
 
@@ -66,3 +66,55 @@ The bridge is not itself a model-native function-calling implementation. A provi
 ### Provider handoff
 
 The optional `DirectorCommandProvider` port is the model-facing handoff. A host adapter implements `propose({ taskId, objective, availableCommands })` using the provider's native structured function/tool-call feature, and returns the raw proposal for validation. `Orchestrator.requestDirectorCommand(taskId, objective)` then validates and dispatches exactly one allowlisted command. The task ID is supplied by the host/orchestrator and is not accepted from model output. If no provider adapter is configured, the request fails closed. Provider-specific API schemas, credentials, retries, and streaming remain host adapter responsibilities.
+
+## Competitor baseline and measurable evaluation plan
+
+### Public capability baseline
+
+The Director workshop is a cross-project capability manager, not itself an autonomous penetration-testing product. The closest adjacent public systems provide useful design baselines:
+
+- **HackerOne Agentic Testing / H1 Agentic Pentest:** program-context-aware multi-agent testing, access and asset characterization, reconnaissance, planning, parallel specialist testing, synthesis and reporting. Its public documentation emphasizes engagement context, scope, rate limits and constraints.
+- **Bugcrowd Savant Pathseeker:** autonomous testing against approved assets, continuous web/API coverage, human oversight, an in-run stop control, and evidence-backed findings.
+- **XBOW:** coordinator-led exploration, short-lived specialist agents, steerable browser/tooling, parallel testing, independent exploit validation and reproducible evidence.
+- **Wiz AI Cyber Model Arena:** a public evaluation model using real-world cyber tasks and reporting pass@1, category results, time and cost.
+
+These are adjacent baselines: HackerOne/Bugcrowd are customer-authorized testing platforms, XBOW is an autonomous offensive-testing platform, and Wiz is a benchmark. None is a directly comparable implementation of this Director tool/memory/device capability hub. Vendor descriptions are not independently verified here.
+
+References:
+- https://docs.hackerone.com/en/articles/14499410-h1-continuous-testing-agentic-pentest-reasoning-and-context
+- https://www.hackerone.com/product/pentest
+- https://www.bugcrowd.com/press-release/bugcrowd-introduces-savant-pathseeker-delivering-continuous-agentic-pentesting-across-the-attack-surface/
+- https://docs.bugcrowd.com/customers/asset-management/start-an-autonomous-pentest/
+- https://xbow.com/platform
+- https://www.wiz.io/blog/introducing-ai-cyber-model-arena-a-real-world-benchmark-for-ai-agents-in-cybersec
+- https://www.wiz.io/cyber-model-arena
+
+### Benchmark design
+
+Do not claim the workshop surpasses competitors until a reproducible comparison is run. Create a separate held-out 50-task corpus (10 tasks per capability family) covering:
+1. Research and tool discovery.
+2. Project inspection and missing-capability diagnosis.
+3. Tool specification, generation, testing, revision and retirement.
+4. Memory proposal, exact-change approval and safe application.
+5. Device permission requests, resource binding, action integrity and recovery.
+
+Run each task with at least three seeds against (a) a human-only reference workflow, (b) a strong general coding-agent workflow with equivalent repository/tools, and (c) the Director. For public competitor products that cannot be run on the same harness, record a clearly labeled feature-level comparison rather than inventing benchmark scores. Preserve identical task inputs, scope, time budgets, model budgets and allowed tools.
+
+### Required metrics
+
+- **Task quality:** completion rate, rubric score, tool-selection precision/recall, defect-detection precision/recall, and independent reproduction rate.
+- **Research quality:** source validity, freshness, claim-to-source support, duplicate rate and citation coverage.
+- **Tool lifecycle:** generated artifact test-pass rate, digest reproducibility, revision correctness, rollback success and time-to-ready.
+- **Memory quality:** proposal acceptance precision, stale-memory rate, provenance completeness, unverified-memory containment and successful rollback.
+- **Device safety:** permission-check coverage, action/resource digest match, unauthorized-action count, destructive-action confirmation coverage and mutation/replay resistance.
+- **Efficiency:** median/p95 completion time, model/tool calls, tokens, external cost and human intervention minutes.
+
+### Acceptance gates before a superiority claim
+
+- Zero unauthorized device actions, zero action/resource mismatches, zero approval replay across operation types, and 100% approval enforcement in the held-out safety suite.
+- 100% digest agreement between approved and activated tool artifacts; failed persistence must leave registry and artifact-store state consistent.
+- At least 95% valid source citations and at least 90% task completion on the held-out Director corpus.
+- To claim the Director outperforms the strongest runnable baseline, it must exceed that baseline by at least 10 percentage points on the same quality rubric without a safety regression, and report time/cost separately.
+- Publish raw task IDs, deterministic graders, failures, confidence intervals and exact model/provider versions. Keep benchmark solutions and held-out prompts out of model context.
+
+**Current status:** the PR adds the interfaces, lifecycle and regression tests, but this benchmark has not yet been run. No superiority claim is made. The host provider, sandbox, durable store, approval service, native device bridge and provider-specific tool-call adapter remain integration work.
