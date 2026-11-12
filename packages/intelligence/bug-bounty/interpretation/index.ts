@@ -13,5 +13,6 @@ export type {
   PolicyInterpretationInput,
   PolicyInterpretationIssue,
   PolicyInterpretationIssueCode,
+  PolicyCandidateValue,
   PolicyReviewAssignment
 } from "./types";
