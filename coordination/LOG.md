@@ -1052,3 +1052,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Corrected citation validation to require the end offset to stop at the first CR or LF; added multi-line LF and trailing-CR CRLF regression cases.
 - Updated the PR description and requested Greptile re-review. Current feature head at this entry: `145be1d7ab54da193d27f581e838554c602807fb`. CI is not yet visible through the workflow/status query; no test success is claimed for this head. No local tests are claimed.
 - No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic, external submission, or merge.
+
+## 2026-11-12 19:03:17 UTC — PR #45 response contract boundary hardening
+
+- Tightened llama.cpp request preflight so the specialized policy-review response contract is accepted only for a non-chat `independent` request; unsupported contracts, chat requests, and other stages fail before backend invocation.
+- Clarified the shared inference result contract precedence and added an adapter regression test proving the user-chat plain-text path cannot bypass the specialized review contract.
+- Adapter response schema now validates the full finding envelope (enum code/severity, optional clause ID, integer offsets, source text, explanation) and rejects unexpected nested fields before coordinator evidence checks.
+- Latest feature head: `d1db1a93210697bc864f97850dae9385b1d7aff7`. CI and Greptile re-review remain pending; no local tests or latest-head CI success are claimed.
