@@ -118,3 +118,12 @@ Run each task with at least three seeds against (a) a human-only reference workf
 - Publish raw task IDs, deterministic graders, failures, confidence intervals and exact model/provider versions. Keep benchmark solutions and held-out prompts out of model context.
 
 **Current status:** the PR adds the interfaces, lifecycle and regression tests, but this benchmark has not yet been run. No superiority claim is made. The host provider, sandbox, durable store, approval service, native device bridge and provider-specific tool-call adapter remain integration work.
+
+## Approval and lifecycle integrity
+
+- Memory changes are approved against a SHA-256 digest of the exact task id, proposal id/rationale, change index, operation, target memory id, layer, content and source references. The Director snapshots the proposal before awaiting the verifier and applies only that private snapshot.
+- Device actions are normalized into a fresh frozen discriminated-union object before authorization. The resource identifier is selected by action kind (app id for open-app; file id for file operations); unrelated fields are discarded and required resource fields are mandatory. The broker receives an action digest, and the bridge executes the same frozen action snapshot after approval.
+- Tool activation and retirement approvals carry distinct operation values, in addition to task, tool, version, digest and approval reference. An activation approval cannot be reused as a retirement approval.
+- Tool build specifications are copied before asynchronous builder/hash work. The digest and saved artifact use the same immutable snapshot.
+- Only one artifact version is marked active. Activating a newer version deactivates the previous version and clears the registry's installation-availability flag so the host must re-install or re-verify the new adapter. Retirement locates the actual active version even if a newer unactivated candidate exists.
+- Artifact status updates are persisted before registry changes. If a multi-record write fails, prior artifact records are restored; if registry mutation fails, persisted records are rolled back. Durable host stores should provide transactional writes where available and must surface rollback failures.
