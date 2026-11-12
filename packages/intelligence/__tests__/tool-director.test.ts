@@ -137,7 +137,7 @@ describe("ToolDirector", () => {
     const registry = new ToolRegistry();
     const director = new ToolDirector({
       registry, builder, sandbox: passingSandbox,
-      approvalVerifier: { verify: input => input.approvalRef === "retire-ok" }
+      approvalVerifier: { verify: input => ["activate-ok", "retire-ok"].includes(input.approvalRef) }
     });
     await director.develop(spec);
     await director.activate({ taskId: "task-1", toolId: spec.id, version: 1, approvalRef: "activate-ok" });
