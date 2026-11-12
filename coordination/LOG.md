@@ -1074,3 +1074,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Replaced the fixture strings with actual JavaScript `\n` and `\r\n` escapes, making the runtime policy text contain real LF/CRLF line endings. The multiline case spans two real source lines; the CRLF case includes the actual carriage-return code unit in its cited span.
 - Commit: `e7353a41c17322aa9de752a0338c67a98875b418` on `codex/bug-bounty-independent-reviews-v2`. Awaiting CI and a fresh Greptile review; no test success is claimed for this new head.
 - The production citation validator remains unchanged in this correction. No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic, external submission, or merge.
+
+## 2026-11-12 19:12 UTC — PR #45 branch synchronization checkpoint
+
+- After the citation-fixture correction commit `e7353a41c17322aa9de752a0338c67a98875b418` passed CI run `43287227241` (48/430 intelligence tests; 18/248 secondary tests, 2 skipped; type-check/build and supporting suites passed), the repository owner added a README-only public competitor capability baseline and gap assessment.
+- The branch advanced to `fee91e3234687473d0ba0ea56d07b34c9056a3b7`. This new head is not yet CI-verified; its intelligence workflow is in progress. The Greptile citation-fixture thread remains unresolved/outdated pending re-review. No changes were made to the owner's README commit.
+- PR #45 remains draft/open/unmerged. No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic or external submission.
