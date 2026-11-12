@@ -910,3 +910,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Updated the iOS workflow concurrency group to key on the PR head SHA (or push SHA), so the `push` and `pull_request` events for the same commit share one cancellation group rather than compiling all Metal slices twice.
 - Latest PR #39 head is `07ddfc4`. Greptile was asked to sanity-check the workflow expression; the next iOS CI run will validate the full device/simulator/macOS and generic iOS link path.
+
+
+## 2026-11-12 UTC — ChatGPT claims bug bounty Program Intelligence foundation
+
+- **Branch:** `codex/bug-bounty-program-intelligence`, created from current `main`.
+- **Claimed files:** `packages/intelligence/bug-bounty/`, focused tests, `packages/intelligence/index.ts`, and architecture documentation.
+- **Scope:** read-only program-brief normalization, explicit scope/exclusion representation, policy completeness checks, expiry and ambiguity fail-closed evaluation, and tests. No target network traffic, scanning, exploit execution, external submission, APEX/East trust/evidence changes, or authorization grants.
+- **Integration boundary:** outputs are reviewable policy data only; they do not set `authorized=true`, issue approvals/receipts, or enable tools. APEX integration requires a separate reviewed contract and ownership claim.
