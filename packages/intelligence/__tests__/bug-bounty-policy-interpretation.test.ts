@@ -267,6 +267,17 @@ describe("bug bounty policy interpretation", () => {
     } as unknown as PolicyInterpretation).valid).toBe(false);
   });
 
+  it("validates large policy snapshots with one indexed source-line pass", () => {
+    const text = [
+      "# In Scope",
+      ...Array.from({ length: 10000 }, (_, index) => "- host-" + index + ".example.com")
+    ].join("\n");
+    const source = snapshot(text);
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses).toHaveLength(10000);
+    expect(validateInterpretationEvidence(source, interpretation).valid).toBe(true);
+  });
+
   it("does not treat interpretation as an authorization decision", () => {
     const source = snapshot("# Allowed Testing Activities\n- Manual testing");
     const interpretation = interpretPolicySnapshot(source);
