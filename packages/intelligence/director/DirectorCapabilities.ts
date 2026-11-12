@@ -128,7 +128,15 @@ export class DirectorCapabilities {
     }
     const sources = await this.options.research.search({ ...request, query: request.query.trim(), maxSources });
     if (!Array.isArray(sources)) throw new Error("Research provider returned an invalid result");
-    return sources.slice(0, maxSources).map(source => ({ ...source }));
+    return sources.slice(0, maxSources).map(source => {
+      if (!source || typeof source.id !== "string" || typeof source.title !== "string" ||
+          typeof source.excerpt !== "string" || typeof source.url !== "string" ||
+          !["http:", "https:"].includes(new URL(source.url).protocol) ||
+          typeof source.retrievedAt !== "string" || !Number.isFinite(Date.parse(source.retrievedAt))) {
+        throw new Error("Research provider returned an invalid or unsafe source");
+      }
+      return { ...source, title: source.title.slice(0, 500), excerpt: source.excerpt.slice(0, 8000) };
+    });
   }
 
   async analyzeProject(input: { objective: string; paths?: string[] }): Promise<ProjectAnalysis> {
@@ -194,6 +202,7 @@ export class DirectorCapabilities {
     if (!input?.taskId?.trim() || !input.approvalRef?.trim() || !input.action) {
       throw new Error("Task, approval, and device action are required");
     }
+    validateDeviceAction(input.action);
     const permission = permissionFor(input.action);
     const resourceId = "appId" in input.action ? input.action.appId : "fileId" in input.action ? input.action.fileId : undefined;
     const approved = await this.options.devicePermissionBroker.authorize({
@@ -215,6 +224,24 @@ function permissionFor(action: DeviceAction): DevicePermission {
     case "read-file": return "files.read";
     case "write-file": return "files.write";
     case "delete-file": return "files.delete";
+    default: throw new Error("Unsupported device action");
+  }
+}
+
+function validateDeviceAction(action: DeviceAction): void {
+  if (!action || typeof action !== "object" || typeof action.kind !== "string") throw new Error("Invalid device action");
+  const resource = "appId" in action ? action.appId : "fileId" in action ? action.fileId : undefined;
+  if (resource !== undefined && (typeof resource !== "string" || !resource.trim() || resource.length > 512)) {
+    throw new Error("Invalid device resource identifier");
+  }
+  if (action.kind === "write-file" && (typeof action.content !== "string" || action.content.length > 1_000_000)) {
+    throw new Error("Invalid or oversized device file content");
+  }
+  if (action.kind === "delete-file" && action.confirmDestructive !== true) {
+    throw new Error("File deletion requires explicit destructive confirmation");
+  }
+  if (!["list-apps", "open-app", "inspect-storage", "read-file", "write-file", "delete-file"].includes(action.kind)) {
+    throw new Error("Unsupported device action");
   }
 }
 
