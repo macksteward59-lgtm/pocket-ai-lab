@@ -10,7 +10,12 @@ export interface ResourceReport {
 }
 
 export class ModelRouter {
-  private reservations = new Map<string, number>();
+  /**
+   * A model's weights are a shared reservation, but concurrent tasks may each
+   * hold a lease on that reservation. Keep it until every holder releases it.
+   * Per-request KV-cache/workspace memory is not represented by this estimate.
+   */
+  private reservations = new Map<string, { memoryMB: number; references: number }>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -39,7 +44,7 @@ export class ModelRouter {
     const alreadyLoaded = resources.loadedModels.includes(preferred.id) || this.reservations.has(preferred.id);
     const reservedElsewhere = [...this.reservations.entries()]
       .filter(([id]) => id !== preferred.id)
-      .reduce((sum, [, amount]) => sum + amount, 0);
+      .reduce((sum, [, reservation]) => sum + reservation.memoryMB, 0);
     const available = Math.max(0, resources.availableMemoryMB - reservedElsewhere);
     if (!alreadyLoaded && available < preferred.memoryEstimateMB) {
       throw new Error(
@@ -47,12 +52,23 @@ export class ModelRouter {
         preferred.memoryEstimateMB + "MB, " + available + "MB available"
       );
     }
-    if (!alreadyLoaded) this.reservations.set(preferred.id, preferred.memoryEstimateMB);
+    const existingReservation = this.reservations.get(preferred.id);
+    if (existingReservation) {
+      existingReservation.references += 1;
+    } else if (!alreadyLoaded) {
+      this.reservations.set(preferred.id, {
+        memoryMB: preferred.memoryEstimateMB,
+        references: 1
+      });
+    }
     return preferred;
   }
 
   release(modelId: string): void {
-    this.reservations.delete(modelId);
+    const reservation = this.reservations.get(modelId);
+    if (!reservation) return;
+    reservation.references -= 1;
+    if (reservation.references <= 0) this.reservations.delete(modelId);
   }
 
   getLoadedModels(): string[] {
