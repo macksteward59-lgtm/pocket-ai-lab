@@ -236,8 +236,17 @@ function classifyHeading(line: string): PolicyClauseKind | undefined {
 
 function classifyClause(line: string, activeSection?: PolicyClauseKind): Classification {
   const cleaned = line.replace(/^(?:[-*+]\s+|\d+[.)]\s+)/, "").trim();
+  const colon = cleaned.indexOf(":");
+  if (colon > 0) {
+    const explicitLabel = classifyLabel(cleaned.slice(0, colon));
+    if (explicitLabel) return explicitLabel;
+  }
   const explicit = classifyLabel(cleaned);
   if (explicit) return explicit;
+
+  if (/\\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted)\\b/i.test(cleaned)) {
+    return { kind: "ambiguous", method: "keyword-pattern" };
+  }
 
   const mentionsDisclosure = /\bdisclos(?:e|ure|ing)\b|\bpublic release\b/i.test(cleaned);
   const allows = /\b(?:allowed|permitted|may test)\b/i.test(cleaned);
