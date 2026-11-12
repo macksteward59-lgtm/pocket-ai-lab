@@ -1002,3 +1002,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added regression tests for every finding. No local test run is claimed. No PR-triggered CI runs were returned for the latest head; CI remains pending. Greptile re-review requested in PR #44 comment `6832483823`.
 - **PR #42 follow-up:** current normalizer code and tests already include strict calendar/clock/offset checks, and the architecture document includes PB-01–PB-14 benchmark metrics. Re-review requested for the two remaining non-outdated Greptile threads; no thread was manually resolved.
 - No merges, repository setting changes, or APEX/East trust/authorization/evidence changes.
+
+
+## 2026-11-12 16:34 UTC — PR #44 CI validation
+
+- **Head:** `933a2fb6079be5ac726baba01274e1fbb3042b3a`; PR #44 is open, draft, unmerged, and GitHub reports mergeable.
+- **Pocket AI Lab CI #353:** completed successfully on the exact head. Type-check/build and intelligence test steps both succeeded.
+- The workflow was a `push` event associated with PR #44, not a separate `pull_request` event. The connector's PR-only workflow query therefore returned no run; direct Actions metadata confirms the successful run.
+- **Greptile:** re-review requested after the six findings were addressed. The newline and rate-limit threads are now marked outdated; shortened evidence, inline qualifier, malformed IP, and benchmark-plan threads remain open pending fresh reviewer confirmation. No thread was manually resolved.
+- No local test run is claimed. No merge or trust/authorization changes.
