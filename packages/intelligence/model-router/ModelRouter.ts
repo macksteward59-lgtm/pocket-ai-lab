@@ -28,6 +28,7 @@ export class ModelRouter {
   private mustRevalidate = new Set<string>();
   /** IDs whose prior registry generation was explicitly replaced or removed. */
   private retiredIds = new Set<string>();
+  private retiredDescriptors = new WeakSet<ModelDescriptor>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -38,6 +39,9 @@ export class ModelRouter {
   ): Promise<ModelDescriptor> {
     if (!agentId.trim()) throw new Error("agentId is required");
     if (!preferred) throw new Error("No model is registered for agent " + agentId);
+    if (this.retiredDescriptors.has(preferred)) {
+      throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
+    }
     if (!preferred.id || !preferred.path) {
       throw new Error("Model " + preferred.id + " has no configured runtime path");
     }
