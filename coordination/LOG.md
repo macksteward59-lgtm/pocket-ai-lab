@@ -945,3 +945,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Implementation:** operator-supplied text capture, HTTPS metadata validation, 512 KiB size bound, exact-text SHA-256, immutable snapshots, and version comparisons for unchanged/changed/out-of-order/same-timestamp conflict. Added strict calendar/clock/offset validation and tests.
 - **CI:** no workflow runs were returned for the PR head at the time of this entry; no local test run is claimed. PR body explicitly records that CI must be verified.
 - **Trust boundary:** no fetching/scraping, storage, scanner, exploit execution, report submission, or APEX/East changes. Hashes establish content identity only, not source authenticity. `authorized` remains false.
+
+
+## 2026-11-12 16:06 UTC — ChatGPT claims bug bounty Policy Interpretation Engine
+
+- **Branch:** `codex/bug-bounty-policy-interpretation`, to be created from the PR #43 intake-provenance branch.
+- **Claimed files:** `packages/intelligence/bug-bounty/interpretation/` and focused tests only.
+- **Scope:** deterministic, conservative clause segmentation and explicit-pattern extraction tied to immutable intake snapshot IDs, SHA-256, and exact source offsets; mark unknown or conflicting language for human review; create separate Critic and Validator review records.
+- **Limits:** no arbitrary natural-language permission inference, policy fetching, target traffic, scanning, exploit execution, external submission, authorization grant, persistence, or APEX/East trust/evidence changes. The interpretation remains untrusted policy data and `authorized: false`.
