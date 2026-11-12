@@ -1141,3 +1141,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Protocol correction:** Preliminary PR #47 on an `agent/*` branch was closed. The replacement follows the required `codex/*` branch convention. Its old branch was left intact for audit history.
 - **Blocker:** The full owner-authored RLS Architecture Specification v3.12, including all eleven SQL/concurrency corrections, is not present in the repository or recovered Library sources. @owner — please supply the authoritative text or canonical path. No SQL policy, trust semantics, receipt, or authorization grant has been invented.
 - **Boundary:** Exact-scope approval, per-edge authorization accumulation, independent repair authorization, broker provenance, DB authorization, transaction-local identity, and WORM retention remain preserved requirements. East/APEX remains fail-closed.
+
+
+## 2026-11-12 23:28 UTC — PR #48 v3.12 source-history correction and reconciliation expansion
+
+- Updated PR #48 documentation to accurately state that the owner-authored RLS Architecture Specification v3.12 was supplied in the 2026-10-31 conversation; the current review recovered its summary and selected correction themes, but not the complete verbatim SQL/body.
+- Recorded the three recoverable structural correction themes: transactional outbox replacing `RAISE LOG`, column-level privilege matrix, and signed-manifest publications bound to deployments. Added known implementation blockers for deterministic active-row locking, typed outbox/dispatcher claims/deduplication, authenticated deployment binding, definer privileges, ACL auditing, repair write boundaries, and migration preflight.
+- Added V1–V80 and M1–M31 as referenced test families whose exact cases must be recovered, not guessed.
+- **PR #48 latest head:** `2201ff03cdc3f84a322b9e9c9782551fe701e50e`; branch is 2 commits ahead / 0 behind main; documentation-only, one file.
+- **CI:** all four workflows were triggered for the new head and were still in progress at the last check. Prior head's four workflows passed, but those results do not substitute for the latest-head run.
+- PR remains draft/open/unmerged. No SQL, migration, RLS, trust, receipt, runtime, or authorization behavior changed. East remains fail-closed. Full verbatim v3.12 source remains required before implementation.
