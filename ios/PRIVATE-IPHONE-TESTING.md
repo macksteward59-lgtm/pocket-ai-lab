@@ -15,7 +15,7 @@ The web workspace is a configurable HTTPS endpoint. The existing web product is 
 
 GitHub Actions compiles the app and runs simulator tests on a hosted macOS runner. CI does not sign with the user's Apple Personal Team and does not prove physical-device Metal execution.
 
-The engine XCFramework must include iOS-device arm64, iOS Simulator, and macOS slices. The macOS slice is for host tests only, not iPhone execution.
+The engine XCFramework must include iOS-device arm64, iOS Simulator, and macOS slices. CI links the native app against the generic iOS destination as well as the simulator. The macOS slice is for host tests only, not iPhone execution. A successful generic-device build proves compilation/linking only; it is not a physical-device execution test.
 
 The build sequence is:
 
@@ -65,3 +65,22 @@ Simulator success does not prove physical iPhone Metal execution. Physical-devic
 - This initial scaffold does not encrypt GGUF files at rest.
 - No Apple credentials, signing certificates, provisioning profiles, or model files belong in Git.
 - No App Store, TestFlight, public distribution, or production release configuration is included.
+
+
+## Competitive evaluation plan — required before merge
+
+**Competitor baseline:** PocketPal AI for iOS, a directly comparable offline GGUF chat app using llama.cpp. Record the exact App Store version/build and date used for each test. References: [PocketPal AI on the App Store](https://apps.apple.com/us/app/pocketpal-ai/id6502579498) and [PocketPal AI source repository](https://github.com/a-ghorbani/pocketpal-ai). The competitor's published feature description identifies offline GGUF chat and llama.cpp as its local inference path.
+
+**Controlled comparison:** Run on the same physical iPhone Air and iOS build. Use the same GGUF file (record SHA-256), quantization, context length, prompt template, system prompt, temperature, maximum output tokens, and fixed 20-prompt test set. Disable network access for local inference trials. Record three cold-start and three warm runs per prompt; report medians and p95 values. If PocketPal cannot load the exact same artifact or settings, mark that comparison non-comparable rather than claiming a win.
+
+**Measurements:** valid/invalid import behavior, import duration, cold model-load duration, generation throughput (tokens/second), time to completed response, peak resident memory, memory-pressure events, thermal state before/after a 10-minute sustained run, battery delta, crash count, and blinded answer-quality scores on a fixed 0–4 rubric. Preserve raw device logs, app versions, model hash, and test configuration.
+
+**Acceptance criteria:**
+
+- 100% of valid test GGUF imports succeed; invalid headers are rejected without changing the previous model file.
+- Zero stale-session responses, concurrent-load leaks, crashes, or unhandled memory-pressure terminations in the test set.
+- Mean blinded answer-quality score is no worse than PocketPal by more than 2 percentage points, with no critical safety regression.
+- Pocket AI Lab must beat the PocketPal baseline by at least 10% on one primary metric (median generation throughput or peak resident memory) while staying within 5% on the other performance metric and meeting the quality gate.
+- Any result without the same device, model hash, and runtime settings is reported as a limitation, not as evidence of superiority.
+
+**Current status:** This is a test plan, not a result. No Pocket AI Lab versus PocketPal performance claim is made until the physical iPhone Air measurements have been collected and reviewed.
