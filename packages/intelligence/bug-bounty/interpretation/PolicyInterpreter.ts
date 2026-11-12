@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 import type { PolicySnapshot } from "../intake";
 import type {
   ExtractedPolicyClause,
@@ -355,7 +356,8 @@ function extractCandidateValue(
   if (kind === "testing-window") {
     const timestamp = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})";
     const match = new RegExp("^(" + timestamp + ")\\s+(?:to|through|until)\\s+(" + timestamp + ")$", "i").exec(value);
-    if (!match || !Number.isFinite(Date.parse(match[1])) || !Number.isFinite(Date.parse(match[2]))) {
+    if (!match || !isStrictZonedTimestamp(match[1]) || !isStrictZonedTimestamp(match[2]) ||
+        Date.parse(match[2]) <= Date.parse(match[1])) {
       return undefined;
     }
     return Object.freeze({
@@ -365,6 +367,26 @@ function extractCandidateValue(
     });
   }
   return undefined;
+}
+
+function isStrictZonedTimestamp(value: string): boolean {
+  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,3})?(?:Z|[+-](\\d{2}):(\\d{2}))$/.exec(value);
+  if (!match || !Number.isFinite(Date.parse(value))) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const offsetHour = match[7] ? Number(match[7]) : 0;
+  const offsetMinute = match[8] ? Number(match[8]) : 0;
+  const calendar = new Date(0);
+  calendar.setUTCHours(0, 0, 0, 0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
+    calendar.getUTCFullYear() === year && calendar.getUTCMonth() === month - 1 &&
+    calendar.getUTCDate() === day && hour <= 23 && minute <= 59 && second <= 59 &&
+    offsetHour <= 14 && offsetMinute <= 59 && (offsetHour !== 14 || offsetMinute === 0);
 }
 
 function addPotentialConflictIssue(
