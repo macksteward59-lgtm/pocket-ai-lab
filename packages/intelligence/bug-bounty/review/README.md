@@ -56,3 +56,39 @@ A reviewer failure is returned as a failed outcome. The other reviewer still run
 - No APEX/East trust, evidence, receipt, RLS, or authorization state is read or changed.
 
 This is real provider-backed review execution when wired to a configured InferenceProvider; it is not a completed benchmark or proof that model-generated findings are correct.
+
+## Measurable comparison plan — independent review benchmark v1
+
+This workflow is not considered superior to established program-review workflows until it is compared against an adjudicated baseline. No competitor performance is assumed or claimed.
+
+### Named baselines
+
+- **Primary baseline:** two independent human reviewers interpreting the same captured program policy and the same extracted clause set, followed by adjudication. Disagreements remain indeterminate until resolved.
+- **Platform reference workflows:** HackerOne policy/scope guidance, Bugcrowd bounty briefs, and Intigriti program rules. They define representative policy formats and review constraints; no private platform parser is presumed.
+- **Agentic security market context:** HackerOne Agentic Pentest and XBOW are tracked as adjacent agentic security-testing offerings. Their published testing claims are not treated as equivalent to policy-review accuracy.
+
+### Fixed corpus and measurements
+
+Use 24 versioned synthetic policy excerpts covering scope/exclusions, approval qualifiers, contradictory clauses, numeric limits, testing windows, prohibited methods, disclosure terms, and adversarial instructions embedded in policy text. Two human reviewers independently annotate each clause, issue, and exact source-line span before freezing the corpus.
+
+Measure:
+- Critical-condition and approval-warning recall.
+- Clause classification precision/recall and exact candidate-value accuracy.
+- Exact source-span accuracy and invalid-evidence rejection.
+- Critic/Validator independence (no peer output, conversation, or memory in either request).
+- Malformed-response rejection and partial-run behavior.
+- False permission/authorization claims (required result: zero).
+- Completion rate, latency, and token cost per policy snapshot.
+- Run-to-run disagreement against the adjudicated human baseline.
+
+### Acceptance criteria
+
+- 100% of model findings cite complete, exact source lines and valid offsets.
+- 100% of extra authorization/approval fields are rejected.
+- 100% of review requests are isolated from peer output, conversation history, and memory.
+- 100% of invalid snapshot/interpretation evidence blocks both inference calls.
+- 0 authorization grants and 0 target-action attempts.
+- At least 95% recall for critical approval/qualification conditions and at least 90% precision on the fixed adjudicated corpus before any claim of practical superiority.
+- Run each model configuration three times and report per-case results, disagreements, commit SHA, fixture version, CI run IDs, latency, and token cost.
+
+The current tests are regression tests for isolation and evidence validation; they do not constitute a completed benchmark. Human adjudication and comparative runs remain pending.
