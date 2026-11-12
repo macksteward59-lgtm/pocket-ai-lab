@@ -56,6 +56,20 @@ describe("bug bounty policy interpretation", () => {
       "testing-window",
       "disclosure"
     ]);
+    expect(interpretation.clauses[0].candidateValue).toEqual({
+      kind: "asset", assetKind: "domain", value: "*.example.com"
+    });
+    expect(interpretation.clauses[1].candidateValue).toEqual({
+      kind: "asset", assetKind: "url", value: "https://admin.example.com/private"
+    });
+    expect(interpretation.clauses[4].candidateValue).toEqual({
+      kind: "rate-limit", limit: 5, unit: "requests-per-second"
+    });
+    expect(interpretation.clauses[5].candidateValue).toEqual({
+      kind: "testing-window",
+      startsAt: "2026-11-12T00:00:00Z",
+      endsAt: "2026-11-13T00:00:00Z"
+    });
     for (const clause of interpretation.clauses) {
       expect(text.slice(clause.startOffset, clause.endOffset)).toBe(clause.text);
       expect(clause.snapshotId).toBe(source.snapshotId);
@@ -93,6 +107,14 @@ describe("bug bounty policy interpretation", () => {
     expect(interpretation.issues.map(issue => issue.code)).toContain("ambiguous-language");
     expect(interpretation.issues.map(issue => issue.code)).toContain("unclassified-clause");
     expect(interpretation.reviewState).toBe("needs-human-review");
+  });
+
+  it("keeps recognized but unsupported scope values as unparsed review items", () => {
+    const source = snapshot("# In Scope\\n- the production application");
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses[0].kind).toBe("scope-inclusion");
+    expect(interpretation.clauses[0].candidateValue).toBeUndefined();
+    expect(interpretation.issues.some(issue => issue.code === "unparsed-candidate")).toBe(true);
   });
 
   it("flags multiple distinct rate limits and testing windows instead of resolving them", () => {
