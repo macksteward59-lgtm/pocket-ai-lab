@@ -319,14 +319,14 @@ function extractCandidateValue(
 ): ExtractedPolicyClause["candidateValue"] {
   if (!requiresStrictCandidate(kind)) return undefined;
 
-  let value = sourceLine.trim().replace(/^(?:[-*+]\\s+|\\d+[.)]\\s+)/, "").trim();
+  let value = sourceLine.trim().replace(/^(?:[-*+]\s+|\d+[.)]\s+)/, "").trim();
   const colon = value.indexOf(":");
   if (colon > 0 && classifyLabel(value.slice(0, colon))) {
     value = value.slice(colon + 1).trim();
   }
 
   if (kind === "scope-inclusion" || kind === "scope-exclusion") {
-    if (/^(?:\\*\\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.?$/i.test(value)) {
+    if (/^(?:\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.?$/i.test(value)) {
       return Object.freeze({ kind: "asset" as const, assetKind: "domain" as const, value });
     }
     try {
@@ -342,7 +342,7 @@ function extractCandidateValue(
   }
 
   if (kind === "rate-limit") {
-    const matches = [...value.matchAll(/\\b(\\d+(?:\\.\\d+)?)\\s*(?:requests?|reqs?)\\s*(?:per|\\/)\\s*(second|sec|minute|min)\\b/gi)];
+    const matches = [...value.matchAll(/\b(\d+(?:\.\d+)?)\s*(?:requests?|reqs?)\s*(?:per|\/)\s*(second|sec|minute|min)\b/gi)];
     if (matches.length !== 1) return undefined;
     const limit = Number(matches[0][1]);
     if (!Number.isFinite(limit) || limit <= 0) return undefined;
