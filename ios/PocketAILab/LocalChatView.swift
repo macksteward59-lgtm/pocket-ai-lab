@@ -10,40 +10,71 @@ final class LocalChatModel: ObservableObject {
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
 
-    private let engine = LlamaCppMetalBackend(requireMetal: true)
+    private let engine: any LlamaEngine
+    private let modelDirectory: URL
     private var session: RuntimeSession?
 
-    init() {
+    init(
+        modelDirectory: URL? = nil,
+        engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true)
+    ) {
+        self.engine = engine
+        self.modelDirectory = modelDirectory ??
+            FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Models", isDirectory: true)
+
         let probe = LlamaCppMetalBackend.probe()
         metalStatus = probe.linked && probe.metalDeviceUsable
             ? "llama.cpp linked · Metal available · \(probe.metalDeviceDescription)"
             : "Metal is not verified in this build. Loading will fail closed if unavailable."
     }
 
-    func importModel(from source: URL) throws {
-        guard source.pathExtension.lowercased() == "gguf" else { throw LocalChatError.notGGUF }
-        let access = source.startAccessingSecurityScopedResource()
-        defer { if access { source.stopAccessingSecurityScopedResource() } }
-        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Models", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = directory.appendingPathComponent(source.lastPathComponent)
-        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
-        try FileManager.default.copyItem(at: source, to: destination)
+    func importModel(from source: URL) async throws {
+        guard !isBusy else { throw LocalChatError.busy }
+        isBusy = true
+        defer { isBusy = false }
+
+        // Import and validate first. A failed copy leaves the selected model
+        // and its currently loaded session untouched.
+        let destination = try await LocalModelImporter.importGGUF(
+            from: source,
+            into: modelDirectory
+        )
+
+        // A successful import changes the selected artifact. Never keep
+        // generating with the previous model while the UI labels the new one.
+        if let previousSession = session {
+            await engine.unload(sessionId: previousSession.id)
+            session = nil
+        }
         modelURL = destination
         modelName = destination.lastPathComponent
-        status = "Copied to this app's private model folder. Model is not loaded yet."
+        status = "Model imported into private storage. Load the selected model before prompting."
     }
 
     func loadModel() async {
-        guard let modelURL else { status = "Import a .gguf model first."; return }
+        guard !isBusy else { return }
+        guard let modelURL else {
+            status = "Import a .gguf model first."
+            return
+        }
+
         isBusy = true
         defer { isBusy = false }
         do {
-            if let session { await engine.unload(sessionId: session.id) }
-            let descriptor = ModelDescriptor(id: UUID().uuidString, name: modelName,
-                path: modelURL.path, contextLength: 2048, quantization: "GGUF")
-            session = try await engine.load(model: descriptor)
+            if let previousSession = session {
+                await engine.unload(sessionId: previousSession.id)
+                session = nil
+            }
+            let descriptor = ModelDescriptor(
+                id: UUID().uuidString,
+                name: modelName,
+                path: modelURL.path,
+                contextLength: 2048,
+                quantization: "GGUF"
+            )
+            let loadedSession = try await engine.load(model: descriptor)
+            session = loadedSession
             status = "A real llama.cpp model session is loaded."
         } catch {
             session = nil
@@ -52,14 +83,24 @@ final class LocalChatModel: ObservableObject {
     }
 
     func send(_ prompt: String) async {
+        // UI button state is not a concurrency lock: queued Tasks can enter
+        // before SwiftUI has rendered the disabled state.
+        guard !isBusy else { return }
         let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let session else { status = "Load a model before prompting."; return }
+        guard !text.isEmpty else { return }
+        guard let session else {
+            status = "Load the selected model before prompting."
+            return
+        }
+
         isBusy = true
         messages.append(ChatLine(role: "You", text: text))
         defer { isBusy = false }
         do {
-            let stream = try await engine.generate(session: session,
-                request: GenerationRequest(prompt: text, maxTokens: 256, temperature: 0.7))
+            let stream = try await engine.generate(
+                session: session,
+                request: GenerationRequest(prompt: text, maxTokens: 256, temperature: 0.7)
+            )
             var output = ""
             for try await token in stream { output += token.text }
             guard !output.isEmpty else { throw LocalChatError.emptyOutput }
@@ -79,11 +120,12 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError {
-    case notGGUF, emptyOutput
+    case notGGUF, emptyOutput, busy
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
         case .emptyOutput: return "The model returned no text."
+        case .busy: return "Another model operation is already in progress."
         }
     }
 }
@@ -102,7 +144,9 @@ struct LocalChatView: View {
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     HStack {
-                        Button("Import GGUF") { showImporter = true }.buttonStyle(.bordered)
+                        Button("Import GGUF") { showImporter = true }
+                            .buttonStyle(.bordered)
+                            .disabled(model.isBusy)
                         Button("Load model") { Task { await model.loadModel() } }
                             .buttonStyle(.borderedProminent)
                             .disabled(model.modelURL == nil || model.isBusy)
@@ -131,9 +175,17 @@ struct LocalChatView: View {
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 do {
                     guard let url = try result.get().first else { throw LocalChatError.notGGUF }
-                    try model.importModel(from: url)
-                    importError = nil
-                } catch { importError = error.localizedDescription }
+                    Task { @MainActor in
+                        do {
+                            try await model.importModel(from: url)
+                            importError = nil
+                        } catch {
+                            importError = error.localizedDescription
+                        }
+                    }
+                } catch {
+                    importError = error.localizedDescription
+                }
             }
             .alert("Import failed", isPresented: Binding(get: { importError != nil },
                 set: { if !$0 { importError = nil } })) {
