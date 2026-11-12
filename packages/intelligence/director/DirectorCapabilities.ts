@@ -68,7 +68,14 @@ export interface MemoryImprovementAdvisor {
 }
 
 export interface MemoryChangeApproval {
-  verify(input: { proposalId: string; changeIndex: number; approvalRef: string }): boolean | Promise<boolean>;
+  /** Approval must be bound to the exact task and SHA-256 of the immutable proposed change. */
+  verify(input: {
+    taskId: string;
+    proposalId: string;
+    changeIndex: number;
+    changeDigest: string;
+    approvalRef: string;
+  }): boolean | Promise<boolean>;
 }
 
 export type DevicePermission =
@@ -92,6 +99,7 @@ export interface DeviceApproval {
   taskId: string;
   permission: DevicePermission;
   resourceId?: string;
+  actionDigest: string;
 }
 
 export interface DevicePermissionBroker {
@@ -156,14 +164,20 @@ export class DirectorCapabilities {
   }): Promise<MemoryImprovementProposal> {
     if (!this.options.memoryAdvisor) throw new Error("Memory improvement advisor is not configured");
     if (!input?.objective?.trim()) throw new Error("Memory improvement objective is required");
+    const objective = input.objective;
+    const research = input.research.map(source => ({ ...source }));
+    const project = {
+      ...input.project,
+      findings: input.project.findings.map(finding => ({ ...finding, evidenceRefs: [...finding.evidenceRefs] }))
+    };
     const proposal = await this.options.memoryAdvisor.propose({
-      objective: input.objective,
-      currentMemories: this.options.memory.list(),
-      research: input.research.map(source => ({ ...source })),
-      project: { ...input.project, findings: input.project.findings.map(finding => ({ ...finding, evidenceRefs: [...finding.evidenceRefs] })) }
+      objective,
+      currentMemories: this.options.memory.list().map(cloneMemoryEntry),
+      research,
+      project
     });
     validateMemoryProposal(proposal);
-    return proposal;
+    return cloneMemoryProposal(proposal);
   }
 
   /** Apply one proposed memory change only after independent approval. */
@@ -173,12 +187,18 @@ export class DirectorCapabilities {
     approvalRef: string;
     taskId: string;
   }): Promise<string | boolean> {
-    const { proposal, changeIndex, approvalRef, taskId } = input;
+    // Snapshot the entire approval subject before any await. The verifier and
+    // the mutation below operate on this exact immutable copy, never caller data.
+    const taskId = input.taskId;
+    const approvalRef = input.approvalRef;
+    const changeIndex = input.changeIndex;
+    const proposal = cloneMemoryProposal(input.proposal);
     validateMemoryProposal(proposal);
     const change = proposal.changes[changeIndex];
     if (!change || !taskId?.trim() || !approvalRef?.trim()) throw new Error("A valid change, task id, and approval reference are required");
+    const changeDigest = await digestJson({ taskId, proposalId: proposal.id, rationale: proposal.rationale, changeIndex, change });
     if (!this.options.memoryApproval || !await this.options.memoryApproval.verify({
-      proposalId: proposal.id, changeIndex, approvalRef
+      taskId, proposalId: proposal.id, changeIndex, changeDigest, approvalRef
     })) throw new Error("Memory change approval was denied");
     if (change.operation === "add") {
       return this.options.memory.write({
@@ -189,7 +209,7 @@ export class DirectorCapabilities {
     }
     if (!change.memoryId) throw new Error("A memory id is required for revise or retire");
     if (change.operation === "revise") {
-      return this.options.memory.update(change.memoryId, { content: change.content, sourceRefs: change.sourceRefs });
+      return this.options.memory.update(change.memoryId, { content: change.content, sourceRefs: [...change.sourceRefs] });
     }
     return this.options.memory.delete(change.memoryId);
   }
@@ -202,17 +222,19 @@ export class DirectorCapabilities {
     if (!input?.taskId?.trim() || !input.approvalRef?.trim() || !input.action) {
       throw new Error("Task, approval, and device action are required");
     }
-    validateDeviceAction(input.action);
-    const permission = permissionFor(input.action);
-    const resourceId = "appId" in input.action ? input.action.appId : "fileId" in input.action ? input.action.fileId : undefined;
+    const taskId = input.taskId;
+    const approvalRef = input.approvalRef;
+    // Normalize and freeze before awaiting the broker. This drops unrelated
+    // caller fields and prevents action/resource mutation during authorization.
+    const action = normalizeDeviceAction(input.action);
+    const permission = permissionFor(action);
+    const resourceId = resourceFor(action);
+    const actionDigest = await digestJson(action);
     const approved = await this.options.devicePermissionBroker.authorize({
-      taskId: input.taskId, approvalRef: input.approvalRef, permission, resourceId
+      taskId, approvalRef, permission, resourceId, actionDigest
     });
     if (approved !== true) throw new Error("Device permission was denied");
-    if (input.action.kind === "delete-file" && input.action.confirmDestructive !== true) {
-      throw new Error("File deletion requires explicit destructive confirmation");
-    }
-    return this.options.deviceBridge.perform({ ...input.action } as DeviceAction);
+    return this.options.deviceBridge.perform(action);
   }
 }
 
@@ -228,21 +250,74 @@ function permissionFor(action: DeviceAction): DevicePermission {
   }
 }
 
-function validateDeviceAction(action: DeviceAction): void {
-  if (!action || typeof action !== "object" || typeof action.kind !== "string") throw new Error("Invalid device action");
-  const resource = "appId" in action ? action.appId : "fileId" in action ? action.fileId : undefined;
-  if (resource !== undefined && (typeof resource !== "string" || !resource.trim() || resource.length > 512)) {
-    throw new Error("Invalid device resource identifier");
+function normalizeDeviceAction(input: unknown): DeviceAction {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Invalid device action");
+  const action = input as Record<string, unknown>;
+  switch (action.kind) {
+    case "list-apps":
+      return Object.freeze({ kind: "list-apps" });
+    case "inspect-storage":
+      return Object.freeze({ kind: "inspect-storage" });
+    case "open-app":
+      return Object.freeze({ kind: "open-app", appId: requireResource(action.appId, "appId") });
+    case "read-file":
+      return Object.freeze({ kind: "read-file", fileId: requireResource(action.fileId, "fileId") });
+    case "write-file":
+      if (typeof action.content !== "string" || action.content.length > 1_000_000) {
+        throw new Error("Invalid or oversized device file content");
+      }
+      return Object.freeze({ kind: "write-file", fileId: requireResource(action.fileId, "fileId"), content: action.content });
+    case "delete-file":
+      if (action.confirmDestructive !== true) throw new Error("File deletion requires explicit destructive confirmation");
+      return Object.freeze({ kind: "delete-file", fileId: requireResource(action.fileId, "fileId"), confirmDestructive: true });
+    default:
+      throw new Error("Unsupported device action");
   }
-  if (action.kind === "write-file" && (typeof action.content !== "string" || action.content.length > 1_000_000)) {
-    throw new Error("Invalid or oversized device file content");
+}
+
+function requireResource(value: unknown, name: string): string {
+  if (typeof value !== "string" || !value.trim() || value.length > 512) {
+    throw new Error("Device action requires a valid " + name);
   }
-  if (action.kind === "delete-file" && action.confirmDestructive !== true) {
-    throw new Error("File deletion requires explicit destructive confirmation");
+  return value;
+}
+
+function resourceFor(action: DeviceAction): string | undefined {
+  switch (action.kind) {
+    case "open-app": return action.appId;
+    case "read-file":
+    case "write-file":
+    case "delete-file": return action.fileId;
+    case "list-apps":
+    case "inspect-storage": return undefined;
   }
-  if (!["list-apps", "open-app", "inspect-storage", "read-file", "write-file", "delete-file"].includes(action.kind)) {
-    throw new Error("Unsupported device action");
-  }
+}
+
+async function digestJson(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function cloneMemoryEntry(entry: MemoryEntry): MemoryEntry {
+  return {
+    ...entry,
+    provenance: { ...entry.provenance, sourceRefs: [...entry.provenance.sourceRefs] }
+  };
+}
+
+function cloneMemoryProposal(proposal: MemoryImprovementProposal): MemoryImprovementProposal {
+  return {
+    id: proposal.id,
+    rationale: proposal.rationale,
+    changes: proposal.changes.map(change => ({
+      operation: change.operation,
+      layer: change.layer,
+      ...(change.memoryId === undefined ? {} : { memoryId: change.memoryId }),
+      content: change.content,
+      sourceRefs: [...change.sourceRefs]
+    }))
+  };
 }
 
 function validateMemoryProposal(proposal: MemoryImprovementProposal): void {
