@@ -15,6 +15,9 @@ export function evaluateTargetScope(
   policy: NormalizedProgramPolicy,
   target: string
 ): ScopeEvaluation {
+  if (policy.reviewState !== "ready-for-human-review") {
+    return result(target, "indeterminate", "Program policy is incomplete, expired, or otherwise blocked from scope review");
+  }
   let url: URL;
   try { url = new URL(target); }
   catch {
