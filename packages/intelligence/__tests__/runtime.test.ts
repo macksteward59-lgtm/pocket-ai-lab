@@ -88,7 +88,7 @@ describe("ModelRouter", () => {
     await expect(router.route("reasoner", model, ["vision"])).rejects.toThrow(/lacks required capabilities/);
     await expect(router.route("reasoner", model, ["reason", "code"])).resolves.toEqual(model);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
@@ -129,6 +129,29 @@ describe("ModelRouter", () => {
     router.release("test-model");
     await expect(router.route("engineer", otherModel, [])).resolves.toEqual(otherModel);
     router.release("other-model");
+  });
+
+  it("accounts for replacement generations while old concurrent leases drain", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const oldModel = { ...model, memoryEstimateMB: 256 };
+    const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 1536 };
+
+    await router.route("reasoner", oldModel, []);
+    await router.route("researcher", oldModel, []);
+    router.retire(oldModel.id);
+    await expect(router.route("engineer", oldModel, []))
+      .rejects.toThrow(/retired/);
+
+    await expect(router.route("engineer", replacement, []))
+      .rejects.toThrow(/Insufficient memory/);
+    router.release(oldModel);
+    await expect(router.route("engineer", replacement, []))
+      .rejects.toThrow(/Insufficient memory/);
+
+    router.release(oldModel);
+    await expect(router.route("engineer", replacement, []))
+      .rejects.toThrow(/Insufficient memory/);
+    expect(router.getLoadedModels()).toEqual([]);
   });
 
   it("does not let a failed route create or release another model's reservation", async () => {
