@@ -89,9 +89,6 @@ export class InMemoryToolArtifactStore implements ToolArtifactStore {
 
   async put(artifact: ToolArtifact): Promise<void> {
     const items = this.artifacts.get(artifact.toolId) ?? [];
-    if (items.some(item => item.version === artifact.version)) {
-      throw new Error("Tool artifact version already exists");
-    }
     const existingIndex = items.findIndex(item => item.version === artifact.version);
     if (existingIndex >= 0) items[existingIndex] = cloneArtifact(artifact);
     else items.push(cloneArtifact(artifact));
@@ -138,6 +135,7 @@ export class ToolDirector {
     const existing = this.registry.has(spec.id);
     const previous = await this.store.getLatest(spec.id);
     if (spec.change === "create" && (existing || previous)) throw new Error("Tool already exists; use extend or revise");
+    if (previous?.status === "retired") throw new Error("Retired tool ids cannot be reused; create a new tool id");
     if (spec.change !== "create" && !previous) {
       throw new Error(existing ? "Built-in tools cannot be revised by the Director workshop" : "Cannot extend or revise an unknown tool");
     }
@@ -185,7 +183,7 @@ export class ToolDirector {
     const artifacts = await this.store.list();
     const artifact = artifacts.find(item => item.toolId === input.toolId && item.version === input.version);
     if (!artifact) throw new Error("Unknown tool artifact version");
-    if (artifact.status !== "ready" || !artifact.testSummary?.passed) {
+    if (!["ready", "active"].includes(artifact.status) || !artifact.testSummary?.passed) {
       throw new Error("Only a fully tested ready artifact can be activated");
     }
     const approved = await this.approvalVerifier.verify({
@@ -204,6 +202,7 @@ export class ToolDirector {
     };
     if (this.registry.has(descriptor.id)) this.registry.replaceManaged(descriptor);
     else this.registry.registerManaged(descriptor);
+    await this.store.put({ ...artifact, status: "active" });
     return descriptorCopy(descriptor);
   }
 
@@ -211,13 +210,13 @@ export class ToolDirector {
   async retire(input: { toolId: string; taskId: string; approvalRef: string }): Promise<void> {
     if (!this.approvalVerifier) throw new Error("Independent tool retirement approval is not configured");
     const latest = await this.store.getLatest(input.toolId);
-    if (!latest || latest.status === "retired") throw new Error("No active managed tool to retire");
+    if (!latest || latest.status === "retired" || !this.registry.has(input.toolId)) throw new Error("No active managed tool to retire");
     const approved = await this.approvalVerifier.verify({
       taskId: input.taskId, toolId: latest.toolId, version: latest.version,
       digest: latest.digest, approvalRef: input.approvalRef
     });
     if (approved !== true) throw new Error("Tool retirement approval was denied");
-    this.registry.unregisterManaged(input.toolId);
+    if (!this.registry.unregisterManaged(input.toolId)) throw new Error("Only Director-managed tools can be retired");
     await this.store.put({ ...latest, version: latest.version + 1, status: "retired",
       createdAt: new Date(this.now()).toISOString(), previousDigest: latest.digest });
   }
