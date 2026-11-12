@@ -191,8 +191,7 @@ export class Orchestrator {
                 "Your role: " + agent.role,
                 "Deliberation stage: " + stage,
                 "Return only a structured payload valid for message type " + STAGE_MESSAGE_TYPE[stage] + "."
-              ].join("
-"),
+              ].join("\n"),
               contextMessages: [...priorMessages]
             });
             const message: AgentMessage = {
@@ -239,6 +238,15 @@ export class Orchestrator {
       consensus: deliberation.consensus,
       notes: deliberation.notes
     };
+  }
+
+  /**
+   * Ask the configured provider adapter for one structured Director command.
+   * Model output is untrusted and must pass the finite command validator.
+   */
+  requestDirectorCommand(taskId: string, objective: string): Promise<unknown> {
+    if (!this.directorCommandProvider) throw new Error("Director command provider is not configured");
+    return this.directorCommands.requestAndDispatch(this.directorCommandProvider, { taskId }, objective);
   }
 
   /**
