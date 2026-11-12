@@ -51,3 +51,4 @@ export { StaticAnalysisOrchestratorBridge } from "./orchestrator/StaticAnalysisO
 export { GOVERNANCE_ADVISORY_INVARIANT, specialistPrompt, withGovernanceInvariant } from "./agents/specialists/dynamicCatalog";
 export { ModelRouterResiliency } from "./model-router/ModelRouterResiliency";
 export { classifyExport, watchOnce } from "./governance/watchInbox";
+export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type ImprovementAssessment, type AssessmentOptions } from "./evaluation/ImprovementEngine";
