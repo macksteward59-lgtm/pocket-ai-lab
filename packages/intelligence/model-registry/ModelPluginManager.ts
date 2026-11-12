@@ -90,7 +90,7 @@ export class ModelPluginManager {
 
     const descriptor = await this.buildDescriptor(input);
     this.registry.unregister(existingId);
-    if (loadedElsewhere) this.router?.release(existingId);
+    if (loadedElsewhere) this.router?.retire(existingId);
     this.registry.register(descriptor);
     this.record({ action: "replaced", modelId: descriptor.id, previousModelId: existingId, source: describeSource(input.source) });
     return descriptor;
@@ -104,7 +104,7 @@ export class ModelPluginManager {
     }
     const removed = this.registry.unregister(id);
     if (removed) {
-      if (loaded) this.router?.release(id);
+      if (loaded) this.router?.retire(id);
       this.record({ action: "removed", modelId: id, source: "n/a" });
     }
     return removed;
