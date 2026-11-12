@@ -165,7 +165,7 @@ export class Orchestrator {
             this.agents.updateStatus(sessionId, "complete");
           } finally {
             this.agents.releaseSession(sessionId);
-            this.router.release(selected.id);
+            this.router.release(selected);
           }
         }
         return [...priorMessages, ...generated];
