@@ -728,3 +728,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **CI on that head, all passed:** Pocket AI Lab CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201377. Consumer prototype CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201379. Cursor plugin CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201788. Governance sidecar CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730201392. iOS LlamaEngine CI https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/42730202154.
 - **Status:** PR #33 stays `in-review`. Not merged. `authorized` stays false. PR #29 is `done` at `5132342`. PR #30 is `done` at `a1da71c`.
 - **APEX:** No authorization grant.
+
+
+## 2026-11-12 10:00 UTC — ChatGPT
+
+- **Claim:** Model router reservation safety on `codex/model-router-reservation-safety`.
+- **Scope:** `packages/intelligence/model-router/ModelRouter.ts` and `packages/intelligence/__tests__/runtime.test.ts` only. Fix concurrent reservation reference accounting and add deterministic regression coverage.
+- **Boundary:** This is admission bookkeeping only. It does not establish that a runtime is ready, that a model is loaded, or that generation succeeded. No APEX/East, evidence, authorization, provider, app UI, repository settings, or release changes.
+- **Base:** Branch created from current `main` at `b2a4ae5c4edf2e04819249106c07017ec52fa0c2`.
