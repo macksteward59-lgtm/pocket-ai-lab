@@ -1118,3 +1118,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Removed blank lines that split the active ownership table and refreshed the PR #41, #45, and #46 status rows.
 - Commits on `agent-coordination`: `84b14ede0bf87ecd73008052b8678e28de2d133f` (table formatting) and `3067d2df1fb28a3d7dfd1a57d4156c7cb47f560f` (status refresh).
 - Greptile re-review requested for the latest board head. PR #40 remains open and currently reports a dirty merge state against main; no rebase, merge, or conflict resolution was performed.
+
+
+## 2026-11-12 23:21:34 UTC — ChatGPT APEX/RLS contract reconciliation claim
+
+- **Claim:** Reconcile the owner-authored RLS v3.12 architecture decisions with the current Pocket AI Lab repository.
+- **Branch:** `codex/apex-rls-contract-reconciliation`, created from `main` at `9dde1ee16874b4b4802dd92e94605dd5fb92bc2d`.
+- **Scope:** Read-only review of the current APEX trust/evidence boundary, existing governance docs and coordination records; documentation-only gap analysis until the authoritative v3.12 source and owner-approved implementation contracts are available.
+- **Invariants:** Preserve exact-scope approval binding, per-edge authorization accumulation, independent repair authorization, broker provenance, database authorization, transaction-local identity discipline, append-only/WORM retention, and separation of evidence verification from authorization.
+- **Explicit exclusions:** No new trust roots or production keys; no signature verifier, RLS SQL, schema, evidence persistence, receipt issuance, or change to East's always-false authorization result in this slice.
+- **Protocol correction:** A preliminary documentation-only PR #47 was opened on an `agent/*` branch. That branch does not follow the repository's ChatGPT `codex/*` branch rule; it will be superseded and its PR closed. No application code was changed.
+- **Blocker / owner input:** The full RLS v3.12 text was not found in the repository or Library search. @owner — please provide the authoritative full v3.12 specification (including the eleven corrections and SQL/concurrency details) or identify its canonical repository path before implementation contracts are drafted.
