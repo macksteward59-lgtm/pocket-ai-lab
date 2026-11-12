@@ -130,6 +130,16 @@ export function validateInterpretationEvidence(
   snapshot: PolicySnapshot,
   interpretation: PolicyInterpretation
 ): InterpretationEvidenceValidation {
+  if (!snapshot || typeof snapshot !== "object" || typeof snapshot.policyText !== "string" ||
+      !interpretation || typeof interpretation !== "object" || !Array.isArray(interpretation.clauses)) {
+    return Object.freeze({
+      valid: false,
+      snapshotId: typeof snapshot?.snapshotId === "string" ? snapshot.snapshotId : "",
+      reasons: Object.freeze(["A valid snapshot and interpretation with a clause array are required"]),
+      authorized: false as const
+    });
+  }
+
   const reasons: string[] = [];
   try {
     assertSnapshotIntegrity(snapshot);
@@ -152,6 +162,10 @@ export function validateInterpretationEvidence(
 
   const seen = new Set<string>();
   for (const clause of interpretation.clauses) {
+    if (!clause || typeof clause !== "object") {
+      reasons.push("Interpretation contains a malformed clause record");
+      continue;
+    }
     if (seen.has(clause.clauseId)) reasons.push("Duplicate clause ID: " + clause.clauseId);
     seen.add(clause.clauseId);
     if (clause.snapshotId !== snapshot.snapshotId || clause.contentSha256 !== snapshot.contentSha256) {
@@ -171,7 +185,7 @@ export function validateInterpretationEvidence(
       reasons.push("Clause line number does not match its source offset: " + clause.clauseId);
     }
     const expectedCandidate = extractCandidateValue(clause.kind, clause.text);
-    if (JSON.stringify(expectedCandidate) !== JSON.stringify(clause.candidateValue)) {
+    if (!candidateValuesEqual(expectedCandidate, clause.candidateValue)) {
       reasons.push("Candidate value does not match the explicit source text: " + clause.clauseId);
     }
     if (clause.requiresHumanReview !== true) {
@@ -317,6 +331,20 @@ function classifyLabel(value: string): Classification | undefined {
     return { kind: "disclosure", method: "explicit-label" };
   }
   return undefined;
+}
+
+function candidateValuesEqual(
+  expected: ExtractedPolicyClause["candidateValue"],
+  actual: ExtractedPolicyClause["candidateValue"]
+): boolean {
+  if (expected === undefined || actual === undefined) return expected === actual;
+  if (!actual || typeof actual !== "object") return false;
+  const expectedRecord = expected as unknown as Record<string, unknown>;
+  const actualRecord = actual as unknown as Record<string, unknown>;
+  const keys = Object.keys(expectedRecord);
+  return keys.length === Object.keys(actualRecord).length &&
+    keys.every(key => Object.prototype.hasOwnProperty.call(actualRecord, key) &&
+      expectedRecord[key] === actualRecord[key]);
 }
 
 function requiresStrictCandidate(kind: PolicyClauseKind): boolean {
