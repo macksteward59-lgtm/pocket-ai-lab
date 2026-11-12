@@ -14,6 +14,7 @@ interface Reservation {
   descriptor: ModelDescriptor;
   memoryMB: number;
   references: number;
+  retired: boolean;
 }
 
 export class ModelRouter {
@@ -47,6 +48,7 @@ export class ModelRouter {
 
     const generations = this.reservations.get(preferred.id) ?? [];
     const existing = generations.find(reservation => reservation.descriptor === preferred);
+    if (existing?.retired) throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
     const reservedElsewhere = [...this.reservations.values()]
       .flat()
       .filter(reservation => reservation !== existing)
@@ -69,11 +71,22 @@ export class ModelRouter {
       generations.push({
         descriptor: preferred,
         memoryMB: preferred.memoryEstimateMB,
-        references: 1
+        references: 1,
+        retired: false
       });
       this.reservations.set(preferred.id, generations);
     }
     return preferred;
+  }
+
+  /**
+   * Retire every currently reserved generation for this ID. Existing leases
+   * remain accounted for until their exact descriptor is released.
+   */
+  retire(modelId: string): void {
+    const generations = this.reservations.get(modelId);
+    if (!generations) return;
+    for (const reservation of generations) reservation.retired = true;
   }
 
   /** Release the exact descriptor generation returned by route(). */
