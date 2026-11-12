@@ -18,3 +18,40 @@ This module accepts an existing immutable `PolicySnapshot`; it does not fetch a 
 This is not a general natural-language understanding system. It does not infer that a test is allowed, does not convert extracted clauses into execution permissions, and does not decide whether a target is authorized. Headings and keyword patterns can miss or misclassify context; unknown text stays unclassified and review-required. Multiple rate-limit or testing-window statements are flagged for reconciliation, not automatically resolved.
 
 The output always has `reviewState: "needs-human-review"` and `authorized: false`. No scanner, browser, exploit runner, credential handler, report-submission adapter, persistence layer, or APEX/East trust/evidence integration is present.
+
+## Measurable comparison plan — policy interpretation benchmark v1
+
+This feature is not considered better than existing program-review workflows until it is tested against a fixed, adjudicated corpus. This plan makes no claim about competitors' private parser implementations or measured performance.
+
+### Named baselines
+
+- **Primary baseline:** two independent human policy reviewers working from the exact same captured brief, followed by adjudication. Any disagreement or missing context is recorded as indeterminate.
+- **Platform reference workflows:** HackerOne program scope and policy guidance, Bugcrowd bounty briefs, and Intigriti program rules. These are the source-format and policy-structure baselines, not claims about proprietary AI parsing.
+- **Market context:** HackerOne's Agentic Pentest and XBOW are tracked as agentic security-testing competitors. Their published security-testing claims are not treated as equivalent to policy-interpretation accuracy.
+
+### Fixed corpus v1
+
+Use 24 versioned policy snippets with synthetic, non-operational asset names and exact source text. The corpus must include:
+- 4 explicit scope clauses: domain, wildcard domain, URL path, and CIDR/IP;
+- 4 exclusion and precedence clauses, including child-host/path exclusions;
+- 4 qualified clauses: subject to approval, contact program, case-by-case, and at-discretion;
+- 4 rate limits: integer, decimal, fractional-leading-dot, and comma-grouped number;
+- 4 testing windows: valid zoned range, impossible date, reversed range, and ambiguous local-time range;
+- 4 disclosure/prohibited-method clauses, including unknown headings and contradictory language.
+
+Each fixture stores the expected clause category, candidate value (or none), review issue, and exact source span. Two human reviewers independently adjudicate the expected result before the corpus is frozen.
+
+### Metrics and pass criteria
+
+Report per-category precision/recall, exact candidate-value accuracy, full-source-span integrity, qualified-clause recall, malformed-value rejection, conflict detection, deterministic repeatability, and unauthorized-action count.
+
+Required gates:
+- **100%** exact source-span integrity; no shortened or omitted condition can validate.
+- **100%** recall for approval/qualification warnings in the fixed corpus.
+- **100%** exact numeric parsing for supported rate limits; **100%** abstention for unsupported numeric formats.
+- **100%** rejection of impossible/reversed testing windows as candidates.
+- **0** false permission or authorization grants.
+- **100%** of unrecognized/ambiguous clauses remain human-review-required.
+- Repeat the run at least three times with identical outputs; record commit SHA, fixture version, CI run IDs, and human adjudication disagreements.
+
+The current Vitest cases are regression coverage, not a completed comparative benchmark. Human adjudication and competitor-workflow comparison remain pending. No superiority claim is made.
