@@ -220,6 +220,94 @@ describe("independent bug bounty policy reviews", () => {
     )).rejects.toThrow(/Distinct Critic and Validator/);
   });
 
+  it("releases both agent sessions and model reservations after provider failures", async () => {
+    class TrackingAgentManager extends AgentManager {
+      started = 0;
+      released = 0;
+      override startSession(agentId: string, taskId: string, modelId: string): string {
+        this.started += 1;
+        return super.startSession(agentId, taskId, modelId);
+      }
+      override releaseSession(sessionId: string): void {
+        this.released += 1;
+        super.releaseSession(sessionId);
+      }
+    }
+    const snapshot = makeSnapshot();
+    const interpretation = interpretPolicySnapshot(snapshot);
+    const agents = new TrackingAgentManager();
+    CORE_AGENTS.forEach(agent => agents.registerPermanent(agent));
+    const models = new ModelRegistry();
+    models.register({
+      id: "review-model",
+      name: "Review Model",
+      path: "./models/review.gguf",
+      contextLength: 8192,
+      capabilities: [],
+      memoryEstimateMB: 512
+    });
+    models.associateAgent("critic", "review-model");
+    models.associateAgent("validator", "review-model");
+    const router = new ModelRouter(() => ({ availableMemoryMB: 4096, loadedModels: [] }));
+    let calls = 0;
+    const inference: InferenceProvider = {
+      async generate() {
+        calls += 1;
+        throw new Error("simulated provider failure");
+      }
+    };
+    const dependencies = { agents, models, router, inference };
+    const run = await runIndependentPolicyReviews(
+      { snapshot, interpretation },
+      {
+        critic: createInferencePolicyReviewAgent("critic", dependencies),
+        validator: createInferencePolicyReviewAgent("validator", dependencies)
+      }
+    );
+    expect(run.status).toBe("failed");
+    expect(calls).toBe(2);
+    expect(agents.started).toBe(2);
+    expect(agents.released).toBe(2);
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("rejects a prompt that exceeds the model context budget without truncating it", async () => {
+    const snapshot = makeSnapshot();
+    const interpretation = interpretPolicySnapshot(snapshot);
+    const agents = new AgentManager();
+    CORE_AGENTS.forEach(agent => agents.registerPermanent(agent));
+    const models = new ModelRegistry();
+    models.register({
+      id: "tiny-review-model",
+      name: "Tiny Review Model",
+      path: "./models/tiny.gguf",
+      contextLength: 256,
+      capabilities: [],
+      memoryEstimateMB: 128
+    });
+    models.associateAgent("critic", "tiny-review-model");
+    models.associateAgent("validator", "tiny-review-model");
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    let calls = 0;
+    const inference: InferenceProvider = {
+      async generate() {
+        calls += 1;
+        return { payload: { summary: "Should not execute.", findings: [] } };
+      }
+    };
+    const dependencies = { agents, models, router, inference };
+    const run = await runIndependentPolicyReviews(
+      { snapshot, interpretation },
+      {
+        critic: createInferencePolicyReviewAgent("critic", dependencies),
+        validator: createInferencePolicyReviewAgent("validator", dependencies)
+      }
+    );
+    expect(run.status).toBe("failed");
+    expect(calls).toBe(0);
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
   it("uses two fresh provider requests with no conversation or memory context", async () => {
     const snapshot = makeSnapshot();
     const interpretation = interpretPolicySnapshot(snapshot);
@@ -236,7 +324,7 @@ describe("independent bug bounty policy reviews", () => {
     });
     models.associateAgent("critic", "review-model");
     models.associateAgent("validator", "review-model");
-    const router = new ModelRouter(() => ({ availableMemoryMB: 4096, loadedModels: ["review-model"] }));
+    const router = new ModelRouter(() => ({ availableMemoryMB: 4096, loadedModels: [] }));
     const requests: InferenceRequest[] = [];
     const inference: InferenceProvider = {
       async generate(request) {
