@@ -84,6 +84,15 @@ describe("bug bounty policy intake provenance", () => {
     expect(() => capturePolicySnapshot(intake({ policyText: "rules\u0000hidden" }))).toThrow(PolicyIntakeError);
   });
 
+  it("rejects unpaired UTF-16 surrogates before hashing", () => {
+    expect(() => capturePolicySnapshot(intake({ policyText: "rules\\uD800" })))
+      .toThrow(PolicyIntakeError);
+    expect(() => capturePolicySnapshot(intake({ policyText: "rules\\uDC00" })))
+      .toThrow(PolicyIntakeError);
+    expect(() => capturePolicySnapshot(intake({ policyText: "rules 😀" })))
+      .not.toThrow();
+  });
+
   it("enforces a bounded policy text size", () => {
     expect(() => capturePolicySnapshot(intake({ policyText: "x".repeat(MAX_POLICY_TEXT_BYTES + 1) })))
       .toThrow(PolicyIntakeError);
