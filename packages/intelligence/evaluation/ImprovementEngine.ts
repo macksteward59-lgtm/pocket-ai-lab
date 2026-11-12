@@ -131,9 +131,15 @@ export function assessImprovement(
   if (candidate.sampleCount < minimumCases) {
     reasons.push("Insufficient benchmark coverage: " + candidate.sampleCount + " of " + minimumCases + " required cases.");
   }
-  // Permit only machine-rounding noise at an exact cutoff. This is far smaller
-  // than a meaningful score increment and does not round near-threshold gains up.
-  const roundingTolerance = Number.EPSILON * Math.max(1, Math.abs(baseline.meanScore), Math.abs(candidate.meanScore));
+  // Bound floating-point accumulation error across both score sums and the
+  // final division/subtraction. The tolerance scales with sample count, but
+  // remains at machine-precision scale (not a user-visible score increment).
+  // This accommodates exact decimal cutoffs such as 39 × (0.82 - 0.80)
+  // without rounding materially below-threshold candidates up.
+  const roundingTolerance =
+    Number.EPSILON *
+    Math.max(1, Math.abs(baseline.meanScore), Math.abs(candidate.meanScore)) *
+    (candidate.sampleCount + 2);
   if (scoreGain + roundingTolerance < minimumScoreGain) {
     reasons.push("Score gain did not meet the minimum threshold.");
   }
