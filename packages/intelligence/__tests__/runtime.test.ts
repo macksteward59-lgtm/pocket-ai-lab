@@ -96,6 +96,36 @@ describe("ModelRouter", () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 128, loadedModels: [] }));
     await expect(router.route("reasoner", model, [])).rejects.toThrow(/Insufficient memory/);
   });
+
+  it("keeps a shared model reservation until every concurrent route releases it", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const [first, second] = await Promise.all([
+      router.route("reasoner", model, []),
+      router.route("researcher", model, [])
+    ]);
+
+    expect(first).toEqual(model);
+    expect(second).toEqual(model);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+
+    router.release("test-model");
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+
+    router.release("test-model");
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("does not let a failed route create or release another model's reservation", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    await router.route("reasoner", model, []);
+    const incompatible = { ...model, id: "vision-model", capabilities: ["vision"] };
+
+    await expect(router.route("researcher", incompatible, ["reason"])).rejects.toThrow(/lacks required capabilities/);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+
+    router.release("test-model");
+    expect(router.getLoadedModels()).toEqual([]);
+  });
 });
 
 describe("DeliberationEngine", () => {
