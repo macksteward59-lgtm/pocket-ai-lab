@@ -171,6 +171,10 @@ export function validateInterpretationEvidence(
     if (clause.snapshotId !== snapshot.snapshotId || clause.contentSha256 !== snapshot.contentSha256) {
       reasons.push("Clause provenance does not match the supplied snapshot: " + clause.clauseId);
     }
+    if (typeof clause.text !== "string") {
+      reasons.push("Clause source text is malformed: " + clause.clauseId);
+      continue;
+    }
     if (!Number.isInteger(clause.startOffset) || !Number.isInteger(clause.endOffset) ||
         clause.startOffset < 0 || clause.endOffset < clause.startOffset ||
         clause.endOffset > snapshot.policyText.length) {
