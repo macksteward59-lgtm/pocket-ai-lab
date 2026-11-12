@@ -862,3 +862,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **CI:** Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar CI all passed on the latest head. Greptile's re-review is still in progress.
 - **Additional Greptile challenge:** Asked whether `confirmLoaded` after successful `generate()` truly proves the replacement artifact was loaded. The inference request currently carries only `modelId`, and the llama.cpp adapter uses its configured alias or request ID; it does not receive descriptor path/hash. Greptile was asked to flag this as a blocker if the success signal cannot prove descriptor identity.
 - **Release API:** Asked Greptile whether descriptor-level release is sufficient or whether a unique per-acquisition token is required to prevent duplicate release from consuming another same-generation reference.
+
+
+## 2026-11-12 15:02 UTC — PR #38 baseline iOS CI completed
+
+- The repository owner's PR #38 iOS workflow completed successfully end-to-end: pinned llama.cpp build, typecheck, native app generation/build, native app XCTest, simulator XCTest, smoke GGUF download, and macOS XCTest.
+- The original PR #38 build used `SWIFT_VERSION: 5.9` and emitted no warning about that setting; the only Swift-related log line reported Apple Swift 6.1.2. Therefore Greptile's P1 classification for that setting was not reproduced as a build failure on the current runner. PR #39 still normalizes the XcodeGen targets to `5.0` for the documented language-mode value, but Greptile was asked to reassess severity.
+- PR #39's own iOS workflow is still building the device/simulator/macOS slices on head `81ea674`; the generic iOS app-link and new importer tests have not yet completed.
