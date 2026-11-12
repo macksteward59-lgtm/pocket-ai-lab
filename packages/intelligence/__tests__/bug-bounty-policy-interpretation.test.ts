@@ -136,11 +136,15 @@ describe("bug bounty policy interpretation", () => {
   it("does not misparse fractional or comma-grouped request limits", () => {
     const source = snapshot([
       "# Rate Limits",
+      "- 0.5 requests per second",
       "- .5 requests per second",
       "- 1,500 requests per minute"
     ].join("\n"));
     const interpretation = interpretPolicySnapshot(source);
-    expect(interpretation.clauses.map(clause => clause.candidateValue)).toEqual([undefined, undefined]);
+    expect(interpretation.clauses[0].candidateValue).toEqual({
+      kind: "rate-limit", limit: 0.5, unit: "requests-per-second"
+    });
+    expect(interpretation.clauses.slice(1).map(clause => clause.candidateValue)).toEqual([undefined, undefined]);
     expect(interpretation.issues.filter(issue => issue.code === "unparsed-candidate")).toHaveLength(2);
   });
 
@@ -211,6 +215,7 @@ describe("bug bounty policy interpretation", () => {
         index === 0 ? { ...clause, text: "different source text" } : clause
       )
     } as PolicyInterpretation;
+    expect(validateInterpretationEvidence(source, interpretation).valid).toBe(true);
     const result = validateInterpretationEvidence(source, altered);
     expect(result.valid).toBe(false);
     expect(result.reasons.some(reason => reason.includes("source offsets"))).toBe(true);
@@ -246,6 +251,7 @@ describe("bug bounty policy interpretation", () => {
         candidateValue: { kind: "asset", assetKind: "domain", value: "app.example.com" }
       }]
     } as unknown as PolicyInterpretation;
+    expect(validateInterpretationEvidence(source, interpretation).valid).toBe(true);
     const result = validateInterpretationEvidence(source, altered);
     expect(result.valid).toBe(false);
     expect(result.reasons.some(reason => reason.includes("complete, exact source line"))).toBe(true);
