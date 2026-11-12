@@ -136,7 +136,7 @@ describe("independent bug bounty policy reviews", () => {
 
 
   it("rejects a citation that spans multiple source lines", async () => {
-    const policyText = "# In Scope\\n- app.example.com\\n- next.example.com";
+    const policyText = "# In Scope\n- app.example.com\n- next.example.com";
     const snapshot = makeSnapshot(policyText);
     const interpretation = interpretPolicySnapshot(snapshot);
     const startOffset = policyText.indexOf("- app.example.com");
@@ -162,7 +162,7 @@ describe("independent bug bounty policy reviews", () => {
   });
 
   it("rejects a CRLF citation whose end offset includes the carriage return", async () => {
-    const policyText = "# In Scope\\r\\n- app.example.com\\r\\n- next.example.com";
+    const policyText = "# In Scope\r\n- app.example.com\r\n- next.example.com";
     const snapshot = makeSnapshot(policyText);
     const interpretation = interpretPolicySnapshot(snapshot);
     const startOffset = policyText.indexOf("- app.example.com");
