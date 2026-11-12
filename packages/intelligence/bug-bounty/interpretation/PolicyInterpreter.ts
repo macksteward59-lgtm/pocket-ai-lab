@@ -298,7 +298,10 @@ function classifyHeading(line: string): PolicyClauseKind | undefined {
 }
 
 function classifyClause(line: string, activeSection?: PolicyClauseKind): Classification {
-  const cleaned = line.replace(/^(?:[-*+]\s+|\d+[.)]\s+)/, "").trim();
+  const cleaned = line.replace(/^(?:[-*+]\\s+|\\d+[.)]\\s+)/, "").trim();
+  if (hasQualification(cleaned)) {
+    return { kind: "ambiguous", method: "keyword-pattern" };
+  }
   const colon = cleaned.indexOf(":");
   if (colon > 0) {
     const explicitLabel = classifyLabel(cleaned.slice(0, colon));
@@ -307,29 +310,22 @@ function classifyClause(line: string, activeSection?: PolicyClauseKind): Classif
   const explicit = classifyLabel(cleaned);
   if (explicit) return explicit;
 
-  if (/\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted)\b/i.test(cleaned)) {
-    return { kind: "ambiguous", method: "keyword-pattern" };
-  }
-
-  const mentionsDisclosure = /\bdisclos(?:e|ure|ing)\b|\bpublic release\b/i.test(cleaned);
-  const allows = /\b(?:allowed|permitted|may test)\b/i.test(cleaned);
-  const prohibits = /\b(?:prohibited|forbidden|not allowed|not permitted|must not|do not)\b/i.test(cleaned);
+  const mentionsDisclosure = /\\bdisclos(?:e|ure|ing)\\b|\\bpublic release\\b/i.test(cleaned);
+  const allows = /\\b(?:allowed|permitted|may test)\\b/i.test(cleaned);
+  const prohibits = /\\b(?:prohibited|forbidden|not allowed|not permitted|must not|do not)\\b/i.test(cleaned);
   if (allows && prohibits) return { kind: "ambiguous", method: "keyword-pattern" };
   if (mentionsDisclosure) return { kind: "disclosure", method: "keyword-pattern" };
-  if (/\b(?:requests?\s*(?:per|\/)\s*(?:second|sec|minute|min)|rate limit)\b/i.test(cleaned)) {
+  if (/\\b(?:requests?\\s*(?:per|\\/)\\s*(?:second|sec|minute|min)|rate limit)\\b/i.test(cleaned)) {
     return { kind: "rate-limit", method: "keyword-pattern" };
   }
-  if (/\b(?:testing window|testing hours|test window)\b/i.test(cleaned)) {
+  if (/\\b(?:testing window|testing hours|test window)\\b/i.test(cleaned)) {
     return { kind: "testing-window", method: "keyword-pattern" };
   }
-  if (prohibits || /\b(?:denial of service|social engineering|credential stuffing)\b/i.test(cleaned)) {
+  if (prohibits || /\\b(?:denial of service|social engineering|credential stuffing)\\b/i.test(cleaned)) {
     return { kind: "prohibited-method", method: "keyword-pattern" };
   }
   if (allows) return { kind: "allowed-activity", method: "keyword-pattern" };
   if (activeSection) return { kind: activeSection, method: "section-context" };
-  if (/\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion)\b/i.test(cleaned)) {
-    return { kind: "ambiguous", method: "keyword-pattern" };
-  }
   return { kind: "unclassified", method: "keyword-pattern" };
 }
 
@@ -408,6 +404,10 @@ function extractCandidateValue(
     if (isIP(value) !== 0) {
       return Object.freeze({ kind: "asset" as const, assetKind: "ip" as const, value });
     }
+    if (/^\\d+(?:\\.\\d+){3}\\.?$/.test(value)) {
+      // A malformed dotted numeric address must never be reclassified as a hostname.
+      return undefined;
+    }
     if (/^(?:\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.?$/i.test(value)) {
       return Object.freeze({ kind: "asset" as const, assetKind: "domain" as const, value });
     }
@@ -424,11 +424,11 @@ function extractCandidateValue(
   }
 
   if (kind === "rate-limit") {
-    const matches = [...value.matchAll(/\b(\d+(?:\.\d+)?)\s*(?:requests?|reqs?)\s*(?:per|\/)\s*(second|sec|minute|min)\b/gi)];
-    if (matches.length !== 1) return undefined;
-    const limit = Number(matches[0][1]);
+    const match = /^(0|[1-9]\\d*)(?:\\.(\\d+))?\\s*(?:requests?|reqs?)\\s*(?:per|\\/)\\s*(second|sec|minute|min)$/i.exec(value);
+    if (!match) return undefined;
+    const limit = Number(match[1] + (match[2] ? "." + match[2] : ""));
     if (!Number.isFinite(limit) || limit <= 0) return undefined;
-    const unit = /^(?:second|sec)$/i.test(matches[0][2])
+    const unit = /^(?:second|sec)$/i.test(match[3])
       ? "requests-per-second" as const
       : "requests-per-minute" as const;
     return Object.freeze({ kind: "rate-limit" as const, limit, unit });
