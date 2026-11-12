@@ -30,6 +30,7 @@ export interface ToolBuildSpec {
 export interface ToolArtifact {
   toolId: string;
   version: number;
+  spec: ToolBuildSpec;
   digest: string;
   files: Record<string, string>;
   createdAt: string;
@@ -92,7 +93,9 @@ export class InMemoryToolArtifactStore implements ToolArtifactStore {
     if (items.some(item => item.version === artifact.version)) {
       throw new Error("Tool artifact version already exists");
     }
-    items.push(cloneArtifact(artifact));
+    const existingIndex = items.findIndex(item => item.version === artifact.version);
+    if (existingIndex >= 0) items[existingIndex] = cloneArtifact(artifact);
+    else items.push(cloneArtifact(artifact));
     this.artifacts.set(artifact.toolId, items);
   }
 
@@ -148,6 +151,7 @@ export class ToolDirector {
     const artifact: ToolArtifact = {
       toolId: spec.id,
       version: (previous?.version ?? 0) + 1,
+      spec: cloneSpec(spec),
       digest,
       files,
       createdAt: new Date(this.now()).toISOString(),
@@ -195,10 +199,10 @@ export class ToolDirector {
 
     const descriptor: ToolDescriptor = {
       id: artifact.toolId,
-      name: artifact.toolId,
-      application: "Director-managed tool artifact; execution is supplied by a separately authorized host adapter.",
-      mode: "active",
-      specialists: this.readSpecialists(artifact.toolId)
+      name: artifact.spec.name,
+      application: artifact.spec.purpose,
+      mode: artifact.spec.mode,
+      specialists: [...artifact.spec.specialists]
     };
     if (this.registry.has(descriptor.id)) this.registry.replaceManaged(descriptor);
     else this.registry.registerManaged(descriptor);
@@ -234,12 +238,6 @@ export class ToolDirector {
     if (!["analysis", "active"].includes(spec.mode)) throw new Error("Invalid tool mode");
   }
 
-  private readSpecialists(toolId: string): SecuritySpecialistId[] {
-    // The builder cannot widen permissions during a revision. Existing
-    // descriptors retain their allowlist; new tools are denied by default
-    // until a host explicitly adds a specialist policy through registry APIs.
-    return this.registry.get(toolId)?.specialists ?? [];
-  }
 }
 
 function validateFiles(input: Record<string, string> | undefined): Record<string, string> {
@@ -269,7 +267,7 @@ function cloneSpec(spec: ToolBuildSpec): ToolBuildSpec {
   return { ...spec, specialists: [...spec.specialists], requirements: [...spec.requirements] };
 }
 function cloneArtifact(artifact: ToolArtifact): ToolArtifact {
-  return { ...artifact, files: { ...artifact.files },
+  return { ...artifact, spec: cloneSpec(artifact.spec), files: { ...artifact.files },
     testSummary: artifact.testSummary ? cloneTestSummary(artifact.testSummary) : undefined };
 }
 function cloneTestSummary(summary: ToolTestSummary): ToolTestSummary {
