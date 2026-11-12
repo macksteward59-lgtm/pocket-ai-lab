@@ -244,13 +244,13 @@ function classifyClause(line: string, activeSection?: PolicyClauseKind): Classif
   const explicit = classifyLabel(cleaned);
   if (explicit) return explicit;
 
-  if (/\\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted)\\b/i.test(cleaned)) {
+  if (/\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted)\b/i.test(cleaned)) {
     return { kind: "ambiguous", method: "keyword-pattern" };
   }
 
   const mentionsDisclosure = /\bdisclos(?:e|ure|ing)\b|\bpublic release\b/i.test(cleaned);
   const allows = /\b(?:allowed|permitted|may test)\b/i.test(cleaned);
-  const prohibits = /\b(?:prohibited|forbidden|not allowed|not permitted|must not)\b/i.test(cleaned);
+  const prohibits = /\b(?:prohibited|forbidden|not allowed|not permitted|must not|do not)\b/i.test(cleaned);
   if (allows && prohibits) return { kind: "ambiguous", method: "keyword-pattern" };
   if (mentionsDisclosure) return { kind: "disclosure", method: "keyword-pattern" };
   if (/\b(?:requests?\s*(?:per|\/)\s*(?:second|sec|minute|min)|rate limit)\b/i.test(cleaned)) {
