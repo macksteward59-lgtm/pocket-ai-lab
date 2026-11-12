@@ -56,6 +56,15 @@ describe("assessImprovement", () => {
     expect(result.recommendation).toBe("review_candidate");
   });
 
+  it("accepts an exact decimal cutoff across 39 accumulated benchmark cases", () => {
+    const result = assessImprovement(
+      run("baseline", Array(39).fill(0.8)),
+      run("candidate", Array(39).fill(0.82))
+    );
+    expect(result.scoreGain).toBeCloseTo(0.02, 12);
+    expect(result.recommendation).toBe("review_candidate");
+  });
+
   it("rejects a gain meaningfully below the configured threshold", () => {
     const result = assessImprovement(
       run("baseline", [0.8, 0.8, 0.8, 0.8, 0.8]),
