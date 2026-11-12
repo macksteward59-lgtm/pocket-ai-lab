@@ -27,6 +27,10 @@ export function createInferencePolicyReviewAgent(
     async review(request: PolicyReviewRequest): Promise<unknown> {
       const profile = dependencies.agents.getAgent(reviewer);
       if (!profile) throw new Error("The permanent " + reviewer + " agent is not registered");
+      const requiredPermission = reviewer === "critic" ? "review" : "verify";
+      if (!profile.permissions.includes(requiredPermission)) {
+        throw new Error("The " + reviewer + " agent lacks its required review permission");
+      }
 
       const selected = await dependencies.router.route(
         reviewer,
@@ -40,8 +44,13 @@ export function createInferencePolicyReviewAgent(
         dependencies.agents.updateStatus(sessionId, "running");
 
         const prompt = buildPrompt(reviewer, request);
-        const estimatedTokens = Math.ceil(prompt.length / 3);
-        if (estimatedTokens > selected.contextLength - 256) {
+        if (!Number.isInteger(selected.contextLength) || selected.contextLength <= 256) {
+          throw new Error("The selected model has an invalid or insufficient context length");
+        }
+        // UTF-8 bytes provide a conservative upper bound for the prompt budget.
+        // The request is rejected rather than truncated when the bound is exceeded.
+        const conservativeTokenBudget = new TextEncoder().encode(prompt).length;
+        if (conservativeTokenBudget > selected.contextLength - 256) {
           throw new Error("Policy review input exceeds the selected model context budget; input was not truncated");
         }
 
