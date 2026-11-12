@@ -132,3 +132,23 @@ export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Rec
     additionalProperties: false
   }
 };
+
+/**
+ * Specialized advisory policy-review payload. The adapter validates the
+ * envelope; the review coordinator independently validates every finding
+ * against the immutable policy snapshot and exact source offsets.
+ */
+export const LLAMA_CPP_POLICY_REVIEW_PAYLOAD_SCHEMA = z.object({
+  summary: z.string().min(1).max(4000),
+  findings: z.array(z.unknown()).max(100)
+}).strict();
+
+export const LLAMA_CPP_POLICY_REVIEW_JSON_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    summary: { type: "string", minLength: 1, maxLength: 4000 },
+    findings: { type: "array", maxItems: 100, items: { type: "object" } }
+  },
+  required: ["summary", "findings"],
+  additionalProperties: false
+};
