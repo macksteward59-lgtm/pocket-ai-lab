@@ -511,6 +511,14 @@ function assertRequest(request: InferenceRequest): void {
   requireText(request.modelId, "modelId");
   requireText(request.prompt, "prompt");
   requireText(request.stage, "stage");
+  if (request.responseContract !== undefined &&
+      (request.responseContract !== "bug-bounty-policy-review" ||
+       request.stage !== "independent" || request.agentId === "chat")) {
+    throw new LlamaCppInferenceError(
+      "invalid_request",
+      "the bug-bounty policy-review response contract requires a non-chat independent-stage request"
+    );
+  }
   if (!isLlamaCppDeliberationStage(request.stage)) {
     throw new LlamaCppInferenceError(
       "invalid_request",
