@@ -93,7 +93,8 @@ export class Orchestrator {
   readonly capabilities: DirectorCapabilities;
   /** Strict allowlisted structured-command bridge for model/provider adapters. */
   readonly directorCommands: DirectorCommandRouter;
-  private readonly inference: InferenceProvider;\n  private readonly directorCommandProvider?: DirectorCommandProvider;
+  private readonly inference: InferenceProvider;
+  private readonly directorCommandProvider?: DirectorCommandProvider;
 
   constructor(opts: {
     inference: InferenceProvider;
@@ -118,7 +119,9 @@ export class Orchestrator {
     memoryImprovementAdvisor?: MemoryImprovementAdvisor;
     memoryChangeApproval?: MemoryChangeApproval;
     devicePermissionBroker?: DevicePermissionBroker;
-    deviceBridge?: DeviceBridge;\n    /** Optional model-native structured tool-call adapter for Director commands. */\n    directorCommandProvider?: DirectorCommandProvider;
+    deviceBridge?: DeviceBridge;
+    /** Optional model-native structured tool-call adapter for Director commands. */
+    directorCommandProvider?: DirectorCommandProvider;
   }) {
     if (!opts?.inference || typeof opts.inference.generate !== "function") {
       throw new Error("A real InferenceProvider must be supplied; placeholder inference is disabled");
@@ -126,7 +129,8 @@ export class Orchestrator {
     if (typeof opts.getResources !== "function") {
       throw new Error("A live resource provider must be supplied");
     }
-    this.inference = opts.inference;\n    this.directorCommandProvider = opts.directorCommandProvider;
+    this.inference = opts.inference;
+    this.directorCommandProvider = opts.directorCommandProvider;
     this.router = new ModelRouter(opts.getResources);
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
     this.memory = opts.memory ?? new MemoryManager();
@@ -187,7 +191,8 @@ export class Orchestrator {
                 "Your role: " + agent.role,
                 "Deliberation stage: " + stage,
                 "Return only a structured payload valid for message type " + STAGE_MESSAGE_TYPE[stage] + "."
-              ].join("\n"),
+              ].join("
+"),
               contextMessages: [...priorMessages]
             });
             const message: AgentMessage = {
