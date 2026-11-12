@@ -176,6 +176,16 @@ describe("bug bounty policy interpretation", () => {
     expect(result.valid).toBe(false);
     expect(result.reasons.some(reason => reason.includes("source offsets"))).toBe(true);
 
+    const alteredCandidate = {
+      ...interpretation,
+      clauses: interpretation.clauses.map((clause, index) =>
+        index === 0
+          ? { ...clause, candidateValue: { kind: "asset", assetKind: "domain", value: "attacker.example" } }
+          : clause
+      )
+    } as PolicyInterpretation;
+    expect(validateInterpretationEvidence(source, alteredCandidate).valid).toBe(false);
+
     const tamperedSnapshot = { ...source, policyText: source.policyText + " changed" };
     expect(() => interpretPolicySnapshot(tamperedSnapshot)).toThrow();
   });
