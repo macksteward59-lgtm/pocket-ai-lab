@@ -17,6 +17,7 @@ export { SkillRegistry, type Skill, type SkillLayer } from "./skills/SkillRegist
 export { createDefaultSkillRegistry, SKILL_CATALOG } from "./skills/catalog";
 export { DYNAMIC_SPECIALIST_CATALOG, type DynamicSpecialistId } from "./agents/specialists/dynamicCatalog";
 export { ToolRegistry, TOOL_CATALOG, type ToolDescriptor, type ToolMode } from "./security/tools";
+export { DirectorCommandRouter, parseDirectorCommand, type DirectorCommand, type DirectorCommandContext } from "./director/DirectorCommandRouter";
 export { DirectorCapabilities, type ResearchProvider, type ResearchRequest, type ResearchSource, type ProjectInspector, type ProjectAnalysis, type ProjectFinding, type MemoryImprovementAdvisor, type MemoryImprovementProposal, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge, type DeviceAction, type DevicePermission, type DeviceApproval } from "./director/DirectorCapabilities";
 export { ToolDirector, InMemoryToolArtifactStore, type ToolBuildSpec, type ToolArtifact, type ToolArtifactStatus, type ToolChangeKind, type ToolBuilder, type ToolSandbox, type ToolTestSummary, type ToolApprovalVerifier, type ToolArtifactStore } from "./tooling/ToolDirector";
 export { APEX_POLICY, FORBIDDEN_AGENT_ACTIONS, evaluatePolicy, type AgentAction, type PolicyRule } from "./policies/apexPolicies";
