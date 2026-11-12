@@ -168,6 +168,13 @@ describe("bug bounty Program Intelligence", () => {
     }), now)).toThrow(ProgramPolicyError);
   });
 
+  it("accepts valid timezone timestamps with fractional seconds", () => {
+    const policy = normalizeProgramPolicy(candidate({
+      retrievedAt: "2026-11-12T11:00:00.125Z"
+    }), now);
+    expect(policy.retrievedAt).toBe("2026-11-12T11:00:00.125Z");
+  });
+
   it("rejects impossible calendar dates instead of rolling them forward", () => {
     for (const value of [
       "2026-02-30T00:00:00Z",
