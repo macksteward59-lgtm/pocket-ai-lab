@@ -1037,3 +1037,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Greptile PR #45:** requested; no review response or inline threads observed yet.
 - **PR #44:** CI #382 passed on latest head. Greptile resolved five findings; two remain open (one is outdated after fix, one is the benchmark-plan comment). Exact evidence replies were posted; no manual thread resolution.
 - No local tests are claimed. No PR merged and no trust/authorization or target execution changes.
+## 2026-11-12 18:58:30 UTC — PR #45 Greptile findings accepted; adapter contract fix claimed
+
+- Greptile reviewed PR #45 and reported two valid blockers: the llama.cpp adapter's `independent` schema only accepts `analysis`, while the policy-review workflow requires `summary/findings`; and citation validation can accept multi-line spans or a trailing CR from CRLF input.
+- Claimed a narrowly scoped extension on `codex/bug-bounty-independent-reviews-v2`: add an explicit optional response-contract discriminator to the shared `InferenceRequest`, implement the corresponding llama.cpp JSON/Zod schema and parsing path, and add adapter-backed regression tests. Existing deliberation stages remain unchanged.
+- Also tighten citation validation to require the exact first line-ending boundary, excluding both LF and CRLF terminators, with regression tests.
+- This extends the previously completed Grok-owned llama.cpp adapter only as required by Greptile's integration finding. No broad ownership transfer, provider redesign, APEX/East trust/evidence/receipt/RLS changes, authorization, target traffic, or merge is intended. @owner: please flag any ownership concern before merge; this PR remains draft for review.
