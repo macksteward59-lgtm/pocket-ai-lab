@@ -141,12 +141,30 @@ function validateSourceUrl(value: string): string {
 }
 
 function validateTimestamp(value: string): string {
-  if (
-    typeof value !== "string" ||
-    !ISO_DATE_WITH_ZONE.test(value) ||
-    !Number.isFinite(Date.parse(value))
-  ) {
+  const match = typeof value === "string"
+    ? /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,3})?(Z|[+-](\\d{2}):(\\d{2}))$/.exec(value)
+    : null;
+  if (!match || !ISO_DATE_WITH_ZONE.test(value) || !Number.isFinite(Date.parse(value))) {
     throw new PolicyIntakeError("retrievedAt must be an ISO-8601 timestamp with timezone");
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const offsetHour = match[8] ? Number(match[8]) : 0;
+  const offsetMinute = match[9] ? Number(match[9]) : 0;
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  const validCalendarDate = calendar.getUTCFullYear() === year &&
+    calendar.getUTCMonth() === month - 1 &&
+    calendar.getUTCDate() === day;
+  const validClock = hour <= 23 && minute <= 59 && second <= 59;
+  const validOffset = offsetHour <= 14 && offsetMinute <= 59 &&
+    (offsetHour !== 14 || offsetMinute === 0);
+  if (!validCalendarDate || !validClock || !validOffset) {
+    throw new PolicyIntakeError("retrievedAt contains an invalid calendar date, clock time, or UTC offset");
   }
   return new Date(value).toISOString();
 }
