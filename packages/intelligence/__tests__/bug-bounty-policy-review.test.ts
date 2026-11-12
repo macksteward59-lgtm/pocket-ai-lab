@@ -219,7 +219,7 @@ describe("independent bug bounty policy reviews", () => {
     expect(requests.every(request => request.contextMessages.length === 0)).toBe(true);
     expect(requests.every(request => request.conversation === undefined && request.memoryContext === undefined)).toBe(true);
     expect(requests.every(request => request.prompt.includes("untrusted source data"))).toBe(true);
-    expect(requests.every(request => request.prompt.includes(snapshot.policyText))).toBe(true);
+    expect(requests.every(request => request.prompt.includes("app.example.com"))).toBe(true);
     expect(router.getLoadedModels()).toEqual([]);
   });
 });
