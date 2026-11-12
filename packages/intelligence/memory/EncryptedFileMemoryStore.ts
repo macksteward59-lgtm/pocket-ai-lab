@@ -250,8 +250,10 @@ export class EncryptedFileMemoryStore implements MemoryStore {
       await lockHandle.sync();
       return await operation();
     } finally {
-      if (lockHandle) await lockHandle.close().catch(() => undefined);
-      await unlink(lockPath).catch(() => undefined);
+      if (lockHandle) {
+        await lockHandle.close().catch(() => undefined);
+        await unlink(lockPath).catch(() => undefined);
+      }
       release();
       if (WRITE_QUEUES.get(this.filePath) === current) WRITE_QUEUES.delete(this.filePath);
     }
