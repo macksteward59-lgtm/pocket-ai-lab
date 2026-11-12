@@ -63,20 +63,7 @@ export async function runIndependentPolicyReviews(
 
   // The frozen packet contains only the source snapshot and interpretation.
   // No prior conversation, memory, target access, or peer-review result is passed.
-  const packet: PolicyReviewRequest = deepFreeze({
-    snapshot: { ...request.snapshot },
-    interpretation: {
-      ...request.interpretation,
-      clauses: request.interpretation.clauses.map(clause => ({
-        ...clause,
-        ...(clause.candidateValue ? { candidateValue: { ...clause.candidateValue } } : {})
-      })),
-      issues: request.interpretation.issues.map(issue => ({
-        ...issue,
-        clauseIds: [...issue.clauseIds]
-      }))
-    }
-  });
+  const packet = createSafePacket(request);
 
   const critic = await runOne("critic", agents.critic, packet);
   const validator = await runOne("validator", agents.validator, packet);
@@ -234,6 +221,64 @@ function validateFinding(
     sourceText,
     explanation: record.explanation.trim()
   });
+}
+
+function createSafePacket(request: PolicyReviewRequest): PolicyReviewRequest {
+  const snapshot = {
+    snapshotId: request.snapshot.snapshotId,
+    programId: request.snapshot.programId,
+    platform: request.snapshot.platform,
+    sourceUrl: request.snapshot.sourceUrl,
+    retrievedAt: request.snapshot.retrievedAt,
+    contentFormat: request.snapshot.contentFormat,
+    contentSha256: request.snapshot.contentSha256,
+    contentBytes: request.snapshot.contentBytes,
+    policyText: request.snapshot.policyText,
+    authorized: false as const
+  };
+  const clauses = request.interpretation.clauses.map(clause => ({
+    clauseId: clause.clauseId,
+    kind: clause.kind,
+    text: clause.text,
+    startOffset: clause.startOffset,
+    endOffset: clause.endOffset,
+    line: clause.line,
+    extractionMethod: clause.extractionMethod,
+    ...(clause.candidateValue ? { candidateValue: cloneCandidateValue(clause.candidateValue) } : {}),
+    snapshotId: clause.snapshotId,
+    contentSha256: clause.contentSha256,
+    requiresHumanReview: true as const
+  }));
+  const issues = request.interpretation.issues.map(issue => ({
+    code: issue.code,
+    message: issue.message,
+    clauseIds: [...issue.clauseIds]
+  }));
+  const interpretation = {
+    parserVersion: request.interpretation.parserVersion,
+    snapshotId: request.interpretation.snapshotId,
+    programId: request.interpretation.programId,
+    sourceUrl: request.interpretation.sourceUrl,
+    contentSha256: request.interpretation.contentSha256,
+    interpretedAt: request.interpretation.interpretedAt,
+    clauses,
+    issues,
+    reviewState: "needs-human-review" as const,
+    authorized: false as const
+  };
+  return deepFreeze({ snapshot, interpretation });
+}
+
+function cloneCandidateValue(
+  value: NonNullable<PolicyReviewRequest["interpretation"]["clauses"][number]["candidateValue"]>
+): NonNullable<PolicyReviewRequest["interpretation"]["clauses"][number]["candidateValue"]> {
+  if (value.kind === "asset") {
+    return { kind: "asset", assetKind: value.assetKind, value: value.value };
+  }
+  if (value.kind === "rate-limit") {
+    return { kind: "rate-limit", limit: value.limit, unit: value.unit };
+  }
+  return { kind: "testing-window", startsAt: value.startsAt, endsAt: value.endsAt };
 }
 
 function deepFreeze<T>(value: T): T {
