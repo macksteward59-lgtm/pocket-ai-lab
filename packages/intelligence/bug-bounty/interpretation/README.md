@@ -41,6 +41,26 @@ Use 24 versioned policy snippets with synthetic, non-operational asset names and
 
 Each fixture stores the expected clause category, candidate value (or none), review issue, and exact source span. Two human reviewers independently adjudicate the expected result before the corpus is frozen.
 
+### Named competitor comparison and measurable gates
+
+| Reference competitor/workflow | Publicly observable baseline | Comparison boundary |
+|---|---|---|
+| HackerOne Agentic Pentest | Published agentic penetration-testing workflow and human-expert collaboration | Compare policy-intake and review handoff only where public artifacts expose equivalent outputs; do not assume private policy-parser behavior |
+| XBOW | Published autonomous security-testing workflow and benchmark claims | Adjacent agentic-testing reference; compare only reproducible policy-review tasks, not vulnerability-discovery leaderboard claims |
+| HackerOne program policy/scope guidance | Published asset and scope definitions | Source-policy format and scope interpretation baseline |
+| Bugcrowd bounty briefs | Published scope, goals, rewards, and exclusions | Program-brief structure and exclusion-handling baseline |
+| Intigriti program rules | Published program-specific conditions and testing constraints | Program-specific rule and condition baseline |
+| Two independent human reviewers | Exact-text interpretation with independent annotations and adjudication | Primary quantitative accuracy baseline |
+
+A vendor without a publicly reproducible policy-interpretation output is recorded as **not comparable**, not assigned an invented score. The human baseline remains the mandatory comparator.
+
+Required competitor-surpass gate, before any superiority claim:
+- On the same 24 adjudicated cases, reach at least **5 percentage points higher recall** for critical approval/qualification conditions than each individual human reviewer, while retaining **100% exact source-line evidence**.
+- Maintain **zero false permission/authorization grants** and **zero target-action attempts**.
+- Achieve at least **90% precision** for actionable policy-review findings and **95% recall** for critical conditions.
+- Reduce median human review time by at least **25%** without reducing the exact-evidence or authorization-safety gates.
+- Report each named competitor as a measured result or **not publicly comparable**, with source URLs, benchmark version, model/provider, commit SHA, CI run IDs, and per-case disagreements.
+
 ### Metrics and pass criteria
 
 Report per-category precision/recall, exact candidate-value accuracy, full-source-span integrity, qualified-clause recall, malformed-value rejection, conflict detection, deterministic repeatability, and unauthorized-action count.
