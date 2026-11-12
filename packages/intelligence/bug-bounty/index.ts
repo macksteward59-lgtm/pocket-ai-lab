@@ -36,6 +36,7 @@ export type {
   PolicyInterpretation,
   PolicyInterpretationIssue,
   PolicyInterpretationIssueCode,
+  PolicyCandidateValue,
   PolicyReviewAssignment
 } from "./interpretation";
 export type { PolicyInterpretationInput } from "./interpretation";
