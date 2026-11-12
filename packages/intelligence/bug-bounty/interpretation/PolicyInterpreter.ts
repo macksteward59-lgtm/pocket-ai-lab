@@ -197,6 +197,28 @@ export function validateInterpretationEvidence(
     }
   }
 
+  if (typeof interpretation.interpretedAt !== "string") {
+    reasons.push("Interpretation timestamp is missing or malformed");
+  } else {
+    const interpretedAt = new Date(interpretation.interpretedAt);
+    if (!Number.isFinite(interpretedAt.getTime()) ||
+        interpretedAt.toISOString() !== interpretation.interpretedAt) {
+      reasons.push("Interpretation timestamp is not canonical ISO-8601");
+    } else {
+      try {
+        const expected = interpretPolicySnapshot(snapshot, interpretedAt);
+        if (JSON.stringify(expected.clauses) !== JSON.stringify(interpretation.clauses)) {
+          reasons.push("Clause set does not exactly reproduce from complete source lines");
+        }
+        if (JSON.stringify(expected.issues) !== JSON.stringify(interpretation.issues)) {
+          reasons.push("Issue set does not exactly reproduce from the source policy");
+        }
+      } catch {
+        reasons.push("Interpretation could not be independently reproduced from the snapshot");
+      }
+    }
+  }
+
   return Object.freeze({
     valid: reasons.length === 0,
     snapshotId: snapshot.snapshotId,
@@ -309,6 +331,10 @@ function classifyClause(line: string, activeSection?: PolicyClauseKind): Classif
     return { kind: "ambiguous", method: "keyword-pattern" };
   }
   return { kind: "unclassified", method: "keyword-pattern" };
+}
+
+function hasQualification(value: string): boolean {
+  return /\\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted|prior approval|required approval|approval required|upon approval)\\b/i.test(value);
 }
 
 function classifyLabel(value: string): Classification | undefined {
