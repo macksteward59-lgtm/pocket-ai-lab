@@ -5,7 +5,7 @@ import path from "node:path";
 import { ModelRegistry } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "../model-router/ModelRouter";
 import { ModelPluginManager } from "../model-registry/ModelPluginManager";
-import { LocalFileFetcher, UnconfiguredFetcher, ModelSourceError, estimateMemoryMB } from "../model-registry/ModelSource";
+import { LocalFileFetcher, UnconfiguredFetcher, ModelSourceError, estimateMemoryMB, type ModelSource, type ResolvedModel } from "../model-registry/ModelSource";
 
 async function withGgufFile<T>(bytes: number, fn: (filePath: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(path.join(tmpdir(), "model-plugin-"));
@@ -174,6 +174,65 @@ describe("ModelPluginManager", () => {
 
       await expect(router.route("agent-1", registry.get("local-llama"), []))
         .rejects.toThrow(/Insufficient memory/);
+    }));
+
+  it("rejects an overlapping replacement when another replacement already changed the descriptor", async () =>
+    withGgufFile(1024, async filePath => {
+      const directory = path.dirname(filePath);
+      const replacementB = path.join(directory, "replacement-b.gguf");
+      const replacementC = path.join(directory, "replacement-c.gguf");
+      await writeFile(replacementB, Buffer.alloc(1024, 2));
+      await writeFile(replacementC, Buffer.alloc(1024, 3));
+
+      const registry = new ModelRegistry();
+      const router = new ModelRouter(() => ({ availableMemoryMB: 4096, loadedModels: [] }));
+      const initialManager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
+      await initialManager.addModel(baseInput(filePath));
+
+      let releaseB: () => void = () => {};
+      let releaseC: () => void = () => {};
+      let markBStarted: () => void = () => {};
+      let markCStarted: () => void = () => {};
+      const gateB = new Promise<void>(resolve => { releaseB = resolve; });
+      const gateC = new Promise<void>(resolve => { releaseC = resolve; });
+      const startedB = new Promise<void>(resolve => { markBStarted = resolve; });
+      const startedC = new Promise<void>(resolve => { markCStarted = resolve; });
+      const localFetcher = new LocalFileFetcher();
+      const controlledFetcher = {
+        resolve: async (source: ModelSource): Promise<ResolvedModel> => {
+          const resolved = await localFetcher.resolve(source);
+          if (source.type === "local-file" && source.path === replacementB) {
+            markBStarted();
+            await gateB;
+          }
+          if (source.type === "local-file" && source.path === replacementC) {
+            markCStarted();
+            await gateC;
+          }
+          return resolved;
+        }
+      };
+      const manager = new ModelPluginManager({ registry, router, fetcher: controlledFetcher });
+      const replaceB = manager.replaceModel("local-llama", {
+        ...baseInput(replacementB), memoryEstimateMB: 256
+      }, { confirmReplaceLoaded: true });
+      const replaceC = manager.replaceModel("local-llama", {
+        ...baseInput(replacementC), memoryEstimateMB: 256
+      }, { confirmReplaceLoaded: true });
+
+      await Promise.all([startedB, startedC]);
+      releaseB();
+      const installedB = await replaceB;
+      expect(installedB.path).toBe(replacementB);
+      const descriptorB = registry.get("local-llama")!;
+      const firstLease = await router.route("agent-b", descriptorB, []);
+
+      releaseC();
+      await expect(replaceC).rejects.toThrow(/changed while its replacement was being prepared/);
+      const secondLease = await router.route("agent-b2", descriptorB, []);
+      expect(registry.get("local-llama")?.path).toBe(replacementB);
+      router.release(firstLease);
+      router.release(secondLease);
     }));
 
   it("refuses replaceModel for an id that was never registered", async () =>
