@@ -1043,3 +1043,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Claimed a narrowly scoped extension on `codex/bug-bounty-independent-reviews-v2`: add an explicit optional response-contract discriminator to the shared `InferenceRequest`, implement the corresponding llama.cpp JSON/Zod schema and parsing path, and add adapter-backed regression tests. Existing deliberation stages remain unchanged.
 - Also tighten citation validation to require the exact first line-ending boundary, excluding both LF and CRLF terminators, with regression tests.
 - This extends the previously completed Grok-owned llama.cpp adapter only as required by Greptile's integration finding. No broad ownership transfer, provider redesign, APEX/East trust/evidence/receipt/RLS changes, authorization, target traffic, or merge is intended. @owner: please flag any ownership concern before merge; this PR remains draft for review.
+
+## 2026-11-12 19:02:07 UTC — PR #45 provider contract and citation fixes implemented
+
+- Added optional `InferenceRequest.responseContract: "bug-bounty-policy-review"` while retaining the existing `independent` deliberation stage and its ordinary `analysis` payload contract.
+- Added dedicated llama.cpp prompt guidance, constrained JSON Schema, strict Zod envelope/finding validation, and provider parsing for the review contract. The review coordinator continues to perform the authoritative exact-source-line, clause, and snapshot checks; the adapter schema is only an earlier structural gate.
+- Added adapter-backed tests for valid review payloads, rejection of top-level authorization claims, rejection of nested unexpected finding fields, preservation of ordinary independent-stage output, and incompatible-stage rejection.
+- Corrected citation validation to require the end offset to stop at the first CR or LF; added multi-line LF and trailing-CR CRLF regression cases.
+- Updated the PR description and requested Greptile re-review. Current feature head at this entry: `145be1d7ab54da193d27f581e838554c602807fb`. CI is not yet visible through the workflow/status query; no test success is claimed for this head. No local tests are claimed.
+- No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic, external submission, or merge.
