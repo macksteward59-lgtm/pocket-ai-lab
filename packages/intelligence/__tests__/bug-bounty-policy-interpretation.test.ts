@@ -230,7 +230,7 @@ describe("bug bounty policy interpretation", () => {
   });
 
   it("rejects shortened evidence that drops a source-line approval condition", () => {
-    const source = snapshot("# In Scope\\n- app.example.com subject to approval");
+    const source = snapshot("# In Scope\n- app.example.com subject to approval");
     const interpretation = interpretPolicySnapshot(source);
     const original = interpretation.clauses[0];
     const shortenedText = "- app.example.com";
