@@ -160,6 +160,9 @@ export function validateInterpretationEvidence(
     reasons.push("Interpretation authority or review-state invariant was changed");
   }
 
+  const sourceLinesByOffset = new Map(
+    splitSourceLines(snapshot.policyText).map(line => [line.startOffset, line] as const)
+  );
   const seen = new Set<string>();
   for (const clause of interpretation.clauses) {
     if (!clause || typeof clause !== "object") {
@@ -181,18 +184,13 @@ export function validateInterpretationEvidence(
       reasons.push("Clause offsets are outside the source text: " + clause.clauseId);
       continue;
     }
-    const sourceLine = splitSourceLines(snapshot.policyText)
-      .find(line => line.startOffset === clause.startOffset);
+    const sourceLine = sourceLinesByOffset.get(clause.startOffset);
     if (!sourceLine || sourceLine.endOffset !== clause.endOffset ||
         sourceLine.text !== clause.text || sourceLine.line !== clause.line) {
       reasons.push("Clause evidence must cover one complete, exact source line: " + clause.clauseId);
     }
     if (snapshot.policyText.slice(clause.startOffset, clause.endOffset) !== clause.text) {
       reasons.push("Clause text does not match its source offsets: " + clause.clauseId);
-    }
-    const actualLine = snapshot.policyText.slice(0, clause.startOffset).split(/\r\n|\n|\r/).length;
-    if (actualLine !== clause.line) {
-      reasons.push("Clause line number does not match its source offset: " + clause.clauseId);
     }
     const expectedCandidate = extractCandidateValue(clause.kind, clause.text);
     if (!candidateValuesEqual(expectedCandidate, clause.candidateValue)) {
