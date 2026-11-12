@@ -128,7 +128,7 @@ describe("ModelRouter", () => {
 
     router.release("test-model");
     await expect(router.route("engineer", otherModel, [])).resolves.toEqual(otherModel);
-    router.release("other-model");
+    router.release(otherModel);
   });
 
   it("accounts for replacement generations while old concurrent leases drain", async () => {
@@ -143,10 +143,10 @@ describe("ModelRouter", () => {
       .rejects.toThrow(/retired/);
 
     await expect(router.route("engineer", replacement, []))
-      .rejects.toThrow(/Insufficient memory/);
+      .rejects.toThrow(/being replaced/);
     router.release(oldModel);
     await expect(router.route("engineer", replacement, []))
-      .rejects.toThrow(/Insufficient memory/);
+      .rejects.toThrow(/being replaced/);
 
     router.release(oldModel);
     await expect(router.route("engineer", replacement, []))
