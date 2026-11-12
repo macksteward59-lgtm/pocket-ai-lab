@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -120,6 +120,130 @@ describe("encrypted file memory store", () => {
     const source = { load: async () => [sample], save: async () => undefined };
     const target = { load: async () => [sample], save: async () => undefined };
     await expect(migratePlaintextMemory(source, target)).rejects.toThrow(/not empty/);
+  });
+
+  it("waits for active saves before zeroing its cached key on close", async () => {
+    const dir = await directory();
+    const key = new Uint8Array(32).fill(9);
+    let resolveKey!: (value: Uint8Array | null) => void;
+    let signalRequested!: () => void;
+    const requested = new Promise<void>(resolve => { signalRequested = resolve; });
+    const provider: MemoryKeyProvider = {
+      getOrCreateKey() {
+        signalRequested();
+        return new Promise(resolve => { resolveKey = resolve; });
+      }
+    };
+    try {
+      const store = await EncryptedFileMemoryStore.open(dir, provider);
+      const saving = store.save([sample]);
+      await requested;
+      const closing = store.close();
+      resolveKey(key);
+      await expect(saving).resolves.toBeUndefined();
+      await expect(closing).resolves.toBeUndefined();
+      const reopened = await EncryptedFileMemoryStore.open(dir, new TestKeyProvider(key));
+      await expect(reopened.load()).resolves.toEqual([sample]);
+      await expect(store.load()).rejects.toMatchObject({ code: "closed" });
+      await reopened.close();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects malformed envelope versions, algorithms, IVs, tags, and base64", async () => {
+    const dir = await directory();
+    try {
+      const store = await EncryptedFileMemoryStore.open(dir, new TestKeyProvider());
+      await store.save([sample]);
+      const file = join(dir, "memory.enc");
+      const original = JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>;
+      const invalid: Array<(value: Record<string, unknown>) => void> = [
+        value => { value.version = 2; },
+        value => { value.algorithm = "A128GCM"; },
+        value => { value.iv = Buffer.alloc(11).toString("base64"); },
+        value => { value.tag = Buffer.alloc(15).toString("base64"); },
+        value => { value.iv = String(value.iv) + "!"; },
+        value => { value.ciphertext = String(value.ciphertext) + "!"; }
+      ];
+      for (const mutate of invalid) {
+        const envelope = { ...original };
+        mutate(envelope);
+        await writeFile(file, JSON.stringify(envelope));
+        await expect(store.load()).rejects.toMatchObject({ code: "integrity" });
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("cleans temporary files when atomic replacement fails", async () => {
+    const dir = await directory();
+    try {
+      await mkdir(join(dir, "memory.enc"));
+      const store = await EncryptedFileMemoryStore.open(dir, new TestKeyProvider());
+      await expect(store.save([sample])).rejects.toBeDefined();
+      const names = await readdir(dir);
+      expect(names).toEqual(["memory.enc"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not remove another process's lock when exclusive lock acquisition fails", async () => {
+    const dir = await directory();
+    const lockPath = join(dir, "memory.enc.lock");
+    try {
+      await writeFile(lockPath, "other-process");
+      const store = await EncryptedFileMemoryStore.open(dir, new TestKeyProvider());
+      await expect(store.save([sample])).rejects.toMatchObject({ code: "invalid" });
+      await expect(readFile(lockPath, "utf8")).resolves.toBe("other-process");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves migration entries whose optional taskId is absent", async () => {
+    const dir = await directory();
+    const entryWithoutTask: MemoryEntry = {
+      ...sample,
+      id: "mem-without-task",
+      provenance: { agentId: "user", verified: false, sourceRefs: ["source-1"] }
+    };
+    try {
+      const source = { load: async () => [entryWithoutTask], save: async () => undefined };
+      const target = await EncryptedFileMemoryStore.open(join(dir, "encrypted"), new TestKeyProvider());
+      const result = await migratePlaintextMemory(source, target);
+      expect(result).toEqual({ entriesCopied: 1, sourcePreserved: true });
+      await expect(target.load()).resolves.toEqual([entryWithoutTask]);
+      await target.close();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("allows only one concurrent migration to populate a shared encrypted target", async () => {
+    const dir = await directory();
+    const second: MemoryEntry = { ...sample, id: "mem-test-2", content: "second source" };
+    try {
+      const targetA = await EncryptedFileMemoryStore.open(dir, new TestKeyProvider());
+      const targetB = await EncryptedFileMemoryStore.open(dir, new TestKeyProvider());
+      const sourceA = { load: async () => [sample], save: async () => undefined };
+      const sourceB = { load: async () => [second], save: async () => undefined };
+      const results = await Promise.allSettled([
+        migratePlaintextMemory(sourceA, targetA),
+        migratePlaintextMemory(sourceB, targetB)
+      ]);
+      expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter(result => result.status === "rejected")).toHaveLength(1);
+      const loaded = await targetA.load();
+      expect(loaded).toHaveLength(1);
+      expect([sample.id, second.id]).toContain(loaded[0].id);
+      await targetA.close();
+      await targetB.close();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("does not silently reinterpret an existing plaintext memory.json", async () => {
