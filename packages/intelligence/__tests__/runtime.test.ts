@@ -115,6 +115,22 @@ describe("ModelRouter", () => {
     expect(router.getLoadedModels()).toEqual([]);
   });
 
+  it("keeps shared model memory reserved until the final concurrent holder releases it", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const otherModel = { ...model, id: "other-model", memoryEstimateMB: 600 };
+    await Promise.all([
+      router.route("reasoner", model, []),
+      router.route("researcher", model, [])
+    ]);
+
+    router.release("test-model");
+    await expect(router.route("engineer", otherModel, [])).rejects.toThrow(/Insufficient memory/);
+
+    router.release("test-model");
+    await expect(router.route("engineer", otherModel, [])).resolves.toEqual(otherModel);
+    router.release("other-model");
+  });
+
   it("does not let a failed route create or release another model's reservation", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
     await router.route("reasoner", model, []);
