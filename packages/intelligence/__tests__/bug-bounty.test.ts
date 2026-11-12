@@ -56,6 +56,28 @@ describe("bug bounty Program Intelligence", () => {
     expect(policy.authorized).toBe(false);
   });
 
+  it("requires explicit prohibited activities and a request-rate limit", () => {
+    const policy = normalizeProgramPolicy(candidate({
+      prohibitedActivities: [],
+      rateLimit: undefined
+    }), now);
+    expect(policy.reviewState).toBe("needs-review");
+    expect(policy.reviewReasons).toContain("Prohibited activities are not explicit");
+    expect(policy.reviewReasons).toContain("A request-rate limit is not explicit");
+  });
+
+  it("blocks contradictory testing windows", () => {
+    const policy = normalizeProgramPolicy(candidate({
+      testingWindow: {
+        startsAt: "2026-11-20T00:00:00Z",
+        endsAt: "2026-11-10T00:00:00Z",
+        timezone: "UTC"
+      }
+    }), now);
+    expect(policy.reviewState).toBe("blocked");
+    expect(policy.reviewReasons).toContain("Testing window is contradictory");
+  });
+
   it("blocks expired and not-yet-effective policies", () => {
     const expired = normalizeProgramPolicy(candidate({ expiresAt: "2026-11-11T00:00:00Z" }), now);
     const future = normalizeProgramPolicy(candidate({ effectiveAt: "2026-11-13T00:00:00Z" }), now);
