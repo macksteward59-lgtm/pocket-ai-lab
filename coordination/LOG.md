@@ -846,3 +846,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Overlapping replacement finding:** `ModelPluginManager.replaceModel` now verifies that the registry still contains the exact descriptor captured before asynchronous source resolution. A second concurrent replacement based on an obsolete descriptor is rejected instead of overwriting the first replacement.
 - **Callsite coverage:** Orchestrator, East, and `runtime/lab/session.ts` now confirm only successful inference and release the exact descriptor in `finally`. The lab harness previously retained its reservations until the session ended; that is now corrected.
 - **Tests:** Added a failed-load/stale-ID admission test and a deterministic two-replacement race test. Greptile re-review requested, including a check for same-generation double-release and whether per-acquisition lease tokens are needed.
+
+
+## 2026-11-12 14:52 UTC — PR #39 Greptile second-pass findings fixed
+
+- **Greptile second pass:** 7 files reviewed, 2 P2 comments. (1) Saved workspace restoration was called on every `.onAppear`, generating a new request ID and reloading the page when returning to the tab. (2) The failed-replacement test started with no selected/loaded model, so it did not prove the old session survived a failed import.
+- **Fixes pushed:** `WorkspaceRestoreGate` now restores only on first appearance; added a unit test. The failed replacement test now imports and loads a good GGUF first, attempts an invalid same-name replacement, checks that the original file/selection/session remain, and sends a prompt through the original session.
+- **Current head:** PR #39 `81ea674`. Pocket AI Lab CI is running; iOS LlamaEngine CI is pending on this head. Greptile re-review requested.
+- **No merge:** PR #39 remains stacked on PR #38 and unmerged.
