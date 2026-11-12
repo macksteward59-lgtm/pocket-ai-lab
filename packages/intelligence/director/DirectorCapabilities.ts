@@ -134,24 +134,32 @@ export class DirectorCapabilities {
     if (!Number.isInteger(maxSources) || maxSources < 1 || maxSources > 20) {
       throw new Error("maxSources must be between 1 and 20");
     }
+    // Keep the policy snapshot private: the provider receives a separate copy
+    // and cannot broaden the allowlist used to validate its own results.
     const allowedDomains = request.allowedDomains === undefined
       ? undefined
-      : normalizeAllowedDomains(request.allowedDomains);
+      : Object.freeze(normalizeAllowedDomains(request.allowedDomains));
+    const providerAllowedDomains = allowedDomains ? [...allowedDomains] : undefined;
     const sources = await this.options.research.search({
-      query: request.query.trim(), maxSources, ...(allowedDomains ? { allowedDomains } : {})
+      query: request.query.trim(), maxSources,
+      ...(providerAllowedDomains ? { allowedDomains: providerAllowedDomains } : {})
     });
     if (!Array.isArray(sources)) throw new Error("Research provider returned an invalid result");
     return sources.slice(0, maxSources).map(source => {
+      if (!source || typeof source.url !== "string") {
+        throw new Error("Research provider returned an invalid or unsafe source");
+      }
       let url: URL;
-      try { url = new URL(source?.url); } catch { throw new Error("Research provider returned an invalid or unsafe source"); }
-      if (!source || typeof source.id !== "string" || typeof source.title !== "string" ||
+      try { url = new URL(source.url); } catch { throw new Error("Research provider returned an invalid or unsafe source"); }
+      if (typeof source.id !== "string" || typeof source.title !== "string" ||
           typeof source.excerpt !== "string" || !["http:", "https:"].includes(url.protocol) ||
           url.username || url.password ||
           typeof source.retrievedAt !== "string" || !Number.isFinite(Date.parse(source.retrievedAt))) {
         throw new Error("Research provider returned an invalid or unsafe source");
       }
-      if (allowedDomains && !allowedDomains.some(domain => url.hostname.toLowerCase() === domain ||
-          url.hostname.toLowerCase().endsWith("." + domain))) {
+      const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+      if (allowedDomains && !allowedDomains.some(domain => hostname === domain ||
+          hostname.endsWith("." + domain))) {
         throw new Error("Research provider returned a source outside the allowed domain list");
       }
       return { ...source, title: source.title.slice(0, 500), excerpt: source.excerpt.slice(0, 8000) };
