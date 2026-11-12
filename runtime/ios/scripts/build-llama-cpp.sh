@@ -227,6 +227,18 @@ case "$destination" in
   verify)
     verify_sources >/dev/null
     ;;
+  device)
+    build_one device \
+      -DCMAKE_SYSTEM_NAME=iOS \
+      -DCMAKE_OSX_SYSROOT=iphoneos \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
+      -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+      -DGGML_METAL=ON \
+      -DGGML_METAL_EMBED_LIBRARY=ON \
+      -DGGML_METAL_TARGET_OS=ios \
+      -DGGML_ACCELERATE=ON
+    ;;
   simulator)
     build_one simulator \
       -DCMAKE_SYSTEM_NAME=iOS \
@@ -256,8 +268,8 @@ case "$destination" in
   xcframework)
     name=""
     for name in libllama.a libggml.a libggml-base.a libggml-cpu.a libggml-metal.a libvendor-hash.a; do
-      if [[ ! -f "$BUILD/simulator/$name" || ! -f "$BUILD/macos/$name" ]]; then
-        echo "missing $name in the simulator or macos build" >&2
+      if [[ ! -f "$BUILD/device/$name" || ! -f "$BUILD/simulator/$name" || ! -f "$BUILD/macos/$name" ]]; then
+        echo "missing $name in the device, simulator, or macos build" >&2
         exit 1
       fi
     done
@@ -266,6 +278,7 @@ case "$destination" in
     for name in llama ggml ggml-base ggml-cpu ggml-metal vendor-hash; do
       rm -rf "$BUILD/xc/${name}.xcframework"
       xcodebuild -create-xcframework \
+        -library "$BUILD/device/lib${name}.a" \
         -library "$BUILD/simulator/lib${name}.a" \
         -library "$BUILD/macos/lib${name}.a" \
         -output "$BUILD/xc/${name}.xcframework"
