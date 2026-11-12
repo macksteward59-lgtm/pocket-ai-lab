@@ -149,6 +149,9 @@ export class Orchestrator {
               ].join("\n"),
               contextMessages: [...priorMessages]
             });
+            // A reservation is not proof that the provider loaded the new
+            // artifact. Confirm only after generation succeeds.
+            this.router.confirmLoaded(selected);
             const message: AgentMessage = {
               messageId: crypto.randomUUID(),
               taskId: request.id,
