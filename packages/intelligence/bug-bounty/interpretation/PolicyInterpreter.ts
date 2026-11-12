@@ -59,6 +59,7 @@ export function interpretPolicySnapshot(
 
     const classification = classifyClause(trimmed, activeSection);
     const clauseId = "clause-" + String(clauses.length + 1).padStart(4, "0");
+    const candidateValue = extractCandidateValue(classification.kind, sourceLine.text);
     const clause = Object.freeze({
       clauseId,
       kind: classification.kind,
@@ -67,6 +68,7 @@ export function interpretPolicySnapshot(
       endOffset: sourceLine.endOffset,
       line: sourceLine.line,
       extractionMethod: classification.method,
+      ...(candidateValue ? { candidateValue } : {}),
       snapshotId: snapshot.snapshotId,
       contentSha256: snapshot.contentSha256,
       requiresHumanReview: true as const
@@ -83,6 +85,12 @@ export function interpretPolicySnapshot(
       issues.push(Object.freeze({
         code: "ambiguous-language" as const,
         message: "Clause contains mixed or qualified language and requires human interpretation",
+        clauseIds: Object.freeze([clauseId])
+      }));
+    } else if (requiresStrictCandidate(classification.kind) && !candidateValue) {
+      issues.push(Object.freeze({
+        code: "unparsed-candidate" as const,
+        message: "Clause category was recognized, but its value did not match a supported explicit format",
         clauseIds: Object.freeze([clauseId])
       }));
     }
@@ -296,6 +304,65 @@ function classifyLabel(value: string): Classification | undefined {
   }
   if (/^(?:disclosure|disclosure rules?|coordinated disclosure)$/.test(label)) {
     return { kind: "disclosure", method: "explicit-label" };
+  }
+  return undefined;
+}
+
+function requiresStrictCandidate(kind: PolicyClauseKind): boolean {
+  return kind === "scope-inclusion" || kind === "scope-exclusion" ||
+    kind === "rate-limit" || kind === "testing-window";
+}
+
+function extractCandidateValue(
+  kind: PolicyClauseKind,
+  sourceLine: string
+): ExtractedPolicyClause["candidateValue"] {
+  if (!requiresStrictCandidate(kind)) return undefined;
+
+  let value = sourceLine.trim().replace(/^(?:[-*+]\\s+|\\d+[.)]\\s+)/, "").trim();
+  const colon = value.indexOf(":");
+  if (colon > 0 && classifyLabel(value.slice(0, colon))) {
+    value = value.slice(colon + 1).trim();
+  }
+
+  if (kind === "scope-inclusion" || kind === "scope-exclusion") {
+    if (/^(?:\\*\\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.?$/i.test(value)) {
+      return Object.freeze({ kind: "asset" as const, assetKind: "domain" as const, value });
+    }
+    try {
+      const url = new URL(value);
+      if ((url.protocol === "https:" || url.protocol === "http:") &&
+          !url.username && !url.password && !url.search && !url.hash) {
+        return Object.freeze({ kind: "asset" as const, assetKind: "url" as const, value });
+      }
+    } catch {
+      // Non-URL scope text remains an unparsed candidate for human review.
+    }
+    return undefined;
+  }
+
+  if (kind === "rate-limit") {
+    const matches = [...value.matchAll(/\\b(\\d+(?:\\.\\d+)?)\\s*(?:requests?|reqs?)\\s*(?:per|\\/)\\s*(second|sec|minute|min)\\b/gi)];
+    if (matches.length !== 1) return undefined;
+    const limit = Number(matches[0][1]);
+    if (!Number.isFinite(limit) || limit <= 0) return undefined;
+    const unit = /^(?:second|sec)$/i.test(matches[0][2])
+      ? "requests-per-second" as const
+      : "requests-per-minute" as const;
+    return Object.freeze({ kind: "rate-limit" as const, limit, unit });
+  }
+
+  if (kind === "testing-window") {
+    const timestamp = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?(?:Z|[+-]\\d{2}:\\d{2})";
+    const match = new RegExp("^(" + timestamp + ")\\s+(?:to|through|until)\\s+(" + timestamp + ")$", "i").exec(value);
+    if (!match || !Number.isFinite(Date.parse(match[1])) || !Number.isFinite(Date.parse(match[2]))) {
+      return undefined;
+    }
+    return Object.freeze({
+      kind: "testing-window" as const,
+      startsAt: match[1],
+      endsAt: match[2]
+    });
   }
   return undefined;
 }
