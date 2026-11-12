@@ -927,3 +927,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Implementation:** structured policy normalization, strict HTTPS source references, explicit domain/URL scope matching, exclusion precedence, expiry/effective-date checks, incomplete-policy gating, unsupported asset-type indeterminate results, and universal action denial. Added architecture note and tests.
 - **Validation:** Pocket AI Lab CI, Consumer prototype CI, Governance sidecar CI, and Cursor collaboration plugin CI all passed. Intelligence engine suite: 42 test files / 350 tests passed. Secondary adapter/lab/memory/East suite: 16 test files / 236 passed / 2 skipped. Type-check/build passed.
 - **Boundaries:** no target traffic, scanner or exploit runner, report submission, credential handling, APEX/East trust/evidence changes, or authorization grant. Human/security review remains required; no merge performed.
+
+
+## 2026-11-12 UTC — ChatGPT claims bug bounty intake provenance slice
+
+- **Branch:** `codex/bug-bounty-intake-provenance`, stacked on `codex/bug-bounty-program-intelligence` (PR #42 head).
+- **Files:** new `packages/intelligence/bug-bounty/intake/` module and focused tests only.
+- **Scope:** bounded operator-supplied policy text ingestion, source metadata validation, SHA-256 content identity, immutable in-memory snapshots, and deterministic policy-version comparison.
+- **Safety:** no outbound HTTP, crawling, scraping, target traffic, AI-granted approval, scanner/exploit execution, persistence, or APEX/East trust/evidence changes. Intake records remain untrusted evidence and do not authorize actions.
