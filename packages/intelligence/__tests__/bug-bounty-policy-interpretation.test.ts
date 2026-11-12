@@ -133,6 +133,33 @@ describe("bug bounty policy interpretation", () => {
     expect(interpretation.authorized).toBe(false);
   });
 
+  it("does not misparse fractional or comma-grouped request limits", () => {
+    const source = snapshot([
+      "# Rate Limits",
+      "- .5 requests per second",
+      "- 1,500 requests per minute"
+    ].join("\n"));
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses.map(clause => clause.candidateValue)).toEqual([undefined, undefined]);
+    expect(interpretation.issues.filter(issue => issue.code === "unparsed-candidate")).toHaveLength(2);
+  });
+
+  it("marks inline approval qualifiers as ambiguous", () => {
+    const source = snapshot("Allowed Testing Activities: manual testing subject to approval");
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses[0].kind).toBe("ambiguous");
+    expect(interpretation.issues.some(issue => issue.code === "ambiguous-language")).toBe(true);
+    expect(interpretation.authorized).toBe(false);
+  });
+
+  it("does not treat malformed dotted numeric IPs as domains", () => {
+    const source = snapshot("In Scope: 999.999.999.999");
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses[0].kind).toBe("scope-inclusion");
+    expect(interpretation.clauses[0].candidateValue).toBeUndefined();
+    expect(interpretation.issues.some(issue => issue.code === "unparsed-candidate")).toBe(true);
+  });
+
   it("keeps recognized but unsupported scope values as unparsed review items", () => {
     const source = snapshot("# In Scope\n- the production application");
     const interpretation = interpretPolicySnapshot(source);
@@ -200,6 +227,28 @@ describe("bug bounty policy interpretation", () => {
 
     const tamperedSnapshot = { ...source, policyText: source.policyText + " changed" };
     expect(() => interpretPolicySnapshot(tamperedSnapshot)).toThrow();
+  });
+
+  it("rejects shortened evidence that drops a source-line approval condition", () => {
+    const source = snapshot("# In Scope\\n- app.example.com subject to approval");
+    const interpretation = interpretPolicySnapshot(source);
+    const original = interpretation.clauses[0];
+    const shortenedText = "- app.example.com";
+    const startOffset = source.policyText.indexOf("- app.example.com");
+    const altered = {
+      ...interpretation,
+      clauses: [{
+        ...original,
+        kind: "scope-inclusion",
+        text: shortenedText,
+        startOffset,
+        endOffset: startOffset + shortenedText.length,
+        candidateValue: { kind: "asset", assetKind: "domain", value: "app.example.com" }
+      }]
+    } as unknown as PolicyInterpretation;
+    const result = validateInterpretationEvidence(source, altered);
+    expect(result.valid).toBe(false);
+    expect(result.reasons.some(reason => reason.includes("complete, exact source line"))).toBe(true);
   });
 
   it("fails closed for malformed evidence-validator inputs", () => {
