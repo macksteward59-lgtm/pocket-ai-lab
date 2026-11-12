@@ -109,6 +109,18 @@ describe("bug bounty policy interpretation", () => {
     expect(interpretation.reviewState).toBe("needs-human-review");
   });
 
+  it("preserves explicit IP and CIDR assets as candidates without authorizing them", () => {
+    const source = snapshot("# In Scope\\n- 192.0.2.0/24\\n- 2001:db8::1");
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses[0].candidateValue).toEqual({
+      kind: "asset", assetKind: "cidr", value: "192.0.2.0/24"
+    });
+    expect(interpretation.clauses[1].candidateValue).toEqual({
+      kind: "asset", assetKind: "ip", value: "2001:db8::1"
+    });
+    expect(interpretation.authorized).toBe(false);
+  });
+
   it("keeps recognized but unsupported scope values as unparsed review items", () => {
     const source = snapshot("# In Scope\\n- the production application");
     const interpretation = interpretPolicySnapshot(source);
@@ -129,6 +141,17 @@ describe("bug bounty policy interpretation", () => {
     const interpretation = interpretPolicySnapshot(source);
     expect(interpretation.issues.filter(issue => issue.code === "potential-conflict")).toHaveLength(2);
     expect(interpretation.authorized).toBe(false);
+  });
+
+  it("rejects impossible dates and reversed testing windows as parsed candidates", () => {
+    const source = snapshot([
+      "# Testing Window",
+      "- 2026-02-30T00:00:00Z to 2026-03-01T00:00:00Z",
+      "- 2026-11-13T00:00:00Z to 2026-11-12T00:00:00Z"
+    ].join("\\n"));
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses.every(clause => clause.candidateValue === undefined)).toBe(true);
+    expect(interpretation.issues.filter(issue => issue.code === "unparsed-candidate")).toHaveLength(2);
   });
 
   it("creates separate pending Critic and Validator assignments without claiming execution", () => {
