@@ -95,6 +95,11 @@ describe("bug bounty Program Intelligence", () => {
     expect(evaluateTargetScope(policy, "https://example.com/apix").disposition).toBe("out-of-scope");
   });
 
+  it("does not treat a matching target as in-scope when the policy is incomplete", () => {
+    const policy = normalizeProgramPolicy(candidate({ allowedActivities: [] }), now);
+    expect(evaluateTargetScope(policy, "https://api.example.com/").disposition).toBe("indeterminate");
+  });
+
   it("returns indeterminate when unsupported asset types appear", () => {
     const policy = normalizeProgramPolicy(candidate({
       scope: {
