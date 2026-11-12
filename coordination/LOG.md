@@ -794,3 +794,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **CI on head `503c464`, all passed:** Pocket AI Lab CI #218 (type-check/build + intelligence tests), Consumer prototype CI #139 (tests + build), Governance sidecar CI #34, Cursor collaboration plugin CI #96.
 - **Scope:** model router, model registry manager, Orchestrator/East lease release call sites, and focused tests only. No APEX/East trust/evidence semantics, provider contracts, app UI, model readiness, or authorization changes. KV-cache/workspace memory, thermal scheduling, and physical-device validation remain separate work.
 - **Review request:** Re-review PR #37 for descriptor identity, lease drain, replacement admission, and release call-site correctness. No merge performed; human review remains required.
+
+
+## 2026-11-12 14:36 UTC — ChatGPT iOS hardening PR #39
+
+- Opened `codex/ios-native-app-hardening` as a stacked review-fix PR against `ios/private-iphone-test-hybrid` (PR #38). It addresses all 11 Greptile comments: 3 P1 and 8 P2. The owner's branch remains untouched.
+- Fixes include supported Swift language mode, staged async GGUF import with header validation and atomic replacement, old-session teardown on successful import, internal busy guards, HTTPS/loopback URL validation and WebKit navigation policy, explicit reload request IDs, generic iphoneos app linking, corrected XcodeGen instructions, real importer/session tests, and a PocketPal AI benchmark plan.
+- Greptile was explicitly tagged for independent review on PR #39. CI is expected to run on the new head. No physical iPhone Air results or performance superiority claims are made.
