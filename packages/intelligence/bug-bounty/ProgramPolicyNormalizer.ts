@@ -62,10 +62,14 @@ export function normalizeProgramPolicy(
   if (allowedActivities.length === 0) reviewReasons.push("Allowed testing activities are not explicit");
   if (prohibitedActivities.length === 0) reviewReasons.push("Prohibited activities are not explicit");
   if (vulnerabilityExclusions.length === 0) reviewReasons.push("Vulnerability exclusions are not explicit");
-  if (!candidate.rateLimit ||
-      (!isPositiveFinite(candidate.rateLimit.requestsPerSecond) &&
-       !isPositiveFinite(candidate.rateLimit.requestsPerMinute))) {
+  const suppliedRateLimits = candidate.rateLimit
+    ? [candidate.rateLimit.requestsPerSecond, candidate.rateLimit.requestsPerMinute]
+      .filter((value): value is number => value !== undefined)
+    : [];
+  if (suppliedRateLimits.length === 0) {
     reviewReasons.push("A request-rate limit is not explicit");
+  } else if (suppliedRateLimits.some(value => !isPositiveFinite(value))) {
+    throw new ProgramPolicyError("Every supplied request-rate limit must be a positive finite number");
   }
   if (!candidate.testingWindow?.startsAt || !candidate.testingWindow?.endsAt) {
     reviewReasons.push("Testing window is not explicit");
@@ -180,8 +184,34 @@ function normalizeSourceUrl(value: string): string {
 }
 
 function validDate(value: string, name: string): string {
-  if (typeof value !== "string" || !ISO_DATE.test(value) || !Number.isFinite(Date.parse(value))) {
+  const match = typeof value === "string"
+    ? /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.(\\d{1,3}))?(Z|[+-](\\d{2}):(\\d{2}))$/.exec(value)
+    : null;
+  if (!match || !ISO_DATE.test(value) || !Number.isFinite(Date.parse(value))) {
     throw new ProgramPolicyError(name + " must be an explicit ISO-8601 timestamp with timezone");
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const offsetHour = match[9] ? Number(match[9]) : 0;
+  const offsetMinute = match[10] ? Number(match[10]) : 0;
+
+  const calendar = new Date(0);
+  calendar.setUTCHours(0, 0, 0, 0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  const validCalendarDate = month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
+    calendar.getUTCFullYear() === year &&
+    calendar.getUTCMonth() === month - 1 &&
+    calendar.getUTCDate() === day;
+  const validClock = hour <= 23 && minute <= 59 && second <= 59;
+  const validOffset = offsetHour <= 14 && offsetMinute <= 59 &&
+    (offsetHour !== 14 || offsetMinute === 0);
+  if (!validCalendarDate || !validClock || !validOffset) {
+    throw new ProgramPolicyError(name + " contains an invalid calendar date, clock time, or UTC offset");
   }
   return new Date(value).toISOString();
 }
