@@ -13,7 +13,7 @@ import { DelegationGate } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
 import { ToolRegistry } from "../security/tools";
 import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVerifier, type ToolArtifactStore } from "../tooling/ToolDirector";
-import { DirectorCommandRouter } from "../director/DirectorCommandRouter";
+import { DirectorCommandRouter, type DirectorCommandProvider } from "../director/DirectorCommandRouter";
 import { DirectorCapabilities, type ResearchProvider, type ProjectInspector, type MemoryImprovementAdvisor, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge } from "../director/DirectorCapabilities";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
 
@@ -93,7 +93,7 @@ export class Orchestrator {
   readonly capabilities: DirectorCapabilities;
   /** Strict allowlisted structured-command bridge for model/provider adapters. */
   readonly directorCommands: DirectorCommandRouter;
-  private readonly inference: InferenceProvider;
+  private readonly inference: InferenceProvider;\n  private readonly directorCommandProvider?: DirectorCommandProvider;
 
   constructor(opts: {
     inference: InferenceProvider;
@@ -118,7 +118,7 @@ export class Orchestrator {
     memoryImprovementAdvisor?: MemoryImprovementAdvisor;
     memoryChangeApproval?: MemoryChangeApproval;
     devicePermissionBroker?: DevicePermissionBroker;
-    deviceBridge?: DeviceBridge;
+    deviceBridge?: DeviceBridge;\n    /** Optional model-native structured tool-call adapter for Director commands. */\n    directorCommandProvider?: DirectorCommandProvider;
   }) {
     if (!opts?.inference || typeof opts.inference.generate !== "function") {
       throw new Error("A real InferenceProvider must be supplied; placeholder inference is disabled");
@@ -126,7 +126,7 @@ export class Orchestrator {
     if (typeof opts.getResources !== "function") {
       throw new Error("A live resource provider must be supplied");
     }
-    this.inference = opts.inference;
+    this.inference = opts.inference;\n    this.directorCommandProvider = opts.directorCommandProvider;
     this.router = new ModelRouter(opts.getResources);
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
     this.memory = opts.memory ?? new MemoryManager();
