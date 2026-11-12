@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Download, verify, and build the pinned llama.cpp static library.
-# Destinations: verify, simulator, macos, linux, xcframework, fetch-gguf, write-smoke-path
+# Destinations: verify, device, simulator, macos, linux, xcframework, fetch-gguf, write-smoke-path
 set -euo pipefail
 
 IOS="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +13,7 @@ SRC="$BUILD/src"
 
 destination="${1:-}"
 if [[ -z "$destination" ]]; then
-  echo "usage: $0 verify|simulator|macos|linux|xcframework|fetch-gguf|write-smoke-path [gguf-path]" >&2
+  echo "usage: $0 verify|device|simulator|macos|linux|xcframework|fetch-gguf|write-smoke-path [gguf-path]" >&2
   exit 2
 fi
 
