@@ -294,9 +294,11 @@ function isCompleteSourceLine(text: string, start: number, end: number): boolean
   while (lineStart > 0 && text[lineStart - 1] !== "\n" && text[lineStart - 1] !== "\r") {
     lineStart -= 1;
   }
-  let lineEnd = end;
+  let lineEnd = start;
   while (lineEnd < text.length && text[lineEnd] !== "\n" && text[lineEnd] !== "\r") {
     lineEnd += 1;
   }
+  // The end offset must stop immediately before the first line terminator.
+  // This rejects multi-line spans and a trailing CR in CRLF input.
   return lineStart === start && lineEnd === end;
 }
