@@ -56,3 +56,9 @@ The intelligence package does not bypass operating-system permissions or app san
 ### Self-improvement boundary
 
 The Director can research improvements, inspect its own project components, propose tool or memory changes, test candidates, and request approvals. It cannot silently rewrite its governing policies, approval verifier, trust roots, security gates, or its own permissions. Tool and memory changes remain versioned/provenanced and subject to the approval boundaries above. The host must supply the actual model tool-call adapter and capability providers; arbitrary model text is never treated as a command.
+
+## Structured command bridge
+
+`Orchestrator.directorCommands` is the finite structured-command dispatcher for model/provider adapters. It accepts only the explicit command kinds `research`, `analyze-project`, `propose-memory-improvements`, `apply-memory-improvement`, `develop-tool`, `activate-tool`, `retire-tool`, and `use-device`. Unknown commands, free-form shell/code requests, malformed fields, excessive limits, and unsafe relative project paths are rejected before dispatch.
+
+The bridge is not itself a model-native function-calling implementation. A provider adapter must still translate provider-specific structured tool calls into this typed command vocabulary and pass model output as untrusted data. The bridge never evaluates code or treats prose as an instruction. Task identity is supplied by the orchestrator, not trusted from model output. Activation, retirement, memory mutations, and device operations retain their independent approval checks.
