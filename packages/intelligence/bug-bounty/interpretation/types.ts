@@ -17,6 +17,11 @@ export type PolicyExtractionMethod =
   | "section-context"
   | "keyword-pattern";
 
+export type PolicyCandidateValue =
+  | { readonly kind: "asset"; readonly assetKind: "domain" | "url"; readonly value: string }
+  | { readonly kind: "rate-limit"; readonly limit: number; readonly unit: "requests-per-second" | "requests-per-minute" }
+  | { readonly kind: "testing-window"; readonly startsAt: string; readonly endsAt: string };
+
 export interface ExtractedPolicyClause {
   readonly clauseId: string;
   readonly kind: PolicyClauseKind;
@@ -27,6 +32,8 @@ export interface ExtractedPolicyClause {
   readonly endOffset: number;
   readonly line: number;
   readonly extractionMethod: PolicyExtractionMethod;
+  /** Strictly parsed candidate data; never an authorization decision. */
+  readonly candidateValue?: PolicyCandidateValue;
   readonly snapshotId: string;
   readonly contentSha256: string;
   readonly requiresHumanReview: true;
@@ -35,7 +42,8 @@ export interface ExtractedPolicyClause {
 export type PolicyInterpretationIssueCode =
   | "unclassified-clause"
   | "ambiguous-language"
-  | "potential-conflict";
+  | "potential-conflict"
+  | "unparsed-candidate";
 
 export interface PolicyInterpretationIssue {
   readonly code: PolicyInterpretationIssueCode;
