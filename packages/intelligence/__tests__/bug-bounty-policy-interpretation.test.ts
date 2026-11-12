@@ -94,6 +94,18 @@ describe("bug bounty policy interpretation", () => {
     expect(interpretation.clauses[0].text).toBe("In Scope: *.example.com");
   });
 
+  it("does not carry a recognized section label across an unknown heading", () => {
+    const source = snapshot([
+      "# In Scope",
+      "- app.example.com",
+      "# General Information",
+      "- This service supports customer account management."
+    ].join("\\n"));
+    const interpretation = interpretPolicySnapshot(source);
+    expect(interpretation.clauses[0].kind).toBe("scope-inclusion");
+    expect(interpretation.clauses[1].kind).toBe("unclassified");
+  });
+
   it("marks qualified or unknown clauses for human review", () => {
     const source = snapshot([
       "Testing may be permitted case-by-case; contact the program first.",
