@@ -60,6 +60,7 @@ export interface ToolSandbox {
 }
 
 export interface ToolApprovalRequest {
+  operation: "activate" | "retire";
   taskId: string;
   toolId: string;
   version: number;
@@ -129,8 +130,10 @@ export class ToolDirector {
 
   /** Build and test a new tool or a revision of an existing tool. Never activates it. */
   async develop(spec: ToolBuildSpec): Promise<ToolArtifact> {
-    if (!spec || typeof spec.id !== "string") throw new Error("Tool specification is required");
-    return this.withToolLock(spec.id, () => this.developLocked(spec));
+    // Snapshot caller-owned metadata before the first asynchronous boundary.
+    const snapshot = snapshotSpec(spec);
+    this.validateSpec(snapshot);
+    return this.withToolLock(snapshot.id, () => this.developLocked(snapshot));
   }
 
   private async developLocked(spec: ToolBuildSpec): Promise<ToolArtifact> {
@@ -139,16 +142,17 @@ export class ToolDirector {
     if (!this.sandbox) throw new Error("Isolated tool sandbox is not configured");
 
     const existing = this.registry.has(spec.id);
-    const previous = await this.store.getLatest(spec.id);
+    const storedPrevious = await this.store.getLatest(spec.id);
+    const previous = storedPrevious ? cloneArtifact(storedPrevious) : undefined;
     if (spec.change === "create" && (existing || previous)) throw new Error("Tool already exists; use extend or revise");
     if (previous?.status === "retired") throw new Error("Retired tool ids cannot be reused; create a new tool id");
     if (spec.change !== "create" && !previous) {
       throw new Error(existing ? "Built-in tools cannot be revised by the Director workshop" : "Cannot extend or revise an unknown tool");
     }
 
-    const built = await this.builder.build({ spec: cloneSpec(spec), previous });
+    const built = await this.builder.build({ spec: cloneSpec(spec), previous: previous ? cloneArtifact(previous) : undefined });
     const files = validateFiles(built?.files);
-    const digest = await digestFiles(files, spec);
+    const digest = await digestFiles(files, cloneSpec(spec));
     const artifact: ToolArtifact = {
       toolId: spec.id,
       version: (previous?.version ?? 0) + 1,
@@ -160,7 +164,7 @@ export class ToolDirector {
       previousDigest: previous?.digest
     };
 
-    await this.store.put(artifact);
+    await this.store.put(cloneArtifact(artifact));
     let testSummary: ToolTestSummary;
     try {
       testSummary = await this.sandbox.test({ spec: cloneSpec(spec), artifact: cloneArtifact(artifact) });
@@ -168,7 +172,7 @@ export class ToolDirector {
       const quarantined = { ...artifact, status: "quarantined" as const,
         testSummary: { passed: false, testsRun: 0, testsPassed: 0,
           findings: ["Sandbox failed: " + safeError(error)], completedAt: new Date(this.now()).toISOString() } };
-      await this.store.put(quarantined);
+      await this.store.put(cloneArtifact(quarantined));
       return cloneArtifact(quarantined);
     }
 
@@ -179,69 +183,131 @@ export class ToolDirector {
         ? "ready" : "quarantined",
       testSummary: normalizedSummary
     };
-    await this.store.put(result);
+    await this.store.put(cloneArtifact(result));
     return cloneArtifact(result);
   }
 
   /** Register or update tool metadata only after tests and digest-bound approval. */
   async activate(input: { taskId: string; toolId: string; version: number; approvalRef: string }): Promise<ToolDescriptor> {
     if (!input || typeof input.toolId !== "string") throw new Error("Tool activation request is required");
-    return this.withToolLock(input.toolId, () => this.activateLocked(input));
+    const request = { taskId: input.taskId, toolId: input.toolId, version: input.version, approvalRef: input.approvalRef };
+    return this.withToolLock(request.toolId, () => this.activateLocked(request));
   }
 
   private async activateLocked(input: { taskId: string; toolId: string; version: number; approvalRef: string }): Promise<ToolDescriptor> {
     if (!this.approvalVerifier) throw new Error("Independent tool activation approval is not configured");
-    if (!input.taskId?.trim() || !input.approvalRef?.trim()) throw new Error("taskId and approvalRef are required");
-    const artifacts = await this.store.list();
+    if (!input.taskId?.trim() || !input.approvalRef?.trim() || !Number.isSafeInteger(input.version) || input.version < 1) {
+      throw new Error("taskId, version, and approvalRef are required");
+    }
+    if (this.registry.has(input.toolId) && !this.registry.isManaged(input.toolId)) {
+      throw new Error("Built-in tools cannot be replaced by the Director workshop");
+    }
+    const artifacts = (await this.store.list()).map(cloneArtifact);
     const artifact = artifacts.find(item => item.toolId === input.toolId && item.version === input.version);
-    const latest = await this.store.getLatest(input.toolId);
+    const latestStored = await this.store.getLatest(input.toolId);
+    const latest = latestStored ? cloneArtifact(latestStored) : undefined;
     if (!artifact || latest?.version !== input.version) throw new Error("Only the latest known tool artifact version can be activated");
     if (!["ready", "active"].includes(artifact.status) || !artifact.testSummary?.passed) {
       throw new Error("Only a fully tested ready artifact can be activated");
     }
-    const approved = await this.approvalVerifier.verify({
+    const approved = await this.approvalVerifier.verify(Object.freeze({
+      operation: "activate" as const,
       taskId: input.taskId, toolId: artifact.toolId, version: artifact.version,
       digest: artifact.digest, approvalRef: input.approvalRef
-    });
+    }));
     if (approved !== true) throw new Error("Tool activation approval was denied");
+
+    const previousActive = artifacts.filter(item => item.toolId === input.toolId && item.status === "active" && item.version !== artifact.version);
+    if (previousActive.length > 1) throw new Error("Multiple active artifact versions found; refusing activation");
+    const originals = [artifact, ...previousActive].map(cloneArtifact);
+    const updates = [
+      { ...artifact, status: "active" as const },
+      ...previousActive.map(item => ({ ...item, status: "ready" as const }))
+    ];
+    await this.persistWithRollback(updates, originals);
 
     const descriptor: ToolDescriptor = {
       id: artifact.toolId,
       name: artifact.spec.name,
       application: artifact.spec.purpose,
-      // Generated code is always classified active: it must pass a fresh, per-use human approval.
       mode: "active",
       specialists: [...artifact.spec.specialists]
     };
-    if (this.registry.has(descriptor.id)) this.registry.replaceManaged(descriptor);
-    else this.registry.registerManaged(descriptor);
-    await this.store.put({ ...artifact, status: "active" });
+    const previousDescriptor = this.registry.get(descriptor.id);
+    const wasAvailable = this.registry.isAvailable(descriptor.id);
+    try {
+      if (previousDescriptor) this.registry.replaceManaged(descriptor);
+      else this.registry.registerManaged(descriptor);
+    } catch (error) {
+      await this.restoreArtifacts(originals);
+      if (previousDescriptor && this.registry.isManaged(descriptor.id)) {
+        this.registry.replaceManaged(previousDescriptor);
+        if (wasAvailable) this.registry.declareAvailable(descriptor.id);
+      }
+      throw error;
+    }
     return descriptorCopy(descriptor);
   }
 
   /** Retiring removes requestable metadata; it does not delete artifact history. */
   async retire(input: { toolId: string; taskId: string; approvalRef: string }): Promise<void> {
     if (!input || typeof input.toolId !== "string") throw new Error("Tool retirement request is required");
-    return this.withToolLock(input.toolId, () => this.retireLocked(input));
+    const request = { toolId: input.toolId, taskId: input.taskId, approvalRef: input.approvalRef };
+    return this.withToolLock(request.toolId, () => this.retireLocked(request));
   }
 
   private async retireLocked(input: { toolId: string; taskId: string; approvalRef: string }): Promise<void> {
     if (!this.approvalVerifier) throw new Error("Independent tool retirement approval is not configured");
-    const latest = await this.store.getLatest(input.toolId);
     if (!input.taskId?.trim() || !input.approvalRef?.trim()) throw new Error("taskId and approvalRef are required");
-    if (!latest || latest.status !== "active" || !this.registry.has(input.toolId)) throw new Error("No active managed tool to retire");
-    const approved = await this.approvalVerifier.verify({
-      taskId: input.taskId, toolId: latest.toolId, version: latest.version,
-      digest: latest.digest, approvalRef: input.approvalRef
-    });
+    if (!this.registry.isManaged(input.toolId)) throw new Error("Only Director-managed tools can be retired");
+    const artifacts = (await this.store.list()).map(cloneArtifact).filter(item => item.toolId === input.toolId);
+    const active = artifacts.filter(item => item.status === "active");
+    const latest = artifacts.reduce<ToolArtifact | undefined>((current, item) =>
+      !current || item.version > current.version ? item : current, undefined);
+    if (active.length !== 1 || !latest || !this.registry.has(input.toolId)) {
+      throw new Error("No uniquely active managed tool to retire");
+    }
+    const activeArtifact = active[0];
+    const approved = await this.approvalVerifier.verify(Object.freeze({
+      operation: "retire" as const,
+      taskId: input.taskId, toolId: activeArtifact.toolId, version: activeArtifact.version,
+      digest: activeArtifact.digest, approvalRef: input.approvalRef
+    }));
     if (approved !== true) throw new Error("Tool retirement approval was denied");
-    if (!this.registry.unregisterManaged(input.toolId)) throw new Error("Only Director-managed tools can be retired");
-    await this.store.put({ ...latest, version: latest.version + 1, status: "retired",
-      createdAt: new Date(this.now()).toISOString(), previousDigest: latest.digest });
+
+    const originals = activeArtifact.version === latest.version
+      ? [cloneArtifact(activeArtifact)]
+      : [cloneArtifact(activeArtifact), cloneArtifact(latest)];
+    const updates = originals.map(item => ({ ...item, status: "retired" as const }));
+    await this.persistWithRollback(updates, originals);
+    try {
+      if (!this.registry.unregisterManaged(input.toolId)) throw new Error("Only Director-managed tools can be retired");
+    } catch (error) {
+      await this.restoreArtifacts(originals);
+      throw error;
+    }
   }
 
   listArtifacts(): Promise<ToolArtifact[]> {
     return this.store.list();
+  }
+
+  /** Compensating transaction for stores without a native multi-record transaction. */
+  private async persistWithRollback(updates: ToolArtifact[], originals: ToolArtifact[]): Promise<void> {
+    try {
+      for (const artifact of updates) await this.store.put(cloneArtifact(artifact));
+    } catch (error) {
+      try {
+        await this.restoreArtifacts(originals);
+      } catch (rollbackError) {
+        throw new Error("Tool artifact persistence failed and rollback also failed: " + safeError(error) + "; " + safeError(rollbackError));
+      }
+      throw error;
+    }
+  }
+
+  private async restoreArtifacts(originals: ToolArtifact[]): Promise<void> {
+    for (const artifact of originals) await this.store.put(cloneArtifact(artifact));
   }
 
   private async withToolLock<T>(toolId: string, operation: () => Promise<T>): Promise<T> {
@@ -322,6 +388,19 @@ function normalizeTestSummary(value: ToolTestSummary, now: number): ToolTestSumm
     };
   }
   return cloneTestSummary(value);
+}
+
+function snapshotSpec(input: ToolBuildSpec): ToolBuildSpec {
+  if (!input || typeof input !== "object") throw new Error("Tool specification is required");
+  const raw = input as unknown as Record<string, unknown>;
+  return {
+    id: raw.id as string,
+    name: raw.name as string,
+    purpose: raw.purpose as string,
+    specialists: Array.isArray(raw.specialists) ? [...raw.specialists] as SecuritySpecialistId[] : raw.specialists as SecuritySpecialistId[],
+    change: raw.change as ToolChangeKind,
+    requirements: Array.isArray(raw.requirements) ? [...raw.requirements] as string[] : raw.requirements as string[]
+  };
 }
 
 function cloneSpec(spec: ToolBuildSpec): ToolBuildSpec {
