@@ -77,7 +77,7 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
         config.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
-        context.coordinator.lastRequestID = requestID
+        _ = context.coordinator.shouldLoad(requestID)
         webView.load(URLRequest(url: url))
         return webView
     }
@@ -85,13 +85,18 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         // The browser's current URL may legitimately differ after a redirect
         // or in-page navigation. Only an explicit Open request should reload.
-        guard context.coordinator.lastRequestID != requestID else { return }
-        context.coordinator.lastRequestID = requestID
+        guard context.coordinator.shouldLoad(requestID) else { return }
         webView.load(URLRequest(url: url))
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
-        var lastRequestID: UUID?
+        private(set) var lastRequestID: UUID?
+
+        func shouldLoad(_ requestID: UUID) -> Bool {
+            guard lastRequestID != requestID else { return false }
+            lastRequestID = requestID
+            return true
+        }
 
         func webView(
             _ webView: WKWebView,
