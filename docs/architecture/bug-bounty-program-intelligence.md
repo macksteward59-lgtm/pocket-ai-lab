@@ -30,3 +30,45 @@ A future execution design must separately verify current program authorization, 
 ## Current limitations
 
 This foundation does not automatically scrape HackerOne, Bugcrowd, or Intigriti; it does not parse arbitrary natural-language policies end-to-end; and it does not test targets. Those are separate, reviewable phases. A program must be re-ingested when its policy changes, and policy provenance/versioning must be added before operational use.
+
+
+## Measurable comparison plan — policy benchmark v1
+
+This AI-related foundation is not considered superior to a competing workflow until the benchmark below is run and its results are recorded. This is a repeatable comparison plan, not a claim that a vendor has been outperformed.
+
+### Named baseline
+
+**Primary baseline:** two independent human reviewers interpreting the same published program brief from HackerOne, Bugcrowd, or Intigriti. They receive the exact captured policy text and the same target/action examples. A disagreement is labelled `indeterminate` until adjudicated. The engine is compared with the adjudicated result, not with an assumed vendor capability.
+
+**Reference workflows:** HackerOne scope best practices and asset definitions, Bugcrowd bounty briefs, and Intigriti program-specific conditions. These provide representative policy formats and scope concepts; this project does not claim access to their internal parsers or private tooling.
+
+### Fixed benchmark corpus v1
+
+The initial fixed corpus is retained as regression coverage:
+
+| ID | Case | Expected result |
+|---|---|---|
+| PB-01 | Explicit wildcard domain, matching child host | in-scope |
+| PB-02 | Wildcard domain, apex host not included | out-of-scope |
+| PB-03 | Suffix lookalike such as `notexample.com` | out-of-scope |
+| PB-04 | Explicit URL path and descendant path segment | in-scope |
+| PB-05 | URL path prefix without segment boundary (`/apix` vs `/api`) | out-of-scope |
+| PB-06 | Explicit child-host URL exclusion | out-of-scope |
+| PB-07 | Terminal DNS root dot on target and exclusion | out-of-scope |
+| PB-08 | One valid and one invalid supplied rate limit | reject candidate |
+| PB-09 | Impossible date such as February 30 | reject candidate |
+| PB-10 | Missing allowed/prohibited methods or request limit | needs-review |
+| PB-11 | Unsupported CIDR/mobile/source-code asset | indeterminate / needs-review |
+| PB-12 | Expired or not-yet-effective policy | blocked |
+| PB-13 | Contradictory testing window | blocked |
+| PB-14 | Any in-scope match offered as execution permission | always denied |
+
+### Metrics and acceptance criteria
+
+Record exact disposition accuracy against the adjudicated human baseline, false-in-scope rate, exclusion recall, correct abstention rate on ambiguous/unsupported cases, malformed date/rate-limit rejection, and deterministic repeatability.
+
+Before merge, demonstrate **zero false in-scope decisions**, **100% exclusion recall on PB-01–PB-14**, **100% rejection of malformed dates and supplied rate limits**, **100% abstention/blocking on ambiguous or unsupported cases**, and **100% action denial**. Report reviewer agreement, per-case engine results, test/CI run identifiers, and unresolved disagreements. Do not claim a competitor-beating result until this comparison is actually run and documented.
+
+### Current status
+
+Regression coverage includes PB-01–PB-14 after the review fixes. The dual-human baseline and external reference-workflow comparison remain pending; no performance or superiority result is claimed. All policy and scope outputs continue to carry `authorized: false`.
