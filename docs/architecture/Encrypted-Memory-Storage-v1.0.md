@@ -42,3 +42,15 @@ Do not switch apps/web/server.mjs or any default memory path to this backend unt
 ## Security boundaries
 
 Encryption protects stored bytes against offline file disclosure when the key remains unavailable to the attacker. It does not protect data while the app is unlocked and using the key, defend against a compromised process or malicious extensions, establish memory provenance, mark entries verified, authorize an action, or change APEX/East evidence and trust semantics.
+
+## Write and lifecycle safety
+
+- Store operations are tracked. `close()` stops new work, waits for active reads/writes/migrations to finish, then zeroes the private cached key copy. A key-provider response arriving during an active save cannot race with key zeroing.
+- Key retrieval is single-flight per store instance. Provider-owned key bytes are copied; the store only zeroes its own buffer.
+- Save plaintext buffers are zeroed in a `finally` path that includes key-provider failures. Ciphertext/envelope buffers are also cleared after writing.
+- Writers are serialized within the process and acquire an exclusive `memory.enc.lock` file for cross-process exclusion. If another process holds the lock, the operation fails closed and does not remove that process's lock.
+- A crash can leave a stale lock file. Recovery must be an explicit operator action after confirming no writer is active; the store does not guess whether a lock is stale.
+- Writes use a mode-0600 temporary file, file sync, atomic rename, and a containing-directory sync on POSIX before reporting success. Windows skips directory sync because this implementation does not claim a portable directory-fsync primitive there.
+- Any failure before rename removes the temporary file. The existing vault is not replaced by an incomplete temp artifact.
+
+The encrypted store also exposes an atomic `migrateIfEmpty` operation. The migration check, encrypted save, and read-back occur under the same exclusive write lock, so two competing migrations cannot both observe an empty target and overwrite each other. Generic MemoryStore implementations without that operation receive only an in-process per-object migration queue and do not provide cross-process transaction guarantees.
