@@ -10,7 +10,7 @@ The API is exposed as `Orchestrator.tooling`. The same `ToolRegistry` instance i
 
 1. **Discover/plan:** The Director identifies a missing capability and submits a typed `ToolBuildSpec` with a stable kebab-case id, purpose, allowed specialist templates, and concrete requirements.
 2. **Build:** An injected `ToolBuilder` returns a source-file map. The output is treated as untrusted data.
-3. **Fingerprint:** The workshop calculates a SHA-256 digest over a canonical, sorted file representation.
+3. **Fingerprint:** The workshop calculates a SHA-256 digest over the canonical manifest (including specialist allowlists and requirements) and sorted source files.
 4. **Test:** An injected `ToolSandbox` evaluates the candidate. The adapter must use a disposable, network-denied, resource-limited environment with no host secrets or production credentials.
 5. **Quarantine or ready:** Any failed, incomplete, or throwing test run leaves the artifact quarantined. A successful test run must report at least one test and every test passing.
 6. **Activate:** A separate `ToolApprovalVerifier` must validate a human approval bound to the exact task, tool id, version, and digest. Activation registers metadata only.
@@ -21,8 +21,8 @@ The API is exposed as `Orchestrator.tooling`. The same `ToolRegistry` instance i
 
 - The workshop does not use `eval`, spawn processes, install packages, execute generated source, or directly access the network.
 - The builder, sandbox, durable artifact store, approval verifier, and runtime adapter are host-injected ports. If the builder or sandbox is missing, development fails closed. If the approval verifier is missing, activation and retirement fail closed.
-- The default artifact store is in-memory for tests and prototypes. A production host should inject a durable, access-controlled store.
-- A registry entry is metadata, not an installed adapter and not permission to run it.
+- The default artifact store is in-memory for tests and prototypes. Its version writes are upserts for lifecycle status transitions. A production host should inject a durable, access-controlled store.
+- A registry entry is metadata, not an installed adapter and not permission to run it. SecurityDivision also denies requests until the host declares the adapter available.
 - Generated tools cannot approve themselves, grant permissions, mint APEX evidence, change scope, or bypass East.
 - Built-in catalog tools cannot be revised or retired through the Director-managed lifecycle.
 
