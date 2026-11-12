@@ -809,3 +809,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Replacement handling:** The router retires old descriptors, preserves their memory reservations while active requests drain, blocks new routes against retired generations, and forces fresh memory admission when the resource provider may still report a stale loaded ID.
 - **Validation:** Latest submitted PR #37 head `503c464` has green Pocket AI Lab, consumer prototype, Cursor plugin, and governance sidecar CI. Greptile re-review explicitly requested.
 - **Boundary note:** `src/east/platform.ts` changed only to release the exact selected descriptor. No East evidence, policy, or authorization logic changed.
+
+
+## 2026-11-12 14:40 UTC — Rechecked PR #39 hardening head
+
+- **Current branch head:** `ac7e417445dfde81a1660ea3fcbee3fc39f2df59`; PR #39 remains open against the original private iOS app branch. PR #38 remains open and untouched.
+- **Review coverage:** 7 files changed. All 11 original Greptile findings have corresponding code/docs/test changes. Added real importer tests for same-file selection, invalid replacement preservation, successful atomic replacement, previous-session teardown, and queued-load rejection. Added workspace URL and explicit-reload tests.
+- **Validation:** GitHub Actions intelligence check on the current head completed successfully. A separate Greptile Review check is still in progress. No new Greptile inline findings had appeared as of this check. CI success is not a physical iPhone Air execution result.
+- **Re-review request:** Posted a fresh top-level request to Greptile on PR #39, explicitly asking it to review current head `ac7e417` and challenge security-scoped file access across detached work, staged-file cleanup/cancellation, `replaceItemAt` behavior, session lifecycle, WebKit URL policy, device linking, and test coverage.
+- **Open caution:** PR API currently reports `mergeable=false` while checks/review are active. Do not merge. Wait for Greptile's completed review, resolve any remaining findings, and obtain a fresh mergeability/check status.
