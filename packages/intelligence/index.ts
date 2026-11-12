@@ -59,3 +59,14 @@ export {
   createPolicyReviewAssignments,
   PolicyInterpretationError
 } from "./bug-bounty/interpretation";
+export type {
+  ExtractedPolicyClause,
+  InterpretationEvidenceValidation,
+  PolicyClauseKind,
+  PolicyExtractionMethod,
+  PolicyInterpretation,
+  PolicyInterpretationInput,
+  PolicyInterpretationIssue,
+  PolicyInterpretationIssueCode,
+  PolicyReviewAssignment
+} from "./bug-bounty/interpretation";
