@@ -116,6 +116,7 @@ export class ToolDirector {
   private readonly approvalVerifier?: ToolApprovalVerifier;
   private readonly store: ToolArtifactStore;
   private readonly now: () => number;
+  private readonly locks = new Map<string, Promise<void>>();
 
   constructor(options: ToolDirectorOptions) {
     this.registry = options.registry;
@@ -128,6 +129,11 @@ export class ToolDirector {
 
   /** Build and test a new tool or a revision of an existing tool. Never activates it. */
   async develop(spec: ToolBuildSpec): Promise<ToolArtifact> {
+    if (!spec || typeof spec.id !== "string") throw new Error("Tool specification is required");
+    return this.withToolLock(spec.id, () => this.developLocked(spec));
+  }
+
+  private async developLocked(spec: ToolBuildSpec): Promise<ToolArtifact> {
     this.validateSpec(spec);
     if (!this.builder) throw new Error("Tool builder is not configured");
     if (!this.sandbox) throw new Error("Isolated tool sandbox is not configured");
@@ -178,6 +184,11 @@ export class ToolDirector {
 
   /** Register or update tool metadata only after tests and digest-bound approval. */
   async activate(input: { taskId: string; toolId: string; version: number; approvalRef: string }): Promise<ToolDescriptor> {
+    if (!input || typeof input.toolId !== "string") throw new Error("Tool activation request is required");
+    return this.withToolLock(input.toolId, () => this.activateLocked(input));
+  }
+
+  private async activateLocked(input: { taskId: string; toolId: string; version: number; approvalRef: string }): Promise<ToolDescriptor> {
     if (!this.approvalVerifier) throw new Error("Independent tool activation approval is not configured");
     if (!input.taskId?.trim() || !input.approvalRef?.trim()) throw new Error("taskId and approvalRef are required");
     const artifacts = await this.store.list();
@@ -209,6 +220,11 @@ export class ToolDirector {
 
   /** Retiring removes requestable metadata; it does not delete artifact history. */
   async retire(input: { toolId: string; taskId: string; approvalRef: string }): Promise<void> {
+    if (!input || typeof input.toolId !== "string") throw new Error("Tool retirement request is required");
+    return this.withToolLock(input.toolId, () => this.retireLocked(input));
+  }
+
+  private async retireLocked(input: { toolId: string; taskId: string; approvalRef: string }): Promise<void> {
     if (!this.approvalVerifier) throw new Error("Independent tool retirement approval is not configured");
     const latest = await this.store.getLatest(input.toolId);
     if (!input.taskId?.trim() || !input.approvalRef?.trim()) throw new Error("taskId and approvalRef are required");
@@ -225,6 +241,20 @@ export class ToolDirector {
 
   listArtifacts(): Promise<ToolArtifact[]> {
     return this.store.list();
+  }
+
+  private async withToolLock<T>(toolId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.locks.get(toolId) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>(resolve => { release = resolve; });
+    this.locks.set(toolId, current);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.locks.get(toolId) === current) this.locks.delete(toolId);
+    }
   }
 
   private validateSpec(spec: ToolBuildSpec): void {
