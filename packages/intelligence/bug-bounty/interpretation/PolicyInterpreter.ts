@@ -298,7 +298,7 @@ function classifyHeading(line: string): PolicyClauseKind | undefined {
 }
 
 function classifyClause(line: string, activeSection?: PolicyClauseKind): Classification {
-  const cleaned = line.replace(/^(?:[-*+]\\s+|\\d+[.)]\\s+)/, "").trim();
+  const cleaned = line.replace(/^(?:[-*+]\s+|\d+[.)]\s+)/, "").trim();
   if (hasQualification(cleaned)) {
     return { kind: "ambiguous", method: "keyword-pattern" };
   }
@@ -310,18 +310,18 @@ function classifyClause(line: string, activeSection?: PolicyClauseKind): Classif
   const explicit = classifyLabel(cleaned);
   if (explicit) return explicit;
 
-  const mentionsDisclosure = /\\bdisclos(?:e|ure|ing)\\b|\\bpublic release\\b/i.test(cleaned);
-  const allows = /\\b(?:allowed|permitted|may test)\\b/i.test(cleaned);
-  const prohibits = /\\b(?:prohibited|forbidden|not allowed|not permitted|must not|do not)\\b/i.test(cleaned);
+  const mentionsDisclosure = /\bdisclos(?:e|ure|ing)\b|\bpublic release\b/i.test(cleaned);
+  const allows = /\b(?:allowed|permitted|may test)\b/i.test(cleaned);
+  const prohibits = /\b(?:prohibited|forbidden|not allowed|not permitted|must not|do not)\b/i.test(cleaned);
   if (allows && prohibits) return { kind: "ambiguous", method: "keyword-pattern" };
   if (mentionsDisclosure) return { kind: "disclosure", method: "keyword-pattern" };
-  if (/\\b(?:requests?\\s*(?:per|\\/)\\s*(?:second|sec|minute|min)|rate limit)\\b/i.test(cleaned)) {
+  if (/\b(?:requests?\s*(?:per|\/)\s*(?:second|sec|minute|min)|rate limit)\b/i.test(cleaned)) {
     return { kind: "rate-limit", method: "keyword-pattern" };
   }
-  if (/\\b(?:testing window|testing hours|test window)\\b/i.test(cleaned)) {
+  if (/\b(?:testing window|testing hours|test window)\b/i.test(cleaned)) {
     return { kind: "testing-window", method: "keyword-pattern" };
   }
-  if (prohibits || /\\b(?:denial of service|social engineering|credential stuffing)\\b/i.test(cleaned)) {
+  if (prohibits || /\b(?:denial of service|social engineering|credential stuffing)\b/i.test(cleaned)) {
     return { kind: "prohibited-method", method: "keyword-pattern" };
   }
   if (allows) return { kind: "allowed-activity", method: "keyword-pattern" };
@@ -330,7 +330,7 @@ function classifyClause(line: string, activeSection?: PolicyClauseKind): Classif
 }
 
 function hasQualification(value: string): boolean {
-  return /\\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted|prior approval|required approval|approval required|upon approval)\\b/i.test(value);
+  return /\b(?:case[- ]by[- ]case|contact (?:the )?program|where possible|at our discretion|subject to approval|may be permitted|prior approval|required approval|approval required|upon approval)\b/i.test(value);
 }
 
 function classifyLabel(value: string): Classification | undefined {
@@ -404,7 +404,7 @@ function extractCandidateValue(
     if (isIP(value) !== 0) {
       return Object.freeze({ kind: "asset" as const, assetKind: "ip" as const, value });
     }
-    if (/^\\d+(?:\\.\\d+){3}\\.?$/.test(value)) {
+    if (/^\d+(?:\.\d+){3}\.?$/.test(value)) {
       // A malformed dotted numeric address must never be reclassified as a hostname.
       return undefined;
     }
@@ -424,7 +424,7 @@ function extractCandidateValue(
   }
 
   if (kind === "rate-limit") {
-    const match = /^(0|[1-9]\\d*)(?:\\.(\\d+))?\\s*(?:requests?|reqs?)\\s*(?:per|\\/)\\s*(second|sec|minute|min)$/i.exec(value);
+    const match = /^(0|[1-9]\d*)(?:\.(\d+))?\s*(?:requests?|reqs?)\s*(?:per|\/)\s*(second|sec|minute|min)$/i.exec(value);
     if (!match) return undefined;
     const limit = Number(match[1] + (match[2] ? "." + match[2] : ""));
     if (!Number.isFinite(limit) || limit <= 0) return undefined;
