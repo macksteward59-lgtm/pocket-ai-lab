@@ -108,10 +108,10 @@ describe("ModelRouter", () => {
     expect(second).toEqual(model);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
 
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
 
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
@@ -123,10 +123,10 @@ describe("ModelRouter", () => {
       router.route("researcher", model, [])
     ]);
 
-    router.release("test-model");
+    router.release(model);
     await expect(router.route("engineer", otherModel, [])).rejects.toThrow(/Insufficient memory/);
 
-    router.release("test-model");
+    router.release(model);
     await expect(router.route("engineer", otherModel, [])).resolves.toEqual(otherModel);
     router.release(otherModel);
   });
@@ -162,7 +162,7 @@ describe("ModelRouter", () => {
     await expect(router.route("researcher", incompatible, ["reason"])).rejects.toThrow(/lacks required capabilities/);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
 
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual([]);
   });
 });
