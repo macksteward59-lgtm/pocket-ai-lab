@@ -63,7 +63,11 @@ describe("independent bug bounty policy reviews", () => {
         calls.push("validator");
         criticResultSeenByValidator = "criticResult" in (request as unknown as Record<string, unknown>);
         expect(request.snapshot.snapshotId).toBe(snapshot.snapshotId);
-        expect(request.interpretation).toBe(interpretation);
+        expect(request.interpretation).toEqual(interpretation);
+        expect(Object.isFrozen(request)).toBe(true);
+        expect(Object.isFrozen(request.snapshot)).toBe(true);
+        expect(Object.isFrozen(request.interpretation)).toBe(true);
+        expect(Object.isFrozen(request.interpretation.clauses)).toBe(true);
         return { summary: "Source spans and candidate values match.", findings: [validFinding(snapshot)] };
       }
     };
