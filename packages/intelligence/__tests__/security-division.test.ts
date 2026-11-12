@@ -138,7 +138,8 @@ describe("security division", () => {
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toMatch(/not installed or available/);
   });
-\n  it("denies an unknown tool without consulting the gate", async () => {
+
+  it("denies an unknown tool without consulting the gate", async () => {
     const { division } = setup();
     const team = await division.assemble("task-1", ENTRA_TASK);
     const member = team.members[0];
