@@ -327,6 +327,19 @@ function extractCandidateValue(
   }
 
   if (kind === "scope-inclusion" || kind === "scope-exclusion") {
+    const slash = value.lastIndexOf("/");
+    if (slash > 0) {
+      const address = value.slice(0, slash);
+      const prefix = value.slice(slash + 1);
+      const version = isIP(address);
+      const maximum = version === 4 ? 32 : version === 6 ? 128 : -1;
+      if (maximum >= 0 && /^\d+$/.test(prefix) && Number(prefix) <= maximum) {
+        return Object.freeze({ kind: "asset" as const, assetKind: "cidr" as const, value });
+      }
+    }
+    if (isIP(value) !== 0) {
+      return Object.freeze({ kind: "asset" as const, assetKind: "ip" as const, value });
+    }
     if (/^(?:\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.?$/i.test(value)) {
       return Object.freeze({ kind: "asset" as const, assetKind: "domain" as const, value });
     }
@@ -370,7 +383,7 @@ function extractCandidateValue(
 }
 
 function isStrictZonedTimestamp(value: string): boolean {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,3})?(?:Z|[+-](\\d{2}):(\\d{2}))$/.exec(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(value);
   if (!match || !Number.isFinite(Date.parse(value))) return false;
   const year = Number(match[1]);
   const month = Number(match[2]);
