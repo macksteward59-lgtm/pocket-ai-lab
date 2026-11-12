@@ -13,6 +13,7 @@ import { DelegationGate } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
 import { ToolRegistry } from "../security/tools";
 import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVerifier, type ToolArtifactStore } from "../tooling/ToolDirector";
+import { DirectorCommandRouter } from "../director/DirectorCommandRouter";
 import { DirectorCapabilities, type ResearchProvider, type ProjectInspector, type MemoryImprovementAdvisor, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge } from "../director/DirectorCapabilities";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
 
@@ -90,6 +91,8 @@ export class Orchestrator {
   readonly tooling: ToolDirector;
   /** Research, project analysis, memory evolution, and permissioned device capabilities. */
   readonly capabilities: DirectorCapabilities;
+  /** Strict allowlisted structured-command bridge for model/provider adapters. */
+  readonly directorCommands: DirectorCommandRouter;
   private readonly inference: InferenceProvider;
 
   constructor(opts: {
@@ -145,6 +148,7 @@ export class Orchestrator {
       approvalVerifier: opts.toolApprovalVerifier,
       store: opts.toolArtifactStore
     });
+    this.directorCommands = new DirectorCommandRouter(this.capabilities, this.tooling);
     this.security = new SecurityDivision({
       agents: this.agents,
       gate: opts.delegationGate ?? new DelegationGate(),
