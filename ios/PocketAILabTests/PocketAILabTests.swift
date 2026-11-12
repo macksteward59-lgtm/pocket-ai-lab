@@ -84,6 +84,14 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https://user:password@workspace.example")!))
     }
 
+    func testWorkspaceWebViewReloadsOnlyForExplicitOpenRequests() {
+        let coordinator = PrivateWorkspaceWebView.Coordinator()
+        let firstRequest = UUID()
+        XCTAssertTrue(coordinator.shouldLoad(firstRequest))
+        XCTAssertFalse(coordinator.shouldLoad(firstRequest))
+        XCTAssertTrue(coordinator.shouldLoad(UUID()))
+    }
+
     @MainActor
     func testImportingAnotherModelUnloadsThePreviousSessionBeforePrompting() async throws {
         let root = try makeTemporaryDirectory()
