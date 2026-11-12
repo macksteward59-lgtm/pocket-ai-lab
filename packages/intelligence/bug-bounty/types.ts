@@ -56,6 +56,7 @@ export interface NormalizedScopeRule {
   readonly kind: AssetKind;
   readonly value: string;
   readonly includeSubdomains: boolean;
+  readonly includeApex: boolean;
   readonly note?: string;
 }
 
