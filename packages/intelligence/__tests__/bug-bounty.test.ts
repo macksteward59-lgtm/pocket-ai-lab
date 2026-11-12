@@ -80,6 +80,7 @@ describe("bug bounty Program Intelligence", () => {
   it("matches subdomains but does not confuse suffix lookalikes", () => {
     const policy = normalizeProgramPolicy(candidate(), now);
     expect(evaluateTargetScope(policy, "https://api.example.com/v1").disposition).toBe("in-scope");
+    expect(evaluateTargetScope(policy, "https://example.com/").disposition).toBe("out-of-scope");
     expect(evaluateTargetScope(policy, "https://notexample.com/").disposition).toBe("out-of-scope");
   });
 
