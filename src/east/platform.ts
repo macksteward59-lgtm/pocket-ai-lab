@@ -309,6 +309,9 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           ].join("\n"),
           contextMessages: [...prior]
         });
+        // The inference call succeeded with this exact selected descriptor;
+        // only now may the router trust the provider's loaded-model ID.
+        orchestrator.router.confirmLoaded(selected);
         const published = publishAnalysis(orchestrator, task.id, agentId, prior.length, result);
         orchestrator.agents.updateStatus(sessionId, "complete");
         return published.messageId;
