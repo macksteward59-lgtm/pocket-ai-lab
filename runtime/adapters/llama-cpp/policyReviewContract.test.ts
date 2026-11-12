@@ -87,6 +87,26 @@ describe("llama.cpp policy-review response contract", () => {
     });
   });
 
+
+  it("rejects malformed finding fields at the provider boundary", async () => {
+    const backend = new RecordingBackend(JSON.stringify({
+      summary: "Review completed.",
+      findings: [{
+        code: "other",
+        severity: "info",
+        startOffset: 0,
+        endOffset: 1,
+        sourceText: "#",
+        explanation: "A finding with an unexpected authority field.",
+        authorized: true
+      }]
+    }));
+    const provider = new LlamaCppInferenceProvider({ repairAttempts: 0 }, backend);
+
+    await expect(provider.generate(request("bug-bounty-policy-review")))
+      .rejects.toMatchObject({ code: "malformed_response" });
+  });
+
   it("rejects a response contract used with a non-independent stage", async () => {
     const backend = new RecordingBackend(JSON.stringify({
       summary: "Review completed.",
