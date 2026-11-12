@@ -100,7 +100,7 @@ describe("bug bounty policy interpretation", () => {
       "- app.example.com",
       "# General Information",
       "- This service supports customer account management."
-    ].join("\\n"));
+    ].join("\n"));
     const interpretation = interpretPolicySnapshot(source);
     expect(interpretation.clauses[0].kind).toBe("scope-inclusion");
     expect(interpretation.clauses[1].kind).toBe("unclassified");
@@ -122,7 +122,7 @@ describe("bug bounty policy interpretation", () => {
   });
 
   it("preserves explicit IP and CIDR assets as candidates without authorizing them", () => {
-    const source = snapshot("# In Scope\\n- 192.0.2.0/24\\n- 2001:db8::1");
+    const source = snapshot("# In Scope\n- 192.0.2.0/24\n- 2001:db8::1");
     const interpretation = interpretPolicySnapshot(source);
     expect(interpretation.clauses[0].candidateValue).toEqual({
       kind: "asset", assetKind: "cidr", value: "192.0.2.0/24"
@@ -134,7 +134,7 @@ describe("bug bounty policy interpretation", () => {
   });
 
   it("keeps recognized but unsupported scope values as unparsed review items", () => {
-    const source = snapshot("# In Scope\\n- the production application");
+    const source = snapshot("# In Scope\n- the production application");
     const interpretation = interpretPolicySnapshot(source);
     expect(interpretation.clauses[0].kind).toBe("scope-inclusion");
     expect(interpretation.clauses[0].candidateValue).toBeUndefined();
@@ -160,7 +160,7 @@ describe("bug bounty policy interpretation", () => {
       "# Testing Window",
       "- 2026-02-30T00:00:00Z to 2026-03-01T00:00:00Z",
       "- 2026-11-13T00:00:00Z to 2026-11-12T00:00:00Z"
-    ].join("\\n"));
+    ].join("\n"));
     const interpretation = interpretPolicySnapshot(source);
     expect(interpretation.clauses.every(clause => clause.candidateValue === undefined)).toBe(true);
     expect(interpretation.issues.filter(issue => issue.code === "unparsed-candidate")).toHaveLength(2);
@@ -203,7 +203,7 @@ describe("bug bounty policy interpretation", () => {
   });
 
   it("fails closed for malformed evidence-validator inputs", () => {
-    const source = snapshot("# In Scope\\n- app.example.com");
+    const source = snapshot("# In Scope\n- app.example.com");
     const interpretation = interpretPolicySnapshot(source);
     expect(validateInterpretationEvidence(source, null as unknown as PolicyInterpretation).valid).toBe(false);
     expect(validateInterpretationEvidence(source, {
