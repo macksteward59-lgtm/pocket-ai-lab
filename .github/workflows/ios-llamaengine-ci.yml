@@ -6,14 +6,17 @@ on:
       - main
     paths:
       - "runtime/ios/**"
+      - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
   push:
     branches:
       - main
+      - ios/private-iphone-test-hybrid
     paths:
       - "runtime/ios/**"
+      - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
@@ -44,13 +47,15 @@ jobs:
           uname -m
 
       - name: Install CMake and Ninja
-        run: brew install cmake ninja
+        run: brew install cmake ninja xcodegen
 
       - name: Build pinned llama.cpp for the simulator and macOS
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
           runtime/ios/scripts/build-llama-cpp.sh simulator
           rm -rf runtime/ios/build/cmake-simulator
+          runtime/ios/scripts/build-llama-cpp.sh ios-device
+          rm -rf runtime/ios/build/cmake-ios-device
           runtime/ios/scripts/build-llama-cpp.sh macos
           rm -rf runtime/ios/build/cmake-macos
           runtime/ios/scripts/build-llama-cpp.sh xcframework
@@ -86,6 +91,32 @@ jobs:
           print(f"id={chosen['udid']}")
           print(f"name={chosen['name']}")
           PY
+
+      - name: Generate and build the native Pocket AI Lab app
+        run: |
+          rm -rf ios/PocketAILab.xcodeproj
+          xcodegen generate --spec ios/project.yml --project ios
+          xcodebuild build \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/pocket-app-derived \
+            CODE_SIGNING_ALLOWED=NO
+          xcodebuild build \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath /tmp/pocket-app-device-derived \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: XCTest the native Pocket AI Lab app
+        run: |
+          xcodebuild test \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
+            -derivedDataPath /tmp/pocket-app-test-derived \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: XCTest on the iOS simulator
         working-directory: runtime/ios
