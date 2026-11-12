@@ -49,7 +49,7 @@ export interface InferenceRequest {
 }
 
 export interface InferenceResult {
-  /** Must match the payload schema for the current deliberation stage. */
+  /** Must match responseContract when supplied; otherwise the stage payload schema. */
   payload: unknown;
   evidenceRefs?: string[];
 }
