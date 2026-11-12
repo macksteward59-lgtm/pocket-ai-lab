@@ -970,3 +970,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Implementation:** deterministic line segmentation and conservative explicit-label/section/keyword classification; source offsets and exact-text hash linkage; ambiguous/unclassified and duplicate rate-limit/testing-window conflict flags; pending Critic/Validator review assignments; independent evidence/hash/byte-count/offset/line validation.
 - **Limits:** every interpretation remains `needs-human-review` and `authorized: false`. No LLM execution or agent approval is claimed. No fetching, target traffic, scanner, exploit runner, persistence, report submission, or APEX/East changes.
 - **Validation:** focused tests added; no local test run claimed. No PR-triggered workflow runs returned for PR #44 head at this time. Greptile review requested. Compare reports PR #44 is 9 commits ahead of its base and 0 behind; GitHub initially returned `mergeable: false`, so mergeability is not claimed.
+
+
+## 2026-11-12 16:16 UTC — Bug bounty review and validation checkpoint
+
+- **PR #42:** Latest head `8190d083d80a7e739be59d8c5c35d502e0fbe68b` has all four workflows green: Pocket AI Lab CI #322, Governance sidecar CI #53, Consumer prototype CI #158, Cursor collaboration plugin CI #115. Greptile's earlier scope/rate-limit/date findings are addressed in code and regression tests. Its old inline threads are now outdated for the first three findings; the fresh re-review and benchmark-plan acknowledgement are still pending, so review is not marked complete.
+- **PR #43:** Greptile resolved its unpaired-surrogate finding after the intake fix. No fresh CI workflow runs were returned for the current stacked head; CI remains unverified. PR remains draft/unmerged.
+- **PR #44:** Policy Interpretation Engine draft remains open/unmerged. Compare confirms 13 commits ahead and 0 behind its PR #43 base; GitHub's initial mergeable flag was false and is not treated as a green mergeability result. No PR-triggered CI runs or Greptile review have appeared yet. Review requested.
+- No branch was merged, no review thread was manually resolved, and no APEX/East trust or authorization boundary changed.
