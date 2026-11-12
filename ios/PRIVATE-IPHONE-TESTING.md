@@ -25,7 +25,7 @@ runtime/ios/scripts/build-llama-cpp.sh simulator
 runtime/ios/scripts/build-llama-cpp.sh ios-device
 runtime/ios/scripts/build-llama-cpp.sh macos
 runtime/ios/scripts/build-llama-cpp.sh xcframework
-xcodegen generate --spec ios/project.yml --project ios/PocketAILab.xcodeproj
+xcodegen generate --spec ios/project.yml --project ios
 xcodebuild -project ios/PocketAILab.xcodeproj -scheme PocketAILab \
   -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
