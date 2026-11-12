@@ -27,7 +27,7 @@ export interface PolicySnapshot {
   readonly authorized: false;
 }
 
-export type PolicyVersionStatus = "unchanged" | "changed" | "out-of-order";
+export type PolicyVersionStatus = "unchanged" | "changed" | "out-of-order" | "timestamp-conflict";
 
 export interface PolicyVersionComparison {
   readonly status: PolicyVersionStatus;
