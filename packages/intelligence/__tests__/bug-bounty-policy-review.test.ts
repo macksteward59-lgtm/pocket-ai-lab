@@ -49,7 +49,11 @@ describe("independent bug bounty policy reviews", () => {
       async review(request) {
         calls.push("critic");
         expect(request.snapshot.snapshotId).toBe(snapshot.snapshotId);
-        expect(request.interpretation).toBe(interpretation);
+        expect(request.interpretation).toEqual(interpretation);
+        expect(Object.isFrozen(request)).toBe(true);
+        expect(Object.isFrozen(request.snapshot)).toBe(true);
+        expect(Object.isFrozen(request.interpretation)).toBe(true);
+        expect(Object.isFrozen(request.interpretation.clauses)).toBe(true);
         return { summary: "Critic found no omitted approval condition.", findings: [] };
       }
     };
@@ -140,6 +144,27 @@ describe("independent bug bounty policy reviews", () => {
     const run = await runIndependentPolicyReviews({ snapshot, interpretation }, { critic, validator });
     expect(run.status).toBe("partial");
     expect(run.reviews[0].status).toBe("failed");
+    expect(run.reviews[1].status).toBe("completed");
+    expect(run.authorized).toBe(false);
+  });
+
+  it("rejects model responses that attempt to add authorization claims", async () => {
+    const snapshot = makeSnapshot();
+    const interpretation = interpretPolicySnapshot(snapshot);
+    const critic: PolicyReviewAgent = {
+      reviewer: "critic",
+      async review() { return { summary: "Approved.", findings: [], authorized: true }; }
+    };
+    const validator: PolicyReviewAgent = {
+      reviewer: "validator",
+      async review() { return { summary: "Independent review completed.", findings: [] }; }
+    };
+    const run = await runIndependentPolicyReviews({ snapshot, interpretation }, { critic, validator });
+    expect(run.status).toBe("partial");
+    expect(run.reviews[0].status).toBe("failed");
+    if (run.reviews[0].status === "failed") {
+      expect(run.reviews[0].failureCode).toBe("invalid-response");
+    }
     expect(run.reviews[1].status).toBe("completed");
     expect(run.authorized).toBe(false);
   });
