@@ -38,3 +38,4 @@ export type {
   PolicyInterpretationIssueCode,
   PolicyReviewAssignment
 } from "./interpretation";
+export type { PolicyInterpretationInput } from "./interpretation";
