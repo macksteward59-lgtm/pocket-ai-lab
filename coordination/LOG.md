@@ -1011,3 +1011,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The workflow was a `push` event associated with PR #44, not a separate `pull_request` event. The connector's PR-only workflow query therefore returned no run; direct Actions metadata confirms the successful run.
 - **Greptile:** re-review requested after the six findings were addressed. The newline and rate-limit threads are now marked outdated; shortened evidence, inline qualifier, malformed IP, and benchmark-plan threads remain open pending fresh reviewer confirmation. No thread was manually resolved.
 - No local test run is claimed. No merge or trust/authorization changes.
+
+## 2026-11-12 18:48 UTC — Independent review workflow stacked onto updated policy base
+
+- Greptile's PR #44 re-review resolved the malformed-IP finding. Four of the six original PR #44 findings are resolved; the benchmark-plan thread remains open, and the long-policy performance finding is now outdated after an O(n) source-line index fix.
+- PR #44 performance correction: `validateInterpretationEvidence` builds one source-line map keyed by start offset before iterating clauses, replacing repeated full-text line splitting. Added a 10,000-clause regression test.
+- Expanded the policy interpretation benchmark README with a named competitor/workflow table, explicit comparability boundaries, and measurable human-baseline surpass criteria.
+- **PR #44 CI:** run #381's type-check/build and intelligence test step passed on commit `5aff8058673fc555d708f230c3a602c0efe6da0b`; the later documentation-only update is on head `17dc8740cb2c3d9e09831e495baad6417ba3cc84`. Workflow cleanup and a second source-fix run are still being checked.
+- To keep PR #45's base current without rewriting history, created `codex/bug-bounty-independent-reviews-v2` from the updated PR #44 head and ported only the six owned review-workflow files. The previous branch `codex/bug-bounty-independent-reviews` remains preserved and no PR was opened from it.
+- The review workflow remains provider-backed, role-isolated, sequential, and tool-free. No authorization, approval, target traffic, APEX/East changes, or merge.
