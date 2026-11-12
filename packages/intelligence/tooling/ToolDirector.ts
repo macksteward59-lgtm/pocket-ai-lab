@@ -172,11 +172,12 @@ export class ToolDirector {
       return cloneArtifact(quarantined);
     }
 
+    const normalizedSummary = normalizeTestSummary(testSummary, this.now());
     const result: ToolArtifact = {
       ...artifact,
-      status: testSummary.passed && testSummary.testsRun > 0 && testSummary.testsPassed === testSummary.testsRun
+      status: normalizedSummary.passed && normalizedSummary.testsRun > 0 && normalizedSummary.testsPassed === normalizedSummary.testsRun
         ? "ready" : "quarantined",
-      testSummary: cloneTestSummary(testSummary)
+      testSummary: normalizedSummary
     };
     await this.store.put(result);
     return cloneArtifact(result);
@@ -305,6 +306,22 @@ async function digestFiles(files: Record<string, string>, spec: ToolBuildSpec): 
   const bytes = new TextEncoder().encode(canonical);
   const hash = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(hash), value => value.toString(16).padStart(2, "0")).join("");
+}
+
+function normalizeTestSummary(value: ToolTestSummary, now: number): ToolTestSummary {
+  const valid = value && typeof value.passed === "boolean" &&
+    Number.isSafeInteger(value.testsRun) && value.testsRun > 0 && value.testsRun <= 10_000 &&
+    Number.isSafeInteger(value.testsPassed) && value.testsPassed >= 0 && value.testsPassed <= value.testsRun &&
+    Array.isArray(value.findings) && value.findings.every(item => typeof item === "string") &&
+    typeof value.completedAt === "string" && Number.isFinite(Date.parse(value.completedAt));
+  if (!valid) {
+    return {
+      passed: false, testsRun: 0, testsPassed: 0,
+      findings: ["Sandbox returned a malformed test summary"],
+      completedAt: new Date(now).toISOString()
+    };
+  }
+  return cloneTestSummary(value);
 }
 
 function cloneSpec(spec: ToolBuildSpec): ToolBuildSpec {
