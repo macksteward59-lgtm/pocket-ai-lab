@@ -102,6 +102,12 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath /tmp/pocket-app-derived \
             CODE_SIGNING_ALLOWED=NO
+          xcodebuild build \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath /tmp/pocket-app-device-derived \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: XCTest the native Pocket AI Lab app
         run: |
