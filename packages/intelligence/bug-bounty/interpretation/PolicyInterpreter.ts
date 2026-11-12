@@ -164,6 +164,10 @@ export function validateInterpretationEvidence(
     if (actualLine !== clause.line) {
       reasons.push("Clause line number does not match its source offset: " + clause.clauseId);
     }
+    const expectedCandidate = extractCandidateValue(clause.kind, clause.text);
+    if (JSON.stringify(expectedCandidate) !== JSON.stringify(clause.candidateValue)) {
+      reasons.push("Candidate value does not match the explicit source text: " + clause.clauseId);
+    }
     if (clause.requiresHumanReview !== true) {
       reasons.push("Clause cannot bypass human review: " + clause.clauseId);
     }
