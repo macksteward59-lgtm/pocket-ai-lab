@@ -134,14 +134,25 @@ export class DirectorCapabilities {
     if (!Number.isInteger(maxSources) || maxSources < 1 || maxSources > 20) {
       throw new Error("maxSources must be between 1 and 20");
     }
-    const sources = await this.options.research.search({ ...request, query: request.query.trim(), maxSources });
+    const allowedDomains = request.allowedDomains === undefined
+      ? undefined
+      : normalizeAllowedDomains(request.allowedDomains);
+    const sources = await this.options.research.search({
+      query: request.query.trim(), maxSources, ...(allowedDomains ? { allowedDomains } : {})
+    });
     if (!Array.isArray(sources)) throw new Error("Research provider returned an invalid result");
     return sources.slice(0, maxSources).map(source => {
+      let url: URL;
+      try { url = new URL(source?.url); } catch { throw new Error("Research provider returned an invalid or unsafe source"); }
       if (!source || typeof source.id !== "string" || typeof source.title !== "string" ||
-          typeof source.excerpt !== "string" || typeof source.url !== "string" ||
-          !["http:", "https:"].includes(new URL(source.url).protocol) ||
+          typeof source.excerpt !== "string" || !["http:", "https:"].includes(url.protocol) ||
+          url.username || url.password ||
           typeof source.retrievedAt !== "string" || !Number.isFinite(Date.parse(source.retrievedAt))) {
         throw new Error("Research provider returned an invalid or unsafe source");
+      }
+      if (allowedDomains && !allowedDomains.some(domain => url.hostname.toLowerCase() === domain ||
+          url.hostname.toLowerCase().endsWith("." + domain))) {
+        throw new Error("Research provider returned a source outside the allowed domain list");
       }
       return { ...source, title: source.title.slice(0, 500), excerpt: source.excerpt.slice(0, 8000) };
     });
@@ -150,7 +161,8 @@ export class DirectorCapabilities {
   async analyzeProject(input: { objective: string; paths?: string[] }): Promise<ProjectAnalysis> {
     if (!this.options.projectInspector) throw new Error("Project inspection adapter is not configured");
     if (!input?.objective?.trim()) throw new Error("Project analysis objective is required");
-    const result = await this.options.projectInspector.inspect(input);
+    const paths = validateProjectPaths(input.paths);
+    const result = await this.options.projectInspector.inspect({ objective: input.objective, ...(paths ? { paths } : {}) });
     if (!result || typeof result.summary !== "string" || !Array.isArray(result.findings)) {
       throw new Error("Project inspector returned an invalid analysis");
     }
@@ -236,6 +248,31 @@ export class DirectorCapabilities {
     if (approved !== true) throw new Error("Device permission was denied");
     return this.options.deviceBridge.perform(action);
   }
+}
+
+function normalizeAllowedDomains(input: string[]): string[] {
+  if (!Array.isArray(input) || input.length === 0 || input.length > 30) {
+    throw new Error("allowedDomains must contain 1–30 hostnames");
+  }
+  const domains = input.map(domain => {
+    if (typeof domain !== "string") throw new Error("allowedDomains must contain hostnames");
+    const normalized = domain.trim().toLowerCase().replace(/\\.$/, "");
+    if (!normalized || normalized.length > 253 || !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalized)) {
+      throw new Error("allowedDomains must contain valid hostnames");
+    }
+    return normalized;
+  });
+  return [...new Set(domains)];
+}
+
+function validateProjectPaths(input?: string[]): string[] | undefined {
+  if (input === undefined) return undefined;
+  if (!Array.isArray(input) || input.length > 100 || input.some(path =>
+    typeof path !== "string" || !path.trim() || path.length > 1024 || path.startsWith("/") ||
+    path.split(/[\\/]/).includes("..") || path.includes("\\0"))) {
+    throw new Error("Project paths must be bounded relative paths without traversal segments");
+  }
+  return [...input];
 }
 
 function permissionFor(action: DeviceAction): DevicePermission {
