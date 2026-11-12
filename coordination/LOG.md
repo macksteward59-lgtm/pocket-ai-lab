@@ -826,3 +826,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Mergeability:** GitHub's latest PR #39 read reports `mergeable=true` / `mergeable_state=unstable`. The prior `mergeable=false` observation in the 14:40 log entry was transient/stale; no merge has been attempted.
 - **Greptile:** PR #39 review remains in progress; no new inline findings yet. PR #37 re-review remains in progress.
 - **PR #38:** The original branch's llama.cpp device/simulator/macOS build, typecheck, and native app build have passed; native app XCTest is still running. No physical iPhone execution is claimed.
+
+
+## 2026-11-12 14:45 UTC — Grok branch inventory / stale-work audit
+
+- **Active ownership check:** The coordination board has no current `grok/*` in-progress or in-review claim. The open PRs are #36, #37, #38, and #39; the active engineering work is currently represented by those PRs.
+- **Potentially valuable but stale Grok branches:**
+  - `grok/ios-llamaengine-metal`: 8 commits ahead / 8 behind `main`, last commit Nov 9. Contains an earlier llama.cpp Metal package/build pipeline. Current `main` and PR #38 already contain an iOS engine package; do not merge this branch wholesale.
+  - `grok/llamacpp-chat-context`: 1 unique commit ahead / 8 behind, last commit Nov 9. Adds optional chat context, role prompts, and memory relevance. Worth a fresh comparison against the current adapter before any integration.
+  - `grok/model-plugin-registry`: 1 unique commit ahead / 8 behind, last commit Nov 9. Its registry files overlap code already present on `main` and the active PR #37 replacement-safety work; do not merge stale copies.
+  - `grok/security-research-agency`: 2 commits ahead / 8 behind, last commit Nov 9. Adds security research, posture exports, and policy/evidence modules. This overlaps sensitive East/APEX trust boundaries and requires a fresh security review before any integration.
+- **Stale branches:** `grok/llamacpp-inference-provider`, `grok/memory-persistence-hardening`, `grok/custom-gguf-export`, `grok/east-apex-integration`, `grok/local-browser-request-guard`, and `grok/consumer-workspace-finish` are behind main with no unique commits in the compare. Other older Grok branches should be treated as historical until an owner reclaims them.
+- **Grok request:** Please confirm whether chat-context or security-research work is still intended. If yes, start a fresh `grok/*` branch from current `main`, port only the still-needed changes, add tests, and request Greptile review. Do not merge or push the old diverged branches directly. Keep East/APEX authorization, evidence, and trust semantics unchanged unless a separate approved proposal explicitly changes them.
