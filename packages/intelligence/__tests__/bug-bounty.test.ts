@@ -111,6 +111,58 @@ describe("bug bounty Program Intelligence", () => {
     expect(evaluateTargetScope(policy, "https://192.0.2.10/").disposition).toBe("indeterminate");
   });
 
+  it("applies URL exclusions to child hosts when includeSubdomains is explicit", () => {
+    const policy = normalizeProgramPolicy(candidate({
+      scope: {
+        inScope: [{ kind: "domain", value: "*.example.com" }],
+        outOfScope: [{
+          kind: "url",
+          value: "https://files.example.com/admin",
+          includeSubdomains: true
+        }]
+      }
+    }), now);
+    const result = evaluateTargetScope(policy, "https://child.files.example.com/admin/settings");
+    expect(result.disposition).toBe("out-of-scope");
+    expect(result.authorized).toBe(false);
+  });
+
+  it("normalizes terminal DNS root dots consistently for inclusion and exclusion", () => {
+    const policy = normalizeProgramPolicy(candidate({
+      scope: {
+        inScope: [{ kind: "url", value: "https://admin.example.com./" }],
+        outOfScope: [{ kind: "domain", value: "admin.example.com." }]
+      }
+    }), now);
+    expect(evaluateTargetScope(policy, "https://admin.example.com./").disposition).toBe("out-of-scope");
+  });
+
+  it("rejects every invalid supplied rate limit even when another is valid", () => {
+    expect(() => normalizeProgramPolicy(candidate({
+      rateLimit: { requestsPerSecond: 2, requestsPerMinute: -1 }
+    }), now)).toThrow(ProgramPolicyError);
+    expect(() => normalizeProgramPolicy(candidate({
+      rateLimit: { requestsPerSecond: 2, requestsPerMinute: Number.POSITIVE_INFINITY }
+    }), now)).toThrow(ProgramPolicyError);
+  });
+
+  it("rejects impossible calendar dates instead of rolling them forward", () => {
+    for (const value of [
+      "2026-02-30T00:00:00Z",
+      "2026-04-31T12:00:00Z",
+      "2026-11-12T24:00:00Z",
+      "2026-11-12T12:00:00+14:01"
+    ]) {
+      expect(() => normalizeProgramPolicy(candidate({ retrievedAt: value }), now))
+        .toThrow(ProgramPolicyError);
+    }
+    expect(() => normalizeProgramPolicy(candidate({ effectiveAt: "2026-02-30T00:00:00Z" }), now))
+      .toThrow(ProgramPolicyError);
+    expect(() => normalizeProgramPolicy(candidate({
+      testingWindow: { startsAt: "2026-11-01T00:00:00Z", endsAt: "2026-02-30T00:00:00Z" }
+    }), now)).toThrow(ProgramPolicyError);
+  });
+
   it("never permits an action, even for an in-scope target", () => {
     for (const action of ["read_program_policy", "analyze_supplied_source", "passive_recon", "active_test", "exploit_validation", "access_sensitive_data", "submit_report"] as const) {
       const decision = evaluateProgramAction(action);
