@@ -1087,3 +1087,34 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - CI workflow run `43287598377` passed on this exact head: TypeScript build/type-check; intelligence suite **48 files / 430 tests passed**; secondary adapter/lab/memory/East suite **18 files / 248 passed / 2 skipped**; web/plugin **34**, local-GGUF **10**, Eagle **10** (4 skipped), custom-GGUF **7**, and desktop **16** tests passed.
 - PR #45 description updated with exact latest head and CI evidence. The citation-fixture thread remains unresolved pending a new Greptile review; do not manually resolve it. PR remains draft/open/unmerged.
 - No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic or external submission.
+
+
+## 2026-11-12 19:16 UTC — Resume checkpoint: PR #46 Director capability hub
+
+- Extended PR #46 with Director-wide capability ports for bounded internet research, project inspection, approval-gated memory improvement proposals, and per-action permissioned device operations.
+- Added strict structured command routing, finite command allowlist, host-supplied task identity, and a provider-neutral DirectorCommandProvider handoff through Orchestrator.requestDirectorCommand. Unknown or malformed provider output is rejected; no free-form text or generated code is executed.
+- Added regression coverage and documentation for iOS/platform permission limits and host adapter requirements.
+- Latest head: `b19af285ad5d6b0e0dee38b7af01c646fc9fc8af`. All four workflows passed: intelligence 44 files / 362 tests; secondary suite 16 files / 236 passed / 2 skipped; web, sidecar, and plugin workflows passed.
+- Greptile review requested on lifecycle, structured command handoff, research provenance, memory approval, and device permission boundaries; no review response yet. PR remains draft/open/unmerged.
+
+## 2026-11-12 19:16 UTC — PR #45 competitor baseline and citation regression follow-up
+
+- Corrected the multiline LF and CRLF test fixtures to use actual line endings; verified the citation validator stops before the first CR/LF boundary.
+- Added a public-source competitor capability and gap assessment to the review README covering HackerOne Agentic Testing, Bugcrowd Savant Pathseeker, XBOW, and Wiz AI Cyber Model Arena. The document separates customer-side agentic PTaaS from the narrower policy-review feature and outlines a separate held-out end-to-end benchmark.
+- Latest head: `fee91e3234687473d0ba0ea56d07b34c9056a3b7`. CI run `43287598377` passed: intelligence 48 files / 430 tests; secondary suite 18 files / 248 passed / 2 skipped; supporting web/plugin, local-GGUF, Eagle, custom-GGUF, and desktop suites passed.
+- Greptile re-review requested on the latest head, including the citation-fixture P2 and competitor-baseline claims. No fresh review response yet. PR remains draft/open/unmerged and stacked on PR #44.
+
+## 2026-11-12 19:16 UTC — PR #41 encrypted-memory security hardening
+
+- Fixed key/close lifecycle races by tracking active operations, rejecting new operations after close begins, waiting for active work to finish, and zeroing only the store-owned key copy. Key retrieval is single-flight.
+- Extended plaintext zeroing to key-provider failures. Added in-process writer serialization, exclusive cross-process lock files, safe lock preservation on acquisition failure, full temp-file cleanup, atomic rename, and POSIX directory fsync.
+- Added atomic migrateIfEmpty check/write/read-back under the same lock, plus a generic same-object in-process migration queue. Canonical migration comparison now ignores absent optional fields such as taskId.
+- Added regressions for close/save races, concurrent migrations, optional taskId, temp cleanup, lock preservation, changed/short IV and tags, malformed base64, and unsupported envelope metadata.
+- Latest head: `fadea750fd1adc2521a0dfbc8ffc4d0b825776cc`. All four workflows passed: intelligence 40 files / 330 tests; secondary suite 18 files / 264 passed / 2 skipped; consumer, sidecar, and plugin workflows passed.
+- Greptile re-review requested. The key provider remains test-only; no production platform key provider, default-store integration, or merge is claimed. PR remains draft/open/unmerged.
+
+## 2026-11-12 19:16 UTC — Coordination board repair and status refresh
+
+- Removed blank lines that split the active ownership table and refreshed the PR #41, #45, and #46 status rows.
+- Commits on `agent-coordination`: `84b14ede0bf87ecd73008052b8678e28de2d133f` (table formatting) and `3067d2df1fb28a3d7dfd1a57d4156c7cb47f560f` (status refresh).
+- Greptile re-review requested for the latest board head. PR #40 remains open and currently reports a dirty merge state against main; no rebase, merge, or conflict resolution was performed.
