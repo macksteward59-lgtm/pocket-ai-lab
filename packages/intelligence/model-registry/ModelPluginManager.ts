@@ -90,6 +90,15 @@ export class ModelPluginManager {
     }
 
     const descriptor = await this.buildDescriptor(input);
+    // Two replacements can resolve their sources concurrently. Commit only if
+    // the registry still contains the exact descriptor captured before await;
+    // otherwise this operation would overwrite a newer replacement.
+    if (!existingDescriptor || !this.registry.has(existingId) ||
+        this.registry.get(existingId) !== existingDescriptor) {
+      throw new ModelSourceError(
+        `Model ${existingId} changed while its replacement was being prepared; retry against the current descriptor`
+      );
+    }
     // Descriptor resolution is async: another task may acquire the model while
     // it is in progress, so re-check the active lease state before committing.
     const loadedAtCommit = this.router?.getLoadedModels().includes(existingId) ?? false;
