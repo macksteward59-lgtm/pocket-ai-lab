@@ -103,6 +103,20 @@ jobs:
             -derivedDataPath /tmp/pocket-app-derived \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Link the native app for physical iOS devices
+        run: |
+          set -o pipefail
+          mkdir -p ios/build
+          # Generic iphoneos build links the device XCFramework slice without
+          # signing or claiming that a physical iPhone was used.
+          xcodebuild build \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath /tmp/pocket-app-device-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee ios/build/device-app-build.log
+
       - name: XCTest the native Pocket AI Lab app
         run: |
           xcodebuild test \
