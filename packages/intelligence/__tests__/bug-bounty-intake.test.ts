@@ -78,6 +78,8 @@ describe("bug bounty policy intake provenance", () => {
 
   it("rejects malformed timestamps, empty text, and null bytes", () => {
     expect(() => capturePolicySnapshot(intake({ retrievedAt: "today" }))).toThrow(PolicyIntakeError);
+    expect(() => capturePolicySnapshot(intake({ retrievedAt: "2026-02-31T12:00:00Z" }))).toThrow(PolicyIntakeError);
+    expect(() => capturePolicySnapshot(intake({ retrievedAt: "2026-11-12T25:00:00Z" }))).toThrow(PolicyIntakeError);
     expect(() => capturePolicySnapshot(intake({ policyText: "  " }))).toThrow(PolicyIntakeError);
     expect(() => capturePolicySnapshot(intake({ policyText: "rules\u0000hidden" }))).toThrow(PolicyIntakeError);
   });
