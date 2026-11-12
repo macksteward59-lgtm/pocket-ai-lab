@@ -39,3 +39,20 @@ The TypeScript orchestration API is wired to `Orchestrator.tooling`, and its reg
 - A separate runtime adapter installer and executor that re-checks the exact active artifact digest and passes every invocation through SecurityDivision, DelegationGate, and applicable APEX/East controls.
 
 The workshop is a capability-management foundation, not a claim that arbitrary generated tools can safely execute on the user's device today.
+
+## Director-wide capabilities
+
+The capability hub is exposed as `Orchestrator.capabilities`. It adds host-injected ports for:
+
+- **Internet research:** submit bounded queries and optional domain allowlists; receive source records with URLs, excerpts, and retrieval timestamps. The host research provider is responsible for web access, source verification, and rate limits. Retrieved text remains untrusted input.
+- **Project analysis:** inspect an explicitly supplied workspace or project scope and return evidence-linked findings for missing capabilities, defects, risks, optimizations, and dependencies.
+- **Memory improvement:** ask an injected advisor to propose additions, revisions, or retirement of working, episodic, semantic, and procedural memories. Each individual change requires independent approval. New or revised memories return to unverified status; research claims do not become trusted memory merely because the Director proposed them.
+- **Device operations:** use a host device bridge for app listing/opening, storage inspection, and file read/write/delete. Every action requires a fresh, narrowly scoped permission decision tied to the task and resource. File deletion additionally requires explicit destructive confirmation.
+
+### Device access limits
+
+The intelligence package does not bypass operating-system permissions or app sandboxing. The device bridge must expose only APIs the host platform permits. On iOS, for example, an app cannot freely browse another app's private container, silently manage arbitrary app data, or launch every installed app; access is constrained to supported document pickers, Files/document-provider APIs, app groups, approved URL schemes, and system permission flows. Storage cleanup should be recommendation-first and target-specific. Uninstalling apps, bulk deletion, credential access, permission changes, and other destructive or privileged operations are not granted by this capability contract.
+
+### Self-improvement boundary
+
+The Director can research improvements, inspect its own project components, propose tool or memory changes, test candidates, and request approvals. It cannot silently rewrite its governing policies, approval verifier, trust roots, security gates, or its own permissions. Tool and memory changes remain versioned/provenanced and subject to the approval boundaries above. The host must supply the actual model tool-call adapter and capability providers; arbitrary model text is never treated as a command.
