@@ -87,6 +87,19 @@ export function comparePolicySnapshots(
   const currentTime = Date.parse(current.retrievedAt);
   const contentChanged = previous.contentSha256 !== current.contentSha256;
 
+  if (currentTime === previousTime && contentChanged) {
+    return Object.freeze({
+      status: "timestamp-conflict" as const,
+      previousSnapshotId: previous.snapshotId,
+      currentSnapshotId: current.snapshotId,
+      previousSha256: previous.contentSha256,
+      currentSha256: current.contentSha256,
+      contentChanged: true,
+      reason: "Different policy text has the same retrieval timestamp; preserve both and resolve provenance before promotion",
+      authorized: false as const
+    });
+  }
+
   if (currentTime < previousTime) {
     return Object.freeze({
       status: "out-of-order" as const,
