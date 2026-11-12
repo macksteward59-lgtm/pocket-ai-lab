@@ -13,9 +13,27 @@ describe("DirectorCapabilities", () => {
         return { summary: "Project inspected", findings: [], inspectedAt: new Date(0).toISOString() };
       } }
     });
-    const sources = await capabilities.research({ query: "compare local code analysis tools" });
+    const sources = await capabilities.research({ query: "compare local code analysis tools", allowedDomains: ["EXAMPLE.com."] });
     expect(sources).toHaveLength(1);
     expect((await capabilities.analyzeProject({ objective: "Find missing project capabilities" })).summary).toBe("Project inspected");
+  });
+
+  it("enforces research domain allowlists and rejects project path traversal", async () => {
+    const capabilities = new DirectorCapabilities({
+      memory: new MemoryManager(),
+      research: { async search() {
+        return [{ id: "bad", title: "Untrusted", url: "https://evil.example.net/path", excerpt: "outside allowlist", retrievedAt: new Date(0).toISOString() }];
+      } },
+      projectInspector: { async inspect() {
+        throw new Error("inspector must not receive traversal paths");
+      } }
+    });
+    await expect(capabilities.research({
+      query: "find a tool", allowedDomains: ["example.com"]
+    })).rejects.toThrow(/outside the allowed domain list/);
+    await expect(capabilities.analyzeProject({
+      objective: "inspect", paths: ["..\\secrets"]
+    })).rejects.toThrow(/relative paths/);
   });
 
   it("fails closed when internet research or project inspection adapters are absent", async () => {
