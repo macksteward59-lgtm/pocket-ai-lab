@@ -40,6 +40,7 @@ pocket-ai-lab/
 │       ├── memory/
 │       ├── knowledge/
 │       ├── evaluation/
+│       ├── tooling/                    # Director-managed tool lifecycle
 │       ├── policies/
 │       └── telemetry/
 ├── runtime/
@@ -100,6 +101,12 @@ Four layers: Working, Episodic, Semantic, Procedural. Provenance tracked on ever
 
 ### 4.7 Evaluation Engine
 Tests whether work satisfies the original objective against evidence or executable tests.
+
+### 4.8 Director Tool Workshop
+- Lets the Director propose, create, extend, revise, test, and retire tool artifacts through injected host adapters.
+- Generated source is untrusted; testing requires an isolated sandbox and activation requires independent approval bound to the exact artifact digest.
+- Activation registers metadata only. Runtime installation and execution remain separate and pass through SecurityDivision, DelegationGate, and APEX/East controls.
+- The intelligence package never evaluates or launches generated code.
 
 ## 5. Hybrid Agent Organization
 
