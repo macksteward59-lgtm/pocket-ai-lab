@@ -125,6 +125,29 @@ describe("ToolDirector", () => {
     await expect(director.develop(spec)).rejects.toThrow(/Unsafe tool bundle path/);
   });
 
+
+  it("serializes competing creates for the same tool id", async () => {
+    const director = new ToolDirector({ registry: new ToolRegistry(), builder, sandbox: passingSandbox });
+    const results = await Promise.allSettled([director.develop(spec), director.develop(spec)]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter(result => result.status === "rejected")).toHaveLength(1);
+  });
+
+  it("requires approval to retire a managed tool and preserves its history", async () => {
+    const registry = new ToolRegistry();
+    const director = new ToolDirector({
+      registry, builder, sandbox: passingSandbox,
+      approvalVerifier: { verify: input => input.approvalRef === "retire-ok" }
+    });
+    await director.develop(spec);
+    await director.activate({ taskId: "task-1", toolId: spec.id, version: 1, approvalRef: "activate-ok" });
+    await expect(director.retire({ taskId: "task-2", toolId: spec.id, approvalRef: "no" }))
+      .rejects.toThrow(/retirement approval was denied/);
+    await director.retire({ taskId: "task-2", toolId: spec.id, approvalRef: "retire-ok" });
+    expect(registry.has(spec.id)).toBe(false);
+    expect((await director.listArtifacts()).map(item => item.status)).toEqual(["active", "retired"]);
+  });
+
   it("fails closed when builder or isolated sandbox adapters are missing", async () => {
     const director = new ToolDirector({ registry: new ToolRegistry() });
     await expect(director.develop(spec)).rejects.toThrow(/builder is not configured/);
