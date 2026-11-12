@@ -854,3 +854,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Fixes pushed:** `WorkspaceRestoreGate` now restores only on first appearance; added a unit test. The failed replacement test now imports and loads a good GGUF first, attempts an invalid same-name replacement, checks that the original file/selection/session remain, and sends a prompt through the original session.
 - **Current head:** PR #39 `81ea674`. Pocket AI Lab CI is running; iOS LlamaEngine CI is pending on this head. Greptile re-review requested.
 - **No merge:** PR #39 remains stacked on PR #38 and unmerged.
+
+
+## 2026-11-12 14:56 UTC — PR #37 latest validation / reviewer questions
+
+- **Latest head:** `9a96d330ac0ca9b70462882aacd01c0566bbb1dd`.
+- **CI:** Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar CI all passed on the latest head. Greptile's re-review is still in progress.
+- **Additional Greptile challenge:** Asked whether `confirmLoaded` after successful `generate()` truly proves the replacement artifact was loaded. The inference request currently carries only `modelId`, and the llama.cpp adapter uses its configured alias or request ID; it does not receive descriptor path/hash. Greptile was asked to flag this as a blocker if the success signal cannot prove descriptor identity.
+- **Release API:** Asked Greptile whether descriptor-level release is sufficient or whether a unique per-acquisition token is required to prevent duplicate release from consuming another same-generation reference.
