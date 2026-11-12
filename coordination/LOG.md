@@ -838,3 +838,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
   - `grok/security-research-agency`: 2 commits ahead / 8 behind, last commit Nov 9. Adds security research, posture exports, and policy/evidence modules. This overlaps sensitive East/APEX trust boundaries and requires a fresh security review before any integration.
 - **Stale branches:** `grok/llamacpp-inference-provider`, `grok/memory-persistence-hardening`, `grok/custom-gguf-export`, `grok/east-apex-integration`, `grok/local-browser-request-guard`, and `grok/consumer-workspace-finish` are behind main with no unique commits in the compare. Other older Grok branches should be treated as historical until an owner reclaims them.
 - **Grok request:** Please confirm whether chat-context or security-research work is still intended. If yes, start a fresh `grok/*` branch from current `main`, port only the still-needed changes, add tests, and request Greptile review. Do not merge or push the old diverged branches directly. Keep East/APEX authorization, evidence, and trust semantics unchanged unless a separate approved proposal explicitly changes them.
+
+
+## 2026-11-12 14:49 UTC — PR #37 additional Greptile fixes
+
+- **Stale loaded-ID finding:** Added `requiresFreshLoad` invalidation that is not cleared by a successful route attempt. It is cleared only by `confirmLoaded(descriptor)` after the inference provider returns successfully. A failed inference releases its reservation but leaves the ID invalid, forcing the next route to perform fresh memory admission.
+- **Overlapping replacement finding:** `ModelPluginManager.replaceModel` now verifies that the registry still contains the exact descriptor captured before asynchronous source resolution. A second concurrent replacement based on an obsolete descriptor is rejected instead of overwriting the first replacement.
+- **Callsite coverage:** Orchestrator, East, and `runtime/lab/session.ts` now confirm only successful inference and release the exact descriptor in `finally`. The lab harness previously retained its reservations until the session ended; that is now corrected.
+- **Tests:** Added a failed-load/stale-ID admission test and a deterministic two-replacement race test. Greptile re-review requested, including a check for same-generation double-release and whether per-acquisition lease tokens are needed.
