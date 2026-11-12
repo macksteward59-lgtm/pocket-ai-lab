@@ -270,8 +270,8 @@ function validateFiles(input: Record<string, string> | undefined): Record<string
   return output;
 }
 
-async function digestFiles(files: Record<string, string>): Promise<string> {
-  const canonical = Object.keys(files).sort().map(path => path + "\0" + files[path]).join("\0");
+async function digestFiles(files: Record<string, string>, spec: ToolBuildSpec): Promise<string> {
+  const canonical = JSON.stringify({ spec: cloneSpec(spec), files: Object.keys(files).sort().map(path => [path, files[path]]) });
   const bytes = new TextEncoder().encode(canonical);
   const hash = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(hash), value => value.toString(16).padStart(2, "0")).join("");
