@@ -904,3 +904,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Greptile completed the second pass on PR #39: **7 files reviewed, 0 new comments added**. The two previous P2 findings were fixed and the new review is clean.
 - Pocket AI Lab CI is green on head `81ea674`. The iOS LlamaEngine CI remains in progress in the device/simulator/macOS library build stage; the generic iOS app-link and expanded importer/session tests are still pending.
+
+
+## 2026-11-12 15:16 UTC — PR #39 CI deduplication
+
+- Updated the iOS workflow concurrency group to key on the PR head SHA (or push SHA), so the `push` and `pull_request` events for the same commit share one cancellation group rather than compiling all Metal slices twice.
+- Latest PR #39 head is `07ddfc4`. Greptile was asked to sanity-check the workflow expression; the next iOS CI run will validate the full device/simulator/macOS and generic iOS link path.
