@@ -93,3 +93,34 @@ Measure:
 - Run each model configuration three times and report per-case results, disagreements, commit SHA, fixture version, CI run IDs, latency, and token cost.
 
 The current tests are regression tests for isolation and evidence validation; they do not constitute a completed benchmark. Human adjudication and comparative runs remain pending.
+
+### Current public competitor capability baseline (2026-11-12)
+
+The following is a public-source baseline, not a claim that these products perform the same task as this policy-review module. HackerOne and Bugcrowd describe customer-authorized testing platforms; XBOW describes an autonomous offensive-testing platform. The closest direct comparison for this module remains a human-reviewed policy interpretation workflow.
+
+| Reference | Publicly described capability | Relevance to our target architecture |
+|---|---|---|
+| **HackerOne Agentic Testing / H1 Agentic Pentest** | Multi-agent workflow spanning authentication/access characterization, reconnaissance and surface mapping, planning/prioritization, parallel specialist testing, synthesis and reporting. Program instructions, asset details, access constraints, rate limits and supplied context inform testing. | Program-aware context and scope/constraint reasoning must be first-class inputs to the Director, not prompt-only notes. Dynamic discoveries should reprioritize work, while program data stays engagement-scoped. |
+| **Bugcrowd Savant Pathseeker** | Controlled autonomous testing of approved external domains, web apps and APIs; asset approval before launch; human oversight, an in-run stop control, validated findings and evidence packages. | Hard scope confirmation, bounded execution windows, kill switch, evidence-backed results and human validation are baseline requirements, not optional polish. |
+| **XBOW** | Coordinator-led exploration, short-lived specialist agents, a steerable headless browser and offensive toolkit, parallel testing, independent exploit validation, and reproducible exploit evidence. | Separate planning, focused workers and independent validators. Optimize for verified impact and reproducibility, not agent count or raw scanner findings. |
+| **Wiz AI Cyber Model Arena** | A public benchmark launched with 257 real-world challenges across zero-day discovery, CVE/code vulnerability detection, API security, web security and cloud security; the current arena exposes pass@1, category results, cost, time and steps per solve. | We need deterministic, held-out, category-balanced evaluations that score observable outcomes and efficiency, with model × harness comparisons. A policy-review-only corpus cannot substantiate full offensive capability. |
+
+Official sources:
+- HackerOne, [Agentic Testing reasoning and context](https://docs.hackerone.com/en/articles/14499410-h1-continuous-testing-agentic-pentest-reasoning-and-context) and [H1 Agentic Pentest](https://www.hackerone.com/product/pentest).
+- Bugcrowd, [Savant Pathseeker launch](https://www.bugcrowd.com/press-release/bugcrowd-introduces-savant-pathseeker-delivering-continuous-agentic-pentesting-across-the-attack-surface/) and [Autonomous Pentest operating guide](https://docs.bugcrowd.com/customers/asset-management/start-an-autonomous-pentest/).
+- XBOW, [platform architecture](https://xbow.com/platform) and [HackerOne leaderboard history](https://xbow.com/blog/top-1-how-xbow-did-it).
+- Wiz Research, [AI Cyber Model Arena introduction](https://www.wiz.io/blog/introducing-ai-cyber-model-arena-a-real-world-benchmark-for-ai-agents-in-cybersec) and [live benchmark](https://www.wiz.io/cyber-model-arena).
+
+Vendor capability statements are attributed to their publishers and are not independently verified here. The public benchmark is useful as a methodology reference, not a directly comparable score for this narrower policy-review feature.
+
+### Gap assessment against the public baseline
+
+**Already represented in this repository / current PR stack:** deterministic policy interpretation with source-line evidence; explicit approval qualifiers and scope candidates; isolated Critic and Validator sessions; strict model response contracts; fail-closed evidence checks; task-scoped model/session cleanup; human review remains mandatory.
+
+**Not yet demonstrated as a competitive end-to-end bug bounty researcher:** program discovery and policy ingestion from platform listings; program-specific authorization/scope enforcement connected to every execution adapter; authorized asset inventory and authenticated session handling; controlled recon and web/API/source-code testing; safe tool orchestration and sandboxed execution; reproducible exploit verification; deduplication and impact ranking; report-quality scoring; persistent engagement memory; continuous retesting after remediation.
+
+**Build order:** (1) program and policy intake with immutable scope snapshots; (2) model-independent authorization and rate-limit gate; (3) isolated, read-only discovery and asset mapping; (4) specialist web/API/source analysis tools in an approved lab; (5) independent reproduction and evidence validation; (6) human-reviewed report drafting; (7) deterministic benchmark harness and repeated model × agent comparisons. Sensitive target testing, exploit execution and external submission remain gated by explicit program authorization and human approval.
+
+### Benchmark expansion path
+
+Keep the 24-case policy-review corpus as a narrow regression suite. Build a separate held-out end-to-end benchmark rather than inflating the policy corpus to imply coverage it does not have. Start with ten reproducible lab tasks, then expand toward balanced web, API, code-vulnerability and cloud categories. Each task needs a deterministic grader, explicit authorized fixture, fixed environment, expected impact/evidence, and cost/time capture. Report pass@1 and pass@3 separately; do not report best-of-three as a single-run capability. Prevent benchmark contamination by keeping solutions and held-out task details out of agent context and network access during evaluation.
