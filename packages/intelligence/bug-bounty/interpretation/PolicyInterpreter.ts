@@ -53,7 +53,7 @@ export function interpretPolicySnapshot(
     if (!trimmed) continue;
 
     const heading = classifyHeading(trimmed);
-    if (/^#{1,6}\\s/.test(trimmed)) {
+    if (/^#{1,6}\s/.test(trimmed)) {
       // An unsupported heading ends the previous section; never carry its
       // classification into unrelated content.
       activeSection = heading;
