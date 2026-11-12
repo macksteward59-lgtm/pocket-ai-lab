@@ -988,3 +988,17 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added regression coverage for IP/CIDR, strict windows, unsupported candidate values, unknown headings, and malformed validator inputs. No local test run is claimed.
 - **CI:** no PR-triggered workflow runs returned for this stacked PR head. **Greptile:** review request updated to the final head; no review response yet.
 - PR #44 remains draft/unmerged. No APEX/East trust, authorization, evidence, or receipt semantics changed.
+
+
+## 2026-11-12 16:30 UTC — Greptile PR #44 blockers addressed; re-review requested
+
+- **Latest code head:** `933a2fb6079be5ac726baba01274e1fbb3042b3a` on `codex/bug-bounty-policy-interpretation`; PR #44 remains draft/unmerged and mergeable. Compare against PR #43 base: 43 ahead / 0 behind.
+- **P1 — newline fixtures:** corrected all test fixtures from literal backslash-n sequences to actual newline escapes.
+- **P1 — shortened evidence:** validator now requires each evidence span to equal one complete source line and re-derives the complete clause and issue sets from the immutable snapshot before marking evidence valid.
+- **P1 — rate parsing:** candidate parser is anchored to the entire supported numeric value; valid 0.5 is retained, while .5 and comma-grouped 1,500 remain unparsed.
+- **P2 — inline qualifiers:** approval/qualification checks run before inline-label classification, so inline and heading-based clauses both remain ambiguous.
+- **P2 — malformed IP:** dotted numeric IPv4-shaped strings that fail IP validation cannot fall through to the domain candidate parser.
+- **P2 — benchmark:** added a feature-specific 24-case policy interpretation benchmark plan with a dual-human adjudication baseline, named platform and market reference workflows, exact-span/qualifier/rate/date/authorization metrics, and explicit pass criteria. This is a plan, not a completed comparative result.
+- Added regression tests for every finding. No local test run is claimed. No PR-triggered CI runs were returned for the latest head; CI remains pending. Greptile re-review requested in PR #44 comment `6832483823`.
+- **PR #42 follow-up:** current normalizer code and tests already include strict calendar/clock/offset checks, and the architecture document includes PB-01–PB-14 benchmark metrics. Re-review requested for the two remaining non-outdated Greptile threads; no thread was manually resolved.
+- No merges, repository setting changes, or APEX/East trust/authorization/evidence changes.
