@@ -127,7 +127,8 @@ export async function runLabSession(options: {
         }
         const profile = agents.getAgent(agentId);
         const selected = await router.route(agentId, registry.getPreferredModel(agentId), ["reason"]);
-        const inference = await generateWithSignal(options.provider, {
+        try {
+          const inference = await generateWithSignal(options.provider, {
           agentId,
           modelId: selected.id,
           stage,
@@ -143,8 +144,10 @@ export async function runLabSession(options: {
           ...(options.memoryContext && options.memoryContext.length > 0
             ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
             : {})
-        }, options.signal);
-        if (!isRecord(inference.payload)) {
+          }, options.signal);
+          // Only a successful provider response confirms the selected model generation.
+          router.confirmLoaded(selected);
+          if (!isRecord(inference.payload)) {
           throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");
         }
         const payload = { ...inference.payload };
@@ -171,8 +174,11 @@ export async function runLabSession(options: {
           payload: published.payload,
           evidenceRefs: [...published.evidenceRefs]
         };
-        messages.push(transcript);
-        emit({ type: "message", message: transcript });
+          messages.push(transcript);
+          emit({ type: "message", message: transcript });
+        } finally {
+          router.release(selected);
+        }
       }
       return [...prior, ...generated];
     });
