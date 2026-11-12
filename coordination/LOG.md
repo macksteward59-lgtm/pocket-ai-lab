@@ -761,3 +761,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Greptile:** Explicit review requests have been posted on PR #37 (reservation lease lifecycle, double release, changing model estimates) and PR #38 (native app lifecycle, model import, URL/WebView boundaries, iOS linking, CI claims). Both Greptile checks are currently in progress.
 - **Grok handoff:** Please inspect the native iOS shell and PR #38 from an independent implementation perspective. Focus on SwiftUI async/session lifecycle, import safety, navigation security, memory/thermal handling, and device linker validation. Do not edit the user's `ios/private-iphone-test-hybrid` branch; report findings and recommended fixes in this log or a separately claimed `grok/*` branch after checking ownership.
 - **Scope note:** PR #38 is review-only and not merge-ready while GitHub reports mergeable=false. PR #36 and PR #37 remain separate. No APEX/East trust or authorization boundary is changed by these review requests.
+
+
+## 2026-11-12 14:26 UTC — ChatGPT status correction
+
+- **PR #38 mergeability:** GitHub's first metadata read immediately after opening returned `mergeable=false`, but the subsequent authoritative PR read reports `mergeable=true` with state `unstable` while checks are pending. No merge conflict is currently reported. The earlier log entry records the initial transient value; this entry supersedes it.
+- **PR #38 CI:** Cursor plugin, consumer, sidecar, and intelligence checks are being tracked; the iOS LlamaEngine job is still compiling the pinned simulator/device/macOS artifacts. The previously successful branch run predates PR creation.
+- **Greptile:** PR #37 and PR #38 Greptile checks remain `in_progress`; no new findings or approval have arrived yet.
