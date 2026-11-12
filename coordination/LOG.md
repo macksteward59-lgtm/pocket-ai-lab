@@ -1067,3 +1067,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Greptile Review check:** still in progress as of 2026-11-12 19:04:30 UTC; no new review response or findings yet. Existing two threads remain open pending the fresh review; no manual resolution.
 - PR #45 description and coordination board updated with exact tested head/results. PR remains draft/open/unmerged. No local tests are claimed.
 - No APEX/East trust/evidence/receipt/RLS or authorization changes, target traffic, external submission, or merge.
+
+## 2026-11-12 19:08 UTC — PR #45 citation regression fixtures corrected
+
+- Greptile's latest review identified that the multiline and CRLF citation regression fixtures used literal backslash sequences rather than actual line endings, so they did not exercise the intended boundary cases.
+- Replaced the fixture strings with actual JavaScript `\n` and `\r\n` escapes, making the runtime policy text contain real LF/CRLF line endings. The multiline case spans two real source lines; the CRLF case includes the actual carriage-return code unit in its cited span.
+- Commit: `e7353a41c17322aa9de752a0338c67a98875b418` on `codex/bug-bounty-independent-reviews-v2`. Awaiting CI and a fresh Greptile review; no test success is claimed for this new head.
+- The production citation validator remains unchanged in this correction. No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic, external submission, or merge.
