@@ -86,6 +86,13 @@ export class ToolRegistry {
   replaceManaged(tool: ToolDescriptor): void {
     if (!this.managed.has(tool.id)) throw new Error("Tool is not Director-managed: " + tool.id);
     this.tools.set(tool.id, { ...tool, specialists: [...tool.specialists] });
+    // A new active artifact digest is not the previously installed adapter.
+    // The host must re-install or re-verify the replacement before use.
+    this.available.delete(tool.id);
+  }
+
+  isManaged(id: string): boolean {
+    return this.managed.has(id);
   }
 
   /** Removes only Director-managed metadata, never built-in catalog entries. */
