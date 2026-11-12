@@ -60,7 +60,7 @@ jobs:
           runtime/ios/scripts/build-llama-cpp.sh xcframework
           test -d runtime/ios/build/xc/llama.xcframework
           test -d runtime/ios/build/xc/llama.xcframework/ios-arm64
-          test -d runtime/ios/build/xc/llama.xcframework/ios-arm64_x86_64-simulator || test -d runtime/ios/build/xc/llama.xcframework/ios-arm64-simulator
+          find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
 
