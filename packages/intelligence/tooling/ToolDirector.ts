@@ -12,7 +12,7 @@
  * DelegationGate, and any applicable APEX/East authorization.
  */
 import type { ToolDescriptor, ToolRegistry } from "../security/tools";
-import type { SecuritySpecialistId } from "../agents/AgentManager";
+import { SECURITY_SPECIALIST_IDS, type SecuritySpecialistId } from "../agents/AgentManager";
 
 export type ToolChangeKind = "create" | "extend" | "revise";
 export type ToolArtifactStatus = "draft" | "testing" | "quarantined" | "ready" | "active" | "retired";
@@ -182,7 +182,8 @@ export class ToolDirector {
     if (!input.taskId?.trim() || !input.approvalRef?.trim()) throw new Error("taskId and approvalRef are required");
     const artifacts = await this.store.list();
     const artifact = artifacts.find(item => item.toolId === input.toolId && item.version === input.version);
-    if (!artifact) throw new Error("Unknown tool artifact version");
+    const latest = await this.store.getLatest(input.toolId);
+    if (!artifact || latest?.version !== input.version) throw new Error("Only the latest known tool artifact version can be activated");
     if (!["ready", "active"].includes(artifact.status) || !artifact.testSummary?.passed) {
       throw new Error("Only a fully tested ready artifact can be activated");
     }
@@ -210,7 +211,8 @@ export class ToolDirector {
   async retire(input: { toolId: string; taskId: string; approvalRef: string }): Promise<void> {
     if (!this.approvalVerifier) throw new Error("Independent tool retirement approval is not configured");
     const latest = await this.store.getLatest(input.toolId);
-    if (!latest || latest.status === "retired" || !this.registry.has(input.toolId)) throw new Error("No active managed tool to retire");
+    if (!input.taskId?.trim() || !input.approvalRef?.trim()) throw new Error("taskId and approvalRef are required");
+    if (!latest || latest.status !== "active" || !this.registry.has(input.toolId)) throw new Error("No active managed tool to retire");
     const approved = await this.approvalVerifier.verify({
       taskId: input.taskId, toolId: latest.toolId, version: latest.version,
       digest: latest.digest, approvalRef: input.approvalRef
@@ -228,7 +230,12 @@ export class ToolDirector {
   private validateSpec(spec: ToolBuildSpec): void {
     if (!spec || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(spec.id)) throw new Error("Tool id must be a lowercase kebab-case identifier");
     if (!spec.name?.trim() || !spec.purpose?.trim()) throw new Error("Tool name and purpose are required");
-    if (!Array.isArray(spec.specialists) || spec.specialists.length === 0) throw new Error("At least one allowed specialist is required");
+    if (!Array.isArray(spec.specialists) || spec.specialists.length === 0 || spec.specialists.some(id => !SECURITY_SPECIALIST_IDS.includes(id))) throw new Error("At least one valid allowed specialist is required");
+    if (new Set(spec.specialists).size !== spec.specialists.length) throw new Error("Specialist allowlist contains duplicates");
+    if (!["create", "extend", "revise"].includes(spec.change)) throw new Error("Invalid tool change kind");
+    if (spec.name.length > 120 || spec.purpose.length > 1000 || spec.requirements.length > 20 || spec.requirements.some(value => value.length > 1000)) {
+      throw new Error("Tool specification exceeds its size limits");
+    }
     if (!Array.isArray(spec.requirements) || spec.requirements.length === 0 || spec.requirements.some(value => !value.trim())) {
       throw new Error("At least one concrete tool requirement is required");
     }
@@ -240,13 +247,17 @@ function validateFiles(input: Record<string, string> | undefined): Record<string
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Builder must return a file map");
   const entries = Object.entries(input);
   if (entries.length === 0 || entries.length > 40) throw new Error("Tool bundle must contain 1–40 files");
-  const output: Record<string, string> = {};
+  const output = Object.create(null) as Record<string, string>;
+  let totalSize = 0;
   for (const [path, content] of entries) {
     if (!path || path.startsWith("/") || path.includes("\\") ||
         path.split("/").some(part => !part || part === "." || part === "..")) {
       throw new Error("Unsafe tool bundle path: " + path);
     }
+    if (path.split("/").some(part => ["__proto__", "prototype", "constructor"].includes(part))) throw new Error("Reserved tool bundle path: " + path);
     if (typeof content !== "string" || content.length > 200_000) throw new Error("Invalid or oversized tool source: " + path);
+    totalSize += new TextEncoder().encode(content).byteLength;
+    if (totalSize > 1_000_000) throw new Error("Tool bundle exceeds the 1 MB size limit");
     output[path] = content;
   }
   return output;
