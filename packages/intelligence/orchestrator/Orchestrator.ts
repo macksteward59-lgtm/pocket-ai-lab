@@ -13,6 +13,7 @@ import { DelegationGate } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
 import { ToolRegistry } from "../security/tools";
 import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVerifier, type ToolArtifactStore } from "../tooling/ToolDirector";
+import { DirectorCapabilities, type ResearchProvider, type ProjectInspector, type MemoryImprovementAdvisor, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge } from "../director/DirectorCapabilities";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
 
 export interface TaskRequest {
@@ -87,6 +88,8 @@ export class Orchestrator {
   readonly security: SecurityDivision;
   /** Director-managed tool lifecycle; generated code remains gated and non-executable here. */
   readonly tooling: ToolDirector;
+  /** Research, project analysis, memory evolution, and permissioned device capabilities. */
+  readonly capabilities: DirectorCapabilities;
   private readonly inference: InferenceProvider;
 
   constructor(opts: {
@@ -107,6 +110,12 @@ export class Orchestrator {
     toolSandbox?: ToolSandbox;
     toolApprovalVerifier?: ToolApprovalVerifier;
     toolArtifactStore?: ToolArtifactStore;
+    researchProvider?: ResearchProvider;
+    projectInspector?: ProjectInspector;
+    memoryImprovementAdvisor?: MemoryImprovementAdvisor;
+    memoryChangeApproval?: MemoryChangeApproval;
+    devicePermissionBroker?: DevicePermissionBroker;
+    deviceBridge?: DeviceBridge;
   }) {
     if (!opts?.inference || typeof opts.inference.generate !== "function") {
       throw new Error("A real InferenceProvider must be supplied; placeholder inference is disabled");
@@ -118,6 +127,15 @@ export class Orchestrator {
     this.router = new ModelRouter(opts.getResources);
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
     this.memory = opts.memory ?? new MemoryManager();
+    this.capabilities = new DirectorCapabilities({
+      memory: this.memory,
+      research: opts.researchProvider,
+      projectInspector: opts.projectInspector,
+      memoryAdvisor: opts.memoryImprovementAdvisor,
+      memoryApproval: opts.memoryChangeApproval,
+      devicePermissionBroker: opts.devicePermissionBroker,
+      deviceBridge: opts.deviceBridge
+    });
     CORE_AGENTS.forEach(agent => this.agents.registerPermanent(agent));
     const toolRegistry = opts.toolRegistry ?? new ToolRegistry();
     this.tooling = new ToolDirector({
