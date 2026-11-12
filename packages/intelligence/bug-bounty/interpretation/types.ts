@@ -18,7 +18,7 @@ export type PolicyExtractionMethod =
   | "keyword-pattern";
 
 export type PolicyCandidateValue =
-  | { readonly kind: "asset"; readonly assetKind: "domain" | "url"; readonly value: string }
+  | { readonly kind: "asset"; readonly assetKind: "domain" | "url" | "ip" | "cidr"; readonly value: string }
   | { readonly kind: "rate-limit"; readonly limit: number; readonly unit: "requests-per-second" | "requests-per-minute" }
   | { readonly kind: "testing-window"; readonly startsAt: string; readonly endsAt: string };
 
