@@ -48,7 +48,7 @@ describe("ToolDirector", () => {
         return { passed: false, testsRun: 2, testsPassed: 1, findings: ["Regression detected"], completedAt: new Date(0).toISOString() };
       }
     };
-    const director = new ToolDirector({ registry, builder, sandbox });
+    const director = new ToolDirector({ registry, builder, sandbox, approvalVerifier: { verify: () => true } });
     const artifact = await director.develop(spec);
     expect(artifact.status).toBe("quarantined");
     expect(artifact.testSummary?.findings).toContain("Regression detected");
