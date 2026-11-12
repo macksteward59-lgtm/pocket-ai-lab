@@ -163,6 +163,8 @@ describe("encrypted file memory store", () => {
         value => { value.algorithm = "A128GCM"; },
         value => { value.iv = Buffer.alloc(11).toString("base64"); },
         value => { value.tag = Buffer.alloc(15).toString("base64"); },
+        value => { value.iv = Buffer.alloc(12, 1).toString("base64"); },
+        value => { value.tag = Buffer.alloc(16, 1).toString("base64"); },
         value => { value.iv = String(value.iv) + "!"; },
         value => { value.ciphertext = String(value.ciphertext) + "!"; }
       ];
