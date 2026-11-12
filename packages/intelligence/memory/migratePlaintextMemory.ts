@@ -15,9 +15,7 @@ export async function migratePlaintextMemory(
 ): Promise<MemoryMigrationResult> {
   const sourceEntries = await source.load();
   const existingTarget = await encryptedTarget.load();
-  if (existingTarget.length > 0) {
-    throw new Error("Encrypted memory target is not empty; refusing to overwrite it.");
-  }
+  if (existingTarget.length > 0) throw new Error("Encrypted memory target is not empty; refusing to overwrite it.");
 
   await encryptedTarget.save(sourceEntries.map(cloneEntry));
   const verified = await encryptedTarget.load();
@@ -35,9 +33,9 @@ function cloneEntry(entry: MemoryEntry): MemoryEntry {
 }
 
 function canonicalize(value: unknown): string {
-  if (Array.isArray(value)) return \`[\${value.map(canonicalize).join(",")}]\`;
+  if (Array.isArray(value)) return "[" + value.map(canonicalize).join(",") + "]";
   if (isRecord(value)) {
-    return \`{\${Object.keys(value).sort().map(key => \`\${JSON.stringify(key)}:\${canonicalize(value[key])}\`).join(",")}}\`;
+    return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonicalize(value[key])).join(",") + "}";
   }
   return JSON.stringify(value);
 }
