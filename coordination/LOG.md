@@ -1080,3 +1080,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - After the citation-fixture correction commit `e7353a41c17322aa9de752a0338c67a98875b418` passed CI run `43287227241` (48/430 intelligence tests; 18/248 secondary tests, 2 skipped; type-check/build and supporting suites passed), the repository owner added a README-only public competitor capability baseline and gap assessment.
 - The branch advanced to `fee91e3234687473d0ba0ea56d07b34c9056a3b7`. This new head is not yet CI-verified; its intelligence workflow is in progress. The Greptile citation-fixture thread remains unresolved/outdated pending re-review. No changes were made to the owner's README commit.
 - PR #45 remains draft/open/unmerged. No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic or external submission.
+
+## 2026-11-12 19:13 UTC — PR #45 latest branch CI passed
+
+- Latest PR head: `fee91e3234687473d0ba0ea56d07b34c9056a3b7`, including the repository owner's README-only public competitor baseline and capability-gap assessment.
+- CI workflow run `43287598377` passed on this exact head: TypeScript build/type-check; intelligence suite **48 files / 430 tests passed**; secondary adapter/lab/memory/East suite **18 files / 248 passed / 2 skipped**; web/plugin **34**, local-GGUF **10**, Eagle **10** (4 skipped), custom-GGUF **7**, and desktop **16** tests passed.
+- PR #45 description updated with exact latest head and CI evidence. The citation-fixture thread remains unresolved pending a new Greptile review; do not manually resolve it. PR remains draft/open/unmerged.
+- No APEX/East trust, evidence, receipt, RLS, or authorization changes; no target traffic or external submission.
