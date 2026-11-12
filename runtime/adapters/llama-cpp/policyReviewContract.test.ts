@@ -107,6 +107,17 @@ describe("llama.cpp policy-review response contract", () => {
       .rejects.toMatchObject({ code: "malformed_response" });
   });
 
+
+  it("rejects a specialized review contract on the user chat path", async () => {
+    const backend = new RecordingBackend("plain text must not bypass the contract");
+    const provider = new LlamaCppInferenceProvider({ repairAttempts: 0, chatOutput: "text" }, backend);
+    const invalid = { ...request("bug-bounty-policy-review"), agentId: "chat" };
+
+    await expect(provider.generate(invalid))
+      .rejects.toBeInstanceOf(LlamaCppInferenceError);
+    expect(backend.params).toBeUndefined();
+  });
+
   it("rejects a response contract used with a non-independent stage", async () => {
     const backend = new RecordingBackend(JSON.stringify({
       summary: "Review completed.",
