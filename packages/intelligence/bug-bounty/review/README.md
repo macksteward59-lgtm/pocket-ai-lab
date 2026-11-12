@@ -8,9 +8,10 @@ This module executes two separate, model-independent inference requests against 
 2. Run the permanent `critic` agent in a fresh task-scoped session with no conversation, memory, or peer-review context.
 3. Run the permanent `validator` agent in a separate fresh task-scoped session with the same original snapshot and interpretation. The Critic result is never passed to the Validator.
 4. Validate each response against a strict schema. Findings must cite a complete exact source line, matching UTF-16 offsets, and (when supplied) the matching clause ID.
-5. Return completed/failed reviewer outcomes. One reviewer failure does not suppress the other review.
+5. Check the permanent agent's existing review/verify permission and reject prompts that exceed the selected model's conservative UTF-8 context budget; inputs are never silently truncated.
+6. Return completed/failed reviewer outcomes. One reviewer failure does not suppress the other review.
 
-The adapter uses the existing `InferenceProvider`, `AgentManager`, `ModelRegistry`, and `ModelRouter` abstractions. It makes no provider-specific assumptions and performs no tool calls. The two executions are sequential to avoid unsafe overlapping reservations when both agents use the same model ID.
+The adapter uses the existing `InferenceProvider`, `AgentManager`, `ModelRegistry`, and `ModelRouter` abstractions. It makes no provider-specific assumptions and performs no tool calls. The two executions are sequential to avoid unsafe overlapping reservations when both agents use the same model ID. Every task session and model reservation is released in a `finally` path, including provider and context-budget failures.
 
 ## Example wiring
 
