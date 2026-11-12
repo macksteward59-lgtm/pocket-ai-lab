@@ -149,6 +149,8 @@ describe("ModelRouter", () => {
       .rejects.toThrow(/being replaced/);
 
     router.release(oldModel);
+    await expect(router.route("engineer", oldModel, []))
+      .rejects.toThrow(/retired/);
     await expect(router.route("engineer", replacement, []))
       .rejects.toThrow(/Insufficient memory/);
     expect(router.getLoadedModels()).toEqual([]);
