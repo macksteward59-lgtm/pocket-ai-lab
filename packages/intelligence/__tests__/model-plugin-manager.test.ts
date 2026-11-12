@@ -156,6 +156,26 @@ describe("ModelPluginManager", () => {
         .rejects.toThrow(/Insufficient memory/);
     }));
 
+  it("rechecks memory after replacing an externally loaded model with no router lease", async () =>
+    withGgufFile(1024, async filePath => {
+      const replacementPath = path.join(path.dirname(filePath), "external-replacement.gguf");
+      await writeFile(replacementPath, Buffer.alloc(1024, 3));
+      const registry = new ModelRegistry();
+      const router = new ModelRouter(() => ({
+        availableMemoryMB: 1024,
+        loadedModels: ["local-llama"]
+      }));
+      const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
+      await manager.addModel({ ...baseInput(filePath), memoryEstimateMB: 256 });
+
+      await manager.replaceModel("local-llama", {
+        ...baseInput(replacementPath), memoryEstimateMB: 1536
+      });
+
+      await expect(router.route("agent-1", registry.get("local-llama"), []))
+        .rejects.toThrow(/Insufficient memory/);
+    }));
+
   it("refuses replaceModel for an id that was never registered", async () =>
     withGgufFile(1024, async filePath => {
       const manager = new ModelPluginManager({ registry: new ModelRegistry(), fetcher: new LocalFileFetcher() });
