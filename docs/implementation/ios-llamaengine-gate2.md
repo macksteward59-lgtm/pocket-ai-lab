@@ -22,7 +22,7 @@ The smoke weight is the existing SmolLM2 135M Instruct Q4_K_M pin: SHA-256 `2e80
 `LlamaCppMetalBackend` is compiled in two ways:
 
 - Without `POCKET_LLAMA_LINKED`, load and generate throw `backendUnavailable`. The macOS workflow typechecks that branch with the iOS simulator SDK.
-- With the flag, the Swift package links the pinned llama, ggml, CPU, Metal, and hash static archives. They are built with `GGML_METAL=ON` and `GGML_METAL_EMBED_LIBRARY=ON` for the iOS simulator and for macOS. The archives are not repacked, because llama.cpp repeats member names such as `quants.c.o`. `requireMetal` defaults to true. If this process cannot create a Metal backend, load throws `backendUnavailable` and does not open the GGUF. `requireMetal: false` is an explicit CPU load. Empty or whitespace-only decode throws `backendFailed` and yields nothing. A missing file throws `invalidModel`. A file llama.cpp rejects throws `backendFailed`.
+- With the flag, the Swift package links the pinned llama, ggml, CPU, Metal, and hash static archives. They are built with `GGML_METAL=ON` and `GGML_METAL_EMBED_LIBRARY=ON` for physical iOS device (`iphoneos`, arm64), iOS simulator, and macOS. The XCFramework combines all three platform slices; a simulator-only artifact is not accepted as an iPhone deliverable. The archives are not repacked, because llama.cpp repeats member names such as `quants.c.o`. `requireMetal` defaults to true. If this process cannot create a Metal backend, load throws `backendUnavailable` and does not open the GGUF. `requireMetal: false` is an explicit CPU load. Empty or whitespace-only decode throws `backendFailed` and yields nothing. A missing file throws `invalidModel`. A file llama.cpp rejects throws `backendFailed`.
 
 Generation asks llama.cpp for one completed string. The engine does not substitute a placeholder. `LlamaOffloadReport.offloadedLayers` is parsed from llama.cpp's own `offloaded N/M layers to GPU` log line. `-1` means that line was not logged. The report is llama.cpp's statement, not a GPU-counter sample from this repository.
 
@@ -35,7 +35,7 @@ Context length must be from 1 through 8192. That bound also applies to the loopb
 On that runner the workflow:
 
 1. Verify the llama.cpp tag, commit, archive hash, and `include/llama.h`.
-2. Build the static Metal libraries for `iphonesimulator` arm64 and for macOS arm64, then make one xcframework per archive.
+2. Cross-compile the static Metal libraries for physical iOS (`iphoneos`, arm64), the available iOS Simulator architecture, and the macOS host, then make one XCFramework per archive. CI asserts that the resulting llama XCFramework contains an `ios-arm64` device slice and at least one `ios-*-simulator` slice.
 3. Typecheck the Swift sources with the unlinked branch.
 4. `xcodebuild test` on an available iPhone simulator. Those tests cover the placeholder, the forced Metal-unavailable failure, a missing file, a non-GGUF file, request bounds, and the loopback checks. The smoke GGUF is not injected for this destination, so the simulator does not run generation.
 5. Download the SmolLM2 GGUF, check SHA-256 and size, then `xcodebuild test` on the macOS host. That run includes the same fail-closed tests plus one greedy smoke generation (`temperature` 0, 8 tokens). If the host probe says Metal initialized, the test requires llama.cpp to log a GPU offload greater than zero. If it does not, the test uses CPU and requires `requireMetal: true` to throw.
@@ -46,7 +46,7 @@ The job summary prints the `POCKET_LLAMA_PROBE`, `POCKET_LLAMA_OFFLOAD`, and `PO
 
 The hosted arm64 pool did not provide a machine, so this workflow does not show Apple Silicon Metal. An Intel runner can still compile the Metal backend and can report whether that VM initialized a Metal device. The probe line in the job summary is that report.
 
-These still require a physical device, or an Apple Silicon Mac that actually runs the binary:
+The physical-device slice is now built by CI, but these still require a physical iPhone, or an Apple Silicon Mac that actually runs the binary:
 
 - Load a GGUF from an app sandbox on a physical iPhone and generate tokens there.
 - Confirm Metal kernels, GPU family, memory, and thermal behavior on that phone. The simulator probe is not that measurement, even when `metalDeviceUsable` is true.

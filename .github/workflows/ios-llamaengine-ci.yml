@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "runtime/ios/**"
+      - "packages/intelligence/evaluation/**"
+      - "packages/intelligence/__tests__/improvement-engine.test.ts"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
@@ -46,15 +48,19 @@ jobs:
       - name: Install CMake and Ninja
         run: brew install cmake ninja
 
-      - name: Build pinned llama.cpp for the simulator and macOS
+      - name: Build pinned llama.cpp for iOS device, simulator, and macOS
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
+          runtime/ios/scripts/build-llama-cpp.sh device
+          rm -rf runtime/ios/build/cmake-device
           runtime/ios/scripts/build-llama-cpp.sh simulator
           rm -rf runtime/ios/build/cmake-simulator
           runtime/ios/scripts/build-llama-cpp.sh macos
           rm -rf runtime/ios/build/cmake-macos
           runtime/ios/scripts/build-llama-cpp.sh xcframework
           test -d runtime/ios/build/xc/llama.xcframework
+          test -d runtime/ios/build/xc/llama.xcframework/ios-arm64
+          find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
 
@@ -66,6 +72,20 @@ jobs:
             -sdk "$sdk" \
             runtime/ios/Sources/PocketLlamaEngine/LlamaEngine.swift \
             runtime/ios/Sources/PocketLlamaEngine/LlamaEngineSupport.swift
+
+      - name: Link the physical iOS device test bundle
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          # Generic iOS destination selects iphoneos/arm64. This compiles and
+          # links the Swift package, C bridge, and all device XCFramework slices
+          # without signing or requiring a connected iPhone.
+          xcodebuild build-for-testing \
+            -scheme PocketLlamaEngine \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath /tmp/pocket-derived-device \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/device-build-for-testing.log
 
       - name: Choose an iPhone simulator
         id: sim
@@ -137,5 +157,7 @@ jobs:
             echo
             echo '```'
             grep -h "POCKET_LLAMA_" runtime/ios/build/simulator-xctest.log runtime/ios/build/macos-xctest.log || true
+            echo
+            echo "Device generic build log: runtime/ios/build/device-build-for-testing.log"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

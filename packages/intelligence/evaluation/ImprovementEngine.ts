@@ -1,49 +1,49 @@
 /**
  * Evidence-based model improvement assessment.
  *
- * This module compares two independently evaluated model runs on the same
+ * This module compares two independently evaluated runs on the same
  * versioned benchmark. It can recommend a candidate for human review; it
  * cannot train, deploy, promote, authorize, or change a production model.
  */
 export interface EvaluationCaseResult {
-  caseId: string;
-  score: number;
-  passed: boolean;
-  safetyViolation: boolean;
-  latencyMs: number;
+  readonly caseId: string;
+  readonly score: number;
+  readonly passed: boolean;
+  readonly safetyViolation: boolean;
+  readonly latencyMs: number;
 }
 
 export interface EvaluationRun {
-  runId: string;
-  modelId: string;
-  datasetVersion: string;
-  completedAt: string;
-  results: EvaluationCaseResult[];
+  readonly runId: string;
+  readonly modelId: string;
+  readonly datasetVersion: string;
+  readonly completedAt: string;
+  readonly results: readonly EvaluationCaseResult[];
 }
 
 export interface AssessmentOptions {
-  minimumCases?: number;
-  minimumScoreGain?: number;
+  readonly minimumCases?: number;
+  readonly minimumScoreGain?: number;
 }
 
 export interface RunMetrics {
-  modelId: string;
-  sampleCount: number;
-  meanScore: number;
-  passRate: number;
-  safetyViolations: number;
-  meanLatencyMs: number;
+  readonly modelId: string;
+  readonly sampleCount: number;
+  readonly meanScore: number;
+  readonly passRate: number;
+  readonly safetyViolations: number;
+  readonly meanLatencyMs: number;
 }
 
 export interface ImprovementAssessment {
-  baseline: RunMetrics;
-  candidate: RunMetrics;
-  scoreGain: number;
-  passRateGain: number;
-  safetyViolationDelta: number;
-  eligibleForHumanReview: boolean;
-  reasons: string[];
-  recommendation: "review_candidate" | "keep_baseline";
+  readonly baseline: RunMetrics;
+  readonly candidate: RunMetrics;
+  readonly scoreGain: number;
+  readonly passRateGain: number;
+  readonly safetyViolationDelta: number;
+  readonly eligibleForHumanReview: boolean;
+  readonly reasons: readonly string[];
+  readonly recommendation: "review_candidate" | "keep_baseline";
 }
 
 function validateRun(run: EvaluationRun, label: string): void {
@@ -86,6 +86,10 @@ function metrics(run: EvaluationRun): RunMetrics {
 /**
  * Paired benchmark comparison. Dataset version and case IDs must match so
  * apparent gains cannot come from evaluating different questions.
+ *
+ * The same model may appear in both runs: prompt, retrieval, routing, or
+ * tool-workflow experiments can change behavior without changing modelId.
+ * Distinct run IDs identify the independently evaluated configurations.
  */
 export function assessImprovement(
   baselineRun: EvaluationRun,
@@ -103,8 +107,8 @@ export function assessImprovement(
   if (!Number.isFinite(minimumScoreGain) || minimumScoreGain < 0 || minimumScoreGain > 1) {
     throw new Error("minimumScoreGain must be between 0 and 1");
   }
-  if (baselineRun.modelId === candidateRun.modelId) {
-    throw new Error("Baseline and candidate must identify different model versions");
+  if (baselineRun.runId === candidateRun.runId) {
+    throw new Error("Baseline and candidate must identify different evaluation runs");
   }
   if (baselineRun.datasetVersion !== candidateRun.datasetVersion) {
     throw new Error("Baseline and candidate must use the same dataset version");
@@ -127,7 +131,16 @@ export function assessImprovement(
   if (candidate.sampleCount < minimumCases) {
     reasons.push("Insufficient benchmark coverage: " + candidate.sampleCount + " of " + minimumCases + " required cases.");
   }
-  if (scoreGain < minimumScoreGain) {
+  // Bound floating-point accumulation error across both score sums and the
+  // final division/subtraction. The tolerance scales with sample count, but
+  // remains at machine-precision scale (not a user-visible score increment).
+  // This accommodates exact decimal cutoffs such as 39 × (0.82 - 0.80)
+  // without rounding materially below-threshold candidates up.
+  const roundingTolerance =
+    Number.EPSILON *
+    Math.max(1, Math.abs(baseline.meanScore), Math.abs(candidate.meanScore)) *
+    (candidate.sampleCount + 2);
+  if (scoreGain + roundingTolerance < minimumScoreGain) {
     reasons.push("Score gain did not meet the minimum threshold.");
   }
   if (passRateGain < 0) {
@@ -149,7 +162,7 @@ export function assessImprovement(
     passRateGain,
     safetyViolationDelta,
     eligibleForHumanReview,
-    reasons: Object.freeze(reasons) as unknown as string[],
+    reasons: Object.freeze(reasons),
     recommendation: eligibleForHumanReview ? "review_candidate" : "keep_baseline"
   });
 }
