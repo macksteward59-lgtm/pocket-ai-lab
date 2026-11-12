@@ -19,6 +19,9 @@ export interface TaskRequest {
   requiredCapabilities: string[];
 }
 
+/** Optional response contracts let a provider validate a task-specific payload without overloading deliberation-stage schemas. */
+export type InferenceResponseContract = "bug-bounty-policy-review";
+
 /** One earlier chat turn. Untrusted context; never an authorization. */
 export interface ConversationTurn {
   role: "user" | "assistant";
@@ -36,6 +39,8 @@ export interface InferenceRequest {
   modelId: string;
   prompt: string;
   stage: DeliberationStage;
+  /** Optional strict provider output shape for specialized advisory workflows. */
+  responseContract?: InferenceResponseContract;
   contextMessages: AgentMessage[];
   /** Optional earlier chat turns, oldest first. Providers may ignore it. */
   conversation?: ConversationTurn[];
