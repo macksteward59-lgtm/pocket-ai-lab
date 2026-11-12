@@ -156,6 +156,29 @@ describe("ModelRouter", () => {
     expect(router.getLoadedModels()).toEqual([]);
   });
 
+  it("keeps a replaced ID invalid until successful inference confirms the new generation", async () => {
+    const resources = { availableMemoryMB: 1024, loadedModels: ["test-model"] };
+    const router = new ModelRouter(() => resources);
+    const oldModel = { ...model, memoryEstimateMB: 256 };
+    const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 512 };
+    router.retire("test-model", oldModel);
+
+    // The route reserves memory, but a failed inference never calls confirmLoaded.
+    await router.route("reasoner", replacement, []);
+    router.release(replacement);
+    resources.availableMemoryMB = 128;
+    await expect(router.route("reasoner", replacement, []))
+      .rejects.toThrow(/Insufficient memory/);
+
+    // Only a successful provider call may make the runtime's loaded ID reusable.
+    resources.availableMemoryMB = 1024;
+    await router.route("reasoner", replacement, []);
+    router.confirmLoaded(replacement);
+    router.release(replacement);
+    resources.availableMemoryMB = 128;
+    await expect(router.route("reasoner", replacement, [])).resolves.toEqual(replacement);
+  });
+
   it("does not let a failed route create or release another model's reservation", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
     await router.route("reasoner", model, []);
