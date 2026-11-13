@@ -104,7 +104,7 @@ describe("ModelPluginManager", () => {
     const manager = new ModelPluginManager({ registry, fetcher: countingFetcher });
     const src = { type: "local-file" as const, path: "/x.gguf" };
     await expect(manager.addModel({ id: "", name: "n", contextLength: 1, capabilities: ["a"], source: src })).rejects.toThrow(/id is required/);
-    await expect(manager.addModel({ id: "x", name: "n", contextLength: 1, capabilities: ["a"], source: src })).rejects.toThrow(/name is required/);
+    await expect(manager.addModel({ id: "x", name: " ", contextLength: 1, capabilities: ["a"], source: src })).rejects.toThrow(/name is required/);
     await expect(manager.addModel({ id: "x", name: "n", contextLength: 0, capabilities: ["a"], source: src })).rejects.toThrow(/contextLength/);
     await expect(manager.addModel({ id: "x", name: "n", contextLength: 1, capabilities: [], source: src })).rejects.toThrow(/capability/);
     expect(fetcherCalls).toBe(0);
