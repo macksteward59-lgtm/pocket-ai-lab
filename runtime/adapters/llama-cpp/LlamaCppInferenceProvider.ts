@@ -20,7 +20,8 @@ import { HttpLlamaCppBackend } from "./httpBackend";
 import {
   isLlamaCppDeliberationStage,
   LLAMA_CPP_CHAT_ANALYSIS_MAX_LENGTH,
-  LLAMA_CPP_STAGE_JSON_SCHEMAS
+  LLAMA_CPP_STAGE_JSON_SCHEMAS,
+  LLAMA_CPP_POLICY_REVIEW_JSON_SCHEMA
 } from "./payloadSchema";
 import { parseLlamaCppOutput } from "./parseOutput";
 import { buildLlamaCppMessages, buildLlamaCppPrompt, isChatRequest, type LlamaCppChatMessage } from "./prompt";
@@ -173,8 +174,14 @@ export class LlamaCppInferenceProvider implements InferenceProvider {
 
       try {
         if (plainChat) return parsePlainChatOutput(content);
-        const parsed = parseLlamaCppOutput(request.stage, aliases ? aliases.restore(content) : content);
-        if (!chat && this.config.requireSubstantive) assertSubstantiveStagePayload(request.stage, parsed.payload);
+        const parsed = parseLlamaCppOutput(
+          request.stage,
+          aliases ? aliases.restore(content) : content,
+          request.responseContract
+        );
+        if (!chat && !request.responseContract && this.config.requireSubstantive) {
+          assertSubstantiveStagePayload(request.stage, parsed.payload);
+        }
         return parsed;
       } catch (error) {
         if (!(error instanceof LlamaCppInferenceError)) throw error;
@@ -227,6 +234,15 @@ export function registerLlamaCppInferenceProvider(
 }
 
 function jsonSchemaFor(request: InferenceRequest): Record<string, unknown> {
+  if (request.responseContract === "bug-bounty-policy-review") {
+    if (request.stage !== "independent") {
+      throw new LlamaCppInferenceError("invalid_request", "bug-bounty policy review contract requires the independent stage");
+    }
+    return JSON.parse(JSON.stringify(LLAMA_CPP_POLICY_REVIEW_JSON_SCHEMA)) as Record<string, unknown>;
+  }
+  if (request.responseContract !== undefined) {
+    throw new LlamaCppInferenceError("invalid_request", "unsupported inference response contract");
+  }
   if (!isLlamaCppDeliberationStage(request.stage)) {
     throw new LlamaCppInferenceError("invalid_request", "stage has no llama.cpp payload schema");
   }
@@ -495,6 +511,14 @@ function assertRequest(request: InferenceRequest): void {
   requireText(request.modelId, "modelId");
   requireText(request.prompt, "prompt");
   requireText(request.stage, "stage");
+  if (request.responseContract !== undefined &&
+      (request.responseContract !== "bug-bounty-policy-review" ||
+       request.stage !== "independent" || request.agentId === "chat")) {
+    throw new LlamaCppInferenceError(
+      "invalid_request",
+      "the bug-bounty policy-review response contract requires a non-chat independent-stage request"
+    );
+  }
   if (!isLlamaCppDeliberationStage(request.stage)) {
     throw new LlamaCppInferenceError(
       "invalid_request",
