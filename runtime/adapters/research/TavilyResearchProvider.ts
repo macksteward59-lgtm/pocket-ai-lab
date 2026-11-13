@@ -68,7 +68,7 @@ export class TavilyResearchProvider implements ResearchProvider {
       try { url = new URL(item.url); } catch { continue; }
       if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
       const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
-        domains.some(domain => typeof domain !== "string" || !/^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i.test(domain)))) {
+      if (domains?.length && !domains.some(domain => hostname === domain.toLowerCase() ||
           hostname.endsWith("." + domain.toLowerCase()))) continue;
       const canonicalUrl = url.toString();
       sources.push({
