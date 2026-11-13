@@ -91,14 +91,14 @@ describe("DirectorTaskRunner", () => {
 
   it("redacts sensitive result fields and truncates oversized output before model reuse", async () => {
     const runner = makeRunner({
-      research: async query => [{
-        id: query,
+      research: async query => Array.from({ length: 5 }, (_, index) => ({
+        id: query + "-" + index,
         title: "x".repeat(1_500),
         url: "https://example.com/source",
         retrievedAt: new Date(0).toISOString(),
         accessToken: "do-not-forward",
         excerpt: "y".repeat(8_000)
-      }]
+      }))
     });
     let nextHistory: unknown;
     const result = await runner.run({
