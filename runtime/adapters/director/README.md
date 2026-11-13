@@ -2,7 +2,7 @@
 
 LocalApprovalRegistry is a process-local adapter implementing the three existing approval ports:
 
-- DevicePermissionBroker for exact device permissions, resource IDs, task IDs, and action digests.
+- DevicePermissionBroker for exact device permissions, resource IDs, task IDs, and action digests. Resource-scoped permissions (`apps.open`, `files.read`, `files.write`, `files.delete`) require a resource ID; broad inventory permissions (`apps.list`, `storage.inspect`) reject one.
 - MemoryChangeApproval for exact proposal IDs, change indexes, task IDs, and change digests.
 - ToolApprovalVerifier for activate/retire operations bound to tool ID, version, task ID, and artifact digest.
 
