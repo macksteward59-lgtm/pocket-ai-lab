@@ -2,11 +2,11 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { openMemoryManager } from "./memoryRuntime.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const maxBody = 64 * 1024;
-const memoryManagerPromises = new Map();
 const RATE_WINDOW_MS = 60_000;
 const RATE_DEFAULTS = { chat: 30, memory: 120, agent: 8 };
 
@@ -51,32 +51,6 @@ function createLimiter(config, now = Date.now) {
     bucket.count += 1;
     return { allowed: true, retryAfterSeconds: 0 };
   };
-}
-
-async function openMemoryManager() {
-  const directory = path.resolve(process.env.POCKET_MEMORY_DIR || path.join(
-    process.env.HOME || process.env.USERPROFILE || ".",
-    ".pocket-ai-lab"
-  ));
-  if (!memoryManagerPromises.has(directory)) {
-    const pending = (async () => {
-      const [{ MemoryManager }, { FileMemoryStore }] = await Promise.all([
-        import("../../packages/intelligence/memory/MemoryManager.ts"),
-        import("../../packages/intelligence/memory/FileMemoryStore.ts")
-      ]);
-      const store = await FileMemoryStore.open(directory);
-      const manager = new MemoryManager(store);
-      await manager.init();
-      return manager;
-    })();
-    memoryManagerPromises.set(directory, pending);
-  }
-  try {
-    return await memoryManagerPromises.get(directory);
-  } catch (error) {
-    memoryManagerPromises.delete(directory);
-    throw error;
-  }
 }
 
 function loopbackName(name) {
