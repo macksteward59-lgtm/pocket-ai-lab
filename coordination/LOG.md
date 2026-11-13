@@ -1163,3 +1163,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - No physical iPhone run was performed. CI status was not yet returned by the PR-triggered workflow query at the time of this log entry; verify checks on PR #49 before considering review complete.
 
 - **PR #49 CI final check:** Pocket AI Lab CI, Consumer prototype CI, Cursor collaboration plugin CI, and Governance sidecar CI all completed successfully for head `7b77b5dd2b08c3eba031831edfc118ed7237c386`. A second Pocket AI Lab check run also completed successfully. PR remains open/draft and unmerged.
+
+## 2026-11-13 03:52 UTC — Native-first shared agent protocol (PR #51)
+
+- Claimed isolated scope on `agent-coordination` and created `codex/native-swift-agent-contracts` from current `main`.
+- Opened draft PR #51: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/51.
+- Added a TypeScript/Swift task and message envelope contract, runtime readiness states, and an Ed25519-signed session proof shape bound to exact model ID, model-file SHA-256, runtime build, expiry, generation counter, and key ID.
+- Readiness becomes `ready` only through an injected independent verifier; no signer, keychain integration, attestation, or trusted verifier is implemented in this slice. Invalid/mismatched/expired/unverifiable proofs fail closed.
+- Hardened `LlamaCppMetalBackend`: generation requests carry UUID identities, one active generation is permitted per session, stale cancellation IDs are ignored, and only the matching request lease is cleared on completion/failure.
+- Added Vitest and XCTest protocol coverage plus Swift request-ID validation. Corrected an interpolation typo discovered during diff review.
+- Latest PR head: `f695af42283cf2b7d6adfe812e5e0ae87ac3a692`; CI workflows were queued/in progress at last check (iOS LlamaEngine pending; Pocket AI Lab, Consumer, Governance sidecar, and Cursor plugin in progress).
+- No APEX/East trust, approval, receipt, RLS, schema, or evidence behavior changed. No merge performed. Physical iPhone acceptance remains unverified.
