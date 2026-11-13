@@ -409,6 +409,50 @@ export function createServer() {
         await provider.checkHealth();
         return json(res, 200, { ready: true, baseUrl: cfg.baseUrl, api: cfg.api, loopback: isLoopbackBaseUrl(cfg.baseUrl) });
       }
+      if (url.pathname === "/api/director-tasks" && req.method === "POST") {
+        if (!jsonContentType(req)) {
+          drain(req);
+          return rejectContentType(res);
+        }
+        const agentLimit = take("agent", req);
+        if (!agentLimit.allowed) {
+          drain(req);
+          return rejectLimited(res, agentLimit.retryAfterSeconds);
+        }
+        let input;
+        try {
+          input = await body(req);
+        } catch (error) {
+          return json(res, error.status || 400, { error: error.message });
+        }
+        if (typeof input.objective !== "string" || !input.objective.trim()) {
+          return json(res, 400, { error: "A non-empty objective is required." });
+        }
+        if (input.objective.length > 4000) {
+          return json(res, 413, { error: "Objective exceeds 4,000 characters." });
+        }
+        const taskId = input.taskId === undefined ? crypto.randomUUID() : input.taskId;
+        if (typeof taskId !== "string" || !taskId.trim() || taskId.length > 256) {
+          return json(res, 400, { error: "Task id must be a non-empty string of at most 256 characters." });
+        }
+        const cfg = llamaProviderConfig();
+        const { provider } = await openProvider(4000);
+        await provider.checkHealth();
+        const { createLocalDirectorTaskRuntime } = await import("./directorRuntime.ts");
+        const director = await createLocalDirectorTaskRuntime({
+          api: cfg.api,
+          baseUrl: cfg.baseUrl,
+          modelAlias: cfg.modelAlias,
+          timeoutMs: 120000
+        });
+        const result = await director.runTask({ taskId }, input.objective.trim());
+        return json(res, 200, {
+          taskId,
+          result,
+          authorized: false,
+          disclaimer: "Model commands are untrusted proposals. Missing approval and host capabilities fail closed."
+        });
+      }
       if (url.pathname === "/api/agent-tasks" && req.method === "POST") {
         if (!jsonContentType(req)) {
           drain(req);
