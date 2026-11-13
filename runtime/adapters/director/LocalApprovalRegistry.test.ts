@@ -126,6 +126,26 @@ describe("LocalApprovalRegistry", () => {
     expect(attempts.filter(Boolean)).toHaveLength(1);
   });
 
+  it("requires exact resource IDs only for resource-scoped device permissions", () => {
+    const registry = new LocalApprovalRegistry();
+    expect(() => registry.grant({
+      kind: "device-action", taskId: "task-resource",
+      permission: "files.read", actionDigest: digestA
+    })).toThrow(/requires an exact resourceId/);
+    expect(() => registry.grant({
+      kind: "device-action", taskId: "task-resource",
+      permission: "apps.list", resourceId: "unexpected-app", actionDigest: digestA
+    })).toThrow(/does not accept a resourceId/);
+    expect(() => registry.grant({
+      kind: "device-action", taskId: "task-resource",
+      permission: "files.delete", resourceId: "file-9", actionDigest: digestA
+    })).not.toThrow();
+    expect(() => registry.grant({
+      kind: "device-action", taskId: "task-resource",
+      permission: "apps.list", actionDigest: digestA
+    })).not.toThrow();
+  });
+
   it("rejects malformed scope data and invalid constructor limits", () => {
     expect(() => new LocalApprovalRegistry({ ttlMs: 500 })).toThrow(/TTL/);
     expect(() => new LocalApprovalRegistry({ maxPending: 0 })).toThrow(/capacity/);
