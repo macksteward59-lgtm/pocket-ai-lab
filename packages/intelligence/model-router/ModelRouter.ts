@@ -1,5 +1,6 @@
 /**
  * Fail-closed model selection and resource accounting.
+ * Reservations are leases: each successful route must be paired with one release.
  * Waiting indefinitely for memory is deliberately avoided; callers may retry.
  */
 import { ModelDescriptor } from "../model-registry/ModelRegistry";
@@ -9,8 +10,13 @@ export interface ResourceReport {
   loadedModels: string[];
 }
 
+interface ModelReservation {
+  memoryMB: number;
+  activeRoutes: number;
+}
+
 export class ModelRouter {
-  private reservations = new Map<string, number>();
+  private reservations = new Map<string, ModelReservation>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -36,25 +42,55 @@ export class ModelRouter {
     if (!Number.isFinite(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
       throw new Error("Resource provider returned invalid available memory");
     }
-    const alreadyLoaded = resources.loadedModels.includes(preferred.id) || this.reservations.has(preferred.id);
+    if (!Array.isArray(resources.loadedModels) || !resources.loadedModels.every(id => typeof id === "string")) {
+      throw new Error("Resource provider returned an invalid loaded-model list");
+    }
+
+    const existing = this.reservations.get(preferred.id);
+    if (existing && existing.memoryMB !== preferred.memoryEstimateMB) {
+      throw new Error(
+        "Model " + preferred.id + " changed its memory estimate while routes are active"
+      );
+    }
+
+    const externallyLoaded = resources.loadedModels.includes(preferred.id);
     const reservedElsewhere = [...this.reservations.entries()]
       .filter(([id]) => id !== preferred.id)
-      .reduce((sum, [, amount]) => sum + amount, 0);
+      .reduce((sum, [, reservation]) => sum + reservation.memoryMB, 0);
     const available = Math.max(0, resources.availableMemoryMB - reservedElsewhere);
-    if (!alreadyLoaded && available < preferred.memoryEstimateMB) {
+
+    if (!existing && !externallyLoaded && available < preferred.memoryEstimateMB) {
       throw new Error(
         "Insufficient memory for " + preferred.id + ": requires " +
         preferred.memoryEstimateMB + "MB, " + available + "MB available"
       );
     }
-    if (!alreadyLoaded) this.reservations.set(preferred.id, preferred.memoryEstimateMB);
+
+    // A reservation is counted once for memory but leased once per route.
+    // Externally loaded models are owned by the runtime/resource provider.
+    if (existing) {
+      existing.activeRoutes += 1;
+    } else if (!externallyLoaded) {
+      this.reservations.set(preferred.id, {
+        memoryMB: preferred.memoryEstimateMB,
+        activeRoutes: 1
+      });
+    }
     return preferred;
   }
 
+  /**
+   * Releases one route lease. A model reservation remains until every route
+   * that selected it has released; externally loaded models are never owned here.
+   */
   release(modelId: string): void {
-    this.reservations.delete(modelId);
+    const reservation = this.reservations.get(modelId);
+    if (!reservation) return;
+    reservation.activeRoutes -= 1;
+    if (reservation.activeRoutes <= 0) this.reservations.delete(modelId);
   }
 
+  /** Models for which this router currently holds an in-flight memory reservation. */
   getLoadedModels(): string[] {
     return [...this.reservations.keys()];
   }
