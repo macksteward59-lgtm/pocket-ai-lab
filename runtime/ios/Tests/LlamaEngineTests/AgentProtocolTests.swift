@@ -1,5 +1,6 @@
 import XCTest
 import CryptoKit
+import Security
 @testable import PocketLlamaEngine
 
 final class AgentProtocolTests: XCTestCase {
@@ -122,6 +123,38 @@ final class AgentProtocolTests: XCTestCase {
         let nextAccepted = await verifier.verify(next, expectedModelId: "model-a",
             expectedModelFileSHA256: unsigned.modelFileSHA256)
         XCTAssertTrue(nextAccepted)
+    }
+
+    func testKeychainReplayStorePersistsAcrossStoreRecreation() async throws {
+        let service = "com.pocketailab.runtime-proof-replay.tests.\\(UUID().uuidString)"
+        let cleanupQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrSynchronizable as String: false
+        ]
+        defer { SecItemDelete(cleanupQuery as CFDictionary) }
+
+        let firstStore = KeychainRuntimeProofReplayStore(service: service)
+        XCTAssertTrue(try await firstStore.accept(
+            sessionId: "session-1", keyId: "key-1", generationCounter: 1
+        ))
+
+        let recreatedStore = KeychainRuntimeProofReplayStore(service: service)
+        XCTAssertFalse(try await recreatedStore.accept(
+            sessionId: "session-1", keyId: "key-1", generationCounter: 1
+        ))
+        XCTAssertFalse(try await recreatedStore.accept(
+            sessionId: "session-1", keyId: "key-1", generationCounter: 0
+        ))
+        XCTAssertFalse(try await recreatedStore.accept(
+            sessionId: "session-1", keyId: "key-2", generationCounter: 2
+        ))
+        XCTAssertTrue(try await recreatedStore.accept(
+            sessionId: "session-1", keyId: "key-1", generationCounter: 2
+        ))
+        XCTAssertFalse(try await firstStore.accept(
+            sessionId: "session-1", keyId: "key-1", generationCounter: 1
+        ))
     }
 
     func testEd25519VerifierRejectsUntrustedBuildAndUnknownKey() async throws {
