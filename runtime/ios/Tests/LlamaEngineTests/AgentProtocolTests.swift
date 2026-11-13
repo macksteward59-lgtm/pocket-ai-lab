@@ -135,26 +135,32 @@ final class AgentProtocolTests: XCTestCase {
         defer { SecItemDelete(cleanupQuery as CFDictionary) }
 
         let firstStore = KeychainRuntimeProofReplayStore(service: service)
-        XCTAssertTrue(try await firstStore.accept(
+        let firstAccepted = try await firstStore.accept(
             sessionId: "session-1", keyId: "key-1", generationCounter: 1
-        ))
+        )
+        XCTAssertTrue(firstAccepted)
 
         let recreatedStore = KeychainRuntimeProofReplayStore(service: service)
-        XCTAssertFalse(try await recreatedStore.accept(
+        let replayAccepted = try await recreatedStore.accept(
             sessionId: "session-1", keyId: "key-1", generationCounter: 1
-        ))
-        XCTAssertFalse(try await recreatedStore.accept(
+        )
+        XCTAssertFalse(replayAccepted)
+        let invalidGenerationAccepted = try await recreatedStore.accept(
             sessionId: "session-1", keyId: "key-1", generationCounter: 0
-        ))
-        XCTAssertFalse(try await recreatedStore.accept(
+        )
+        XCTAssertFalse(invalidGenerationAccepted)
+        let keyChangeAccepted = try await recreatedStore.accept(
             sessionId: "session-1", keyId: "key-2", generationCounter: 2
-        ))
-        XCTAssertTrue(try await recreatedStore.accept(
+        )
+        XCTAssertFalse(keyChangeAccepted)
+        let nextGenerationAccepted = try await recreatedStore.accept(
             sessionId: "session-1", keyId: "key-1", generationCounter: 2
-        ))
-        XCTAssertFalse(try await firstStore.accept(
+        )
+        XCTAssertTrue(nextGenerationAccepted)
+        let staleGenerationAccepted = try await firstStore.accept(
             sessionId: "session-1", keyId: "key-1", generationCounter: 1
-        ))
+        )
+        XCTAssertFalse(staleGenerationAccepted)
     }
 
     func testEd25519VerifierRejectsUntrustedBuildAndUnknownKey() async throws {
