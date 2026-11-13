@@ -33,11 +33,12 @@ public actor KeychainRuntimeProofReplayStore: RuntimeProofReplayStore {
             kSecAttrSynchronizable as String: false
         ]
 
+        var lookup = query
+        lookup[kSecReturnData as String] = true
+        lookup[kSecMatchLimit as String] = kSecMatchLimitOne
+
         var existing: CFTypeRef?
-        let status = SecItemCopyMatching(query.merging([
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]) { _, new in new }, &existing)
+        let status = SecItemCopyMatching(lookup as CFDictionary, &existing)
 
         if status == errSecItemNotFound {
             let record = ReplayRecord(keyId: keyId, generationCounter: generationCounter)
