@@ -52,9 +52,9 @@ export class LocalProjectInspector implements ProjectInspector {
       const content = await readFile(actual, "utf8");
       totalBytes += Buffer.byteLength(content, "utf8");
       inspected.push(relative);
-      const lines = content.split(/\\r?\\n/);
+      const lines = content.split(/\r?\n/);
       for (let index = 0; index < lines.length; index += 1) {
-        if (/\\b(TODO|FIXME)\\b/.test(lines[index])) {
+        if (/\b(TODO|FIXME)\b/.test(lines[index])) {
           findings.push({
             id: relative + ":" + (index + 1),
             category: "optimization",
