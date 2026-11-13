@@ -55,3 +55,6 @@ export { GOVERNANCE_ADVISORY_INVARIANT, specialistPrompt, withGovernanceInvarian
 export { ModelRouterResiliency } from "./model-router/ModelRouterResiliency";
 export { classifyExport, watchOnce } from "./governance/watchInbox";
 export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type ImprovementAssessment, type AssessmentOptions } from "./evaluation/ImprovementEngine";
+
+export { createDirectorTaskRuntime, type DirectorTaskRuntime, type DirectorTaskRuntimeOptions } from "./director/createDirectorTaskRuntime";
+export { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskHistoryEntry, type DirectorTaskRunnerOptions } from "./director/DirectorTaskRunner";

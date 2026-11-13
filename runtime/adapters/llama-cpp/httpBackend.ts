@@ -22,11 +22,12 @@ export class HttpLlamaCppBackend implements LlamaCppBackend {
   private templateSupported: boolean | null = null;
 
   async complete(params: LlamaCppCompletionParams, signal: AbortSignal): Promise<LlamaCppCompletionResult> {
+    assertToolCallingMode(this.config.api, params, false);
     const path = this.config.api === "openai-chat" ? "/v1/chat/completions" : "/completion";
     const prepared = await this.prepare(params, signal);
     const response = await this.post(path, buildBody(this.config.api, prepared, false), signal);
     const body = await readCheckedBody(response, signal, path);
-    return { content: readContent(this.config.api, body) };
+    return readCompletion(this.config.api, body);
   }
 
   /**
@@ -38,6 +39,7 @@ export class HttpLlamaCppBackend implements LlamaCppBackend {
     signal: AbortSignal,
     onDelta: (text: string) => void
   ): Promise<LlamaCppCompletionResult> {
+    assertToolCallingMode(this.config.api, params, true);
     const path = this.config.api === "openai-chat" ? "/v1/chat/completions" : "/completion";
     const prepared = await this.prepare(params, signal);
     const response = await this.post(path, buildBody(this.config.api, prepared, true), signal);
@@ -201,6 +203,15 @@ function buildBody(
     if (params.stop && params.stop.length > 0) body.stop = [...params.stop];
     if (params.seed !== undefined) body.seed = params.seed;
     if (params.jsonSchema) body.json_schema = params.jsonSchema;
+    if (params.tools && params.tools.length > 0) body.tools = params.tools.map(tool => ({
+      type: "function",
+      function: {
+        name: tool.function.name,
+        ...(tool.function.description ? { description: tool.function.description } : {}),
+        parameters: tool.function.parameters
+      }
+    }));
+    if (params.toolChoice !== undefined) body.tool_choice = params.toolChoice;
     return body;
   }
 
@@ -216,7 +227,7 @@ function buildBody(
   return body;
 }
 
-function readContent(api: LlamaCppProviderConfig["api"], body: string): string {
+function readCompletion(api: LlamaCppProviderConfig["api"], body: string): LlamaCppCompletionResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
@@ -227,8 +238,12 @@ function readContent(api: LlamaCppProviderConfig["api"], body: string): string {
       { cause: error }
     );
   }
-  if (api === "openai-chat") return readChatContent(parsed);
-  return readCompletionContent(parsed);
+  if (api === "openai-chat") return readChatCompletion(parsed);
+  return { content: readCompletionContent(parsed) };
+}
+
+function readContent(api: LlamaCppProviderConfig["api"], body: string): string {
+  return readCompletion(api, body).content;
 }
 
 function readCompletionContent(parsed: unknown): string {
@@ -241,7 +256,7 @@ function readCompletionContent(parsed: unknown): string {
   return parsed.content;
 }
 
-function readChatContent(parsed: unknown): string {
+function readChatCompletion(parsed: unknown): LlamaCppCompletionResult {
   if (!isRecord(parsed) || !Array.isArray(parsed.choices) || parsed.choices.length === 0) {
     throw new LlamaCppInferenceError(
       "malformed_response",
@@ -250,13 +265,59 @@ function readChatContent(parsed: unknown): string {
   }
   const choice = parsed.choices[0];
   const message = isRecord(choice) ? choice.message : undefined;
-  if (!isRecord(message) || typeof message.content !== "string") {
+  if (!isRecord(message)) {
     throw new LlamaCppInferenceError(
       "malformed_response",
-      "llama.cpp /v1/chat/completions response is missing message content"
+      "llama.cpp /v1/chat/completions response is missing message"
     );
   }
-  return message.content;
+
+  const content = typeof message.content === "string" ? message.content : "";
+  let toolCalls: LlamaCppCompletionResult["toolCalls"];
+  if (message.tool_calls !== undefined) {
+    if (!Array.isArray(message.tool_calls)) {
+      throw new LlamaCppInferenceError("malformed_response", "llama.cpp tool_calls must be an array");
+    }
+    toolCalls = message.tool_calls.map((value, index) => {
+      if (!isRecord(value) || value.type !== "function" || !isRecord(value.function) ||
+          typeof value.function.name !== "string" || !value.function.name.trim() ||
+          typeof value.function.arguments !== "string") {
+        throw new LlamaCppInferenceError(
+          "malformed_response",
+          `llama.cpp tool call ${index} is missing a function name or string arguments`
+        );
+      }
+      return {
+        ...(typeof value.id === "string" ? { id: value.id } : {}),
+        type: "function" as const,
+        function: { name: value.function.name, arguments: value.function.arguments }
+      };
+    });
+  }
+  if (!content && (!toolCalls || toolCalls.length === 0)) {
+    throw new LlamaCppInferenceError(
+      "malformed_response",
+      "llama.cpp /v1/chat/completions response has neither message content nor tool calls"
+    );
+  }
+  return { content, ...(toolCalls ? { toolCalls } : {}) };
+}
+
+function assertToolCallingMode(
+  api: LlamaCppProviderConfig["api"],
+  params: LlamaCppCompletionParams,
+  streaming: boolean
+): void {
+  const hasTools = Array.isArray(params.tools) && params.tools.length > 0;
+  if ((hasTools || params.toolChoice !== undefined) && api !== "openai-chat") {
+    throw new LlamaCppInferenceError("invalid_request", "Function calling requires api=openai-chat");
+  }
+  if (params.toolChoice !== undefined && !hasTools) {
+    throw new LlamaCppInferenceError("invalid_request", "toolChoice requires at least one function tool");
+  }
+  if (streaming && hasTools) {
+    throw new LlamaCppInferenceError("invalid_request", "Function calling is currently non-streaming");
+  }
 }
 
 function readCompletionDelta(parsed: unknown): string {

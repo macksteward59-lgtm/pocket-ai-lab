@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { assertLoopbackHost, createServer } from "../server.mjs";
 
-const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "POCKET_MEMORY_DIR", "HOST", "POCKET_RATE_LIMIT_CHAT", "POCKET_RATE_LIMIT_MEMORY", "POCKET_RATE_LIMIT_AGENT", "POCKET_RATE_LIMIT_WINDOW_MS"];
+const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "TAVILY_API_KEY", "POCKET_MEMORY_DIR", "HOST", "POCKET_RATE_LIMIT_CHAT", "POCKET_RATE_LIMIT_MEMORY", "POCKET_RATE_LIMIT_AGENT", "POCKET_RATE_LIMIT_WINDOW_MS"];
 
 async function withServer(fn, env = {}) {
   const previous = {};
@@ -352,3 +352,24 @@ test("consumer server startup permits loopback binds only", () => {
     assert.throws(() => assertLoopbackHost(host), /must bind to loopback/);
   }
 });
+
+
+test("Director task endpoint requires an explicit OpenAI-compatible model configuration", async () => withServer(async url => {
+  const response = await fetch(url + "/api/director-tasks", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ objective: "Inspect the project" })
+  });
+  const body = await response.json();
+  assert.equal(response.status, 400);
+  assert.match(body.error, /LLAMACPP_API=openai-chat/);
+}, { LLAMACPP_API: "completion" }));
+
+test("Director task endpoint rejects an empty objective before contacting the model", async () => withServer(async url => {
+  const response = await fetch(url + "/api/director-tasks", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ objective: "  " })
+  });
+  assert.equal(response.status, 400);
+}, { LLAMACPP_API: "openai-chat", LLAMACPP_MODEL_ALIAS: "test-model" }));
