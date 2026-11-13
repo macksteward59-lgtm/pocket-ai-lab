@@ -1,7 +1,4 @@
-import path from "node:path";
-import { homedir } from "node:os";
-import { FileMemoryStore } from "../../packages/intelligence/memory/FileMemoryStore";
-import { MemoryManager } from "../../packages/intelligence/memory/MemoryManager";
+import { openMemoryManager } from "./memoryRuntime";
 import { DirectorCapabilities } from "../../packages/intelligence/director/DirectorCapabilities";
 import { createDirectorTaskRuntime } from "../../packages/intelligence/director/createDirectorTaskRuntime";
 import { ToolDirector } from "../../packages/intelligence/tooling/ToolDirector";
@@ -9,27 +6,6 @@ import { ToolRegistry } from "../../packages/intelligence/security/tools";
 import { LlamaCppDirectorCommandProvider } from "../../runtime/adapters/llama-cpp/DirectorCommandProvider";
 import { TavilyResearchProvider } from "../../runtime/adapters/research/TavilyResearchProvider";
 import { LocalProjectInspector } from "../../runtime/adapters/director/LocalProjectInspector";
-
-const memoryManagers = new Map<string, Promise<MemoryManager>>();
-
-async function openPersistentMemory(directory: string): Promise<MemoryManager> {
-  const resolved = path.resolve(directory);
-  if (!memoryManagers.has(resolved)) {
-    const pending = (async () => {
-      const store = await FileMemoryStore.open(resolved);
-      const manager = new MemoryManager(store);
-      await manager.init();
-      return manager;
-    })();
-    memoryManagers.set(resolved, pending);
-  }
-  try {
-    return await memoryManagers.get(resolved)!;
-  } catch (error) {
-    memoryManagers.delete(resolved);
-    throw error;
-  }
-}
 
 export interface LocalDirectorRuntimeConfig {
   api: string;
@@ -54,9 +30,8 @@ export async function createLocalDirectorTaskRuntime(
   if (typeof config.modelAlias !== "string" || !config.modelAlias.trim()) {
     throw new Error("Director tasks require LLAMACPP_MODEL_ALIAS matching the loaded llama-server model id");
   }
-  const memoryDirectory = env.POCKET_MEMORY_DIR || path.join(homedir(), ".pocket-ai-lab");
   const [memory, projectInspector] = await Promise.all([
-    openPersistentMemory(memoryDirectory),
+    openMemoryManager(env),
     LocalProjectInspector.open(options.workspaceRoot ?? process.cwd())
   ]);
   const research = env.TAVILY_API_KEY
