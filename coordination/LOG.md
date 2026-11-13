@@ -1186,3 +1186,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #51 remains draft/open/unmerged. No APEX/East authorization semantics, receipts, trust roots, RLS, or evidence behavior changed. No physical iPhone execution claimed.
 
 - CI update for PR #51 head `c6298a17e1067305d465d44c47dbf656a322f857`: Pocket AI Lab, Consumer prototype, Governance sidecar, and Cursor collaboration plugin checks passed. Consumer's prior archive-cleanup `ENOTEMPTY` failure passed on rerun, confirming it was transient. iOS LlamaEngine workflow remains pending/queued; no jobs have started yet.
+
+
+## 2026-11-13 04:52 UTC — PR #51 iOS simulator test fixture correction
+
+- iOS LlamaEngine workflow for PR #51 head `c6298a17e1067305d465d44c47dbf656a322f857` built the native app and passed its app XCTest stage; the simulator XCTest stage failed in `AgentProtocolTests.testExpiredProofDoesNotReachVerifier`.
+- Job log identified a test-fixture crash at `AgentProtocolTests.swift:51`: the default `ISO8601DateFormatter` returned nil for a timestamp containing fractional seconds, and the test force-unwrapped it. The production readiness parser already supports both fractional and non-fractional ISO-8601 timestamps.
+- Updated only the test clock fixture to use a standard non-fractional timestamp. No production code or trust behavior changed.
+- Fix commit: `bb1c3d5b1bfa92c07fe4fbeb4901327c01714d6b`; new CI must be checked on the new PR head before treating iOS validation as passed.
+- PR #51 remains draft/open/unmerged. Simulator-only; no physical iPhone execution claimed.
