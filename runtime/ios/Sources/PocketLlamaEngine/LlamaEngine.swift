@@ -240,7 +240,7 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         #else
         try LlamaEngineSupport.validateRequest(request)
         guard sessions[session.id] != nil else {
-            throw LlamaEngineError.sessionNotLoaded("Session \\(session.id) is not loaded.")
+            throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
         guard generation[session.id] == nil else {
             throw LlamaEngineError.invalidRequest("This runtime session already has an active generation. Cancel or finish it before starting another.")
