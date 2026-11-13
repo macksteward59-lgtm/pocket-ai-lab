@@ -436,6 +436,11 @@ export function createServer() {
           return json(res, 400, { error: "Task id must be a non-empty string of at most 256 characters." });
         }
         const cfg = llamaProviderConfig();
+        if (cfg.api !== "openai-chat" || !cfg.modelAlias) {
+          return json(res, 400, {
+            error: "Director tasks require LLAMACPP_API=openai-chat and LLAMACPP_MODEL_ALIAS matching the loaded llama-server model id."
+          });
+        }
         const { provider } = await openProvider(4000);
         await provider.checkHealth();
         const { createLocalDirectorTaskRuntime } = await import("./directorRuntime.ts");
