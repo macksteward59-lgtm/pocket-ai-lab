@@ -59,6 +59,44 @@ export const RuntimeSessionProofSchema = z.object({
 }).strict();
 export type RuntimeSessionProof = z.infer<typeof RuntimeSessionProofSchema>;
 
+/**
+ * Canonical bytes signed by the native Ed25519 runtime key.
+ * Fields are UTF-8 with a 4-byte unsigned big-endian byte-length prefix.
+ * Keep field order synchronized with RuntimeSessionProofCanonicalizer.swift.
+ */
+export function canonicalRuntimeSessionProofPayload(proof: RuntimeSessionProof): Uint8Array {
+  const fields = [
+    "pocket-ai-runtime-session-proof-v1",
+    String(proof.protocolVersion),
+    proof.sessionId,
+    proof.modelId,
+    proof.modelFileSHA256.toLowerCase(),
+    proof.runtimeBuildId,
+    proof.expiresAt,
+    String(proof.generationCounter),
+    proof.keyId,
+    proof.algorithm
+  ];
+  const encoder = new TextEncoder();
+  const chunks = fields.map((field) => {
+    const bytes = encoder.encode(field);
+    if (bytes.byteLength > 0xffff_ffff) throw new RangeError("Runtime proof field is too large");
+    const prefix = new Uint8Array(4);
+    new DataView(prefix.buffer).setUint32(0, bytes.byteLength, false);
+    return [prefix, bytes] as const;
+  });
+  const length = chunks.reduce((sum, [prefix, bytes]) => sum + prefix.byteLength + bytes.byteLength, 0);
+  const result = new Uint8Array(length);
+  let offset = 0;
+  for (const [prefix, bytes] of chunks) {
+    result.set(prefix, offset);
+    offset += prefix.byteLength;
+    result.set(bytes, offset);
+    offset += bytes.byteLength;
+  }
+  return result;
+}
+
 export interface RuntimeProofVerifier {
   verify(proof: RuntimeSessionProof, expected: {
     modelId: string;

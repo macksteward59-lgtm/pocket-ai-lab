@@ -3,6 +3,7 @@ import {
   AgentMessageEnvelopeSchema,
   AgentTaskRequestSchema,
   RuntimeSessionProofSchema,
+  canonicalRuntimeSessionProofPayload,
   evaluateRuntimeReadiness
 } from "../contracts/AgentProtocol";
 
@@ -45,6 +46,14 @@ describe("cross-runtime agent protocol", () => {
       createdAt: "2026-11-13T00:00:00.000Z",
       sequence: 0
     }).success).toBe(true);
+  });
+
+
+  it("encodes the runtime proof into stable length-prefixed signing bytes", () => {
+    const encoded = Buffer.from(canonicalRuntimeSessionProofPayload(proof)).toString("base64");
+    expect(encoded).toBe("AAAAInBvY2tldC1haS1ydW50aW1lLXNlc3Npb24tcHJvb2YtdjEAAAABMQAAAAlzZXNzaW9uLTEAAAAKcXdlbi1sb2NhbAAAAEBhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhAAAAEWlvcy1sbGFtYS0yMDI2LjExAAAAGDIwMzAtMDEtMDFUMDA6MDA6MDAuMDAwWgAAAAExAAAAFGRldmljZS1ydW50aW1lLWtleS0xAAAAB0VkMjU1MTk=");
+    expect(canonicalRuntimeSessionProofPayload({ ...proof, generationCounter: 2 }))
+      .not.toEqual(canonicalRuntimeSessionProofPayload(proof));
   });
 
   it("requires a complete Ed25519 runtime proof shape", () => {
