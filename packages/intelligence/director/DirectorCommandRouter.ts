@@ -43,6 +43,22 @@ export const DIRECTOR_COMMAND_KINDS = [
   "retire-tool", "use-device"
 ] as const;
 
+/**
+ * Canonical command argument allowlist shared by the router and provider
+ * adapters. The satisfies constraint makes a newly added command fail
+ * type-checking until its exact argument contract is declared here.
+ */
+export const DIRECTOR_COMMAND_FIELDS = {
+  research: ["kind", "query", "allowedDomains", "maxSources"],
+  "analyze-project": ["kind", "objective", "paths"],
+  "propose-memory-improvements": ["kind", "objective", "research", "project"],
+  "apply-memory-improvement": ["kind", "proposal", "changeIndex", "approvalRef"],
+  "develop-tool": ["kind", "spec"],
+  "activate-tool": ["kind", "toolId", "version", "approvalRef"],
+  "retire-tool": ["kind", "toolId", "approvalRef"],
+  "use-device": ["kind", "approvalRef", "action"]
+} as const satisfies Record<(typeof DIRECTOR_COMMAND_KINDS)[number], readonly string[]>;
+
 export class DirectorCommandRouter {
   constructor(
     private readonly capabilities: DirectorCapabilities,
@@ -105,6 +121,13 @@ export class DirectorCommandRouter {
 /** Public validator is useful to provider adapters before dispatch. */
 export function parseDirectorCommand(input: unknown): DirectorCommand {
   if (!isRecord(input) || typeof input.kind !== "string") throw new Error("Director command must be a structured object");
+  const hasCommandContract = Object.prototype.hasOwnProperty.call(DIRECTOR_COMMAND_FIELDS, input.kind);
+  const allowedFields: readonly string[] | undefined = hasCommandContract
+    ? DIRECTOR_COMMAND_FIELDS[input.kind as keyof typeof DIRECTOR_COMMAND_FIELDS]
+    : undefined;
+  if (allowedFields && Object.keys(input).some(key => !allowedFields.includes(key))) {
+    throw new Error("Director command contains fields outside the selected command contract");
+  }
   switch (input.kind) {
     case "research":
       requireString(input.query, "query");
@@ -151,9 +174,7 @@ export function parseDirectorCommand(input: unknown): DirectorCommand {
     case "use-device":
       requireString(input.approvalRef, "approvalRef");
       requireRecord(input.action, "action");
-      if (!["list-apps", "open-app", "inspect-storage", "read-file", "write-file", "delete-file"].includes(String(input.action.kind))) {
-        throw new Error("Unsupported device action");
-      }
+      validateDeviceActionFields(input.action);
       return input as unknown as DirectorCommand;
     default:
       throw new Error("Unsupported Director command: " + input.kind);
@@ -168,4 +189,32 @@ function requireRecord(value: unknown, name: string): asserts value is Record<st
 }
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateDeviceActionFields(action: Record<string, unknown>): void {
+  if (typeof action.kind !== "string") throw new Error("Unsupported device action");
+  let allowed: readonly string[];
+  switch (action.kind) {
+    case "list-apps":
+    case "inspect-storage":
+      allowed = ["kind"];
+      break;
+    case "open-app":
+      allowed = ["kind", "appId"];
+      break;
+    case "read-file":
+      allowed = ["kind", "fileId"];
+      break;
+    case "write-file":
+      allowed = ["kind", "fileId", "content"];
+      break;
+    case "delete-file":
+      allowed = ["kind", "fileId", "confirmDestructive"];
+      break;
+    default:
+      throw new Error("Unsupported device action");
+  }
+  if (Object.keys(action).some(key => !allowed.includes(key))) {
+    throw new Error("Device action contains fields outside its selected action contract");
+  }
 }

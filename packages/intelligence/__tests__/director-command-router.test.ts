@@ -11,8 +11,12 @@ describe("DirectorCommandRouter", () => {
       kind: "research", query: "compare sandbox tools"
     });
     expect(() => parseDirectorCommand({ kind: "shell", command: "rm -rf /" })).toThrow(/Unsupported Director command/);
+    expect(() => parseDirectorCommand({ kind: "toString", unexpected: true })).toThrow(/Unsupported Director command/);
     expect(() => parseDirectorCommand("research tools")).toThrow(/structured object/);
     expect(() => parseDirectorCommand({ kind: "research", query: "x", maxSources: 999 })).toThrow(/maxSources/);
+    expect(() => parseDirectorCommand({ kind: "research", query: "x", unexpected: true })).toThrow(/outside the selected command contract/);
+    expect(() => parseDirectorCommand({ kind: "use-device", approvalRef: "a", action: { kind: "inspect-storage" }, resourceId: "file-1" })).toThrow(/outside the selected command contract/);
+    expect(() => parseDirectorCommand({ kind: "use-device", approvalRef: "a", action: { kind: "inspect-storage", fileId: "file-1" } })).toThrow(/outside its selected action contract/);
     expect(() => parseDirectorCommand({ kind: "analyze-project", objective: "inspect", paths: ["../secrets"] })).toThrow(/relative project paths/);
   });
 
