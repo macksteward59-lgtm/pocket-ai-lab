@@ -6,7 +6,7 @@
  * DirectorCommandRouter validate them again before dispatch.
  */
 import type { DirectorTaskProvider, DirectorTaskHistoryEntry } from "../../../packages/intelligence/director/DirectorTaskRunner";
-import { DIRECTOR_COMMAND_KINDS } from "../../../packages/intelligence/director/DirectorCommandRouter";
+import { DIRECTOR_COMMAND_FIELDS, DIRECTOR_COMMAND_KINDS } from "../../../packages/intelligence/director/DirectorCommandRouter";
 import type { LlamaCppBackend, LlamaCppFunctionTool } from "./backend";
 import { normalizeLlamaCppConfig, type LlamaCppProviderConfig, type LlamaCppProviderConfigInput } from "./config";
 import { LlamaCppInferenceError } from "./errors";
@@ -18,14 +18,7 @@ const MAX_HISTORY_RESULT_CHARS = 2_000;
 const CONTROL_KINDS = ["complete", "blocked", "needs-input"] as const;
 const ALLOWED_KINDS = new Set<string>([...DIRECTOR_COMMAND_KINDS, ...CONTROL_KINDS]);
 const COMMAND_FIELDS: Record<string, readonly string[]> = {
-  research: ["kind", "query", "allowedDomains", "maxSources"],
-  "analyze-project": ["kind", "objective", "paths"],
-  "propose-memory-improvements": ["kind", "objective", "research", "project"],
-  "apply-memory-improvement": ["kind", "proposal", "changeIndex", "approvalRef"],
-  "develop-tool": ["kind", "spec"],
-  "activate-tool": ["kind", "toolId", "version", "approvalRef"],
-  "retire-tool": ["kind", "toolId", "approvalRef"],
-  "use-device": ["kind", "approvalRef", "action"],
+  ...DIRECTOR_COMMAND_FIELDS,
   complete: ["kind", "summary"],
   blocked: ["kind", "reason"],
   "needs-input": ["kind", "question"]
