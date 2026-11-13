@@ -6,6 +6,7 @@
 import { z } from "zod";
 
 export const AgentTaskRequestSchema = z.object({
+  protocolVersion: z.literal(1),
   id: z.string().min(1),
   objective: z.string().min(1),
   requiredCapabilities: z.array(z.string().min(1))
@@ -20,6 +21,7 @@ export const AgentMessageTypeSchema = z.enum([
 export type AgentMessageType = z.infer<typeof AgentMessageTypeSchema>;
 
 export const AgentMessageEnvelopeSchema = z.object({
+  protocolVersion: z.literal(1),
   messageId: z.string().uuid(),
   taskId: z.string().min(1),
   conversationId: z.string().min(1),
@@ -44,6 +46,7 @@ export type RuntimeReadinessState = z.infer<typeof RuntimeReadinessStateSchema>;
  * verifier authenticates the signature and binds it to the requested model/file.
  */
 export const RuntimeSessionProofSchema = z.object({
+  protocolVersion: z.literal(1),
   sessionId: z.string().min(1),
   modelId: z.string().min(1),
   modelFileSHA256: z.string().regex(/^[a-f0-9]{64}$/i),
