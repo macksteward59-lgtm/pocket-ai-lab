@@ -90,7 +90,9 @@ export class ModelPluginManager {
 
     const descriptor = await this.buildDescriptor(input);
     this.registry.unregister(existingId);
-    if (loadedElsewhere) this.router?.release(existingId);
+    // Confirmed admin replace drops the whole reservation. Calling release()
+    // once would steal a single route lease when multiple routes are active.
+    if (loadedElsewhere) this.router?.forceDropReservation(existingId);
     this.registry.register(descriptor);
     this.record({ action: "replaced", modelId: descriptor.id, previousModelId: existingId, source: describeSource(input.source) });
     return descriptor;
@@ -104,7 +106,9 @@ export class ModelPluginManager {
     }
     const removed = this.registry.unregister(id);
     if (removed) {
-      if (loaded) this.router?.release(id);
+      // Confirmed admin remove drops the whole reservation so concurrent route
+      // leases are not partially consumed.
+      if (loaded) this.router?.forceDropReservation(id);
       this.record({ action: "removed", modelId: id, source: "n/a" });
     }
     return removed;
