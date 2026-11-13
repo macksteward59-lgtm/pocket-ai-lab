@@ -81,6 +81,10 @@ export class LocalApprovalRegistry implements MemoryChangeApproval, ToolApproval
     return approvalRef;
   }
 
+  authorize(input: DeviceApproval): boolean {
+    return this.verify(input);
+  }
+
   verify(input: Parameters<MemoryChangeApproval["verify"]>[0]): boolean;
   verify(input: ToolApprovalRequest): boolean;
   verify(input: DeviceApproval): boolean;
