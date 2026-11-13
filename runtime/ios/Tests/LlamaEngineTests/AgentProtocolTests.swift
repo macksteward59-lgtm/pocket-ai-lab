@@ -61,7 +61,8 @@ final class AgentProtocolTests: XCTestCase {
             rawPublicKey: privateKey.publicKey.rawRepresentation,
             allowedRuntimeBuildIds: ["ios-build-1"]
         )
-        let verifier = Ed25519RuntimeProofVerifier(trustedKeys: [trustedKey])
+        let replayStore = TestRuntimeProofReplayStore()
+        let verifier = Ed25519RuntimeProofVerifier(trustedKeys: [trustedKey], replayStore: replayStore)
         let unsigned = RuntimeSessionProof(
             protocolVersion: .v1, sessionId: "session-verified", modelId: "model-a",
             modelFileSHA256: String(repeating: "b", count: 64), runtimeBuildId: "ios-build-1",
@@ -84,6 +85,26 @@ final class AgentProtocolTests: XCTestCase {
             expectedModelFileSHA256: unsigned.modelFileSHA256)
         XCTAssertFalse(replayAccepted)
 
+        let failingVerifier = Ed25519RuntimeProofVerifier(
+            trustedKeys: [trustedKey], replayStore: FailingRuntimeProofReplayStore()
+        )
+        let storageFailureAccepted = await failingVerifier.verify(
+            signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256
+        )
+        XCTAssertFalse(storageFailureAccepted)
+
+        // Recreating the verifier must not reset replay state when the same durable
+        // store is injected by the application composition root.
+        let recreatedVerifier = Ed25519RuntimeProofVerifier(
+            trustedKeys: [trustedKey], replayStore: replayStore
+        )
+        let afterRecreationAccepted = await recreatedVerifier.verify(
+            signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256
+        )
+        XCTAssertFalse(afterRecreationAccepted)
+
         let nextUnsigned = RuntimeSessionProof(
             protocolVersion: .v1, sessionId: unsigned.sessionId, modelId: unsigned.modelId,
             modelFileSHA256: unsigned.modelFileSHA256, runtimeBuildId: unsigned.runtimeBuildId,
@@ -103,13 +124,14 @@ final class AgentProtocolTests: XCTestCase {
         XCTAssertTrue(nextAccepted)
     }
 
+
     func testEd25519VerifierRejectsUntrustedBuildAndUnknownKey() async throws {
         let privateKey = Curve25519.Signing.PrivateKey()
         let verifier = Ed25519RuntimeProofVerifier(trustedKeys: [
             RuntimeProofTrustedKey(keyId: "trusted-key",
                 rawPublicKey: privateKey.publicKey.rawRepresentation,
                 allowedRuntimeBuildIds: ["approved-build"])
-        ])
+        ], replayStore: TestRuntimeProofReplayStore())
         let proof = RuntimeSessionProof(
             protocolVersion: .v1, sessionId: "session", modelId: "model",
             modelFileSHA256: String(repeating: "c", count: 64), runtimeBuildId: "unapproved-build",
@@ -171,5 +193,26 @@ private actor RejectingRuntimeProofVerifier: RuntimeProofVerifier {
                 expectedModelFileSHA256: String) async -> Bool {
         calls += 1
         return false
+    }
+}
+
+
+private actor TestRuntimeProofReplayStore: RuntimeProofReplayStore {
+    private var accepted: [String: (keyId: String, generation: Int)] = [:]
+
+    func accept(sessionId: String, keyId: String, generationCounter: Int) async throws -> Bool {
+        if let previous = accepted[sessionId] {
+            guard previous.keyId == keyId, generationCounter > previous.generation else {
+                return false
+            }
+        }
+        accepted[sessionId] = (keyId, generationCounter)
+        return true
+    }
+}
+
+private actor FailingRuntimeProofReplayStore: RuntimeProofReplayStore {
+    func accept(sessionId: String, keyId: String, generationCounter: Int) async throws -> Bool {
+        throw RuntimeProofReplayStoreError.corruptRecord
     }
 }

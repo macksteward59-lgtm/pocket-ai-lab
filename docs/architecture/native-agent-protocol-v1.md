@@ -40,7 +40,7 @@ A proof is only a claim until a separately injected verifier authenticates it ag
 
 TypeScript and Swift share a canonical signing representation: the UTF-8 values `pocket-ai-runtime-session-proof-v1`, protocol version, session ID, model ID, lowercase model SHA-256, runtime build ID, expiry string, generation counter, key ID, and algorithm, in that order. Every value is prefixed by a 4-byte unsigned big-endian byte length. Paired tests pin the canonical byte encoding.
 
-The current replay counter is in-memory and scoped to one verifier instance. It is a useful process-lifetime replay gate, not durable anti-replay across app restarts or verifier replacement. Production readiness still requires trusted key provisioning/rotation, durable session-generation state, and lifecycle invalidation. No private-key signer, hardware-backed key, device attestation, or production runtime key source is implemented here.
+Replay state is delegated to an injected `RuntimeProofReplayStore`. The iOS `KeychainRuntimeProofReplayStore` persists the accepted key ID and generation in a device-only Keychain item and survives verifier recreation and ordinary app restarts. It is designed for one process-wide writer: its read/compare/update sequence is not a cross-process compare-and-swap. Storage failures reject verification. Trusted key provisioning/rotation, cross-process atomicity, session lifecycle invalidation, a private-key signer, hardware-backed key attestation, device attestation, and a production runtime key source remain separate gates.
 
 ## Readiness states
 

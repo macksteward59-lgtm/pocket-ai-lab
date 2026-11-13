@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+      - codex/runtime-proof-verifier-mainline
+      - codex/durable-runtime-proof-replay
     paths:
       - "runtime/ios/**"
       - "ios/**"
@@ -131,7 +133,9 @@ jobs:
             -scheme PocketAILab \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
             -derivedDataPath /tmp/pocket-app-test-derived \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_REQUIRED=NO
 
       - name: XCTest on the iOS simulator
         working-directory: runtime/ios
