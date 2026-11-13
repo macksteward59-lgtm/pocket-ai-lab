@@ -35,10 +35,11 @@ Context length must be from 1 through 8192. That bound also applies to the loopb
 On that runner the workflow:
 
 1. Verify the llama.cpp tag, commit, archive hash, and `include/llama.h`.
-2. Build the static Metal libraries for `iphonesimulator` arm64 and for macOS arm64, then make one xcframework per archive.
+2. Cross-compile the static Metal libraries for physical iOS (`iphoneos`, arm64), the iOS Simulator, and macOS, then make one XCFramework per archive. CI asserts that the llama XCFramework contains an `ios-arm64` device slice and an `ios-*-simulator` slice.
 3. Typecheck the Swift sources with the unlinked branch.
-4. `xcodebuild test` on an available iPhone simulator. Those tests cover the placeholder, the forced Metal-unavailable failure, a missing file, a non-GGUF file, request bounds, and the loopback checks. The smoke GGUF is not injected for this destination, so the simulator does not run generation.
-5. Download the SmolLM2 GGUF, check SHA-256 and size, then `xcodebuild test` on the macOS host. That run includes the same fail-closed tests plus one greedy smoke generation (`temperature` 0, 8 tokens). If the host probe says Metal initialized, the test requires llama.cpp to log a GPU offload greater than zero. If it does not, the test uses CPU and requires `requireMetal: true` to throw.
+4. Run `xcodebuild build-for-testing` for `generic/platform=iOS` against the `PocketLlamaEngine` package. This verifies device-slice compilation and linking without signing, installing, or running on a physical iPhone.
+5. `xcodebuild test` on an available iPhone simulator. Those tests cover the placeholder, the forced Metal-unavailable failure, a missing file, a non-GGUF file, request bounds, and the loopback checks. The smoke GGUF is not injected for this destination, so the simulator does not run generation.
+6. Download the SmolLM2 GGUF, check SHA-256 and size, then `xcodebuild test` on the macOS host. That run includes the same fail-closed tests plus one greedy smoke generation (`temperature` 0, 8 tokens). If the host probe says Metal initialized, the test requires llama.cpp to log a GPU offload greater than zero. If it does not, the test uses CPU and requires `requireMetal: true` to throw.
 
 The job summary prints the `POCKET_LLAMA_PROBE`, `POCKET_LLAMA_OFFLOAD`, and `POCKET_LLAMA_SMOKE` lines. Those lines are the evidence for that commit. A green job is not a claim that an iPhone executed Metal.
 
@@ -46,7 +47,7 @@ The job summary prints the `POCKET_LLAMA_PROBE`, `POCKET_LLAMA_OFFLOAD`, and `PO
 
 The hosted arm64 pool did not provide a machine, so this workflow does not show Apple Silicon Metal. An Intel runner can still compile the Metal backend and can report whether that VM initialized a Metal device. The probe line in the job summary is that report.
 
-These still require a physical device, or an Apple Silicon Mac that actually runs the binary:
+The generic iOS device build is compile/link validation only. These still require a physical device, or an Apple Silicon Mac that actually runs the binary:
 
 - Load a GGUF from an app sandbox on a physical iPhone and generate tokens there.
 - Confirm Metal kernels, GPU family, memory, and thermal behavior on that phone. The simulator probe is not that measurement, even when `metalDeviceUsable` is true.
