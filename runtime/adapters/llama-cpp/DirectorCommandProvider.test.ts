@@ -53,7 +53,7 @@ describe("LlamaCppDirectorCommandProvider", () => {
 
     expect(proposal).toEqual(COMMAND);
     expect(captured?.model).toBe("local-test-model");
-    expect(captured?.toolChoice).toEqual({ type: "function", function: { name: "director_command" } });
+    expect(captured?.toolChoice).toBe("required");
     expect(captured?.tools).toHaveLength(1);
     expect(captured?.tools?.[0].function.name).toBe("director_command");
     expect(captured?.tools?.[0].function.parameters).toMatchObject({
@@ -120,7 +120,7 @@ describe("LlamaCppDirectorCommandProvider", () => {
       });
       await expect(provider.propose(makeInput())).resolves.toEqual(COMMAND);
       expect(received?.model).toBe("http-test-model");
-      expect(received?.tool_choice).toEqual({ type: "function", function: { name: "director_command" } });
+      expect(received?.tool_choice).toBe("required");
       expect(received?.tools).toMatchObject([{
         type: "function",
         function: { name: "director_command" }
