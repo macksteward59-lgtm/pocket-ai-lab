@@ -2,11 +2,11 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { openMemoryManager } from "./memoryRuntime.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const maxBody = 64 * 1024;
-const memoryManagerPromises = new Map();
 const RATE_WINDOW_MS = 60_000;
 const RATE_DEFAULTS = { chat: 30, memory: 120, agent: 8 };
 
@@ -51,32 +51,6 @@ function createLimiter(config, now = Date.now) {
     bucket.count += 1;
     return { allowed: true, retryAfterSeconds: 0 };
   };
-}
-
-async function openMemoryManager() {
-  const directory = path.resolve(process.env.POCKET_MEMORY_DIR || path.join(
-    process.env.HOME || process.env.USERPROFILE || ".",
-    ".pocket-ai-lab"
-  ));
-  if (!memoryManagerPromises.has(directory)) {
-    const pending = (async () => {
-      const [{ MemoryManager }, { FileMemoryStore }] = await Promise.all([
-        import("../../packages/intelligence/memory/MemoryManager.ts"),
-        import("../../packages/intelligence/memory/FileMemoryStore.ts")
-      ]);
-      const store = await FileMemoryStore.open(directory);
-      const manager = new MemoryManager(store);
-      await manager.init();
-      return manager;
-    })();
-    memoryManagerPromises.set(directory, pending);
-  }
-  try {
-    return await memoryManagerPromises.get(directory);
-  } catch (error) {
-    memoryManagerPromises.delete(directory);
-    throw error;
-  }
 }
 
 function loopbackName(name) {
@@ -408,6 +382,55 @@ export function createServer() {
         const { cfg, provider } = await openProvider(30000);
         await provider.checkHealth();
         return json(res, 200, { ready: true, baseUrl: cfg.baseUrl, api: cfg.api, loopback: isLoopbackBaseUrl(cfg.baseUrl) });
+      }
+      if (url.pathname === "/api/director-tasks" && req.method === "POST") {
+        if (!jsonContentType(req)) {
+          drain(req);
+          return rejectContentType(res);
+        }
+        const agentLimit = take("agent", req);
+        if (!agentLimit.allowed) {
+          drain(req);
+          return rejectLimited(res, agentLimit.retryAfterSeconds);
+        }
+        let input;
+        try {
+          input = await body(req);
+        } catch (error) {
+          return json(res, error.status || 400, { error: error.message });
+        }
+        if (typeof input.objective !== "string" || !input.objective.trim()) {
+          return json(res, 400, { error: "A non-empty objective is required." });
+        }
+        if (input.objective.length > 4000) {
+          return json(res, 413, { error: "Objective exceeds 4,000 characters." });
+        }
+        const taskId = input.taskId === undefined ? crypto.randomUUID() : input.taskId;
+        if (typeof taskId !== "string" || !taskId.trim() || taskId.length > 256) {
+          return json(res, 400, { error: "Task id must be a non-empty string of at most 256 characters." });
+        }
+        const cfg = llamaProviderConfig();
+        if (cfg.api !== "openai-chat" || !cfg.modelAlias) {
+          return json(res, 400, {
+            error: "Director tasks require LLAMACPP_API=openai-chat and LLAMACPP_MODEL_ALIAS matching the loaded llama-server model id."
+          });
+        }
+        const { provider } = await openProvider(4000);
+        await provider.checkHealth();
+        const { createLocalDirectorTaskRuntime } = await import("./directorRuntime.ts");
+        const director = await createLocalDirectorTaskRuntime({
+          api: cfg.api,
+          baseUrl: cfg.baseUrl,
+          modelAlias: cfg.modelAlias,
+          timeoutMs: 120000
+        });
+        const result = await director.runTask({ taskId }, input.objective.trim());
+        return json(res, 200, {
+          taskId,
+          result,
+          authorized: false,
+          disclaimer: "Model commands are untrusted proposals. Missing approval and host capabilities fail closed."
+        });
       }
       if (url.pathname === "/api/agent-tasks" && req.method === "POST") {
         if (!jsonContentType(req)) {
