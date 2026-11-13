@@ -20,6 +20,8 @@ Every task, message envelope, and runtime proof carries `protocolVersion: 1`. Un
 
 ## Message envelope
 
+The existing TypeScript `MessageBus` now requires `protocolVersion: 1` and all current publishers provide it; it continues to apply its message-type-specific payload validation and deep-freeze behavior. The shared DTO and native Swift envelope carry the same version field.
+
 The envelope fields are stable across runtimes: `messageId`, `taskId`, `conversationId`, `senderAgentId`, `recipientAgentId`, `messageType`, `payload`, `evidenceRefs`, optional `parentMessageId`, `createdAt`, and monotonic per-task `sequence`. Payload validation remains message-type-specific in the existing MessageBus. Model-generated content is untrusted proposal data.
 
 ## Runtime readiness proof
