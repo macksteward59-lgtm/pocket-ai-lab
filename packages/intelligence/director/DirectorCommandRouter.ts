@@ -43,6 +43,22 @@ export const DIRECTOR_COMMAND_KINDS = [
   "retire-tool", "use-device"
 ] as const;
 
+/**
+ * Canonical command argument allowlist shared by the router and provider
+ * adapters. The satisfies constraint makes a newly added command fail
+ * type-checking until its exact argument contract is declared here.
+ */
+export const DIRECTOR_COMMAND_FIELDS = {
+  research: ["kind", "query", "allowedDomains", "maxSources"],
+  "analyze-project": ["kind", "objective", "paths"],
+  "propose-memory-improvements": ["kind", "objective", "research", "project"],
+  "apply-memory-improvement": ["kind", "proposal", "changeIndex", "approvalRef"],
+  "develop-tool": ["kind", "spec"],
+  "activate-tool": ["kind", "toolId", "version", "approvalRef"],
+  "retire-tool": ["kind", "toolId", "approvalRef"],
+  "use-device": ["kind", "approvalRef", "action"]
+} as const satisfies Record<(typeof DIRECTOR_COMMAND_KINDS)[number], readonly string[]>;
+
 export class DirectorCommandRouter {
   constructor(
     private readonly capabilities: DirectorCapabilities,
@@ -105,6 +121,10 @@ export class DirectorCommandRouter {
 /** Public validator is useful to provider adapters before dispatch. */
 export function parseDirectorCommand(input: unknown): DirectorCommand {
   if (!isRecord(input) || typeof input.kind !== "string") throw new Error("Director command must be a structured object");
+  const allowedFields = DIRECTOR_COMMAND_FIELDS[input.kind as keyof typeof DIRECTOR_COMMAND_FIELDS];
+  if (allowedFields && Object.keys(input).some(key => !allowedFields.includes(key))) {
+    throw new Error("Director command contains fields outside the selected command contract");
+  }
   switch (input.kind) {
     case "research":
       requireString(input.query, "query");
