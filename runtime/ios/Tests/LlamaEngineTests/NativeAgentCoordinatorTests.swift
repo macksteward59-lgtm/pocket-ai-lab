@@ -22,8 +22,8 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         XCTAssertEqual(result.messages[2].parentMessageId, result.messages[1].messageId)
         XCTAssertEqual(result.messages[0].recipientAgentId, "critic")
         XCTAssertEqual(result.messages[2].recipientAgentId, "user")
-        XCTAssertEqual(await engine.recordedPrompts.count, 3)
         let prompts = await engine.recordedPrompts
+        XCTAssertEqual(prompts.count, 3)
         XCTAssertTrue(prompts[1].contains("UNTRUSTED PROPOSAL FROM reasoner"))
         XCTAssertTrue(prompts[2].contains("UNTRUSTED PROPOSAL FROM critic"))
     }
