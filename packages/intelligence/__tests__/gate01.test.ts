@@ -13,6 +13,7 @@ describe("Gate 0.1 regression checks", () => {
   it("keeps published message payloads immutable", () => {
     const bus = new MessageBus();
     const message = bus.publish({
+      protocolVersion: 1,
       messageId: crypto.randomUUID(),
       taskId: "gate-0.1",
       conversationId: "gate-0.1",
