@@ -1174,3 +1174,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added Vitest and XCTest protocol coverage plus Swift request-ID validation. Corrected an interpolation typo discovered during diff review.
 - Added explicit `protocolVersion: 1` to task, message, and runtime-proof DTOs; Swift uses a typed Codable version enum so unsupported versions fail decoding. Updated paired TS/Swift tests. Latest PR head: `307df1415609db707907c76fce31f404db6d2f0d`; CI for this latest head is awaiting workflow registration. Previous head's Pocket AI Lab, Consumer, Governance sidecar, and Cursor plugin checks passed; iOS LlamaEngine build was still in progress.
 - No APEX/East trust, approval, receipt, RLS, schema, or evidence behavior changed. No merge performed. Physical iPhone acceptance remains unverified.
+
+## 2026-11-13 04:21 UTC — Native coordinator and protocol-v1 bus parity (PR #51)
+
+- Added `NativeAgentCoordinator.swift`: sequential, caller-planned logical roles over one injected `LlamaEngine` session; task output becomes linked, sequenced `AgentMessageEnvelope` records.
+- The coordinator explicitly does not claim separate independent models, tool execution, evidence verification, memory persistence, or authorization. It has one active task per coordinator, per-request UUID cancellation, validates the plan and generation settings, rejects empty output, and labels prior model outputs as untrusted proposals in subsequent prompts.
+- Added XCTest coverage for role chaining, parent-message linkage, untrusted proposal context, empty plans, and empty output.
+- Closed TypeScript message-bus parity gap: `MessageBus` now requires `protocolVersion: 1`; updated current producers in Orchestrator, governance review, PolicyChecker, runtime lab, and East platform, plus adapter and unit-test fixtures. Added a regression test rejecting unversioned messages.
+- Updated architecture docs to describe the sequential/shared-session limitation and remaining integration gates (trusted proof verifier, model pool, durable bus, tool authorization integration, physical iPhone evidence).
+- Latest branch head: `c6298a17e1067305d465d44c47dbf656a322f857`. CI has restarted for this head; Pocket AI Lab and Consumer workflows are running, iOS LlamaEngine is queued, and other checks are pending/running. Previous Consumer prototype attempt failed only in existing archive smoke cleanup with transient `ENOTEMPTY`; its failed job was rerun. Earlier Pocket AI Lab build passed after the protocol literal fix.
+- PR #51 remains draft/open/unmerged. No APEX/East authorization semantics, receipts, trust roots, RLS, or evidence behavior changed. No physical iPhone execution claimed.
