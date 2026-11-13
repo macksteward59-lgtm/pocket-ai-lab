@@ -11,7 +11,6 @@ import {
   DIRECTOR_COMMAND_KINDS,
   DirectorCommandRouter,
   parseDirectorCommand,
-  type DirectorCommandProvider
 } from "./DirectorCommandRouter";
 
 export type DirectorTaskControl =
@@ -26,7 +25,7 @@ export interface DirectorTaskHistoryEntry {
   readonly result: unknown;
 }
 
-export interface DirectorTaskProvider extends DirectorCommandProvider {
+export interface DirectorTaskProvider {
   propose(input: {
     taskId: string;
     objective: string;
