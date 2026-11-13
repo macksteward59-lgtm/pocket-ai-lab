@@ -9,6 +9,7 @@ final class LocalChatModel: ObservableObject {
     @Published var messages: [ChatLine] = []
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
+    @Published var trustStatus = RuntimeTrustPresentation.stateLabel
 
     private let engine = LlamaCppMetalBackend(requireMetal: true)
     private var session: RuntimeSession?
@@ -44,7 +45,7 @@ final class LocalChatModel: ObservableObject {
             let descriptor = ModelDescriptor(id: UUID().uuidString, name: modelName,
                 path: modelURL.path, contextLength: 2048, quantization: "GGUF")
             session = try await engine.load(model: descriptor)
-            status = "A real llama.cpp model session is loaded."
+            status = RuntimeTrustPresentation.statusMessage(after: "A real llama.cpp model session is loaded.")
         } catch {
             session = nil
             status = "Model load failed: \(error.localizedDescription)"
@@ -64,10 +65,10 @@ final class LocalChatModel: ObservableObject {
             for try await token in stream { output += token.text }
             guard !output.isEmpty else { throw LocalChatError.emptyOutput }
             messages.append(ChatLine(role: "Pocket AI", text: output))
-            status = "Local generation completed. Output is untrusted proposal data, never authorization."
+            status = RuntimeTrustPresentation.statusMessage(after: "Local generation completed.")
         } catch {
             messages.append(ChatLine(role: "Runtime", text: "Generation failed: \(error.localizedDescription)"))
-            status = "Generation failed; no synthetic response was substituted."
+            status = "Generation failed; no synthetic response was substituted. Runtime trust remains unverified."
         }
     }
 }
@@ -101,6 +102,8 @@ struct LocalChatView: View {
                     Text(model.modelName).font(.headline)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
+                    Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
+                        .font(.caption2).foregroundStyle(.orange)
                     HStack {
                         Button("Import GGUF") { showImporter = true }.buttonStyle(.bordered)
                         Button("Load model") { Task { await model.loadModel() } }
