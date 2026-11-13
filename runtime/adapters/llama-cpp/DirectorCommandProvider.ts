@@ -8,7 +8,7 @@
 import type { DirectorTaskProvider, DirectorTaskHistoryEntry } from "../../../packages/intelligence/director/DirectorTaskRunner";
 import { DIRECTOR_COMMAND_KINDS } from "../../../packages/intelligence/director/DirectorCommandRouter";
 import type { LlamaCppBackend, LlamaCppFunctionTool } from "./backend";
-import { normalizeLlamaCppConfig, type LlamaCppProviderConfigInput } from "./config";
+import { normalizeLlamaCppConfig, type LlamaCppProviderConfig, type LlamaCppProviderConfigInput } from "./config";
 import { LlamaCppInferenceError } from "./errors";
 import { HttpLlamaCppBackend } from "./httpBackend";
 
@@ -29,7 +29,7 @@ const SYSTEM_INSTRUCTIONS = [
 ].join("\n");
 
 export class LlamaCppDirectorCommandProvider implements DirectorTaskProvider {
-  readonly config;
+  readonly config: LlamaCppProviderConfig;
   private readonly backend: LlamaCppBackend;
 
   constructor(configInput: LlamaCppProviderConfigInput = {}, backend?: LlamaCppBackend) {
