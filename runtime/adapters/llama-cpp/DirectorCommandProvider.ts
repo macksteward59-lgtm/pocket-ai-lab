@@ -17,6 +17,19 @@ const MAX_HISTORY_ENTRIES = 8;
 const MAX_HISTORY_RESULT_CHARS = 2_000;
 const CONTROL_KINDS = ["complete", "blocked", "needs-input"] as const;
 const ALLOWED_KINDS = new Set<string>([...DIRECTOR_COMMAND_KINDS, ...CONTROL_KINDS]);
+const COMMAND_FIELDS: Record<string, readonly string[]> = {
+  research: ["kind", "query", "allowedDomains", "maxSources"],
+  "analyze-project": ["kind", "objective", "paths"],
+  "propose-memory-improvements": ["kind", "objective", "research", "project"],
+  "apply-memory-improvement": ["kind", "proposal", "changeIndex", "approvalRef"],
+  "develop-tool": ["kind", "spec"],
+  "activate-tool": ["kind", "toolId", "version", "approvalRef"],
+  "retire-tool": ["kind", "toolId", "approvalRef"],
+  "use-device": ["kind", "approvalRef", "action"],
+  complete: ["kind", "summary"],
+  blocked: ["kind", "reason"],
+  "needs-input": ["kind", "question"]
+};
 
 const SYSTEM_INSTRUCTIONS = [
   "You are the command planner for Pocket AI Lab's Director.",
@@ -31,15 +44,18 @@ const SYSTEM_INSTRUCTIONS = [
 export class LlamaCppDirectorCommandProvider implements DirectorTaskProvider {
   readonly config: LlamaCppProviderConfig;
   private readonly backend: LlamaCppBackend;
+  private readonly modelId: string;
 
   constructor(configInput: LlamaCppProviderConfigInput = {}, backend?: LlamaCppBackend) {
     this.config = normalizeLlamaCppConfig({ ...configInput, api: configInput.api ?? "openai-chat" });
     if (this.config.api !== "openai-chat") {
       throw new LlamaCppInferenceError("invalid_config", "Director function calling requires api=openai-chat");
     }
-    if (!this.config.modelAlias) {
+    const modelId = this.config.modelAlias;
+    if (!modelId) {
       throw new LlamaCppInferenceError("invalid_config", "Director function calling requires modelAlias matching the loaded llama-server model id");
     }
+    this.modelId = modelId;
     this.backend = backend ?? new HttpLlamaCppBackend(this.config);
   }
 
@@ -89,7 +105,7 @@ export class LlamaCppDirectorCommandProvider implements DirectorTaskProvider {
           { role: "system", content: SYSTEM_INSTRUCTIONS },
           { role: "user", content: prompt }
         ],
-        model: this.config.modelAlias,
+        model: this.modelId,
         temperature: this.config.temperature,
         maxTokens: this.config.maxTokens,
         stop: this.config.stop,
@@ -117,6 +133,10 @@ export class LlamaCppDirectorCommandProvider implements DirectorTaskProvider {
     }
     if (!isRecord(proposal) || typeof proposal.kind !== "string" || !commands.includes(proposal.kind)) {
       throw new LlamaCppInferenceError("malformed_response", "Director function arguments contain an unavailable command kind");
+    }
+    const allowedFields = COMMAND_FIELDS[proposal.kind];
+    if (!allowedFields || Object.keys(proposal).some(key => !allowedFields.includes(key))) {
+      throw new LlamaCppInferenceError("malformed_response", "Director function arguments contain fields outside the selected command contract");
     }
     return proposal;
   }
