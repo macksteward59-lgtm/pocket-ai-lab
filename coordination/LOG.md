@@ -1195,3 +1195,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated only the test clock fixture to use a standard non-fractional timestamp. No production code or trust behavior changed.
 - Fix commit: `bb1c3d5b1bfa92c07fe4fbeb4901327c01714d6b`; new CI must be checked on the new PR head before treating iOS validation as passed.
 - PR #51 remains draft/open/unmerged. Simulator-only; no physical iPhone execution claimed.
+
+
+## 2026-11-13 05:20 UTC — Native Ed25519 runtime proof verifier (PR #56)
+
+- PR #51's corrected head `bb1c3d5b1bfa92c07fe4fbeb4901327c01714d6b` passed all five workflows: iOS LlamaEngine, Pocket AI Lab, Consumer prototype, Governance sidecar, and Cursor collaboration plugin. iOS validation ran on hosted macOS/iPhone Simulator, not a physical iPhone.
+- Opened draft PR #56: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/56, stacked on PR #51's branch/head.
+- Added native `Ed25519RuntimeProofVerifier` using CryptoKit and a host-injected immutable public-key registry. Each trusted key is constrained to explicit runtime build IDs; unknown or duplicate key IDs fail closed.
+- Added a canonical proof signing payload shared by Swift and TypeScript: ten ordered UTF-8 fields, each prefixed by a 4-byte unsigned big-endian length. Paired tests pin the same Base64 fixture.
+- Verifier checks Ed25519 signature, expected model ID/hash, SHA-256 shape, expiry, key ID, runtime build allowlist, and strictly increasing per-session generation counter. Actor isolation serializes replay-state mutation.
+- Replay protection is process/verifier-instance lifetime only. Durable anti-replay across app restarts, trusted key provisioning/rotation/revocation, private-key signing, hardware-backed key integration, device attestation, and app lifecycle wiring remain explicitly unimplemented.
+- No APEX/East authorization, approvals, receipts, RLS, evidence, or model authority changed. CI/review for PR #56 pending. No physical iPhone execution claimed.
