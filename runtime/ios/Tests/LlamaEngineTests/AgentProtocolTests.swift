@@ -3,17 +3,18 @@ import XCTest
 
 final class AgentProtocolTests: XCTestCase {
     func testTaskContractRoundTripsWithStableWireNames() throws {
-        let task = AgentTaskRequest(id: "task-1", objective: "Review architecture",
+        let task = AgentTaskRequest(protocolVersion: 1, id: "task-1", objective: "Review architecture",
                                     requiredCapabilities: ["reasoning", "security"])
         let data = try JSONEncoder().encode(task)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["protocolVersion"] as? Int, 1)
         XCTAssertEqual(object["requiredCapabilities"] as? [String], ["reasoning", "security"])
         XCTAssertEqual(try JSONDecoder().decode(AgentTaskRequest.self, from: data), task)
     }
 
     func testMessageEnvelopeRoundTripsAndPreservesSnakeCaseMessageType() throws {
         let message = AgentMessageEnvelope(
-            messageId: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!,
+            protocolVersion: 1, messageId: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!,
             taskId: "task-1", conversationId: "conversation-1",
             senderAgentId: "reasoner", recipientAgentId: "critic",
             messageType: .analysis, payload: .object(["analysis": .string("proposal")]),
@@ -21,6 +22,7 @@ final class AgentProtocolTests: XCTestCase {
         )
         let data = try JSONEncoder().encode(message)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["protocolVersion"] as? Int, 1)
         XCTAssertEqual(object["messageType"] as? String, "analysis")
         XCTAssertEqual(try JSONDecoder().decode(AgentMessageEnvelope.self, from: data), message)
     }
@@ -30,7 +32,7 @@ final class AgentProtocolTests: XCTestCase {
         let missing = await RuntimeReadinessEvaluator.evaluate(nil, expectedModelId: "m",
             expectedModelFileSHA256: String(repeating: "a", count: 64), verifier: verifier)
         XCTAssertEqual(missing, .unavailable)
-        let invalid = RuntimeSessionProof(sessionId: "s", modelId: "m", modelFileSHA256: "bad",
+        let invalid = RuntimeSessionProof(protocolVersion: 1, sessionId: "s", modelId: "m", modelFileSHA256: "bad",
             runtimeBuildId: "build", expiresAt: "2030-01-01T00:00:00.000Z",
             generationCounter: 1, keyId: "key", signature: "sig")
         let state = await RuntimeReadinessEvaluator.evaluate(invalid, expectedModelId: "m",
@@ -40,7 +42,7 @@ final class AgentProtocolTests: XCTestCase {
 
     func testExpiredProofDoesNotReachVerifier() async {
         let verifier = RejectingRuntimeProofVerifier()
-        let proof = RuntimeSessionProof(sessionId: "s", modelId: "m",
+        let proof = RuntimeSessionProof(protocolVersion: 1, sessionId: "s", modelId: "m",
             modelFileSHA256: String(repeating: "a", count: 64), runtimeBuildId: "build",
             expiresAt: "2020-01-01T00:00:00.000Z", generationCounter: 1,
             keyId: "key", signature: "sig")
