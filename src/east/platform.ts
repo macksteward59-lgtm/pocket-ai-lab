@@ -447,6 +447,7 @@ function publishAnalysis(
 ): AgentMessage {
   try {
     return orchestrator.bus.publish({
+      protocolVersion: 1,
       messageId: crypto.randomUUID(),
       taskId,
       conversationId: taskId,
