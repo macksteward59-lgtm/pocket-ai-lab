@@ -166,3 +166,41 @@ New optional `LlamaCppProviderConfigInput` fields, all off or unchanged by defau
 Synthesis and challenge `evidenceRefs` are constrained to transcript message ids, arrays have `maxItems`, and text fields have `minLength`/`maxLength`, so constrained decoding cannot loop until the token limit.
 
 None of this changes the trust boundary: model output is never authorization, `authorized` stays `false`, and nothing is invented when output is rejected. The consumer web server does not set these options, so that app still uses the flat JSON prompt. `MemoryManager.search` ranks saved notes locally and does not mark them verified. Passing `memoryContext` does not grant anything.
+
+
+## Director native function calling
+
+The Director has a separate provider adapter for native OpenAI-style function calls. It is not the stage-based `InferenceProvider` and does not make ordinary chat or deliberation output executable.
+
+Start `llama-server` with `--jinja` and a model/chat template that supports function calling:
+
+```bash
+llama-server -m ./models/model.gguf --host 127.0.0.1 --port 8080 -c 8192 --jinja
+```
+
+The current llama.cpp function-calling documentation describes OpenAI-style function calling on `llama-server` with `--jinja`, including native handlers for supported model formats and a generic handler for other templates. Generic handling can consume more tokens and may be less efficient. The loaded model and template still determine call quality.
+
+Compose the provider with the bounded task runner and the existing command router:
+
+```ts
+import { DirectorCommandRouter } from "../../packages/intelligence/director/DirectorCommandRouter";
+import { DirectorTaskRunner } from "../../packages/intelligence/director/DirectorTaskRunner";
+import { LlamaCppDirectorCommandProvider } from "./runtime/adapters/llama-cpp";
+
+const commandProvider = new LlamaCppDirectorCommandProvider({
+  api: "openai-chat",
+  baseUrl: "http://127.0.0.1:8080",
+  modelAlias: "model.gguf", // use the id returned by GET /v1/models
+  timeoutMs: 120_000,
+  maxTokens: 1024
+});
+
+const taskRunner = new DirectorTaskRunner(directorCommandRouter, { maxSteps: 8 });
+const result = await taskRunner.run(commandProvider, { taskId }, objective);
+```
+
+The adapter sends one required `director_command` function definition and accepts exactly one matching function call. Missing, multiple, malformed, or unexpected calls fail closed. It is non-streaming and requires `api: "openai-chat"` plus an explicit `modelAlias`; the native `/completion` API is not used for function calls.
+
+The function arguments remain untrusted proposals. `DirectorTaskRunner` checks the command kind and task-control shape, `DirectorCommandRouter` validates the command again, and capability ports independently enforce approvals. A model-generated `approvalRef` is not itself approval. Tool execution, device access, memory changes, and tool lifecycle actions still require their existing host-side authorization.
+
+The provider passes only the latest eight bounded history entries to the model and labels tool results as untrusted data. The runner remains the authoritative step limit and terminal-state controller. This adapter does not add persistent task state, cancellation, parallel tool calls, or a production sandbox/provider runtime.
