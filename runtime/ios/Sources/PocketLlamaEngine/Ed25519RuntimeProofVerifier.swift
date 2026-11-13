@@ -45,17 +45,18 @@ public enum RuntimeSessionProofCanonicalizer {
 }
 
 /// Verifies runtime claims using only host-provisioned Ed25519 public keys.
-/// The actor serializes verification and enforces strictly increasing generation
-/// counters for each session during this verifier instance's lifetime.
+/// The actor serializes verification and delegates replay state to an injected
+/// durable store. A store failure always rejects the proof.
 public actor Ed25519RuntimeProofVerifier: RuntimeProofVerifier {
     private let trustedKeys: [String: RuntimeProofTrustedKey]
-    private var acceptedSessions: [String: (keyId: String, generation: Int)] = [:]
+    private let replayStore: any RuntimeProofReplayStore
 
-    public init(trustedKeys: [RuntimeProofTrustedKey]) {
+    public init(trustedKeys: [RuntimeProofTrustedKey], replayStore: any RuntimeProofReplayStore) {
         let grouped = Dictionary(grouping: trustedKeys, by: \.keyId)
         self.trustedKeys = grouped.compactMapValues { entries in
             entries.count == 1 ? entries.first : nil
         }
+        self.replayStore = replayStore
     }
 
     public func verify(
@@ -89,14 +90,14 @@ public actor Ed25519RuntimeProofVerifier: RuntimeProofVerifier {
             return false
         }
 
-        if let previous = acceptedSessions[proof.sessionId] {
-            guard previous.keyId == proof.keyId,
-                  proof.generationCounter > previous.generation else {
-                return false
-            }
+        do {
+            return try await replayStore.accept(
+                sessionId: proof.sessionId,
+                keyId: proof.keyId,
+                generationCounter: proof.generationCounter
+            )
+        } catch {
+            return false
         }
-
-        acceptedSessions[proof.sessionId] = (proof.keyId, proof.generationCounter)
-        return true
     }
 }
