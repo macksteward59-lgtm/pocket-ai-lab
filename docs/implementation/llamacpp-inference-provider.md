@@ -195,6 +195,8 @@ const commandProvider = new LlamaCppDirectorCommandProvider({
   maxTokens: 1024
 });
 
+// Compose this once with the host-injected DirectorCapabilities and ToolDirector.
+declare const directorCommandRouter: DirectorCommandRouter;
 const taskRunner = new DirectorTaskRunner(directorCommandRouter, { maxSteps: 8 });
 const result = await taskRunner.run(commandProvider, { taskId }, objective);
 ```
