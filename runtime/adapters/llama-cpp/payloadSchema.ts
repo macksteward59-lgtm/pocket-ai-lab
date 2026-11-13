@@ -132,3 +132,59 @@ export const LLAMA_CPP_STAGE_JSON_SCHEMAS: Record<LlamaCppDeliberationStage, Rec
     additionalProperties: false
   }
 };
+
+/**
+ * Specialized advisory policy-review payload. The adapter validates the
+ * envelope; the review coordinator independently validates every finding
+ * against the immutable policy snapshot and exact source offsets.
+ */
+const POLICY_REVIEW_FINDING_CODES = [
+  "omitted-condition",
+  "misclassified-clause",
+  "ambiguous-permission",
+  "conflicting-policy",
+  "unsupported-value",
+  "evidence-mismatch",
+  "other"
+] as const;
+const POLICY_REVIEW_SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
+
+export const LLAMA_CPP_POLICY_REVIEW_PAYLOAD_SCHEMA = z.object({
+  summary: z.string().min(1).max(4000),
+  findings: z.array(z.object({
+    code: z.enum(POLICY_REVIEW_FINDING_CODES),
+    severity: z.enum(POLICY_REVIEW_SEVERITIES),
+    clauseId: z.string().optional(),
+    startOffset: z.number().int().nonnegative(),
+    endOffset: z.number().int().positive(),
+    sourceText: z.string().min(1),
+    explanation: z.string().min(1).max(2000)
+  }).strict()).max(100)
+}).strict();
+
+export const LLAMA_CPP_POLICY_REVIEW_JSON_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    summary: { type: "string", minLength: 1, maxLength: 4000 },
+    findings: {
+      type: "array",
+      maxItems: 100,
+      items: {
+        type: "object",
+        properties: {
+          code: { type: "string", enum: POLICY_REVIEW_FINDING_CODES },
+          severity: { type: "string", enum: POLICY_REVIEW_SEVERITIES },
+          clauseId: { type: "string" },
+          startOffset: { type: "integer", minimum: 0 },
+          endOffset: { type: "integer", minimum: 1 },
+          sourceText: { type: "string", minLength: 1 },
+          explanation: { type: "string", minLength: 1, maxLength: 2000 }
+        },
+        required: ["code", "severity", "startOffset", "endOffset", "sourceText", "explanation"],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ["summary", "findings"],
+  additionalProperties: false
+};

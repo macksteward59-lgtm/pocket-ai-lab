@@ -7,11 +7,16 @@ import type { ZodError } from "zod";
 import { LlamaCppInferenceError } from "./errors";
 import {
   isLlamaCppDeliberationStage,
-  LLAMA_CPP_STAGE_PAYLOAD_SCHEMAS
+  LLAMA_CPP_STAGE_PAYLOAD_SCHEMAS,
+  LLAMA_CPP_POLICY_REVIEW_PAYLOAD_SCHEMA
 } from "./payloadSchema";
 import type { LlamaCppInferenceResult } from "./result";
 
-export function parseLlamaCppOutput(stage: string, content: string): LlamaCppInferenceResult {
+export function parseLlamaCppOutput(
+  stage: string,
+  content: string,
+  responseContract?: "bug-bounty-policy-review"
+): LlamaCppInferenceResult {
   if (typeof content !== "string" || content.trim().length === 0) {
     throw new LlamaCppInferenceError("empty_output", "llama.cpp returned empty output");
   }
@@ -21,6 +26,9 @@ export function parseLlamaCppOutput(stage: string, content: string): LlamaCppInf
     throw new LlamaCppInferenceError("empty_output", "llama.cpp returned empty output");
   }
 
+  if (responseContract !== undefined && responseContract !== "bug-bounty-policy-review") {
+    throw new LlamaCppInferenceError("invalid_request", "unsupported inference response contract");
+  }
   if (!isLlamaCppDeliberationStage(stage)) {
     throw new LlamaCppInferenceError(
       "invalid_request",
@@ -46,7 +54,9 @@ export function parseLlamaCppOutput(stage: string, content: string): LlamaCppInf
     );
   }
 
-  const schema = LLAMA_CPP_STAGE_PAYLOAD_SCHEMAS[stage];
+  const schema = responseContract === "bug-bounty-policy-review"
+    ? LLAMA_CPP_POLICY_REVIEW_PAYLOAD_SCHEMA
+    : LLAMA_CPP_STAGE_PAYLOAD_SCHEMAS[stage];
   const parsed = schema.safeParse(parsedJson);
   if (!parsed.success) {
     throw new LlamaCppInferenceError(
