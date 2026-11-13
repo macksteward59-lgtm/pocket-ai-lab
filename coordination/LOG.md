@@ -1206,3 +1206,6 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Verifier checks Ed25519 signature, expected model ID/hash, SHA-256 shape, expiry, key ID, runtime build allowlist, and strictly increasing per-session generation counter. Actor isolation serializes replay-state mutation.
 - Replay protection is process/verifier-instance lifetime only. Durable anti-replay across app restarts, trusted key provisioning/rotation/revocation, private-key signing, hardware-backed key integration, device attestation, and app lifecycle wiring remain explicitly unimplemented.
 - No APEX/East authorization, approvals, receipts, RLS, evidence, or model authority changed. CI/review for PR #56 pending. No physical iPhone execution claimed.
+
+- Follow-up tests added for direct verifier rejection of expired proofs and forged signatures. Latest PR #56 head: `215579b1400b6bc3558afc800caf122d721d9ed5`.
+- No workflow runs are associated with PR #56 because its base is the feature branch for PR #51, while the current iOS and package CI workflows only trigger for pull requests targeting `main`. Do not report this branch as CI-passed. Once PR #51 is merged (or CI trigger policy is deliberately broadened), rerun the full matrix.
