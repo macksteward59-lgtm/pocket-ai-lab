@@ -1151,3 +1151,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #48 latest head:** `2201ff03cdc3f84a322b9e9c9782551fe701e50e`; branch is 2 commits ahead / 0 behind main; documentation-only, one file.
 - **CI:** all four workflows were triggered for the new head and were still in progress at the last check. Prior head's four workflows passed, but those results do not substitute for the latest-head run.
 - PR remains draft/open/unmerged. No SQL, migration, RLS, trust, receipt, runtime, or authorization behavior changed. East remains fail-closed. Full verbatim v3.12 source remains required before implementation.
+
+
+## 2026-11-13 03:25 UTC — Native inference / agent orchestration integration audit (PR #49)
+
+- Opened draft PR #49: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/49
+- Verified that `ios/PocketAILab/LocalChatView.swift` uses the native Swift `LlamaCppMetalBackend`, while `apps/web/server.mjs` composes the TypeScript `LlamaCppInferenceProvider` over loopback HTTP with `runtime/lab/session.ts`. No native Swift inference adapter into the TypeScript orchestrator, and no demonstrated iOS on-device agent-team composition were found.
+- Added `docs/implementation/native-runtime-orchestrator-integration-audit.md` documenting the two separate paths, readiness/session evidence gaps, loopback health-vs-model binding limitation, cancellation/lifecycle risks, architecture options, and acceptance gates.
+- Fixed `ModelRouter` same-model reservation lifetime with reference-counted route leases; added regression tests for shared route release order, runtime-owned models, changed estimates, and malformed resource reports.
+- PR head: `7b77b5dd2b08c3eba031831edfc118ed7237c386`; 3 commits ahead / 0 behind main; 3 files changed. No APEX/East authorization, RLS, trust, receipt, or runtime evidence contract changed.
+- No physical iPhone run was performed. CI status was not yet returned by the PR-triggered workflow query at the time of this log entry; verify checks on PR #49 before considering review complete.
