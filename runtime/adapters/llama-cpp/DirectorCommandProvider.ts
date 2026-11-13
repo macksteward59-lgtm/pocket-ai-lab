@@ -111,7 +111,10 @@ export class LlamaCppDirectorCommandProvider implements DirectorTaskProvider {
         stop: this.config.stop,
         seed: this.config.seed,
         tools: [tool],
-        toolChoice: { type: "function", function: { name: FUNCTION_NAME } }
+        // Only one tool is registered; "required" requests a call, but the
+        // provider still rejects a prose-only response because some model
+        // templates do not enforce this hint as a hard decoding constraint.
+        toolChoice: "required"
       }, signal);
     } catch (error) {
       if (error instanceof LlamaCppInferenceError) throw error;
