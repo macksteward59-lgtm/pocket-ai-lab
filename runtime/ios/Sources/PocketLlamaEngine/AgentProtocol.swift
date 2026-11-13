@@ -134,6 +134,15 @@ public protocol RuntimeProofVerifier: Sendable {
 
 /// Fails closed unless an independently implemented verifier authenticates the runtime claim.
 public enum RuntimeReadinessEvaluator {
+    private static func parseISO8601(_ value: String) -> Date? {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: value) { return date }
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return standard.date(from: value)
+    }
+
     public static func evaluate(_ proof: RuntimeSessionProof?,
                                 expectedModelId: String,
                                 expectedModelFileSHA256: String,
@@ -145,7 +154,7 @@ public enum RuntimeReadinessEvaluator {
               proof.modelFileSHA256.range(of: "^[a-fA-F0-9]{64}$", options: .regularExpression) != nil,
               !proof.sessionId.isEmpty, !proof.runtimeBuildId.isEmpty,
               !proof.keyId.isEmpty, !proof.signature.isEmpty,
-              let expiry = ISO8601DateFormatter().date(from: proof.expiresAt) else {
+              let expiry = Self.parseISO8601(proof.expiresAt) else {
             return .unavailable
         }
         guard expiry > now else { return .expired }
