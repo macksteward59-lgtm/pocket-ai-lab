@@ -121,7 +121,10 @@ export class DirectorCommandRouter {
 /** Public validator is useful to provider adapters before dispatch. */
 export function parseDirectorCommand(input: unknown): DirectorCommand {
   if (!isRecord(input) || typeof input.kind !== "string") throw new Error("Director command must be a structured object");
-  const allowedFields: readonly string[] = DIRECTOR_COMMAND_FIELDS[input.kind as keyof typeof DIRECTOR_COMMAND_FIELDS];
+  const hasCommandContract = Object.prototype.hasOwnProperty.call(DIRECTOR_COMMAND_FIELDS, input.kind);
+  const allowedFields: readonly string[] | undefined = hasCommandContract
+    ? DIRECTOR_COMMAND_FIELDS[input.kind as keyof typeof DIRECTOR_COMMAND_FIELDS]
+    : undefined;
   if (allowedFields && Object.keys(input).some(key => !allowedFields.includes(key))) {
     throw new Error("Director command contains fields outside the selected command contract");
   }
