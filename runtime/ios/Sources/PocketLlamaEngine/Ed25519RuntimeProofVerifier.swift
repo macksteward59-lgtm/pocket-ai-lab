@@ -52,10 +52,10 @@ public actor Ed25519RuntimeProofVerifier: RuntimeProofVerifier {
     private var acceptedSessions: [String: (keyId: String, generation: Int)] = [:]
 
     public init(trustedKeys: [RuntimeProofTrustedKey]) {
-        self.trustedKeys = Dictionary(
-            trustedKeys.map { ($0.keyId, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
+        let grouped = Dictionary(grouping: trustedKeys, by: \\.keyId)
+        self.trustedKeys = grouped.compactMapValues { entries in
+            entries.count == 1 ? entries.first : nil
+        }
     }
 
     public func verify(
@@ -63,18 +63,27 @@ public actor Ed25519RuntimeProofVerifier: RuntimeProofVerifier {
         expectedModelId: String,
         expectedModelFileSHA256: String
     ) async -> Bool {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        let expiry = fractional.date(from: proof.expiresAt) ?? standard.date(from: proof.expiresAt)
+
         guard proof.protocolVersion == .v1,
               proof.algorithm == "Ed25519",
               proof.modelId == expectedModelId,
+              proof.modelFileSHA256.range(of: "^[a-fA-F0-9]{64}$", options: .regularExpression) != nil,
               proof.modelFileSHA256.lowercased() == expectedModelFileSHA256.lowercased(),
               proof.generationCounter > 0,
               !proof.sessionId.isEmpty,
+              let expiry, expiry > Date(),
               let trustedKey = trustedKeys[proof.keyId],
               trustedKey.keyId == proof.keyId,
               trustedKey.allowedRuntimeBuildIds.contains(proof.runtimeBuildId),
               let publicKey = try? Curve25519.Signing.PublicKey(rawRepresentation: trustedKey.rawPublicKey),
               let signature = Data(base64Encoded: proof.signature),
               signature.count == 64,
+              signature.base64EncodedString() == proof.signature,
               let payload = RuntimeSessionProofCanonicalizer.canonicalPayload(proof),
               publicKey.isValidSignature(signature, for: payload) else {
             return false
