@@ -36,7 +36,11 @@ A runtime proof binds:
 - monotonically increasing generation counter;
 - key ID and Ed25519 signature.
 
-A proof is only a claim until a separately injected verifier authenticates it against the expected model ID and file hash. Missing verifier, invalid signature, mismatched model/hash, malformed fields, verifier errors, or expired proof all fail closed. This change defines the verifier interface only; it does not invent a device key, signing implementation, attestation service, or verified runtime state.
+A proof is only a claim until a separately injected verifier authenticates it against the expected model ID and file hash. The native `Ed25519RuntimeProofVerifier` verifies the Ed25519 signature with a host-provisioned public-key registry, requires the key's runtime-build allowlist to contain the claimed build, and rejects unknown/ambiguous key IDs, malformed or expired proofs, model/hash substitution, invalid signatures, and non-increasing generation counters for a session. The verifier never accepts keys from a proof or model output.
+
+TypeScript and Swift share a canonical signing representation: the UTF-8 values `pocket-ai-runtime-session-proof-v1`, protocol version, session ID, model ID, lowercase model SHA-256, runtime build ID, expiry string, generation counter, key ID, and algorithm, in that order. Every value is prefixed by a 4-byte unsigned big-endian byte length. Paired tests pin the canonical byte encoding.
+
+The current replay counter is in-memory and scoped to one verifier instance. It is a useful process-lifetime replay gate, not durable anti-replay across app restarts or verifier replacement. Production readiness still requires trusted key provisioning/rotation, durable session-generation state, and lifecycle invalidation. No private-key signer, hardware-backed key, device attestation, or production runtime key source is implemented here.
 
 ## Readiness states
 
