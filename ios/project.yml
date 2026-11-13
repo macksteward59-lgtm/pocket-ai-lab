@@ -34,6 +34,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: false
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: PocketAILab/PocketAILab.entitlements
         GENERATE_INFOPLIST_FILE: true
     dependencies:
       - package: PocketLlamaEngine
