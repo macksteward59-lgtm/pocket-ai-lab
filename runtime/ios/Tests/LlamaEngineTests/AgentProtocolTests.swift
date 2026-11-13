@@ -85,6 +85,15 @@ final class AgentProtocolTests: XCTestCase {
             expectedModelFileSHA256: unsigned.modelFileSHA256)
         XCTAssertFalse(replayAccepted)
 
+        let failingVerifier = Ed25519RuntimeProofVerifier(
+            trustedKeys: [trustedKey], replayStore: FailingRuntimeProofReplayStore()
+        )
+        let storageFailureAccepted = await failingVerifier.verify(
+            signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256
+        )
+        XCTAssertFalse(storageFailureAccepted)
+
         // Recreating the verifier must not reset replay state when the same durable
         // store is injected by the application composition root.
         let recreatedVerifier = Ed25519RuntimeProofVerifier(
@@ -198,5 +207,11 @@ private actor TestRuntimeProofReplayStore: RuntimeProofReplayStore {
         }
         accepted[sessionId] = (keyId, generationCounter)
         return true
+    }
+}
+
+private actor FailingRuntimeProofReplayStore: RuntimeProofReplayStore {
+    func accept(sessionId: String, keyId: String, generationCounter: Int) async throws -> Bool {
+        throw RuntimeProofReplayStoreError.corruptRecord
     }
 }
