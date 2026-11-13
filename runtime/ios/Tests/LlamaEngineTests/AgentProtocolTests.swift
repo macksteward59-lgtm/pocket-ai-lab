@@ -48,7 +48,8 @@ final class AgentProtocolTests: XCTestCase {
             expectedModelFileSHA256: proof.modelFileSHA256, verifier: verifier,
             now: ISO8601DateFormatter().date(from: "2026-11-13T00:00:00.000Z")!)
         XCTAssertEqual(state, .expired)
-        XCTAssertEqual(await verifier.calls, 0)
+        let calls = await verifier.calls
+        XCTAssertEqual(calls, 0)
     }
 }
 
