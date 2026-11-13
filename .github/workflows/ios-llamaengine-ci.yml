@@ -60,6 +60,8 @@ jobs:
           rm -rf runtime/ios/build/cmake-macos
           runtime/ios/scripts/build-llama-cpp.sh xcframework
           test -d runtime/ios/build/xc/llama.xcframework
+          test -d runtime/ios/build/xc/llama.xcframework/ios-arm64
+          find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
 
@@ -71,6 +73,19 @@ jobs:
             -sdk "$sdk" \
             runtime/ios/Sources/PocketLlamaEngine/LlamaEngine.swift \
             runtime/ios/Sources/PocketLlamaEngine/LlamaEngineSupport.swift
+
+      - name: Link PocketLlamaEngine for physical iOS device
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          # Generic iOS selects iphoneos/arm64. This compiles and links the
+          # Swift package and device XCFramework slices; it does not run on a phone.
+          xcodebuild build-for-testing \
+            -scheme PocketLlamaEngine \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath /tmp/pocket-derived-device \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/device-build-for-testing.log
 
       - name: Choose an iPhone simulator
         id: sim
