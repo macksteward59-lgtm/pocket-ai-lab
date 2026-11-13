@@ -1,4 +1,5 @@
 import XCTest
+import CryptoKit
 @testable import PocketLlamaEngine
 
 final class AgentProtocolTests: XCTestCase {
@@ -76,10 +77,12 @@ final class AgentProtocolTests: XCTestCase {
             keyId: unsigned.keyId, signature: signature
         )
 
-        XCTAssertTrue(await verifier.verify(signed, expectedModelId: "model-a",
-            expectedModelFileSHA256: unsigned.modelFileSHA256))
-        XCTAssertFalse(await verifier.verify(signed, expectedModelId: "model-a",
-            expectedModelFileSHA256: unsigned.modelFileSHA256))
+        let firstAccepted = await verifier.verify(signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256)
+        XCTAssertTrue(firstAccepted)
+        let replayAccepted = await verifier.verify(signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256)
+        XCTAssertFalse(replayAccepted)
 
         let nextUnsigned = RuntimeSessionProof(
             protocolVersion: .v1, sessionId: unsigned.sessionId, modelId: unsigned.modelId,
@@ -95,8 +98,9 @@ final class AgentProtocolTests: XCTestCase {
             expiresAt: nextUnsigned.expiresAt, generationCounter: 2,
             keyId: nextUnsigned.keyId, signature: nextSignature
         )
-        XCTAssertTrue(await verifier.verify(next, expectedModelId: "model-a",
-            expectedModelFileSHA256: unsigned.modelFileSHA256))
+        let nextAccepted = await verifier.verify(next, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256)
+        XCTAssertTrue(nextAccepted)
     }
 
     func testEd25519VerifierRejectsUntrustedBuildAndUnknownKey() async throws {
@@ -112,16 +116,18 @@ final class AgentProtocolTests: XCTestCase {
             expiresAt: "2030-01-01T00:00:00.000Z", generationCounter: 1,
             keyId: "trusted-key", signature: "invalid"
         )
-        XCTAssertFalse(await verifier.verify(proof, expectedModelId: "model",
-            expectedModelFileSHA256: proof.modelFileSHA256))
+        let buildAccepted = await verifier.verify(proof, expectedModelId: "model",
+            expectedModelFileSHA256: proof.modelFileSHA256)
+        XCTAssertFalse(buildAccepted)
         let unknown = RuntimeSessionProof(
             protocolVersion: .v1, sessionId: "session", modelId: "model",
             modelFileSHA256: proof.modelFileSHA256, runtimeBuildId: "approved-build",
             expiresAt: proof.expiresAt, generationCounter: 1,
             keyId: "unknown-key", signature: "invalid"
         )
-        XCTAssertFalse(await verifier.verify(unknown, expectedModelId: "model",
-            expectedModelFileSHA256: unknown.modelFileSHA256))
+        let unknownKeyAccepted = await verifier.verify(unknown, expectedModelId: "model",
+            expectedModelFileSHA256: unknown.modelFileSHA256)
+        XCTAssertFalse(unknownKeyAccepted)
     }
 
     func testExpiredProofDoesNotReachVerifier() async {
