@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/runtime-proof-verifier-mainline
+      - codex/durable-runtime-proof-replay
     paths:
       - "runtime/ios/**"
       - "ios/**"
