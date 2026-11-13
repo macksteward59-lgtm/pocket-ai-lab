@@ -82,6 +82,8 @@ describe("LlamaCppDirectorCommandProvider", () => {
       .rejects.toThrow(/not valid JSON/);
     await expect(make({ content: "", toolCalls: [toolCall(JSON.stringify({ kind: "shell", command: "unsafe" }))] }).propose(makeInput()))
       .rejects.toThrow(/unavailable command kind/);
+    await expect(make({ content: "", toolCalls: [toolCall(JSON.stringify({ kind: "research", query: "x", extra: "unexpected" }))] }).propose(makeInput()))
+      .rejects.toThrow(/outside the selected command contract/);
   });
 
   it("requires the OpenAI-compatible chat route and an explicit loaded-model alias", () => {
