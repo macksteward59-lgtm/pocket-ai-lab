@@ -137,6 +137,7 @@ export async function handleScanTelemetryUpload(
 
 function publishAnalysis(orchestrator: ReviewHost, taskId: string, recipient: string, analysis: string): void {
   orchestrator.bus.publish({
+    protocolVersion: 1,
     messageId: crypto.randomUUID(),
     taskId,
     conversationId: taskId,
@@ -152,6 +153,7 @@ function publishAnalysis(orchestrator: ReviewHost, taskId: string, recipient: st
 
 function publishViolation(orchestrator: ReviewHost, taskId: string, violation: SecurityBoundaryViolation): void {
   orchestrator.bus.publish({
+    protocolVersion: 1,
     messageId: crypto.randomUUID(),
     taskId,
     conversationId: taskId,
