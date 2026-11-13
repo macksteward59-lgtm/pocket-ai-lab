@@ -173,6 +173,15 @@ final class LlamaEngineTests: XCTestCase {
         XCTAssertThrowsError(try LlamaEngineSupport.completionContent(Data("{\"content\":\"\"}".utf8)))
     }
 
+    func testGenerationRequestRequiresUUIDIdentity() throws {
+        XCTAssertThrowsError(try LlamaEngineSupport.validateRequest(
+            GenerationRequest(requestId: "not-a-uuid", prompt: "hello", maxTokens: 8, temperature: 0)
+        ))
+        XCTAssertNoThrow(try LlamaEngineSupport.validateRequest(
+            GenerationRequest(requestId: UUID().uuidString, prompt: "hello", maxTokens: 8, temperature: 0)
+        ))
+    }
+
     func testModelAndRequestBounds() {
         XCTAssertThrowsError(try LlamaEngineSupport.validateModel(ModelDescriptor(id: " ", name: "n", path: "/m.gguf", contextLength: 512)))
         XCTAssertThrowsError(try LlamaEngineSupport.validateModel(ModelDescriptor(id: "m", name: "n", path: " ", contextLength: 512)))
