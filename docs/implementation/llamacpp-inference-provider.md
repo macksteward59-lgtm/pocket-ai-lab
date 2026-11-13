@@ -201,7 +201,7 @@ const taskRunner = new DirectorTaskRunner(directorCommandRouter, { maxSteps: 8 }
 const result = await taskRunner.run(commandProvider, { taskId }, objective);
 ```
 
-The adapter sends one required `director_command` function definition and accepts exactly one matching function call. Missing, multiple, malformed, or unexpected calls fail closed. It is non-streaming and requires `api: "openai-chat"` plus an explicit `modelAlias`; the native `/completion` API is not used for function calls.
+The adapter sends one `director_command` function definition with `tool_choice: "required"` and accepts exactly one matching function call. The required choice is a request to the model/template, not a substitute for validation: some llama.cpp template/model combinations may still return prose or no tool call. In that case, the adapter fails closed. Missing, multiple, malformed, or unexpected calls are rejected. It is non-streaming and requires `api: "openai-chat"` plus an explicit `modelAlias`; the native `/completion` API is not used for function calls.
 
 The function arguments remain untrusted proposals. `DirectorTaskRunner` checks the command kind and task-control shape, `DirectorCommandRouter` validates the command again, and capability ports independently enforce approvals. A model-generated `approvalRef` is not itself approval. Tool execution, device access, memory changes, and tool lifecycle actions still require their existing host-side authorization.
 
