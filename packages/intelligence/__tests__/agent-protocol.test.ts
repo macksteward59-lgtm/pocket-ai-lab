@@ -7,6 +7,7 @@ import {
 } from "../contracts/AgentProtocol";
 
 const proof = {
+  protocolVersion: 1,
   sessionId: "session-1",
   modelId: "qwen-local",
   modelFileSHA256: "a".repeat(64),
@@ -21,17 +22,18 @@ const proof = {
 describe("cross-runtime agent protocol", () => {
   it("accepts the stable task contract and rejects unknown fields", () => {
     expect(AgentTaskRequestSchema.parse({
-      id: "task-1", objective: "Analyze this design", requiredCapabilities: ["reasoning"]
+      protocolVersion: 1, id: "task-1", objective: "Analyze this design", requiredCapabilities: ["reasoning"]
     })).toEqual({
       id: "task-1", objective: "Analyze this design", requiredCapabilities: ["reasoning"]
     });
     expect(AgentTaskRequestSchema.safeParse({
-      id: "task-1", objective: "Analyze", requiredCapabilities: [], authorized: true
+      protocolVersion: 1, id: "task-1", objective: "Analyze", requiredCapabilities: [], authorized: true
     }).success).toBe(false);
   });
 
   it("validates the cross-platform message envelope", () => {
     expect(AgentMessageEnvelopeSchema.safeParse({
+      protocolVersion: 1,
       messageId: "00000000-0000-4000-8000-000000000001",
       taskId: "task-1",
       conversationId: "conversation-1",
