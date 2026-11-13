@@ -54,7 +54,7 @@ export class LocalProjectInspector implements ProjectInspector {
       inspected.push(relative);
       const lines = content.split(/\r?\n/);
       for (let index = 0; index < lines.length; index += 1) {
-        if (/\b(TODO|FIXME)\b/.test(lines[index])) {
+        if (findings.length < 200 && /\b(TODO|FIXME)\b/.test(lines[index])) {
           findings.push({
             id: relative + ":" + (index + 1),
             category: "optimization",
