@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - codex/runtime-proof-verifier-mainline
     paths:
       - "runtime/ios/**"
       - "ios/**"
