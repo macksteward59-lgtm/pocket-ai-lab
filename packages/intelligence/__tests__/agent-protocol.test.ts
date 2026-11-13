@@ -24,7 +24,7 @@ describe("cross-runtime agent protocol", () => {
     expect(AgentTaskRequestSchema.parse({
       protocolVersion: 1, id: "task-1", objective: "Analyze this design", requiredCapabilities: ["reasoning"]
     })).toEqual({
-      id: "task-1", objective: "Analyze this design", requiredCapabilities: ["reasoning"]
+      protocolVersion: 1, id: "task-1", objective: "Analyze this design", requiredCapabilities: ["reasoning"]
     });
     expect(AgentTaskRequestSchema.safeParse({
       protocolVersion: 1, id: "task-1", objective: "Analyze", requiredCapabilities: [], authorized: true
