@@ -53,6 +53,7 @@ export class PolicyChecker {
   private publishViolation(violation: SecurityBoundaryViolation): void {
     const sequence = this.opts.bus.getThread(this.opts.taskId).length;
     this.opts.bus.publish({
+      protocolVersion: 1,
       messageId: crypto.randomUUID(),
       taskId: this.opts.taskId,
       conversationId: this.opts.taskId,

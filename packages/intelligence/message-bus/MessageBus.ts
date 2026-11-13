@@ -29,6 +29,7 @@ const PayloadSchemas = {
 } as const;
 
 const BaseMessageSchema = z.object({
+  protocolVersion: z.literal(1),
   messageId: z.string().uuid(),
   taskId: z.string().min(1),
   conversationId: z.string().min(1),

@@ -48,11 +48,14 @@ public struct RuntimeSession: Sendable, Equatable {
 }
 
 public struct GenerationRequest: Sendable, Equatable {
+    /// Stable request identity used to prevent stale cancellation from affecting a newer decode.
+    public let requestId: String
     public let prompt: String
     public let maxTokens: Int
     public let temperature: Double
 
-    public init(prompt: String, maxTokens: Int, temperature: Double) {
+    public init(requestId: String = UUID().uuidString, prompt: String, maxTokens: Int, temperature: Double) {
+        self.requestId = requestId
         self.prompt = prompt
         self.maxTokens = maxTokens
         self.temperature = temperature
@@ -239,7 +242,12 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         guard sessions[session.id] != nil else {
             throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
-        let token = UUID()
+        guard generation[session.id] == nil else {
+            throw LlamaEngineError.invalidRequest("This runtime session already has an active generation. Cancel or finish it before starting another.")
+        }
+        guard let token = UUID(uuidString: request.requestId) else {
+            throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
+        }
         generation[session.id] = token
         let stream = AsyncThrowingStream<Token, Error> { continuation in
             let task = Task {
@@ -250,8 +258,10 @@ public actor LlamaCppMetalBackend: LlamaEngine {
                         return
                     }
                     continuation.yield(Token(text: text, isComplete: true))
+                    await self.finishGeneration(sessionId: session.id, token: token)
                     continuation.finish()
                 } catch {
+                    await self.finishGeneration(sessionId: session.id, token: token)
                     continuation.finish(throwing: error)
                 }
             }
@@ -265,7 +275,11 @@ public actor LlamaCppMetalBackend: LlamaEngine {
     }
 
     public func cancel(sessionId: String, requestId: String) async {
-        guard !requestId.isEmpty else { return }
+        guard let active = generation[sessionId],
+              active.uuidString.caseInsensitiveCompare(requestId) == .orderedSame else {
+            // A stale or unrelated request must never cancel a newer generation.
+            return
+        }
         generation[sessionId] = nil
         #if POCKET_LLAMA_LINKED
         sessions[sessionId]?.requestCancel()
@@ -283,6 +297,11 @@ public actor LlamaCppMetalBackend: LlamaEngine {
 
     private func isCurrent(_ sessionId: String, _ token: UUID) -> Bool {
         generation[sessionId] == token
+    }
+
+    private func finishGeneration(sessionId: String, token: UUID) {
+        guard generation[sessionId] == token else { return }
+        generation[sessionId] = nil
     }
 
     #if POCKET_LLAMA_LINKED

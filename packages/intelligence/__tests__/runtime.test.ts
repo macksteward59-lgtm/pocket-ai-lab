@@ -13,6 +13,7 @@ function message(
   sequence: number
 ): AgentMessage {
   return {
+    protocolVersion: 1,
     messageId: crypto.randomUUID(),
     taskId: "task-1",
     conversationId: "task-1",

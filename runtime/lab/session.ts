@@ -149,6 +149,7 @@ export async function runLabSession(options: {
         }
         const payload = { ...inference.payload };
         const message: AgentMessage = {
+          protocolVersion: 1,
           messageId: crypto.randomUUID(),
           taskId,
           conversationId: taskId,

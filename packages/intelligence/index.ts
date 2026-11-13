@@ -1,3 +1,9 @@
+export {
+  AgentTaskRequestSchema, AgentMessageEnvelopeSchema, AgentMessageTypeSchema,
+  RuntimeReadinessStateSchema, RuntimeSessionProofSchema, evaluateRuntimeReadiness,
+  type AgentTaskRequest, type AgentMessageEnvelope, type AgentMessageType,
+  type RuntimeReadinessState, type RuntimeSessionProof, type RuntimeProofVerifier
+} from "./contracts/AgentProtocol";
 export { AgentManager, CORE_AGENTS, SECURITY_SPECIALIST_TEMPLATES, type SecuritySpecialistId } from "./agents/AgentManager";
 export { MessageBus, type AgentMessage } from "./message-bus/MessageBus";
 export { ModelRegistry } from "./model-registry/ModelRegistry";

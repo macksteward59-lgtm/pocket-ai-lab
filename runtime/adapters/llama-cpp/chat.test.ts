@@ -114,6 +114,7 @@ describe("provider behavior", () => {
       agentId: "synthesizer",
       stage: "synthesis",
       contextMessages: [{
+        protocolVersion: 1,
         messageId: ID_A, taskId: "t", conversationId: "t", senderAgentId: "reasoner", recipientAgentId: "broadcast",
         messageType: "analysis", payload: { analysis: "x" }, evidenceRefs: [], createdAt: "2026-11-08T00:00:00.000Z", sequence: 0
       }]
@@ -155,6 +156,7 @@ describe("message id aliases", () => {
       stage: "revision",
       prompt: "Address these counterargument message IDs exactly: " + ID_A,
       contextMessages: [{
+        protocolVersion: 1,
         messageId: ID_A, taskId: "t", conversationId: "t", senderAgentId: "critic", recipientAgentId: "broadcast",
         messageType: "counterargument", payload: { claim: "a", objection: "b", evidenceRefs: [] }, evidenceRefs: [],
         createdAt: "2026-11-08T00:00:00.000Z", sequence: 0

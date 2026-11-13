@@ -13,6 +13,7 @@ describe("Gate 0.1 regression checks", () => {
   it("keeps published message payloads immutable", () => {
     const bus = new MessageBus();
     const message = bus.publish({
+      protocolVersion: 1,
       messageId: crypto.randomUUID(),
       taskId: "gate-0.1",
       conversationId: "gate-0.1",
@@ -24,8 +25,25 @@ describe("Gate 0.1 regression checks", () => {
       createdAt: new Date().toISOString(),
       sequence: 0
     });
+    expect(message.protocolVersion).toBe(1);
     expect(Object.isFrozen(message.payload)).toBe(true);
     expect((message.payload as { analysis: string }).analysis).toBe("proposal");
+  });
+
+  it("rejects unversioned messages instead of silently downgrading the protocol", () => {
+    const bus = new MessageBus();
+    expect(() => bus.publish({
+      messageId: crypto.randomUUID(),
+      taskId: "gate-0.1",
+      conversationId: "gate-0.1",
+      senderAgentId: "reasoner",
+      recipientAgentId: "broadcast",
+      messageType: "analysis",
+      payload: { analysis: "proposal" },
+      evidenceRefs: [],
+      createdAt: new Date().toISOString(),
+      sequence: 0
+    } as never)).toThrow();
   });
 
   it("does not claim consensus without validation", async () => {

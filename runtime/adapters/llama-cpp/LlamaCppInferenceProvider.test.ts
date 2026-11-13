@@ -31,6 +31,7 @@ function baseRequest(overrides: Partial<InferenceRequest> = {}): InferenceReques
     prompt: "Explain the trust boundary in one sentence.",
     stage: "independent",
     contextMessages: [{
+      protocolVersion: 1,
       messageId: "00000000-0000-4000-8000-000000000001",
       taskId: "task-1",
       conversationId: "task-1",
