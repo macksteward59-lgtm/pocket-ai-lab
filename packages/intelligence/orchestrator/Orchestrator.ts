@@ -150,6 +150,7 @@ export class Orchestrator {
               contextMessages: [...priorMessages]
             });
             const message: AgentMessage = {
+              protocolVersion: 1,
               messageId: crypto.randomUUID(),
               taskId: request.id,
               conversationId: request.id,
