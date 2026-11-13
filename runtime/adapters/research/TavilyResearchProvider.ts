@@ -36,7 +36,7 @@ export class TavilyResearchProvider implements ResearchProvider {
     }
     const domains = request.allowedDomains;
     if (domains !== undefined && (!Array.isArray(domains) || domains.length > 30 ||
-        domains.some(domain => typeof domain !== "string" || !/^(?:[a-z0-9-]+\\.)*[a-z0-9-]+$/i.test(domain)))) {
+        domains.some(domain => typeof domain !== "string" || !/^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i.test(domain)))) {
       throw new Error("Research domain allowlist is invalid");
     }
 
@@ -67,8 +67,8 @@ export class TavilyResearchProvider implements ResearchProvider {
       let url: URL;
       try { url = new URL(item.url); } catch { continue; }
       if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
-      const hostname = url.hostname.toLowerCase().replace(/\\.$/, "");
-      if (domains?.length && !domains.some(domain => hostname === domain.toLowerCase() ||
+      const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+        domains.some(domain => typeof domain !== "string" || !/^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i.test(domain)))) {
           hostname.endsWith("." + domain.toLowerCase()))) continue;
       const canonicalUrl = url.toString();
       sources.push({
