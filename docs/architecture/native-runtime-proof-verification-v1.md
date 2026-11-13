@@ -40,14 +40,16 @@ Each field is prefixed by its byte length encoded as an unsigned 32-bit big-endi
 3. Resolve the key ID only in the host-provisioned registry and require the runtime build ID allowlist.
 4. Decode a canonical 64-byte Base64 Ed25519 signature.
 5. Verify the signature over the canonical payload using CryptoKit.
-6. Under actor isolation, require the generation counter to be strictly greater than the last accepted counter for that session and require the same key ID for the session.
-7. Record the accepted counter only after successful signature verification.
+6. Pass the authenticated session/key/generation tuple to the injected replay store only after signature verification.
+7. The store rejects a reused/lower generation or a key change for the same session. Store errors fail closed.
 
-The verifier is safe to call concurrently within one process because its actor serializes replay-state mutation.
+`KeychainRuntimeProofReplayStore` persists the accepted key ID and generation in a device-only Keychain generic-password item using `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. Its actor serializes operations through one shared store instance, and the item survives verifier recreation and ordinary app process restarts.
+
+**Concurrency boundary:** the Keychain implementation is designed for one process-wide writer. The Keychain read/compare/update sequence is not a cross-process compare-and-swap. Do not share this store across app extensions or multiple processes until a transactional cross-process store is implemented. The app composition root must inject one shared store instance into its verifier.
 
 ## Important production gaps
 
-- Replay state is currently in-memory only. It resets when the verifier instance is recreated or the app restarts. A durable, atomic session-generation store is required before claiming restart-safe anti-replay.
+- Durable replay persistence is implemented for the single-process app model, but cross-process atomicity and session invalidation on unload/disconnect remain open. A storage failure rejects verification; there is no in-memory fallback.
 - The host must provision trusted public keys and their runtime-build allowlists from a separately authenticated source. This PR does not implement provisioning, rotation, revocation, or a trusted root.
 - No runtime private-key signer, Secure Enclave integration, hardware-backed key attestation, or device attestation is implemented.
 - The verifier is not yet wired into the app's production runtime lifecycle. Until the host supplies real trusted keys and lifecycle state, readiness remains unavailable.
