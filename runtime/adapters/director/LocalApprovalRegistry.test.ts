@@ -152,7 +152,7 @@ describe("LocalApprovalRegistry", () => {
     const registry = new LocalApprovalRegistry();
     expect(() => registry.grant({
       kind: "device-action", taskId: "task-7",
-      permission: "files.delete", actionDigest: "not-a-digest"
+      permission: "files.delete", resourceId: "file-7", actionDigest: "not-a-digest"
     })).toThrow(/SHA-256/);
   });
 });
