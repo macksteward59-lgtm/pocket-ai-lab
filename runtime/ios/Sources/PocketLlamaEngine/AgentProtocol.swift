@@ -3,11 +3,13 @@ import Foundation
 /// Wire-compatible contracts shared with packages/intelligence/contracts/AgentProtocol.ts.
 /// These types carry proposals and runtime claims only; they do not authorize actions.
 public struct AgentTaskRequest: Codable, Sendable, Equatable {
+    public let protocolVersion: Int
     public let id: String
     public let objective: String
     public let requiredCapabilities: [String]
 
-    public init(id: String, objective: String, requiredCapabilities: [String]) {
+    public init(protocolVersion: Int = 1, id: String, objective: String, requiredCapabilities: [String]) {
+        self.protocolVersion = protocolVersion
         self.id = id
         self.objective = objective
         self.requiredCapabilities = requiredCapabilities
@@ -62,6 +64,7 @@ public indirect enum AgentJSONValue: Codable, Sendable, Equatable {
 }
 
 public struct AgentMessageEnvelope: Codable, Sendable, Equatable {
+    public let protocolVersion: Int
     public let messageId: UUID
     public let taskId: String
     public let conversationId: String
@@ -74,11 +77,12 @@ public struct AgentMessageEnvelope: Codable, Sendable, Equatable {
     public let createdAt: String
     public let sequence: Int
 
-    public init(messageId: UUID, taskId: String, conversationId: String,
+    public init(protocolVersion: Int = 1, messageId: UUID, taskId: String, conversationId: String,
                 senderAgentId: String, recipientAgentId: String,
                 messageType: AgentMessageType, payload: AgentJSONValue,
                 evidenceRefs: [String] = [], parentMessageId: UUID? = nil,
                 createdAt: String, sequence: Int) {
+        self.protocolVersion = protocolVersion
         self.messageId = messageId
         self.taskId = taskId
         self.conversationId = conversationId
@@ -102,6 +106,7 @@ public enum RuntimeReadinessState: String, Codable, Sendable {
 
 /// Runtime-signed claim. Its presence is not proof until RuntimeProofVerifier authenticates it.
 public struct RuntimeSessionProof: Codable, Sendable, Equatable {
+    public let protocolVersion: Int
     public let sessionId: String
     public let modelId: String
     public let modelFileSHA256: String
@@ -112,9 +117,10 @@ public struct RuntimeSessionProof: Codable, Sendable, Equatable {
     public let signature: String
     public let algorithm: String
 
-    public init(sessionId: String, modelId: String, modelFileSHA256: String,
+    public init(protocolVersion: Int = 1, sessionId: String, modelId: String, modelFileSHA256: String,
                 runtimeBuildId: String, expiresAt: String, generationCounter: Int,
                 keyId: String, signature: String, algorithm: String = "Ed25519") {
+        self.protocolVersion = protocolVersion
         self.sessionId = sessionId
         self.modelId = modelId
         self.modelFileSHA256 = modelFileSHA256
