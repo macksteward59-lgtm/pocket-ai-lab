@@ -15,6 +15,7 @@ describe("TavilyResearchProvider", () => {
 
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.tavily.com/search");
+    expect(fetchImpl.mock.calls[0][1]?.redirect).toBe("error");
     const body = JSON.parse(String(fetchImpl.mock.calls[0][1]?.body));
     expect(body).toMatchObject({ api_key: "test-key", query: "director runtime", max_results: 3, include_domains: ["example.com"] });
     expect(result).toHaveLength(1);
@@ -27,5 +28,19 @@ describe("TavilyResearchProvider", () => {
     const provider = new TavilyResearchProvider({ apiKey: "test-key", fetchImpl });
     await expect(provider.search({ query: "   " })).rejects.toThrow(/query/);
     await expect(provider.search({ query: "valid" })).rejects.toThrow(/HTTP 503/);
+  });
+
+  it("stops a chunked response as soon as the 1 MB limit is exceeded", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(700_000));
+        controller.enqueue(new Uint8Array(300_001));
+      }
+    });
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(stream, { status: 200 }));
+    const provider = new TavilyResearchProvider({ apiKey: "test-key", fetchImpl });
+
+    await expect(provider.search({ query: "bounded response" })).rejects.toThrow(/1 MB limit/);
+    expect(fetchImpl.mock.calls[0][1]?.redirect).toBe("error");
   });
 });
