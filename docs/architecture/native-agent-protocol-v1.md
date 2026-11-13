@@ -10,9 +10,13 @@ Define one wire contract for TypeScript and native Swift agent coordination. The
 - Swift: `runtime/ios/Sources/PocketLlamaEngine/AgentProtocol.swift`
 - Cross-runtime tests: `packages/intelligence/__tests__/agent-protocol.test.ts` and `runtime/ios/Tests/LlamaEngineTests/AgentProtocolTests.swift`
 
+## Protocol version
+
+Every task, message envelope, and runtime proof carries `protocolVersion: 1`. Unknown versions must be rejected rather than guessed or silently downgraded. Version changes require paired TypeScript/Swift contract tests.
+
 ## Task request
 
-`id`, `objective`, and `requiredCapabilities` are required. Unknown task fields are rejected by the TypeScript schema. A task is a request for computation, not an authorization voucher.
+`protocolVersion`, `id`, `objective`, and `requiredCapabilities` are required. Unknown task fields are rejected by the TypeScript schema. A task is a request for computation, not an authorization voucher.
 
 ## Message envelope
 
