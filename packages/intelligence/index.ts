@@ -53,3 +53,21 @@ export { ModelRouterResiliency } from "./model-router/ModelRouterResiliency";
 export { classifyExport, watchOnce } from "./governance/watchInbox";
 export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type ImprovementAssessment, type AssessmentOptions } from "./evaluation/ImprovementEngine";
 export { normalizeProgramPolicy, ProgramPolicyError, evaluateTargetScope, evaluateProgramAction } from "./bug-bounty";
+export {
+  interpretPolicySnapshot,
+  validateInterpretationEvidence,
+  createPolicyReviewAssignments,
+  PolicyInterpretationError
+} from "./bug-bounty/interpretation";
+export type {
+  ExtractedPolicyClause,
+  InterpretationEvidenceValidation,
+  PolicyClauseKind,
+  PolicyExtractionMethod,
+  PolicyInterpretation,
+  PolicyInterpretationInput,
+  PolicyInterpretationIssue,
+  PolicyInterpretationIssueCode,
+  PolicyCandidateValue,
+  PolicyReviewAssignment
+} from "./bug-bounty/interpretation";

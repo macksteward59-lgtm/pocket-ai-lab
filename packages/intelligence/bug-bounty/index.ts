@@ -21,3 +21,22 @@ export type {
   RateLimitInput,
   TestingWindowInput
 } from "./types";
+
+export {
+  interpretPolicySnapshot,
+  validateInterpretationEvidence,
+  createPolicyReviewAssignments,
+  PolicyInterpretationError
+} from "./interpretation";
+export type {
+  ExtractedPolicyClause,
+  InterpretationEvidenceValidation,
+  PolicyClauseKind,
+  PolicyExtractionMethod,
+  PolicyInterpretation,
+  PolicyInterpretationIssue,
+  PolicyInterpretationIssueCode,
+  PolicyCandidateValue,
+  PolicyReviewAssignment
+} from "./interpretation";
+export type { PolicyInterpretationInput } from "./interpretation";
