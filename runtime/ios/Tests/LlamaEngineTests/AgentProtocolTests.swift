@@ -126,7 +126,7 @@ final class AgentProtocolTests: XCTestCase {
     }
 
     func testKeychainReplayStorePersistsAcrossStoreRecreation() async throws {
-        let service = "com.pocketailab.runtime-proof-replay.tests.\\(UUID().uuidString)"
+        let service = "com.pocketailab.runtime-proof-replay.tests.\(UUID().uuidString)"
         let cleanupQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
