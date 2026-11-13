@@ -52,7 +52,7 @@ public actor Ed25519RuntimeProofVerifier: RuntimeProofVerifier {
     private var acceptedSessions: [String: (keyId: String, generation: Int)] = [:]
 
     public init(trustedKeys: [RuntimeProofTrustedKey]) {
-        let grouped = Dictionary(grouping: trustedKeys, by: \\.keyId)
+        let grouped = Dictionary(grouping: trustedKeys, by: \.keyId)
         self.trustedKeys = grouped.compactMapValues { entries in
             entries.count == 1 ? entries.first : nil
         }
