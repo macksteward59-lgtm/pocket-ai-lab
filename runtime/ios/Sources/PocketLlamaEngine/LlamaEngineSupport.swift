@@ -56,6 +56,9 @@ public enum LlamaEngineSupport {
     }
 
     public static func validateRequest(_ request: GenerationRequest) throws {
+        guard UUID(uuidString: request.requestId) != nil else {
+            throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
+        }
         if request.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             throw LlamaEngineError.invalidRequest("Prompt is required.")
         }
