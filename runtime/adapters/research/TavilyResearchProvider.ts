@@ -7,6 +7,8 @@ export interface TavilyResearchProviderOptions {
   fetchImpl?: typeof fetch;
 }
 
+const MAX_RESPONSE_BYTES = 1_000_000;
+
 /** Fixed-origin, query-only Tavily adapter. It never accepts arbitrary request URLs. */
 export class TavilyResearchProvider implements ResearchProvider {
   private readonly apiKey: string;
@@ -36,12 +38,13 @@ export class TavilyResearchProvider implements ResearchProvider {
     }
     const domains = request.allowedDomains;
     if (domains !== undefined && (!Array.isArray(domains) || domains.length > 30 ||
-        domains.some(domain => typeof domain !== "string" || !/^(?:[a-z0-9-]+\.)*[a-z0-9-]+$/i.test(domain)))) {
+        domains.some(domain => typeof domain !== "string" || !/^(?:[a-z0-9-]+\\.)*[a-z0-9-]+$/i.test(domain)))) {
       throw new Error("Research domain allowlist is invalid");
     }
 
     const response = await this.fetchImpl("https://api.tavily.com/search", {
       method: "POST",
+      redirect: "error",
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
         api_key: this.apiKey,
@@ -54,14 +57,7 @@ export class TavilyResearchProvider implements ResearchProvider {
       signal: AbortSignal.timeout(this.timeoutMs)
     });
     if (!response.ok) throw new Error("Tavily research request failed with HTTP " + response.status);
-    const advertisedBytes = Number(response.headers.get("content-length") || 0);
-    if (Number.isFinite(advertisedBytes) && advertisedBytes > 1_000_000) {
-      throw new Error("Tavily research response exceeds the 1 MB limit");
-    }
-    const responseText = await response.text();
-    if (new TextEncoder().encode(responseText).byteLength > 1_000_000) {
-      throw new Error("Tavily research response exceeds the 1 MB limit");
-    }
+    const responseText = await readBoundedResponse(response, MAX_RESPONSE_BYTES);
     let payload: unknown;
     try { payload = JSON.parse(responseText); } catch {
       throw new Error("Tavily returned invalid JSON");
@@ -77,8 +73,8 @@ export class TavilyResearchProvider implements ResearchProvider {
           typeof item.content !== "string") continue;
       let url: URL;
       try { url = new URL(item.url); } catch { continue; }
-      if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
-      const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+      if (![ "https:", "http:" ].includes(url.protocol) || url.username || url.password) continue;
+      const hostname = url.hostname.toLowerCase().replace(/\\.$/, "");
       if (domains?.length && !domains.some(domain => hostname === domain.toLowerCase() ||
           hostname.endsWith("." + domain.toLowerCase()))) continue;
       const canonicalUrl = url.toString();
@@ -92,6 +88,42 @@ export class TavilyResearchProvider implements ResearchProvider {
     }
     return sources;
   }
+}
+
+/** Enforce the response cap while streaming, not after buffering an untrusted body. */
+async function readBoundedResponse(response: Response, maxBytes: number): Promise<string> {
+  const advertisedBytes = Number(response.headers.get("content-length") || 0);
+  if (Number.isFinite(advertisedBytes) && advertisedBytes > maxBytes) {
+    await response.body?.cancel();
+    throw new Error("Tavily research response exceeds the 1 MB limit");
+  }
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new Error("Tavily research response exceeds the 1 MB limit");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const combined = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(combined);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
