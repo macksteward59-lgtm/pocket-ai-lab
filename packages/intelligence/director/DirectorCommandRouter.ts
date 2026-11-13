@@ -174,9 +174,7 @@ export function parseDirectorCommand(input: unknown): DirectorCommand {
     case "use-device":
       requireString(input.approvalRef, "approvalRef");
       requireRecord(input.action, "action");
-      if (!["list-apps", "open-app", "inspect-storage", "read-file", "write-file", "delete-file"].includes(String(input.action.kind))) {
-        throw new Error("Unsupported device action");
-      }
+      validateDeviceActionFields(input.action);
       return input as unknown as DirectorCommand;
     default:
       throw new Error("Unsupported Director command: " + input.kind);
@@ -191,4 +189,32 @@ function requireRecord(value: unknown, name: string): asserts value is Record<st
 }
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateDeviceActionFields(action: Record<string, unknown>): void {
+  if (typeof action.kind !== "string") throw new Error("Unsupported device action");
+  let allowed: readonly string[];
+  switch (action.kind) {
+    case "list-apps":
+    case "inspect-storage":
+      allowed = ["kind"];
+      break;
+    case "open-app":
+      allowed = ["kind", "appId"];
+      break;
+    case "read-file":
+      allowed = ["kind", "fileId"];
+      break;
+    case "write-file":
+      allowed = ["kind", "fileId", "content"];
+      break;
+    case "delete-file":
+      allowed = ["kind", "fileId", "confirmDestructive"];
+      break;
+    default:
+      throw new Error("Unsupported device action");
+  }
+  if (Object.keys(action).some(key => !allowed.includes(key))) {
+    throw new Error("Device action contains fields outside its selected action contract");
+  }
 }
