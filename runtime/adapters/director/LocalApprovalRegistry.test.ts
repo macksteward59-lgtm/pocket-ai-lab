@@ -15,7 +15,7 @@ describe("LocalApprovalRegistry", () => {
       actionDigest: digestA
     });
 
-    expect(registry.verify({
+    expect(registry.authorize({
       approvalRef, taskId: "task-1", permission: "files.write",
       resourceId: "file-7", actionDigest: digestA
     })).toBe(true);
