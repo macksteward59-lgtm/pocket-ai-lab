@@ -7,7 +7,7 @@ import {
 } from "../contracts/AgentProtocol";
 
 const proof = {
-  protocolVersion: 1,
+  protocolVersion: 1 as const,
   sessionId: "session-1",
   modelId: "qwen-local",
   modelFileSHA256: "a".repeat(64),
