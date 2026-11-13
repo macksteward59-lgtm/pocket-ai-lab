@@ -29,7 +29,7 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: Connect to a Pocket AI Lab workspace hosted on your trusted local network.
         INFOPLIST_KEY_UIFileSharingEnabled: true
         INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: true
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "5.0"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: false
@@ -51,6 +51,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal.tests
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "5.0"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         GENERATE_INFOPLIST_FILE: true
