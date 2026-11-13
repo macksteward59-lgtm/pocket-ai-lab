@@ -16,6 +16,13 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertNotEqual(URL(fileURLWithPath: "/tmp/model.gguf.zip").pathExtension.lowercased(), "gguf")
     }
 
+    func testRuntimeTrustRemainsUnverifiedUntilTrustedLeaseIntegrationExists() {
+        XCTAssertEqual(RuntimeTrustPresentation.stateLabel, "Unverified")
+        XCTAssertFalse(RuntimeTrustPresentation.isVerified)
+        XCTAssertTrue(RuntimeTrustPresentation.detail.contains("server-issued runtime lease"))
+        XCTAssertTrue(RuntimeTrustPresentation.statusMessage(after: "Model loaded").contains("Runtime trust remains unverified"))
+    }
+
     func testKeychainReplayStorePersistsAcrossStoreRecreation() async throws {
         let service = "com.pocketailab.runtime-proof-replay.tests.\(UUID().uuidString)"
         let cleanupQuery: [String: Any] = [
@@ -53,5 +60,4 @@ final class PocketAILabTests: XCTestCase {
         )
         XCTAssertFalse(staleGenerationAccepted)
     }
-
 }
