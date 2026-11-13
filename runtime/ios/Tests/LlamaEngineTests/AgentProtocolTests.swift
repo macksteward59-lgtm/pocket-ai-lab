@@ -128,6 +128,26 @@ final class AgentProtocolTests: XCTestCase {
         let unknownKeyAccepted = await verifier.verify(unknown, expectedModelId: "model",
             expectedModelFileSHA256: unknown.modelFileSHA256)
         XCTAssertFalse(unknownKeyAccepted)
+
+        let expired = RuntimeSessionProof(
+            protocolVersion: .v1, sessionId: "expired-session", modelId: "model",
+            modelFileSHA256: proof.modelFileSHA256, runtimeBuildId: "approved-build",
+            expiresAt: "2020-01-01T00:00:00.000Z", generationCounter: 1,
+            keyId: "trusted-key", signature: Data(repeating: 0, count: 64).base64EncodedString()
+        )
+        let expiredAccepted = await verifier.verify(expired, expectedModelId: "model",
+            expectedModelFileSHA256: expired.modelFileSHA256)
+        XCTAssertFalse(expiredAccepted)
+
+        let forged = RuntimeSessionProof(
+            protocolVersion: .v1, sessionId: "forged-session", modelId: "model",
+            modelFileSHA256: proof.modelFileSHA256, runtimeBuildId: "approved-build",
+            expiresAt: "2030-01-01T00:00:00.000Z", generationCounter: 1,
+            keyId: "trusted-key", signature: Data(repeating: 0, count: 64).base64EncodedString()
+        )
+        let forgedAccepted = await verifier.verify(forged, expectedModelId: "model",
+            expectedModelFileSHA256: forged.modelFileSHA256)
+        XCTAssertFalse(forgedAccepted)
     }
 
     func testExpiredProofDoesNotReachVerifier() async {
