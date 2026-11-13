@@ -94,6 +94,8 @@ describe("DirectorTaskRunner", () => {
       research: async query => [{
         id: query,
         title: "x".repeat(1_500),
+        url: "https://example.com/source",
+        retrievedAt: new Date(0).toISOString(),
         accessToken: "do-not-forward",
         excerpt: "y".repeat(8_000)
       }]
