@@ -10,7 +10,9 @@ function setup(opts: { approvalVerifier?: ApprovalVerifier; maxTeamSize?: number
   const agents = new AgentManager();
   CORE_AGENTS.forEach(agent => agents.registerPermanent(agent));
   const gate = new DelegationGate({ verifier: { verify: v => v.signature === "valid" }, now: () => T0 });
-  const division = new SecurityDivision({ agents, gate, ...opts });
+  const toolRegistry = opts.toolRegistry ?? new ToolRegistry();
+  toolRegistry.list().forEach(tool => toolRegistry.declareAvailable(tool.id));
+  const division = new SecurityDivision({ agents, gate, ...opts, toolRegistry });
   return { agents, gate, division };
 }
 
@@ -125,6 +127,18 @@ describe("security division", () => {
     expect(decision.reason).toMatch(/may not request/);
   });
 
+
+  it("denies tools whose host adapters are not installed", async () => {
+    const registry = new ToolRegistry();
+    const { division } = setup({ toolRegistry: registry });
+    const team = await division.assemble("task-1", "Analyze the binary for static analysis issues");
+    const member = team.members.find(m => m.templateId === "reverse-engineering")!;
+    registry.declareUnavailable("ghidra");
+    const decision = await division.requestToolUse(team, member.agentId, "ghidra", "scope-1", voucherFor(member.agentId, { tool: "ghidra" }));
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toMatch(/not installed or available/);
+  });
+
   it("denies an unknown tool without consulting the gate", async () => {
     const { division } = setup();
     const team = await division.assemble("task-1", ENTRA_TASK);
@@ -142,9 +156,11 @@ describe("security division", () => {
       mode: "active",
       specialists: ["identity-security"]
     };
+    const activeRegistry = new ToolRegistry([activeOnly]);
+    activeRegistry.declareAvailable("gated-review");
     const { division } = setup({
       approvalVerifier: { verify: (taskId, ref) => taskId === "task-1" && ref === "tool-approval" },
-      toolRegistry: new ToolRegistry([activeOnly])
+      toolRegistry: activeRegistry
     });
     const team = await division.assemble("task-1", "Review OAuth and OIDC flows");
     const identity = team.members.find(m => m.templateId === "identity-security")!;

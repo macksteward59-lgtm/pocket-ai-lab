@@ -33,8 +33,13 @@ export type {
   LlamaCppBackend,
   LlamaCppCompletionParams,
   LlamaCppCompletionResult,
-  LlamaCppServerInfo
+  LlamaCppServerInfo,
+  LlamaCppFunctionTool,
+  LlamaCppToolChoice,
+  LlamaCppToolCall
 } from "./backend";
 export { buildLlamaCppMessages, buildLlamaCppPrompt } from "./prompt";
 export type { LlamaCppChatMessage, LlamaCppPromptOptions } from "./prompt";
 export { HttpLlamaCppBackend } from "./httpBackend";
+
+export { LlamaCppDirectorCommandProvider } from "./DirectorCommandProvider";

@@ -148,6 +148,9 @@ export class SecurityDivision {
     if (!this.tools.mayRequest(member.templateId, tool)) {
       return this.gate.recordDenial(request, member.templateId + " may not request " + tool);
     }
+    if (!this.tools.isAvailable(tool)) {
+      return this.gate.recordDenial(request, "Tool is not installed or available: " + tool);
+    }
 
     if (descriptor.mode === "active") {
       const approved = await this.isApproved(team.taskId, toolApprovalRef);

@@ -11,6 +11,10 @@ import { DeliberationEngine, DeliberationStage } from "../deliberation/Deliberat
 import { MemoryManager } from "../memory/MemoryManager";
 import { DelegationGate } from "../security/delegation";
 import { SecurityDivision, type ApprovalVerifier } from "../security/SecurityDivision";
+import { ToolRegistry } from "../security/tools";
+import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVerifier, type ToolArtifactStore } from "../tooling/ToolDirector";
+import { DirectorCommandRouter, type DirectorCommandProvider } from "../director/DirectorCommandRouter";
+import { DirectorCapabilities, type ResearchProvider, type ProjectInspector, type MemoryImprovementAdvisor, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge } from "../director/DirectorCapabilities";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
 
 export interface TaskRequest {
@@ -83,7 +87,14 @@ export class Orchestrator {
    * injects a verifier. This object does not set `authorized`.
    */
   readonly security: SecurityDivision;
+  /** Director-managed tool lifecycle; generated code remains gated and non-executable here. */
+  readonly tooling: ToolDirector;
+  /** Research, project analysis, memory evolution, and permissioned device capabilities. */
+  readonly capabilities: DirectorCapabilities;
+  /** Strict allowlisted structured-command bridge for model/provider adapters. */
+  readonly directorCommands: DirectorCommandRouter;
   private readonly inference: InferenceProvider;
+  private readonly directorCommandProvider?: DirectorCommandProvider;
 
   constructor(opts: {
     inference: InferenceProvider;
@@ -97,6 +108,20 @@ export class Orchestrator {
     delegationGate?: DelegationGate;
     /** Human-approval check for operational-intent tasks. Absent means those tasks are refused. */
     approvalVerifier?: ApprovalVerifier;
+    /** Optional host adapters for Director-managed tool development and validation. */
+    toolRegistry?: ToolRegistry;
+    toolBuilder?: ToolBuilder;
+    toolSandbox?: ToolSandbox;
+    toolApprovalVerifier?: ToolApprovalVerifier;
+    toolArtifactStore?: ToolArtifactStore;
+    researchProvider?: ResearchProvider;
+    projectInspector?: ProjectInspector;
+    memoryImprovementAdvisor?: MemoryImprovementAdvisor;
+    memoryChangeApproval?: MemoryChangeApproval;
+    devicePermissionBroker?: DevicePermissionBroker;
+    deviceBridge?: DeviceBridge;
+    /** Optional model-native structured tool-call adapter for Director commands. */
+    directorCommandProvider?: DirectorCommandProvider;
   }) {
     if (!opts?.inference || typeof opts.inference.generate !== "function") {
       throw new Error("A real InferenceProvider must be supplied; placeholder inference is disabled");
@@ -105,14 +130,34 @@ export class Orchestrator {
       throw new Error("A live resource provider must be supplied");
     }
     this.inference = opts.inference;
+    this.directorCommandProvider = opts.directorCommandProvider;
     this.router = new ModelRouter(opts.getResources);
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
     this.memory = opts.memory ?? new MemoryManager();
+    this.capabilities = new DirectorCapabilities({
+      memory: this.memory,
+      research: opts.researchProvider,
+      projectInspector: opts.projectInspector,
+      memoryAdvisor: opts.memoryImprovementAdvisor,
+      memoryApproval: opts.memoryChangeApproval,
+      devicePermissionBroker: opts.devicePermissionBroker,
+      deviceBridge: opts.deviceBridge
+    });
     CORE_AGENTS.forEach(agent => this.agents.registerPermanent(agent));
+    const toolRegistry = opts.toolRegistry ?? new ToolRegistry();
+    this.tooling = new ToolDirector({
+      registry: toolRegistry,
+      builder: opts.toolBuilder,
+      sandbox: opts.toolSandbox,
+      approvalVerifier: opts.toolApprovalVerifier,
+      store: opts.toolArtifactStore
+    });
+    this.directorCommands = new DirectorCommandRouter(this.capabilities, this.tooling);
     this.security = new SecurityDivision({
       agents: this.agents,
       gate: opts.delegationGate ?? new DelegationGate(),
-      approvalVerifier: opts.approvalVerifier
+      approvalVerifier: opts.approvalVerifier,
+      toolRegistry
     });
   }
 
@@ -194,6 +239,15 @@ export class Orchestrator {
       consensus: deliberation.consensus,
       notes: deliberation.notes
     };
+  }
+
+  /**
+   * Ask the configured provider adapter for one structured Director command.
+   * Model output is untrusted and must pass the finite command validator.
+   */
+  requestDirectorCommand(taskId: string, objective: string): Promise<unknown> {
+    if (!this.directorCommandProvider) throw new Error("Director command provider is not configured");
+    return this.directorCommands.requestAndDispatch(this.directorCommandProvider, { taskId }, objective);
   }
 
   /**

@@ -23,6 +23,9 @@ export { SkillRegistry, type Skill, type SkillLayer } from "./skills/SkillRegist
 export { createDefaultSkillRegistry, SKILL_CATALOG } from "./skills/catalog";
 export { DYNAMIC_SPECIALIST_CATALOG, type DynamicSpecialistId } from "./agents/specialists/dynamicCatalog";
 export { ToolRegistry, TOOL_CATALOG, type ToolDescriptor, type ToolMode } from "./security/tools";
+export { DirectorCommandRouter, parseDirectorCommand, DIRECTOR_COMMAND_KINDS, type DirectorCommand, type DirectorCommandContext, type DirectorCommandProvider } from "./director/DirectorCommandRouter";
+export { DirectorCapabilities, type ResearchProvider, type ResearchRequest, type ResearchSource, type ProjectInspector, type ProjectAnalysis, type ProjectFinding, type MemoryImprovementAdvisor, type MemoryImprovementProposal, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge, type DeviceAction, type DevicePermission, type DeviceApproval } from "./director/DirectorCapabilities";
+export { ToolDirector, InMemoryToolArtifactStore, type ToolBuildSpec, type ToolArtifact, type ToolArtifactStatus, type ToolChangeKind, type ToolBuilder, type ToolSandbox, type ToolTestSummary, type ToolApprovalVerifier, type ToolArtifactStore } from "./tooling/ToolDirector";
 export { APEX_POLICY, FORBIDDEN_AGENT_ACTIONS, evaluatePolicy, type AgentAction, type PolicyRule } from "./policies/apexPolicies";
 export {
   buildEvidenceReport, renderEvidenceReportMarkdown, EvidenceReportError,
@@ -58,3 +61,6 @@ export { GOVERNANCE_ADVISORY_INVARIANT, specialistPrompt, withGovernanceInvarian
 export { ModelRouterResiliency } from "./model-router/ModelRouterResiliency";
 export { classifyExport, watchOnce } from "./governance/watchInbox";
 export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type ImprovementAssessment, type AssessmentOptions } from "./evaluation/ImprovementEngine";
+
+export { createDirectorTaskRuntime, type DirectorTaskRuntime, type DirectorTaskRuntimeOptions } from "./director/createDirectorTaskRuntime";
+export { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskHistoryEntry, type DirectorTaskRunnerOptions } from "./director/DirectorTaskRunner";

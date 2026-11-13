@@ -46,6 +46,7 @@ export const TOOL_CATALOG: ToolDescriptor[] = [
 export class ToolRegistry {
   private readonly tools = new Map<string, ToolDescriptor>();
   private readonly available = new Set<string>();
+  private readonly managed = new Set<string>();
 
   constructor(catalog: ToolDescriptor[] = TOOL_CATALOG) {
     for (const tool of catalog) {
@@ -71,6 +72,35 @@ export class ToolRegistry {
   /** Whether this specialist template may request the tool. Says nothing about permission to use it. */
   mayRequest(specialist: SecuritySpecialistId, toolId: string): boolean {
     return this.tools.get(toolId)?.specialists.includes(specialist) ?? false;
+  }
+
+  /** Registers metadata for a Director-built tool. This never installs or executes code. */
+  registerManaged(tool: ToolDescriptor): void {
+    if (!tool.id?.trim()) throw new Error("Tool id is required");
+    if (this.tools.has(tool.id)) throw new Error("Tool already registered: " + tool.id);
+    this.tools.set(tool.id, { ...tool, specialists: [...tool.specialists] });
+    this.managed.add(tool.id);
+  }
+
+  /** Updates only tools created through registerManaged; built-in catalog entries are protected. */
+  replaceManaged(tool: ToolDescriptor): void {
+    if (!this.managed.has(tool.id)) throw new Error("Tool is not Director-managed: " + tool.id);
+    this.tools.set(tool.id, { ...tool, specialists: [...tool.specialists] });
+    // A new active artifact digest is not the previously installed adapter.
+    // The host must re-install or re-verify the replacement before use.
+    this.available.delete(tool.id);
+  }
+
+  isManaged(id: string): boolean {
+    return this.managed.has(id);
+  }
+
+  /** Removes only Director-managed metadata, never built-in catalog entries. */
+  unregisterManaged(id: string): boolean {
+    if (!this.managed.has(id)) return false;
+    this.managed.delete(id);
+    this.available.delete(id);
+    return this.tools.delete(id);
   }
 
   /** Host calls this after detecting an installation. No tool is available by default. */
