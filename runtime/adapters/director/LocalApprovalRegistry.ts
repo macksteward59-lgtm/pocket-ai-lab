@@ -187,9 +187,16 @@ function normalizeScope(scope: LocalApprovalScope): LocalApprovalScope {
         version: scope.version,
         digest: requireDigest(scope.digest, "digest")
       };
-    case "device-action":
+    case "device-action": {
       if (!["apps.list", "apps.open", "storage.inspect", "files.read", "files.write", "files.delete"].includes(scope.permission)) {
         throw new Error("Invalid device permission");
+      }
+      const resourceRequired = ["apps.open", "files.read", "files.write", "files.delete"].includes(scope.permission);
+      if (resourceRequired && scope.resourceId === undefined) {
+        throw new Error("This device permission requires an exact resourceId");
+      }
+      if (!resourceRequired && scope.resourceId !== undefined) {
+        throw new Error("This device permission does not accept a resourceId");
       }
       return {
         kind: "device-action",
@@ -198,6 +205,7 @@ function normalizeScope(scope: LocalApprovalScope): LocalApprovalScope {
         ...(scope.resourceId === undefined ? {} : { resourceId: requireText(scope.resourceId, "resourceId", 512) }),
         actionDigest: requireDigest(scope.actionDigest, "actionDigest")
       };
+    }
     default:
       throw new Error("Unsupported approval scope");
   }
