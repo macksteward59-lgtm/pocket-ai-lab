@@ -55,4 +55,25 @@ describe("ModelRouter reservation leases", () => {
     await expect(router.route("reasoner", model("shared", 256), ["reason"]))
       .rejects.toThrow(/invalid loaded-model list/);
   });
+
+  it("forceDropReservation clears all route leases without partial release", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 512, loadedModels: [] }));
+
+    await router.route("reasoner", model("shared", 512), ["reason"]);
+    await router.route("researcher", model("shared", 512), ["reason"]);
+    expect(router.getLoadedModels()).toEqual(["shared"]);
+
+    // Admin drop must not leave a half-open lease count.
+    router.forceDropReservation("shared");
+    expect(router.getLoadedModels()).toEqual([]);
+
+    // Subsequent per-route releases are no-ops once the reservation is gone.
+    router.release("shared");
+    router.release("shared");
+    expect(router.getLoadedModels()).toEqual([]);
+
+    await expect(router.route("engineer", model("other", 128), ["reason"])).resolves.toMatchObject({
+      id: "other"
+    });
+  });
 });

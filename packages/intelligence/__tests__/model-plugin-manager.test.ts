@@ -104,7 +104,7 @@ describe("ModelPluginManager", () => {
     const manager = new ModelPluginManager({ registry, fetcher: countingFetcher });
     const src = { type: "local-file" as const, path: "/x.gguf" };
     await expect(manager.addModel({ id: "", name: "n", contextLength: 1, capabilities: ["a"], source: src })).rejects.toThrow(/id is required/);
-    await expect(manager.addModel({ id: "x", name: "", contextLength: 1, capabilities: ["a"], source: src })).rejects.toThrow(/name is required/);
+    await expect(manager.addModel({ id: "x", name: "n", contextLength: 1, capabilities: ["a"], source: src })).rejects.toThrow(/name is required/);
     await expect(manager.addModel({ id: "x", name: "n", contextLength: 0, capabilities: ["a"], source: src })).rejects.toThrow(/contextLength/);
     await expect(manager.addModel({ id: "x", name: "n", contextLength: 1, capabilities: [], source: src })).rejects.toThrow(/capability/);
     expect(fetcherCalls).toBe(0);
@@ -132,11 +132,38 @@ describe("ModelPluginManager", () => {
 
       await expect(manager.replaceModel("local-llama", baseInput(filePath, "local-llama")))
         .rejects.toThrow(/currently loaded/);
-      
 
       const replaced = await manager.replaceModel("local-llama", baseInput(filePath, "local-llama"), { confirmReplaceLoaded: true });
       expect(replaced.id).toBe("local-llama");
       expect(router.getLoadedModels()).not.toContain("local-llama");
+    }));
+
+  it("confirmed remove with concurrent routes drops the full reservation, not one lease", async () =>
+    withGgufFile(1024, async filePath => {
+      const registry = new ModelRegistry();
+      const router = new ModelRouter(() => ({ availableMemoryMB: 512, loadedModels: [] }));
+      const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
+      await manager.addModel({ ...baseInput(filePath), memoryEstimateMB: 512 });
+
+      await router.route("agent-1", registry.get("local-llama")!, []);
+      await router.route("agent-2", registry.get("local-llama")!, []);
+      expect(router.getLoadedModels()).toEqual(["local-llama"]);
+
+      // Confirmed admin remove must not leave a half-open lease that a later
+      // route release would incorrectly free while another consumer still ran.
+      expect(manager.removeModel("local-llama", { confirmReplaceLoaded: true })).toBe(true);
+      expect(registry.has("local-llama")).toBe(false);
+      expect(router.getLoadedModels()).toEqual([]);
+
+      // Memory is fully available again for a different model.
+      await expect(router.route("agent-3", {
+        id: "other",
+        name: "other",
+        path: "/models/other.gguf",
+        contextLength: 2048,
+        capabilities: ["reason"],
+        memoryEstimateMB: 128
+      }, ["reason"])).resolves.toMatchObject({ id: "other" });
     }));
 
   it("refuses replaceModel for an id that was never registered", async () =>

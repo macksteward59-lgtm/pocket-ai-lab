@@ -90,6 +90,16 @@ export class ModelRouter {
     if (reservation.activeRoutes <= 0) this.reservations.delete(modelId);
   }
 
+  /**
+   * Drops the entire reservation for a model, regardless of active route count.
+   * Intended only for confirmed admin replace/remove where the caller has already
+   * acknowledged that in-flight requests against the model may fail. Must not be
+   * used as a substitute for a normal per-route release().
+   */
+  forceDropReservation(modelId: string): void {
+    this.reservations.delete(modelId);
+  }
+
   /** Models for which this router currently holds an in-flight memory reservation. */
   getLoadedModels(): string[] {
     return [...this.reservations.keys()];
