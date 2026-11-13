@@ -54,7 +54,18 @@ export class TavilyResearchProvider implements ResearchProvider {
       signal: AbortSignal.timeout(this.timeoutMs)
     });
     if (!response.ok) throw new Error("Tavily research request failed with HTTP " + response.status);
-    const payload: unknown = await response.json();
+    const advertisedBytes = Number(response.headers.get("content-length") || 0);
+    if (Number.isFinite(advertisedBytes) && advertisedBytes > 1_000_000) {
+      throw new Error("Tavily research response exceeds the 1 MB limit");
+    }
+    const responseText = await response.text();
+    if (new TextEncoder().encode(responseText).byteLength > 1_000_000) {
+      throw new Error("Tavily research response exceeds the 1 MB limit");
+    }
+    let payload: unknown;
+    try { payload = JSON.parse(responseText); } catch {
+      throw new Error("Tavily returned invalid JSON");
+    }
     if (!isRecord(payload) || !Array.isArray(payload.results)) {
       throw new Error("Tavily returned an invalid research response");
     }
