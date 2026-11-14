@@ -221,7 +221,11 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
             return CrossFileAnalysisReport(parser_status="syntax-error", files_analyzed=len(files),
                 authorized=False, executes=False,
                 limitations=["At least one submitted file could not be parsed; no cross-file conclusion is produced."])
-        count = sum(1 for _ in ast.walk(tree))
+        count = 0
+        for _ in ast.walk(tree):
+            count += 1
+            if count > _MAX_NODES_PER_FILE:
+                break
         if count > _MAX_NODES_PER_FILE:
             return CrossFileAnalysisReport(parser_status="unsupported", files_analyzed=len(files),
                 nodes_visited=total_nodes, authorized=False, executes=False,
@@ -237,7 +241,12 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
         return CrossFileAnalysisReport(parser_status="truncated", files_analyzed=len(files),
             nodes_visited=total_nodes, authorized=False, executes=False,
             limitations=["Import graph exceeds the 500-edge budget."])
-    summaries = _function_summaries(files)
+    try:
+        summaries = _function_summaries(files)
+    except (RecursionError, MemoryError):
+        return CrossFileAnalysisReport(parser_status="unsupported", files_analyzed=len(files),
+            nodes_visited=total_nodes, authorized=False, executes=False,
+            limitations=["Function-summary traversal exceeded a safe recursion or memory bound."])
     observations: list[CrossFileObservation] = []
     seen: set[tuple[str, int, str, int, str]] = set()
     analysis_partial = bool(unresolved)
@@ -327,8 +336,13 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
                     if isinstance(nested, list): process_scope(path, nested)
                 for handler in getattr(statement, "handlers", []): process_scope(path, handler.body)
                 for case in getattr(statement, "cases", []): process_scope(path, case.body)
-    for path, item in files.items():
-        process_scope(path, item.tree.body)
+    try:
+        for path, item in files.items():
+            process_scope(path, item.tree.body)
+    except (RecursionError, MemoryError):
+        return CrossFileAnalysisReport(parser_status="unsupported", files_analyzed=len(files),
+            nodes_visited=total_nodes, authorized=False, executes=False,
+            limitations=["Cross-file flow traversal exceeded a safe recursion or memory bound."])
     analysis_partial = analysis_partial or len(observations) >= _MAX_SIGNALS
     return CrossFileAnalysisReport(
         parser_status="partial" if analysis_partial else "parsed",
