@@ -93,6 +93,7 @@ describe("FileToolArtifactStore", () => {
     const outside = await temporaryRoot();
     const directory = path.join(root, artifact.toolId);
     await mkdir(directory);
+    if (process.platform !== "win32") await chmod(directory, 0o700);
     const outsideFile = path.join(outside, "1.json");
     await writeFile(outsideFile, JSON.stringify(artifact));
     await symlink(outsideFile, path.join(directory, "1.json"));
@@ -104,6 +105,7 @@ describe("FileToolArtifactStore", () => {
     const root = await temporaryRoot();
     const directory = path.join(root, artifact.toolId);
     await mkdir(directory);
+    if (process.platform !== "win32") await chmod(directory, 0o700);
     await writeFile(path.join(directory, "1.json"), "{broken");
     if (process.platform !== "win32") await chmod(path.join(directory, "1.json"), 0o600);
     const store = new FileToolArtifactStore(root);
