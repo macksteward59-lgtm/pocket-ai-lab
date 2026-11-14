@@ -45,7 +45,7 @@ _MAX_AST_NODES = 20_000
 _MAX_SIGNALS = 100
 _LIMITATIONS = [
     "Interprocedural summaries are bounded to local Python functions in one file and simple name-based argument propagation.",
-    "Branches and loops are partial; recursion, dynamic dispatch, attributes, containers, aliases, reflection, frameworks, and sanitizers are incomplete or unsupported.",
+    "The analysis of branches and loops is partial; recursion, dynamic dispatch, attributes, containers, aliases, reflection, frameworks, and sanitizers are incomplete or unsupported.",
     "A source-to-sink signal is a review lead, not proof of exploitability or a vulnerability.",
     "Absence of a signal does not establish that the source is safe.",
 ]
