@@ -46,7 +46,7 @@ export class SourceResearchPipeline {
       truncated: analysis.truncated
     });
     const sourceLines = input.source.split(/\r\n|\n|\r/);
-    const boundFlows = analysis.dataFlows.signals.map(signal => {
+    const boundRoutes = analysis.authorizationSurface.routes.map(route => {\n      if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||\n          sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {\n        throw new Error("Authorization route provenance does not exactly match submitted source lines");\n      }\n      return Object.freeze({ ...route, filename: input.filename, sourceSha256: evidence.sourceSha256,\n        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" + encodeURIComponent(input.filename) + "#L" + route.line,\n        status: "unverified" as const });\n    });\n    const boundFlows = analysis.dataFlows.signals.map(signal => {
       if (!Number.isSafeInteger(signal.sourceLine) || signal.sourceLine < 1 ||
           signal.sourceLine > sourceLines.length || !Number.isSafeInteger(signal.sinkLine) ||
           signal.sinkLine < 1 || signal.sinkLine > sourceLines.length ||
