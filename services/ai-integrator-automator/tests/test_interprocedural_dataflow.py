@@ -51,3 +51,17 @@ def handler():
     report = analyze_python_dataflow(source)
     assert report.parser_status == "unsupported"
     assert not [signal for signal in report.signals if signal.analysis_scope == "interprocedural"]
+
+def test_helper_call_in_return_expression_is_followed():
+    source = """def inner(value):
+    return eval(value)
+
+def handler():
+    item = request.args.get("q")
+    return inner(item)
+"""
+    report = analyze_python_dataflow(source)
+    cross = [signal for signal in report.signals if signal.analysis_scope == "interprocedural"]
+    assert len(cross) == 1
+    assert cross[0].sink_line == 2
+    assert cross[0].source_line == 5
