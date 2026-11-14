@@ -250,6 +250,43 @@ final class ModelPoolTests: XCTestCase {
         try await pool.unload(modelId: "second")
     }
 
+    func testWrongRuntimeSessionKeepsReservationUntilRejectedSessionUnloads() async throws {
+        let engine = BlockingUnloadPoolTestEngine(returnedModelIdOverride: "unexpected")
+        let configuration = try ModelPoolConfiguration(
+            maxResidentMemoryMB: 512,
+            maxLoadedModels: 2,
+            minimumFreeMemoryMB: 64
+        )
+        let pool = ModelPool(engine: engine, configuration: configuration, availableMemoryMB: { 512 })
+        let firstAcquire = Task {
+            try await pool.acquire(model: model("expected"), estimatedMemoryMB: 400)
+        }
+        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+
+        let duringUnload = await pool.snapshot()
+        XCTAssertEqual(duringUnload.unloadingModelIDs, ["expected"])
+        XCTAssertEqual(duringUnload.reservedMemoryMB, 400)
+        do {
+            _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 200)
+            XCTFail("Unexpected native session memory must remain reserved until unload returns")
+        } catch ModelPoolError.insufficientMemory(let required, let available) {
+            XCTAssertEqual(required, 200)
+            XCTAssertEqual(available, 112)
+        }
+
+        await engine.finishUnloading()
+        do {
+            _ = try await firstAcquire.value
+            XCTFail("The unexpected native session must be rejected")
+        } catch ModelPoolError.runtimeReturnedWrongModel(let expected, let actual) {
+            XCTAssertEqual(expected, "expected")
+            XCTAssertEqual(actual, "unexpected")
+        }
+        let afterUnload = await pool.snapshot()
+        XCTAssertEqual(afterUnload.reservedMemoryMB, 0)
+        XCTAssertEqual(afterUnload.unloadingModelIDs, [])
+    }
+
     func testUnloadingSessionCountsTowardLoadedModelLimit() async throws {
         let engine = BlockingUnloadPoolTestEngine()
         let configuration = try ModelPoolConfiguration(
@@ -378,10 +415,18 @@ private actor BlockingUnloadPoolTestEngine: LlamaEngine {
     private var nextSession = 0
     private var unloadingStarted = false
     private var unloadContinuation: CheckedContinuation<Void, Never>?
+    private let returnedModelIdOverride: String?
+
+    init(returnedModelIdOverride: String? = nil) {
+        self.returnedModelIdOverride = returnedModelIdOverride
+    }
 
     func load(model: ModelDescriptor) async throws -> RuntimeSession {
         nextSession += 1
-        return RuntimeSession(id: "blocking-unload-\(nextSession)", modelId: model.id)
+        return RuntimeSession(
+            id: "blocking-unload-\(nextSession)",
+            modelId: returnedModelIdOverride ?? model.id
+        )
     }
 
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
