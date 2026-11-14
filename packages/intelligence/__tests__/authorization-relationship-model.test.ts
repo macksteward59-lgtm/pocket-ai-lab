@@ -189,4 +189,19 @@ describe("AuthorizationRelationshipModel", () => {
     expect(Object.isFrozen(model.grants)).toBe(true);
     expect(() => (model.grants as unknown as unknown[]).push({})).toThrow();
   });
+
+  it("honors an enforced cross-tenant deny even when residual authorization is unknown", () => {
+    const world = new SecurityWorldModel({
+      ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
+      operations: [{
+        ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0],
+        tenantIsolationGuard: "enforced" as const,
+        residualAuthorization: "unknown" as const
+      }]
+    });
+    const result = checkAuthorizationRelationships(makeModel({ world }));
+    expect(result.status).toBe("inconclusive");
+    expect(result.unknownPairs).toBe(1);
+    expect(result.counterexamples).toHaveLength(0);
+  });
 });
