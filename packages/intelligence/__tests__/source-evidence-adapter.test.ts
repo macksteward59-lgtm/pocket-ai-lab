@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { ingestStaticAnalysis } from "../SourceEvidenceAdapter";
+import { ingestStaticAnalysis } from "../research-science/SourceEvidenceAdapter";
 
 const source = [
   "from flask import request",
