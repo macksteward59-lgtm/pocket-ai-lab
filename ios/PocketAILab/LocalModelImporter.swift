@@ -15,9 +15,9 @@ enum LocalModelImporterError: LocalizedError {
 }
 
 /// Copies user-selected GGUF files without blocking the UI and preserves the
-/// last known-good destination until the staged copy has passed header checks.
+/// last known-good destination until header validation and SHA-256 complete.
 enum LocalModelImporter {
-    static func importGGUF(from source: URL, into directory: URL) async throws -> URL {
+    static func importGGUF(from source: URL, into directory: URL) async throws -> ImportedModelArtifact {
         guard source.pathExtension.lowercased() == "gguf" else {
             throw LocalModelImporterError.notGGUF
         }
@@ -39,22 +39,26 @@ enum LocalModelImporter {
         let destinationPath = destination.standardizedFileURL.resolvingSymlinksInPath().path
 
         // Files may hand the app a URL to a model already in Documents/Models.
-        // Never remove or copy a file onto itself.
+        // Never remove or copy a file onto itself. Hash it off the main actor.
         if sourcePath == destinationPath {
-            try validateGGUF(at: destination)
-            return destination
+            let fingerprint = try await Task.detached(priority: .utility) {
+                try validateGGUF(at: destination)
+                return try ModelArtifactFingerprint.compute(at: destination)
+            }.value
+            return ImportedModelArtifact(url: destination, fingerprint: fingerprint)
         }
 
         let staged = directory.appendingPathComponent(".\(UUID().uuidString).gguf-importing")
         do {
-            try await Task.detached(priority: .utility) {
+            let fingerprint = try await Task.detached(priority: .utility) {
                 try FileManager.default.copyItem(at: source, to: staged)
                 try validateGGUF(at: staged)
+                let fingerprint = try ModelArtifactFingerprint.compute(at: staged)
 
                 if FileManager.default.fileExists(atPath: destination.path) {
                     // The staged file is in the same directory, so replacement
-                    // is atomic on the destination volume. A failed copy or
-                    // failed validation never removes the previous model.
+                    // is atomic on the destination volume. A failed copy,
+                    // header check, or hash read preserves the previous model.
                     _ = try FileManager.default.replaceItemAt(
                         destination,
                         withItemAt: staged,
@@ -64,13 +68,13 @@ enum LocalModelImporter {
                 } else {
                     try FileManager.default.moveItem(at: staged, to: destination)
                 }
+                return fingerprint
             }.value
+            return ImportedModelArtifact(url: destination, fingerprint: fingerprint)
         } catch {
             try? FileManager.default.removeItem(at: staged)
             throw error
         }
-
-        return destination
     }
 
     private static func validateGGUF(at url: URL) throws {
