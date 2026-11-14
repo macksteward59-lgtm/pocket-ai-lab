@@ -25,6 +25,7 @@ export interface WorldOperation {
   componentId: string;
   action: SecurityAction;
   tenantIsolationGuard: GuardState;
+  residualAuthorization: "allow" | "deny" | "unknown";
 }
 
 export interface WorldInvariant {
