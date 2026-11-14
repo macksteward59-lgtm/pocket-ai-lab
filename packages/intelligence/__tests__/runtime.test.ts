@@ -89,8 +89,82 @@ describe("ModelRouter", () => {
     await expect(router.route("reasoner", model, ["vision"])).rejects.toThrow(/lacks required capabilities/);
     await expect(router.route("reasoner", model, ["reason", "code"])).resolves.toEqual(model);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("keeps a shared model reservation until every concurrent route releases it", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const [first, second] = await Promise.all([
+      router.route("reasoner", model, []),
+      router.route("researcher", model, [])
+    ]);
+    expect(first).toBe(model);
+    expect(second).toBe(model);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+    router.release(first);
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+    router.release(second);
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("keeps shared model memory reserved until the final concurrent holder releases it", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const otherModel = { ...model, id: "other-model", memoryEstimateMB: 600 };
+    const [first, second] = await Promise.all([
+      router.route("reasoner", model, []),
+      router.route("researcher", model, [])
+    ]);
+    router.release(first);
+    await expect(router.route("engineer", otherModel, [])).rejects.toThrow(/Insufficient memory/);
+    router.release(second);
+    const otherLease = await router.route("engineer", otherModel, []);
+    expect(otherLease).toBe(otherModel);
+    router.release(otherLease);
+  });
+
+  it("accounts for replacement generations while old concurrent leases drain", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const oldModel = { ...model, memoryEstimateMB: 256 };
+    const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 1536 };
+    const first = await router.route("reasoner", oldModel, []);
+    const second = await router.route("researcher", oldModel, []);
+    router.retire(oldModel.id, oldModel);
+    await expect(router.route("engineer", oldModel, [])).rejects.toThrow(/retired/);
+    await expect(router.route("engineer", replacement, [])).rejects.toThrow(/being replaced/);
+    router.release(first);
+    await expect(router.route("engineer", replacement, [])).rejects.toThrow(/being replaced/);
+    router.release(second);
+    await expect(router.route("engineer", oldModel, [])).rejects.toThrow(/retired/);
+    await expect(router.route("engineer", replacement, [])).rejects.toThrow(/Insufficient memory/);
+    expect(router.getLoadedModels()).toEqual([]);
+  });
+
+  it("keeps a replaced ID invalid until successful inference confirms the new generation", async () => {
+    const resources = { availableMemoryMB: 1024, loadedModels: ["test-model"] };
+    const router = new ModelRouter(() => resources);
+    const oldModel = { ...model, memoryEstimateMB: 256 };
+    const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 512 };
+    router.retire("test-model", oldModel);
+
+    const first = await router.route("reasoner", replacement, []);
+    router.release(first);
+    resources.availableMemoryMB = 128;
+    await expect(router.route("reasoner", replacement, [])).rejects.toThrow(/Insufficient memory/);
+
+    resources.availableMemoryMB = 1024;
+    const loaded = await router.route("reasoner", replacement, []);
+    router.confirmLoaded(loaded);
+    router.release(loaded);
+    resources.availableMemoryMB = 128;
+    const reused = await router.route("reasoner", replacement, []);
+    expect(reused).toBe(replacement);
+    router.release(reused);
+  });
+
+  it("rejects malformed resource-provider loaded-model data", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [null] as unknown as string[] }));
+    await expect(router.route("reasoner", model, [])).rejects.toThrow(/invalid loaded-model list/);
   });
 
   it("rejects insufficient memory rather than waiting forever", async () => {
