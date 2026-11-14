@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { mkdir, open, readdir, realpath, rename, rm, lstat } from "node:fs/promises";
+import { chmod, mkdir, open, readdir, realpath, rename, rm, lstat } from "node:fs/promises";
 import path from "node:path";
 import type { ToolArtifact, ToolArtifactStore } from "../../../packages/intelligence/tooling/ToolDirector";
 
@@ -21,7 +21,7 @@ const MAX_TOOL_DIRECTORIES = 10_000;
  * encrypted storage or an OS-protected application-data volume.
  */
 export class FileToolArtifactStore implements ToolArtifactStore {
-  private readonly root: string;
+  private root: string;
   private readonly locks = new Map<string, Promise<void>>();
 
   constructor(rootDirectory: string) {
@@ -56,8 +56,7 @@ export class FileToolArtifactStore implements ToolArtifactStore {
         await handle.close();
         handle = undefined;
         await rename(temporary, target);
-        const directoryHandle = await open(directory, fsConstants.O_RDONLY);
-        try { await directoryHandle.sync(); } finally { await directoryHandle.close(); }
+        await syncDirectory(directory);
       } catch (error) {
         if (handle) await handle.close().catch(() => undefined);
         await rm(temporary, { force: true }).catch(() => undefined);
@@ -117,8 +116,10 @@ export class FileToolArtifactStore implements ToolArtifactStore {
     if (!stat.isDirectory() || stat.isSymbolicLink()) {
       throw new Error("Artifact root must be a real directory, not a symbolic link");
     }
-    const resolved = await realpath(this.root);
-    if (resolved !== this.root) throw new Error("Artifact root resolves through an unexpected path");
+    // Canonicalize parent symlinks (for example macOS /var -> /private/var)
+    // while still rejecting a symlink at the configured root itself.
+    this.root = await realpath(this.root);
+    await chmod(this.root, 0o700);
   }
 
   private async ensureToolDirectory(toolId: string): Promise<string> {
@@ -130,6 +131,7 @@ export class FileToolArtifactStore implements ToolArtifactStore {
       throw new Error("Tool artifact path must be a real directory");
     }
     if (await realpath(directory) !== directory) throw new Error("Tool artifact path escapes the artifact root");
+    await chmod(directory, 0o700);
     return directory;
   }
 
