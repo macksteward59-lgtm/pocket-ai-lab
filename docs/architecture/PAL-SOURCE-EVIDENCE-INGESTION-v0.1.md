@@ -89,3 +89,8 @@ The adapter is tested for source digest binding, excerpt/line mismatch, out-of-r
 - Integration that automatically elevates candidates into the Security World Model.
 
 These remain separate research milestones.
+
+
+## Integrated research pipeline
+
+`SourceResearchPipeline` now connects the existing loopback-only static-analysis bridge to this adapter. It rejects a sidecar filename that differs from the submitted filename, binds the returned observations to the exact submitted source, and preserves the upstream truncation flag. Its result contains source-review context and immutable unverified candidates only; it does not promote them to findings or authorize tests.
