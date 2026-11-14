@@ -124,7 +124,7 @@ export class FileToolArtifactStore implements ToolArtifactStore {
   private async ensureToolDirectory(toolId: string): Promise<string> {
     await this.ensureRoot();
     const directory = path.join(this.root, toolId);
-    await mkdir(directory, { mode: 0o700 });
+    await mkdir(directory, { recursive: true, mode: 0o700 });
     const stat = await lstat(directory);
     if (!stat.isDirectory() || stat.isSymbolicLink()) {
       throw new Error("Tool artifact path must be a real directory");
