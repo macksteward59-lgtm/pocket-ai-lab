@@ -80,6 +80,10 @@ export class ModelPluginManager {
     if (!this.registry.has(existingId)) {
       throw new ModelSourceError(`Model ${existingId} is not registered; use addModel instead`);
     }
+    const existingDescriptor = this.registry.get(existingId);
+    if (input.id !== existingId && this.registry.has(input.id)) {
+      throw new ModelSourceError(`Model ${input.id} is already registered; choose a different id for the replacement`);
+    }
     const loadedElsewhere = this.router?.getLoadedModels().includes(existingId) ?? false;
     if (loadedElsewhere && !options.confirmReplaceLoaded) {
       throw new ModelSourceError(
@@ -89,10 +93,25 @@ export class ModelPluginManager {
     }
 
     const descriptor = await this.buildDescriptor(input);
+    // Source resolution is asynchronous: another replacement may have changed
+    // the registry while this descriptor was being prepared.
+    if (!existingDescriptor || !this.registry.has(existingId) ||
+        this.registry.get(existingId) !== existingDescriptor) {
+      throw new ModelSourceError(
+        `Model ${existingId} changed while its replacement was being prepared; retry against the current descriptor`
+      );
+    }
+    // A route can start while source resolution is in progress. Re-check at commit.
+    const loadedAtCommit = this.router?.getLoadedModels().includes(existingId) ?? false;
+    if (loadedAtCommit && !options.confirmReplaceLoaded) {
+      throw new ModelSourceError(
+        `Model ${existingId} became loaded while its replacement was being prepared; retry with confirmReplaceLoaded: true`
+      );
+    }
     this.registry.unregister(existingId);
-    // Confirmed admin replace drops the whole reservation. Calling release()
-    // once would steal a single route lease when multiple routes are active.
-    if (loadedElsewhere) this.router?.forceDropReservation(existingId);
+    // Retire even when no local lease is visible: a provider may still report
+    // the previous generation as loaded. The next route must re-check memory.
+    this.router?.retire(existingId, existingDescriptor);
     this.registry.register(descriptor);
     this.record({ action: "replaced", modelId: descriptor.id, previousModelId: existingId, source: describeSource(input.source) });
     return descriptor;
@@ -101,14 +120,15 @@ export class ModelPluginManager {
   /** Removes a model outright. Refuses if it is currently loaded, unless confirmed. */
   removeModel(id: string, options: ReplaceModelOptions = {}): boolean {
     const loaded = this.router?.getLoadedModels().includes(id) ?? false;
+    const existingDescriptor = this.registry.get(id);
     if (loaded && !options.confirmReplaceLoaded) {
       throw new ModelSourceError(`Model ${id} is currently loaded; pass confirmReplaceLoaded: true to remove it anyway`);
     }
     const removed = this.registry.unregister(id);
     if (removed) {
-      // Confirmed admin remove drops the whole reservation so concurrent route
-      // leases are not partially consumed.
-      if (loaded) this.router?.forceDropReservation(id);
+      // Retire the descriptor but keep in-flight route leases accounted until
+      // each caller releases its exact generation.
+      this.router?.retire(id, existingDescriptor);
       this.record({ action: "removed", modelId: id, source: "n/a" });
     }
     return removed;
