@@ -119,7 +119,7 @@ final class ModelPoolTests: XCTestCase {
         let secondTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while (await pool.snapshot()).pendingModelIDs.isEmpty { await Task.yield() }
+        while (await pool.snapshot()).pendingAcquirerCount < 2 { await Task.yield() }
         await engine.finishLoad()
 
         let first = try await firstTask.value
