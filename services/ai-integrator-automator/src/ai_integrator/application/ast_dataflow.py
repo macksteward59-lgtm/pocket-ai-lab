@@ -292,7 +292,10 @@ def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) ->
                                 add(tainted(arg, env), (sink[0], sink[1], getattr(call, "lineno", 1), _render(call)))
                         else:
                             callee = _name(call.func).split(".")[-1]
-                            args = [*call.args, *(k.value for k in call.keywords)]
+                            if call.keywords or any(isinstance(arg, ast.Starred) for arg in call.args):
+                                partial = True
+                                continue
+                            args = list(call.args)
                             for i, arg in enumerate(args):
                                 for site in summaries.get(callee, {}).get(i, []):
                                     add(tainted(arg, env), site)
@@ -364,7 +367,10 @@ def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) ->
                 if expr is not None:
                     for call in (x for x in ast.walk(expr) if isinstance(x, ast.Call) and _sink(x) is None):
                         callee = _name(call.func).split(".")[-1]
-                        args = [*call.args, *(k.value for k in call.keywords)]
+                        if call.keywords or any(isinstance(arg, ast.Starred) for arg in call.args):
+                            partial = True
+                            continue
+                        args = list(call.args)
                         for i, arg in enumerate(args):
                             for source_line, source_expr, _ in origins(arg):
                                 for kind, sink_name, sink_line, sink_expr in summaries.get(callee, {}).get(i, []):
