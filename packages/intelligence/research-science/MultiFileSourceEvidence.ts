@@ -39,6 +39,7 @@ export interface MultiFileEvidenceInput {
   files: readonly MultiFileSource[];
   resolvedImports: readonly ResolvedImportEdge[];
   unresolvedImports?: readonly UnresolvedImport[];
+  analysisPartial?: boolean;
   observations: readonly CrossFileFlowObservation[];
 }
 
@@ -204,7 +205,7 @@ export function bindMultiFileEvidence(input: MultiFileEvidenceInput): MultiFileE
     }));
   }
 
-  const partial = frozenUnresolved.length > 0;
+  const partial = frozenUnresolved.length > 0 || input.analysisPartial === true;
   return Object.freeze({
     files: Object.freeze(files),
     resolvedImports: Object.freeze(edges),
@@ -220,7 +221,8 @@ export function bindMultiFileEvidence(input: MultiFileEvidenceInput): MultiFileE
       "Every endpoint is rebound to its own exact file digest and source excerpt.",
       "Resolved import edges are evidence supplied by the caller, not proof of runtime reachability or call semantics.",
       "All candidates remain unverified; no source was executed and no target was contacted.",
-      ...(partial ? ["Unresolved imports make the manifest partial; missing signals are not evidence of absence."] : [])
+      ...(frozenUnresolved.length > 0 ? ["Unresolved imports make the manifest partial; missing signals are not evidence of absence."] : []),
+      ...(input.analysisPartial === true ? ["The upstream analyzer reported partial or incomplete analysis; missing signals are not evidence of absence."] : [])
     ])
   });
 }
