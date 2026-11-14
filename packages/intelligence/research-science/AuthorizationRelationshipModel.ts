@@ -226,11 +226,11 @@ function decide(
   if (operation.residualAuthorization === "deny") {
     return { decision: "deny", evidenceRefs: refs };
   }
-  if (operation.residualAuthorization === "unknown") {
-    return { decision: "unknown", evidenceRefs: refs };
-  }
   if (crossTenant && operation.tenantIsolationGuard === "enforced") {
     return { decision: "deny", evidenceRefs: refs };
+  }
+  if (operation.residualAuthorization === "unknown") {
+    return { decision: "unknown", evidenceRefs: refs };
   }
   if (crossTenant && operation.tenantIsolationGuard === "unknown") {
     return { decision: "unknown", evidenceRefs: refs };
