@@ -65,3 +65,18 @@ def handler():
     assert len(cross) == 1
     assert cross[0].sink_line == 2
     assert cross[0].source_line == 5
+
+def test_branch_states_are_isolated_to_avoid_cross_branch_taint():
+    source = """def helper(value):
+    if condition:
+        local = value
+    else:
+        eval(local)
+
+def handler():
+    item = request.args.get("q")
+    helper(item)
+"""
+    report = analyze_python_dataflow(source)
+    assert report.parser_status == "unsupported"
+    assert not [signal for signal in report.signals if signal.analysis_scope == "interprocedural"]
