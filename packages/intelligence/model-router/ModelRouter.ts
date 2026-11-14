@@ -62,6 +62,9 @@ export class ModelRouter {
     if (existing && existing.memoryMB !== preferred.memoryEstimateMB) {
       throw new Error("Model " + preferred.id + " changed its memory estimate while routes are active");
     }
+    if (!existing && generations.some(reservation => !reservation.retired)) {
+      throw new Error("Model " + preferred.id + " changed its descriptor while routes are active");
+    }
     if (existing?.retired) {
       throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
     }
