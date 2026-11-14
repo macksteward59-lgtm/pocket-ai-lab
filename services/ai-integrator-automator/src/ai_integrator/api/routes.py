@@ -72,7 +72,7 @@ def replace_allowlist(body: AllowlistBody) -> dict:
 
 @router.post("/api/v1/governance/analyze-source")
 def analyze(body: AnalyzeSourceRequest) -> dict:
-    report = analyze_source(body.source)
+    report = analyze_source(body.source, filename=body.filename)
     context = _EXTRACTOR.extract(body.source)
     dependency = None
     name = body.filename.lower()
@@ -88,6 +88,7 @@ def analyze(body: AnalyzeSourceRequest) -> dict:
     return {
         "filename": body.filename,
         "observations": [item.model_dump() for item in report.observations],
+        "data_flows": report.data_flows,
         "truncated": report.truncated or context.truncated,
         "context": context.model_dump(),
         "dependencies": dependency,
