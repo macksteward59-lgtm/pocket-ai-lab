@@ -80,9 +80,25 @@ def test_review_and_analyze_routes(monkeypatch, tmp_path: Path):
     report = analyzed.json()
     assert report["authorized"] is False
     assert report["executes"] is False
+    assert report["data_flows"]["parser_status"] == "parsed"
+    assert report["data_flows"]["signals"] == []
     assert "pathlib" in report["context"]["imports"]
     assert "sample" in report["context"]["functions"]
     assert marker.exists() is False
+
+    flow_source = "value = request.args.get('query')\\neval(value)\\n"
+    flow_response = client.post(
+        "/api/v1/governance/analyze-source",
+        json={"filename": "handler.py", "source": flow_source},
+    )
+    assert flow_response.status_code == 200
+    flow_report = flow_response.json()["data_flows"]
+    assert flow_report["parser_status"] == "parsed"
+    assert len(flow_report["signals"]) == 1
+    assert flow_report["signals"][0]["source_line"] == 1
+    assert flow_report["signals"][0]["sink_line"] == 2
+    assert flow_report["authorized"] is False
+    assert flow_report["executes"] is False
 
     saved = client.put("/api/v1/governance/allowlist", json={"hosts": ["app.example.com", "not a host"]})
     assert saved.status_code == 200
