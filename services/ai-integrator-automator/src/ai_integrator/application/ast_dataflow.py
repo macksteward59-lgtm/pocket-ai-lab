@@ -126,15 +126,24 @@ class _Analyzer:
 
     def origins(self, node: ast.AST, env: dict[str, list[tuple[int, str, str]]]) -> list[tuple[int, str, str]]:
         found: list[tuple[int, str, str]] = []
-        for child in ast.walk(node):
-            if _source_node(child):
-                entry = (getattr(child, "lineno", 1), _render(child), "")
+
+        def visit(current: ast.AST) -> None:
+            # Stop at the outermost source expression so request.args.get(...)
+            # is one provenance origin rather than three nested matches.
+            if _source_node(current):
+                entry = (getattr(current, "lineno", 1), _render(current), "")
                 if entry not in found:
                     found.append(entry)
-            elif isinstance(child, ast.Name) and child.id in env:
-                for entry in env[child.id]:
+                return
+            if isinstance(current, ast.Name) and current.id in env:
+                for entry in env[current.id]:
                     if entry not in found:
                         found.append(entry)
+                return
+            for child in ast.iter_child_nodes(current):
+                visit(child)
+
+        visit(node)
         return found
 
     def inspect_sinks(self, node: ast.AST, env: dict[str, list[tuple[int, str, str]]]) -> None:
