@@ -227,6 +227,28 @@ describe("Orchestrator", () => {
     })).toThrow(/InferenceProvider must be supplied/);
   });
 
+  it("releases the exact model reservation when provider inference fails", async () => {
+    const orchestrator = new Orchestrator({
+      getResources: () => ({ availableMemoryMB: 8192, loadedModels: [] }),
+      inference: {
+        async generate() {
+          throw new Error("provider unavailable");
+        }
+      }
+    });
+    orchestrator.models.register(model);
+    for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+      orchestrator.models.associateAgent(agentId, model.id);
+    }
+
+    await expect(orchestrator.executeTask({
+      id: "provider-failure",
+      objective: "Exercise failure cleanup",
+      requiredCapabilities: []
+    })).rejects.toThrow(/provider unavailable/);
+    expect(orchestrator.router.getLoadedModels()).toEqual([]);
+  });
+
   it("executes each stage through the injected provider and records unverified synthesis", async () => {
     const orchestrator = new Orchestrator({
       maxDeliberationRounds: 1,
