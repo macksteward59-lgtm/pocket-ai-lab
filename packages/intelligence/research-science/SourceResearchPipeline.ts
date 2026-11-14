@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { StaticAnalysisOrchestratorBridge, type StaticDataFlowSignal } from "../orchestrator/StaticAnalysisOrchestratorBridge";
 import { ingestStaticAnalysis, type SourceEvidenceReport } from "./SourceEvidenceAdapter";
 
