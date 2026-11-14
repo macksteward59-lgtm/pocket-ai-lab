@@ -1,7 +1,10 @@
 /**
- * Fail-closed model selection and resource accounting.
- * Reservations are leases: each successful route must be paired with one release.
- * Waiting indefinitely for memory is deliberately avoided; callers may retry.
+ * Fail-closed model selection and generation-aware resource accounting.
+ *
+ * A route returns the exact descriptor generation that must later be released.
+ * Replacements retire old generations and drain their in-flight leases before
+ * a new descriptor with the same ID can route. A reservation is not proof that
+ * the runtime loaded a model; callers confirm only after successful inference.
  */
 import { ModelDescriptor } from "../model-registry/ModelRegistry";
 
@@ -10,13 +13,19 @@ export interface ResourceReport {
   loadedModels: string[];
 }
 
-interface ModelReservation {
+interface Reservation {
+  descriptor: ModelDescriptor;
   memoryMB: number;
-  activeRoutes: number;
+  references: number;
+  retired: boolean;
 }
 
 export class ModelRouter {
-  private reservations = new Map<string, ModelReservation>();
+  /** Multiple generations may coexist only while a retired generation drains. */
+  private reservations = new Map<string, Reservation[]>();
+  /** IDs whose prior artifact was retired and whose replacement load is unconfirmed. */
+  private requiresFreshLoad = new Set<string>();
+  private retiredDescriptors = new WeakSet<ModelDescriptor>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -25,13 +34,23 @@ export class ModelRouter {
     preferred: ModelDescriptor | undefined,
     requiredCaps: string[]
   ): Promise<ModelDescriptor> {
-    if (!agentId.trim()) throw new Error("agentId is required");
+    if (typeof agentId !== "string" || !agentId.trim()) throw new Error("agentId is required");
     if (!preferred) throw new Error("No model is registered for agent " + agentId);
-    if (!preferred.id || !preferred.path) {
-      throw new Error("Model " + preferred.id + " has no configured runtime path");
+    if (this.retiredDescriptors.has(preferred)) {
+      throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
+    }
+    if (typeof preferred.id !== "string" || !preferred.id.trim() ||
+        typeof preferred.path !== "string" || !preferred.path.trim()) {
+      throw new Error("Model " + String(preferred.id) + " has no configured runtime path");
     }
     if (!Number.isFinite(preferred.memoryEstimateMB) || preferred.memoryEstimateMB <= 0) {
       throw new Error("Model " + preferred.id + " has an invalid memory estimate");
+    }
+    if (!Array.isArray(preferred.capabilities) ||
+        preferred.capabilities.some(capability => typeof capability !== "string" || !capability.trim()) ||
+        !Array.isArray(requiredCaps) ||
+        requiredCaps.some(capability => typeof capability !== "string" || !capability.trim())) {
+      throw new Error("Model capability inventory is invalid");
     }
     const missing = requiredCaps.filter(cap => !preferred.capabilities.includes(cap));
     if (missing.length) {
@@ -39,24 +58,35 @@ export class ModelRouter {
     }
 
     const resources = this.getResources();
-    if (!Number.isFinite(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
+    if (!resources || !Number.isFinite(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
       throw new Error("Resource provider returned invalid available memory");
     }
-    if (!Array.isArray(resources.loadedModels) || !resources.loadedModels.every(id => typeof id === "string")) {
+    if (!Array.isArray(resources.loadedModels) ||
+        !resources.loadedModels.every(id => typeof id === "string")) {
       throw new Error("Resource provider returned an invalid loaded-model list");
     }
 
-    const existing = this.reservations.get(preferred.id);
+    const generations = this.reservations.get(preferred.id) ?? [];
+    const existing = generations.find(reservation => reservation.descriptor === preferred);
     if (existing && existing.memoryMB !== preferred.memoryEstimateMB) {
-      throw new Error(
-        "Model " + preferred.id + " changed its memory estimate while routes are active"
-      );
+      throw new Error("Model " + preferred.id + " changed its memory estimate while route leases are active");
+    }
+    if (existing?.retired || this.retiredDescriptors.has(preferred)) {
+      throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
+    }
+    if (generations.some(reservation => reservation.descriptor !== preferred)) {
+      throw new Error("Model " + preferred.id + " is being replaced until the previous generation drains");
     }
 
-    const externallyLoaded = resources.loadedModels.includes(preferred.id);
-    const reservedElsewhere = [...this.reservations.entries()]
-      .filter(([id]) => id !== preferred.id)
-      .reduce((sum, [, reservation]) => sum + reservation.memoryMB, 0);
+    // A reported loaded ID is reusable only when this router has no tracked
+    // generation and the ID has not been invalidated by a replacement/removal.
+    const externallyLoaded = generations.length === 0 &&
+      !this.requiresFreshLoad.has(preferred.id) &&
+      resources.loadedModels.includes(preferred.id);
+    const reservedElsewhere = [...this.reservations.values()]
+      .flat()
+      .filter(reservation => reservation !== existing)
+      .reduce((sum, reservation) => sum + reservation.memoryMB, 0);
     const available = Math.max(0, resources.availableMemoryMB - reservedElsewhere);
 
     if (!existing && !externallyLoaded && available < preferred.memoryEstimateMB) {
@@ -66,41 +96,65 @@ export class ModelRouter {
       );
     }
 
-    // A reservation is counted once for memory but leased once per route.
-    // Externally loaded models are owned by the runtime/resource provider.
     if (existing) {
-      existing.activeRoutes += 1;
+      existing.references += 1;
     } else if (!externallyLoaded) {
-      this.reservations.set(preferred.id, {
+      generations.push({
+        descriptor: preferred,
         memoryMB: preferred.memoryEstimateMB,
-        activeRoutes: 1
+        references: 1,
+        retired: false
       });
+      this.reservations.set(preferred.id, generations);
     }
     return preferred;
   }
 
   /**
-   * Releases one route lease. A model reservation remains until every route
-   * that selected it has released; externally loaded models are never owned here.
+   * Retire the current generation for an ID. Existing route leases remain
+   * accounted for until released. A stale runtime loadedModels entry cannot
+   * make a replacement appear loaded.
    */
-  release(modelId: string): void {
-    const reservation = this.reservations.get(modelId);
-    if (!reservation) return;
-    reservation.activeRoutes -= 1;
-    if (reservation.activeRoutes <= 0) this.reservations.delete(modelId);
+  retire(modelId: string, descriptor?: ModelDescriptor): void {
+    if (typeof modelId !== "string" || !modelId.trim()) return;
+    this.requiresFreshLoad.add(modelId);
+    if (descriptor) this.retiredDescriptors.add(descriptor);
+    const generations = this.reservations.get(modelId);
+    if (!generations) return;
+    for (const reservation of generations) {
+      reservation.retired = true;
+      this.retiredDescriptors.add(reservation.descriptor);
+    }
   }
 
   /**
-   * Drops the entire reservation for a model, regardless of active route count.
-   * Intended only for confirmed admin replace/remove where the caller has already
-   * acknowledged that in-flight requests against the model may fail. Must not be
-   * used as a substitute for a normal per-route release().
+   * Confirm a replacement only after the inference provider successfully
+   * generates with that exact descriptor. Route selection alone is not load proof.
    */
-  forceDropReservation(modelId: string): void {
-    this.reservations.delete(modelId);
+  confirmLoaded(descriptor: ModelDescriptor): void {
+    if (this.retiredDescriptors.has(descriptor)) return;
+    const generations = this.reservations.get(descriptor.id);
+    const activeGeneration = generations?.some(
+      reservation => reservation.descriptor === descriptor && !reservation.retired
+    );
+    if (activeGeneration) this.requiresFreshLoad.delete(descriptor.id);
   }
 
-  /** Models for which this router currently holds an in-flight memory reservation. */
+  /** Release the exact descriptor generation returned by route(). */
+  release(descriptor: ModelDescriptor): void {
+    const generations = this.reservations.get(descriptor.id);
+    if (!generations) return;
+    const reservation = generations.find(item => item.descriptor === descriptor);
+    if (!reservation) return;
+    reservation.references -= 1;
+    if (reservation.references <= 0) {
+      const remaining = generations.filter(item => item !== reservation);
+      if (remaining.length) this.reservations.set(descriptor.id, remaining);
+      else this.reservations.delete(descriptor.id);
+    }
+  }
+
+  /** IDs with one or more active route leases owned by this router. */
   getLoadedModels(): string[] {
     return [...this.reservations.keys()];
   }
