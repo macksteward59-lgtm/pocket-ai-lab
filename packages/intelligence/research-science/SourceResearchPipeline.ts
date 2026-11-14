@@ -15,6 +15,11 @@ export interface SourceResearchResult {
     functions: readonly string[];
     classes: readonly string[];
   };
+  authorizationSurface: {
+    parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";
+    routes: readonly Readonly<{ path: string | null; methods: readonly string[]; function: string; line: number; guardStatus: "local-guard-observed" | "no-local-guard-observed" | "indeterminate"; guardSignals: readonly string[]; excerpt: string; filename: string; sourceSha256: string; evidenceRef: string; status: "unverified" }>[];
+    limitations: readonly string[];
+  };
   dataFlows: {
     parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";
     signals: readonly Readonly<BoundSourceDataFlow>[];
@@ -46,7 +51,20 @@ export class SourceResearchPipeline {
       truncated: analysis.truncated
     });
     const sourceLines = input.source.split(/\r\n|\n|\r/);
-    const boundRoutes = analysis.authorizationSurface.routes.map(route => {\n      if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||\n          sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {\n        throw new Error("Authorization route provenance does not exactly match submitted source lines");\n      }\n      return Object.freeze({ ...route, filename: input.filename, sourceSha256: evidence.sourceSha256,\n        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" + encodeURIComponent(input.filename) + "#L" + route.line,\n        status: "unverified" as const });\n    });\n    const boundFlows = analysis.dataFlows.signals.map(signal => {
+    const boundRoutes = analysis.authorizationSurface.routes.map(route => {\n      if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||\n          sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {\n        throw new Error("Authorization route provenance does not exactly match submitted source lines");\n      }\n      return Object.freeze({ ...route, filename: input.filename, sourceSha256: evidence.sourceSha256,\n        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" + encodeURIComponent(input.filename) + "#L" + route.line,\n        status: "unverified" as const });\n    });\n    const boundRoutes = analysis.authorizationSurface.routes.map(route => {
+      if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||
+          sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {
+        throw new Error("Authorization route provenance does not exactly match submitted source lines");
+      }
+      return Object.freeze({
+        ...route,
+        filename: input.filename,
+        sourceSha256: evidence.sourceSha256,
+        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" + encodeURIComponent(input.filename) + "#L" + route.line,
+        status: "unverified" as const
+      });
+    });
+    const boundFlows = analysis.dataFlows.signals.map(signal => {
       if (!Number.isSafeInteger(signal.sourceLine) || signal.sourceLine < 1 ||
           signal.sourceLine > sourceLines.length || !Number.isSafeInteger(signal.sinkLine) ||
           signal.sinkLine < 1 || signal.sinkLine > sourceLines.length ||
@@ -71,6 +89,11 @@ export class SourceResearchPipeline {
         imports: Object.freeze([...analysis.context.imports]),
         functions: Object.freeze([...analysis.context.functions]),
         classes: Object.freeze([...analysis.context.classes])
+      }),
+      authorizationSurface: Object.freeze({
+        parserStatus: analysis.authorizationSurface.parserStatus,
+        routes: Object.freeze(boundRoutes),
+        limitations: Object.freeze([...analysis.authorizationSurface.limitations])
       }),
       dataFlows: Object.freeze({
         parserStatus: analysis.dataFlows.parserStatus,
