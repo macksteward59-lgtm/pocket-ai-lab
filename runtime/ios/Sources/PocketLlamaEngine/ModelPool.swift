@@ -130,7 +130,10 @@ public actor ModelPool {
             return try await resolve(joined)
         }
 
-        guard entries.count + pendingLoads.count < configuration.maxLoadedModels else {
+        // An unloading session may still occupy native resources until the
+        // engine's async unload returns, so it continues to count toward the
+        // loaded-model cap during actor reentrancy.
+        guard entries.count + pendingLoads.count + unloading.count < configuration.maxLoadedModels else {
             throw ModelPoolError.modelLimitExceeded
         }
 
