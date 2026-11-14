@@ -95,16 +95,17 @@ export function ingestStaticAnalysis(input: StaticAnalysisInput): SourceEvidence
       throw new Error("Observation remediation must be a bounded non-empty string");
     }
     const sourceLine = lines[observation.line - 1].trim();
-    if (!sourceLine.startsWith(observation.excerpt)) {
-      throw new Error("Observation excerpt does not match its claimed source line");
+    if (sourceLine.slice(0, 180) !== observation.excerpt) {
+      throw new Error("Observation excerpt does not exactly match its claimed source line");
     }
     const key = [observation.kind, observation.line, observation.excerpt].join(":");
     if (seen.has(key)) continue;
     seen.add(key);
+    const signalDigest = createHash("sha256").update(key, "utf8").digest("hex").slice(0, 12);
     const evidenceRef = "source://sha256/" + sourceSha256 + "/" +
       encodeURIComponent(input.filename) + "#L" + observation.line;
     candidates.push(Object.freeze({
-      id: "source-signal:" + sourceSha256.slice(0, 16) + ":" + observation.line + ":" + observation.kind,
+      id: "source-signal:" + sourceSha256.slice(0, 16) + ":" + signalDigest,
       kind: observation.kind,
       filename: input.filename,
       line: observation.line,
