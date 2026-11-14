@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ai_integrator.api.dependencies import get_orchestrator
 from ai_integrator.application.allowlist_store import read_allowlist, write_allowlist
+from ai_integrator.application.authorization_surface import analyze_authorization_surface
 from ai_integrator.application.dependency_triage import triage_package_json, triage_requirements
 from ai_integrator.application.report import render_review_markdown
 from ai_integrator.application.services import PolicyReviewOrchestrator, ReviewEnvelope
@@ -72,8 +73,9 @@ def replace_allowlist(body: AllowlistBody) -> dict:
 
 @router.post("/api/v1/governance/analyze-source")
 def analyze(body: AnalyzeSourceRequest) -> dict:
-    report = analyze_source(body.source)
+    report = analyze_source(body.source, filename=body.filename)
     context = _EXTRACTOR.extract(body.source)
+    authorization_surface = analyze_authorization_surface(body.source).model_dump(mode="json") if body.filename.lower().endswith(".py") else None
     dependency = None
     name = body.filename.lower()
     if name.endswith("requirements.txt") or name.endswith(".txt") and "requirement" in name:
@@ -88,6 +90,8 @@ def analyze(body: AnalyzeSourceRequest) -> dict:
     return {
         "filename": body.filename,
         "observations": [item.model_dump() for item in report.observations],
+        "data_flows": report.data_flows,
+        "authorization_surface": authorization_surface,
         "truncated": report.truncated or context.truncated,
         "context": context.model_dump(),
         "dependencies": dependency,

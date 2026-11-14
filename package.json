@@ -6,7 +6,7 @@
   "scripts": {
     "setup": "npm install",
     "build": "tsc -p tsconfig.json",
-    "test": "npm run test:web && npm run test:engine && vitest run runtime/adapters runtime/lab packages/intelligence/memory src/east && npm run test:local-gguf && npm run test:eagle && npm run test:custom-gguf && npm run test:desktop",
+    "test": "npm run test:web && npm run test:engine && npm run poc:research && npm run benchmark:research && vitest run runtime/adapters runtime/lab packages/intelligence/memory src/east && npm run test:local-gguf && npm run test:eagle && npm run test:custom-gguf && npm run test:desktop",
     "test:desktop": "node scripts/desktop/require-tests.mjs scripts/desktop/*.test.mjs && node --import tsx --test scripts/desktop/*.test.mjs",
     "package:desktop": "node scripts/desktop/package-archive.mjs",
     "test:custom-gguf": "python3 -m unittest discover -s scripts/custom-gguf -p 'test_*.py'",
@@ -19,7 +19,9 @@
     "lab": "tsx runtime/lab/server.ts",
     "test:engine": "vitest run packages/intelligence/__tests__",
     "test:governance": "python3 -m pytest --rootdir services/ai-integrator-automator services/ai-integrator-automator/tests",
-    "test:simulation": "node --import tsx scripts/local-gguf/SimulationEnvironment.ts"
+    "test:simulation": "node --import tsx scripts/local-gguf/SimulationEnvironment.ts",
+    "poc:research": "tsx scripts/research-poc.ts",
+    "benchmark:research": "tsx scripts/research-benchmark.ts"
   },
   "dependencies": {
     "@elaraai/east": "^1.0.96",

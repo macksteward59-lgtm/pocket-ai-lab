@@ -269,6 +269,29 @@ describe("governance evidence and catalog", () => {
 });
 
 describe("static bridge and inbox watcher", () => {
+  it("preserves truncation metadata from the static-analysis sidecar", async () => {
+    const bridge = new StaticAnalysisOrchestratorBridge({
+      baseUrl: "http://127.0.0.1:8765",
+      fetchImpl: async () => new Response(JSON.stringify({
+        authorized: false, executes: false, truncated: true, filename: "a.py", observations: [], context: {}
+      }), { status: 200 })
+    });
+    const report = await bridge.analyzeSource({ filename: "a.py", source: "print(1)" });
+    expect(report.truncated).toBe(true);
+    expect(report.authorized).toBe(false);
+    expect(report.executes).toBe(false);
+  });
+
+  it("rejects an analysis report that omits truncation metadata", async () => {
+    const bridge = new StaticAnalysisOrchestratorBridge({
+      baseUrl: "http://127.0.0.1:8765",
+      fetchImpl: async () => new Response(JSON.stringify({
+        authorized: false, executes: false, filename: "a.py", observations: [], context: {}
+      }), { status: 200 })
+    });
+    await expect(bridge.analyzeSource({ filename: "a.py", source: "print(1)" })).rejects.toThrow(/truncated/);
+  });
+
   it("rejects an analysis report that claims execution", async () => {
     const bridge = new StaticAnalysisOrchestratorBridge({
       baseUrl: "http://127.0.0.1:8765",

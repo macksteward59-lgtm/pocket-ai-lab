@@ -64,3 +64,18 @@ export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type 
 
 export { createDirectorTaskRuntime, type DirectorTaskRuntime, type DirectorTaskRuntimeOptions } from "./director/createDirectorTaskRuntime";
 export { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskHistoryEntry, type DirectorTaskRunnerOptions } from "./director/DirectorTaskRunner";
+
+export {
+  SecurityWorldModel, checkTenantIsolation, generateHypotheses, planExperiments, runResearchPoc,
+  type SecurityAction, type GuardState, type WorldComponent, type WorldIdentity,
+  type WorldResource, type WorldOperation, type WorldInvariant, type WorldFact,
+  type SecurityWorldModelInput, type Counterexample, type ModelCheckResult,
+  type ResearchHypothesis, type ExperimentProposal, type ResearchPocReport
+} from "./research-science";
+
+export { ingestStaticAnalysis } from "./research-science/SourceEvidenceAdapter";
+export type { StaticObservationInput, StaticAnalysisInput, SourceEvidenceCandidate, SourceEvidenceReport } from "./research-science/SourceEvidenceAdapter";
+
+export { SourceResearchPipeline, type SourceResearchResult } from "./research-science/SourceResearchPipeline";
+
+export { runResearchBenchmark, type ResearchBenchmarkCase, type ResearchBenchmarkReport } from "./research-science/ResearchBenchmark";
