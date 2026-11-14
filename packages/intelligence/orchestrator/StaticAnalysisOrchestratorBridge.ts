@@ -145,7 +145,7 @@ function parseDataFlows(value: unknown): StaticDataFlowReport {
       throw new PolicyCheckError("Static AST data-flow signal is malformed");
     }
     return {
-      analysisScope: item.analysis_scope === "interprocedural" ? "interprocedural" : "intraprocedural",
+      analysisScope: (item.analysis_scope === "interprocedural" ? "interprocedural" : "intraprocedural") as StaticDataFlowSignal["analysisScope"],
       kind: item.kind,
       sourceLine: item.source_line as number,
       sinkLine: item.sink_line as number,
