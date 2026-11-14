@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ModelRouter } from "../model-router/ModelRouter";
+import { ModelRouterResiliency } from "../model-router/ModelRouterResiliency";
 import type { ModelDescriptor } from "../model-registry/ModelRegistry";
 
 const model = (id: string, memoryEstimateMB: number): ModelDescriptor => ({
@@ -28,6 +29,15 @@ describe("ModelRouter generation-aware reservation leases", () => {
     expect(router.getLoadedModels()).toEqual([]);
     await expect(router.route("engineer", model("other", 128), ["reason"]))
       .resolves.toMatchObject({ id: "other" });
+  });
+
+  it("preserves exact lease lifecycle through the bounded retry wrapper", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 512, loadedModels: [] }));
+    const resiliency = new ModelRouterResiliency(router);
+    const selected = await resiliency.routeWithRetry("reasoner", model("wrapped", 256), ["reason"]);
+    resiliency.confirmLoaded(selected);
+    resiliency.release(selected);
+    expect(router.getLoadedModels()).toEqual([]);
   });
 
   it("does not reserve or release models owned by the runtime", async () => {
