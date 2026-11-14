@@ -17,6 +17,34 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testAgentTeamRunsSixLogicalRolesOnOneSessionAndKeepsTrustUnverified() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("team-model.gguf")
+        try Data("GGUF-team-model".utf8).write(to: source)
+
+        let engine = TestLlamaEngine()
+        let model = LocalChatModel(
+            modelDirectory: root.appendingPathComponent("models", isDirectory: true),
+            engine: engine
+        )
+        try await model.importModel(from: source)
+        await model.loadModel()
+        await model.runAgentTeam("Review the architecture and identify its main risks.")
+
+        let generatedSessions = await engine.generatedSessionIDs()
+        XCTAssertEqual(generatedSessions.count, 6)
+        XCTAssertEqual(Set(generatedSessions).count, 1)
+        XCTAssertEqual(model.trustStatus, "Unverified")
+        XCTAssertTrue(model.status.contains("six sequential logical roles shared one local model session"))
+        XCTAssertTrue(model.messages.contains(where: { $0.role.contains("reasoner") }))
+        XCTAssertTrue(model.messages.contains(where: { $0.role.contains("researcher") }))
+        XCTAssertTrue(model.messages.contains(where: { $0.role.contains("security-analyst") }))
+        XCTAssertTrue(model.messages.contains(where: { $0.role.contains("critic") }))
+        XCTAssertTrue(model.messages.contains(where: { $0.role.contains("validator") }))
+    }
+
+    @MainActor
     func testImportingAnExistingDocumentsModelDoesNotDeleteItsSource() async throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
