@@ -151,7 +151,6 @@ describe("AuthorizationRelationshipModel", () => {
         { id: "tenant-a-member", tenantId: "tenant-a", role: "member" }
       ],
       operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], action: "write" }],
-      invariants: [{ id: "owner-only-write", kind: "owner-only-write", description: "Only the resource owner may write." }],
       facts: []
     });
     const result = checkAuthorizationRelationships(makeModel({
