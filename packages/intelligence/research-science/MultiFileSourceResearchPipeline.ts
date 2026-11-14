@@ -88,13 +88,13 @@ function parseResolvedImports(value: unknown): ResolvedImportEdge[] {
     if (!isRecord(item) || typeof item.from_file !== "string" || item.from_file.length > 240 ||
         typeof item.to_file !== "string" || item.to_file.length > 240 ||
         typeof item.module !== "string" || item.module.length < 1 || item.module.length > 240 ||
-        (item.symbol !== undefined && (typeof item.symbol !== "string" || item.symbol.length > 128))) {
+        (item.symbol !== undefined && item.symbol !== null && (typeof item.symbol !== "string" || item.symbol.length > 128))) {
       throw new PolicyCheckError("Resolved import edge is malformed");
     }
     return {
       from: item.from_file,
       to: item.to_file,
-      symbol: item.symbol as string | undefined
+      symbol: typeof item.symbol === "string" ? item.symbol : undefined
     };
   });
 }
