@@ -147,7 +147,7 @@ describe("ModelPluginManager", () => {
       expect(router.getLoadedModels()).toEqual([]);
     }));
 
-  it("confirmed remove with concurrent routes drops the full reservation, not one lease", async () =>
+  it("confirmed remove retires the generation and drains every route lease", async () =>
     withGgufFile(1024, async filePath => {
       const registry = new ModelRegistry();
       const router = new ModelRouter(() => ({ availableMemoryMB: 512, loadedModels: [] }));
@@ -179,6 +179,54 @@ describe("ModelPluginManager", () => {
         memoryEstimateMB: 128
       }, ["reason"])).resolves.toMatchObject({ id: "other" });
     }));
+
+  it("refuses to replace a model into another already-registered ID", async () =>
+    withGgufFile(1024, async filePath => {
+      const registry = new ModelRegistry();
+      const manager = new ModelPluginManager({ registry, fetcher: new LocalFileFetcher() });
+      await manager.addModel(baseInput(filePath, "first"));
+      await manager.addModel(baseInput(filePath, "second"));
+      await expect(manager.replaceModel("first", baseInput(filePath, "second")))
+        .rejects.toThrow(/replacement target IDs must be unique/);
+      expect(registry.has("first")).toBe(true);
+      expect(registry.has("second")).toBe(true);
+    }));
+
+  it("does not let a slower concurrent replacement overwrite a newer one", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "model-plugin-race-"));
+    const filePath = path.join(directory, "model.gguf");
+    await writeFile(filePath, Buffer.alloc(1024, 1));
+    let calls = 0;
+    let releaseFirst!: () => void;
+    let releaseSecond!: () => void;
+    const firstGate = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const secondGate = new Promise<void>(resolve => { releaseSecond = resolve; });
+    const fetcher = {
+      async resolve() {
+        calls += 1;
+        if (calls === 2) await firstGate;
+        if (calls === 3) await secondGate;
+        return { path: filePath + "?generation=" + calls, sizeBytes: 1024 };
+      }
+    };
+    try {
+      const registry = new ModelRegistry();
+      const manager = new ModelPluginManager({ registry, fetcher });
+      await manager.addModel(baseInput(filePath, "race"));
+      const first = manager.replaceModel("race", baseInput(filePath, "race"));
+      const second = manager.replaceModel("race", baseInput(filePath, "race"));
+      while (calls < 3) await Promise.resolve();
+      releaseFirst();
+      const firstReplacement = await first;
+      releaseSecond();
+      await expect(second).rejects.toThrow(/changed while its replacement was being prepared/);
+      expect(registry.get("race")).toBe(firstReplacement);
+    } finally {
+      releaseFirst();
+      releaseSecond();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 
   it("refuses replaceModel for an id that was never registered", async () =>
     withGgufFile(1024, async filePath => {
