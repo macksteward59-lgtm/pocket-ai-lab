@@ -194,6 +194,8 @@ export class Orchestrator {
               ].join("\n"),
               contextMessages: [...priorMessages]
             });
+            // A route reservation is not proof that the provider loaded the replacement.
+            this.router.confirmLoaded(selected);
             const message: AgentMessage = {
               protocolVersion: 1,
               messageId: crypto.randomUUID(),
@@ -211,7 +213,7 @@ export class Orchestrator {
             this.agents.updateStatus(sessionId, "complete");
           } finally {
             this.agents.releaseSession(sessionId);
-            this.router.release(selected.id);
+            this.router.release(selected);
           }
         }
         return [...priorMessages, ...generated];
