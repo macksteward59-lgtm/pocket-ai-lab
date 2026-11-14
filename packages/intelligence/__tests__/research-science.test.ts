@@ -60,13 +60,41 @@ describe("PAL research science proof of concept", () => {
       operations: [{
         ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0],
         tenantIsolationGuard: "enforced" as const
-      }]
+      }],
+      facts: SYNTHETIC_TENANT_ISOLATION_FIXTURE.facts.map(fact => ({ ...fact, value: "enforced" }))
     };
     const report = runResearchPoc(input);
 
     expect(report.modelCheck.status).toBe("no-counterexample");
     expect(report.hypotheses).toHaveLength(0);
     expect(report.experiments).toHaveLength(0);
+  });
+
+  it("does not report a counterexample when an independent authorization control denies access", () => {
+    const input = {
+      ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
+      operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], residualAuthorization: "deny" as const }]
+    };
+    const report = runResearchPoc(input);
+    expect(report.modelCheck.status).toBe("no-counterexample");
+    expect(report.hypotheses).toHaveLength(0);
+  });
+
+  it("returns inconclusive when no cross-tenant pair exists", () => {
+    const input = {
+      ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
+      identities: [SYNTHETIC_TENANT_ISOLATION_FIXTURE.identities[0]]
+    };
+    const result = checkTenantIsolation(new SecurityWorldModel(input));
+    expect(result.status).toBe("inconclusive");
+    expect(result.checkedPairs).toBe(0);
+  });
+
+  it("rejects contradictory facts instead of silently choosing one", () => {
+    expect(() => new SecurityWorldModel({
+      ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
+      operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], tenantIsolationGuard: "enforced" as const }]
+    })).toThrow(/conflicts/);
   });
 
   it("rejects malformed models and duplicate identifiers", () => {
