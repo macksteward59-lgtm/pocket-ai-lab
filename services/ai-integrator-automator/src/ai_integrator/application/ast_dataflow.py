@@ -283,7 +283,7 @@ def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) ->
             for st in body:
                 if isinstance(st, (ast.Import, ast.ImportFrom, ast.Pass, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                     continue
-                expr = st.value if isinstance(st, (ast.Assign, ast.AnnAssign)) else st.value if isinstance(st, ast.Expr) else None
+                expr = st.value if isinstance(st, (ast.Assign, ast.AnnAssign, ast.Expr, ast.Return)) else None
                 if expr is not None:
                     for call in (x for x in ast.walk(expr) if isinstance(x, ast.Call)):
                         sink = _sink(call)
