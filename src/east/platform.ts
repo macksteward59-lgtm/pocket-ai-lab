@@ -310,6 +310,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           ].join("\n"),
           contextMessages: [...prior]
         });
+        orchestrator.router.confirmLoaded(selected);
         const published = publishAnalysis(orchestrator, task.id, agentId, prior.length, result);
         orchestrator.agents.updateStatus(sessionId, "complete");
         return published.messageId;
