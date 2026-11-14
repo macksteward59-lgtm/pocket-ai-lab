@@ -171,6 +171,9 @@ export class FileToolArtifactStore implements ToolArtifactStore {
       if (!stat.isDirectory() || stat.isSymbolicLink()) {
         throw new Error("Tool artifact path is not a safe directory");
       }
+      if (process.platform !== "win32" && (stat.mode & 0o077) !== 0) {
+        throw new Error("Tool artifact directory permissions are broader than owner-only");
+      }
       if (await realpath(directory) !== directory) {
         throw new Error("Tool artifact path escapes the artifact root");
       }
