@@ -134,7 +134,8 @@ describe("ModelRouter", () => {
   });
 
   it("accounts for replacement generations while old concurrent leases drain", async () => {
-    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const resources = { availableMemoryMB: 1024, loadedModels: [] as string[] };
+    const router = new ModelRouter(() => resources);
     const oldModel = { ...model, memoryEstimateMB: 256 };
     const replacement = { ...model, path: "./replacement.gguf", memoryEstimateMB: 1536 };
     const first = await router.route("reasoner", oldModel, []);
@@ -147,6 +148,13 @@ describe("ModelRouter", () => {
     router.release(second);
     await expect(router.route("engineer", oldModel, [])).rejects.toThrow(/retired/);
     await expect(router.route("engineer", replacement, [])).rejects.toThrow(/Insufficient memory/);
+    expect(router.getLoadedModels()).toEqual([]);
+
+    resources.availableMemoryMB = 2048;
+    const replacementLease = await router.route("engineer", replacement, []);
+    router.release(first); // stale duplicate release for the old descriptor
+    expect(router.getLoadedModels()).toEqual(["test-model"]);
+    router.release(replacementLease);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
