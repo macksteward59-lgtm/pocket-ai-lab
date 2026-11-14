@@ -34,7 +34,7 @@ The current native app is an early functional foundation, not a PocketPal-equiva
 |---|---|---|
 | Native GGUF inference | llama.cpp + Metal backend is linked in the native engine package | Hosted device/simulator builds prove compile/link only; no physical iPhone run claimed |
 | Model import | File-based GGUF import, with staged replacement and GGUF magic validation in PR #84 | No in-app Hugging Face catalog/download; full GGUF parsing is delegated to llama.cpp |
-| Local chat | Basic SwiftUI chat path | Conversation history is currently in-memory; no durable chat database/export/import |
+| Local chat | Basic SwiftUI single-turn prompt path | Displayed messages are in-memory and are not yet assembled into multi-turn model context; no durable chat database/export/import |
 | Agent Team | Six sequential logical roles sharing one local model session in PR #85 | Not six independent models, no model pool, no tool execution, no persistent message bus |
 | Runtime trust | Explicitly displayed as Unverified in PR #82 | Proof verifier primitive in PR #83 is not provisioned or wired into the app |
 | Workspace | HTTPS WebKit workspace with loopback HTTP for local development | Server authentication/authorization remain server responsibilities |
