@@ -139,7 +139,7 @@ export async function runLabSession(options: {
                 ? `Address these counterargument message IDs exactly (list them in addressesMessageIds; write prose in revision): ${counterargumentIds.join(", ")}`
                 : "",
               "Return only the JSON object for this stage. Do not grant permission."
-            ].filter(Boolean).join("\\n"),
+            ].filter(Boolean).join("\n"),
             contextMessages: [...prior],
             ...(options.memoryContext && options.memoryContext.length > 0
               ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
