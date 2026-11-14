@@ -201,7 +201,7 @@ enum LocalChatError: LocalizedError {
     }
 }
 
-private enum LocalInteractionMode: String, CaseIterable, Identifiable {
+private enum LocalInteractionMode: String, CaseIterable, Identifiable, Hashable {
     case chat = "Chat"
     case agentTeam = "Agent Team"
     var id: String { rawValue }
