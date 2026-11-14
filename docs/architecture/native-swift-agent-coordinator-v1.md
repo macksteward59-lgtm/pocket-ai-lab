@@ -10,13 +10,13 @@ The native iOS Local AI screen exposes an Agent Team mode. Its default plan runs
 
 The coordinator enforces explicit limits:
 
-- Task objective: at most 4,000 characters.
-- Required capabilities: at most 16 entries, each at most 64 characters.
-- Plan: 1–8 roles, unique IDs of at most 64 characters, and instructions of at most 1,000 characters.
+- Task objective: at most 4,000 UTF-8 bytes.
+- Required capabilities: at most 16 entries, each at most 64 UTF-8 bytes.
+- Plan: 1–8 roles, unique IDs of at most 64 UTF-8 bytes, and instructions of at most 1,000 UTF-8 bytes.
 - Generation: 1–512 tokens per role and finite temperature from 0 through 2.
-- Prompt: at most 12,000 characters.
-- Prior context: at most the last four role messages, each truncated to 1,200 characters with a visible truncation marker.
-- Model response: at most 8,000 characters per role; oversized output is cancelled and rejected.
+- Prompt: at most 12,000 UTF-8 bytes.
+- Prior context: at most the last four role messages, each truncated to 1,200 UTF-8 bytes with a visible truncation marker.
+- Model response: at most 8,000 UTF-8 bytes per role; oversized output is cancelled and rejected.
 
 These are safety/resource bounds for this coordinator, not a guarantee that a model's tokenizer or context window has a matching character ratio.
 
