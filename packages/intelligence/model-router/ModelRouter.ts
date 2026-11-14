@@ -144,7 +144,9 @@ export class ModelRouter {
     if (this.retiredDescriptors.has(descriptor)) return;
     for (const [modelId, generations] of this.reservations) {
       const activeGeneration = generations.some(
-        reservation => reservation.descriptor === descriptor && !reservation.retired
+        reservation => reservation.descriptor === descriptor &&
+          !reservation.retired &&
+          reservation.fingerprint === descriptorFingerprint(descriptor)
       );
       if (activeGeneration) {
         this.requiresFreshLoad.delete(modelId);
