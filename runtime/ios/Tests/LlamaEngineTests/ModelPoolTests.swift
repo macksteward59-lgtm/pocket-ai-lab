@@ -78,7 +78,8 @@ final class ModelPoolTests: XCTestCase {
             XCTFail("The same ID cannot silently refer to a different artifact")
         } catch ModelPoolError.descriptorConflict("same") {
         }
-        XCTAssertTrue(awaitRelease(pool, lease))
+        let released = await pool.release(lease)
+        XCTAssertTrue(released)
         try await pool.unload(modelId: "same")
     }
 
@@ -98,7 +99,8 @@ final class ModelPoolTests: XCTestCase {
 
         let lease = try await pool.acquire(model: model("retry"), estimatedMemoryMB: 300)
         XCTAssertEqual(lease.session.modelId, "retry")
-        XCTAssertTrue(awaitRelease(pool, lease))
+        let released = await pool.release(lease)
+        XCTAssertTrue(released)
         try await pool.unload(modelId: "retry")
         let calls = await engine.loadCallCount()
         XCTAssertEqual(calls, 2)
@@ -160,7 +162,8 @@ final class ModelPoolTests: XCTestCase {
         let engine = PoolTestEngine()
         let configuration = try ModelPoolConfiguration(maxResidentMemoryMB: 1_024, maxLoadedModels: 1)
         let pool = ModelPool(engine: engine, configuration: configuration, availableMemoryMB: { -1 })
-        let leaseTask = Task { try await pool.acquire(model: model("invalid-memory"), estimatedMemoryMB: 128) }
+        let descriptor = model("invalid-memory")
+        let leaseTask = Task { try await pool.acquire(model: descriptor, estimatedMemoryMB: 128) }
         do {
             _ = try await leaseTask.value
             XCTFail("Negative system memory must fail closed")
