@@ -45,7 +45,7 @@ _MAX_AST_NODES = 20_000
 _MAX_SIGNALS = 100
 _LIMITATIONS = [
     "Interprocedural summaries are bounded to local Python functions in one file and simple name-based argument propagation.",
-    "Branches, loops, recursion, dynamic dispatch, attributes, containers, aliases, reflection, frameworks, and sanitizers are incomplete or unsupported.",
+    "Branches and loops are partial; recursion, dynamic dispatch, attributes, containers, aliases, reflection, frameworks, and sanitizers are incomplete or unsupported.",
     "A source-to-sink signal is a review lead, not proof of exploitability or a vulnerability.",
     "Absence of a signal does not establish that the source is safe.",
 ]
@@ -363,7 +363,7 @@ def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) ->
                     return
                 if isinstance(st, (ast.Import, ast.ImportFrom, ast.Pass, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                     continue
-                expr = st.value if isinstance(st, (ast.Assign, ast.AnnAssign)) else st.value if isinstance(st, ast.Expr) else None
+                expr = st.value if isinstance(st, (ast.Assign, ast.AnnAssign, ast.Expr, ast.Return)) else None
                 if expr is not None:
                     for call in (x for x in ast.walk(expr) if isinstance(x, ast.Call) and _sink(x) is None):
                         callee = _name(call.func).split(".")[-1]
