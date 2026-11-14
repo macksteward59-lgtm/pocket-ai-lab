@@ -101,6 +101,9 @@ export class ModelPluginManager {
         `Model ${existingId} changed while its replacement was being prepared; retry against the current descriptor`
       );
     }
+    if (input.id !== existingId && this.registry.has(input.id)) {
+      throw new ModelSourceError(`Model ${input.id} was registered while replacement was being prepared`);
+    }
     // A route can start while source resolution is in progress. Re-check at commit.
     const loadedAtCommit = this.router?.getLoadedModels().includes(existingId) ?? false;
     if (loadedAtCommit && !options.confirmReplaceLoaded) {
