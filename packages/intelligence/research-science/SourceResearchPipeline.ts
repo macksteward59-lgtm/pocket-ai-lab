@@ -60,7 +60,7 @@ export class SourceResearchPipeline {
       executes: analysis.executes,
       truncated: analysis.truncated
     });
-    const sourceLines = input.source.split(/\\r\\n|\\n|\\r/);
+    const sourceLines = input.source.split(/\r\n|\n|\r/);
     const boundRoutes = analysis.authorizationSurface.routes.map(route => {
       if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||
           sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {
