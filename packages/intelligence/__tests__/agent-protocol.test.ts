@@ -74,6 +74,9 @@ describe("cross-runtime agent protocol", () => {
       expect(RuntimeSessionProofSchema.safeParse(candidate).success).toBe(false);
     }
     expect(RuntimeSessionProofSchema.safeParse(proof).success).toBe(true);
+    expect(() => canonicalRuntimeSessionProofPayload({
+      ...proof, sessionId: "s".repeat(257)
+    })).toThrow(/protocol limit/);
   });
 
   it("does not report ready without a successful independent verifier", async () => {
