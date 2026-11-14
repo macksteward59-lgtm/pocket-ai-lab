@@ -31,3 +31,17 @@ export { bindMultiFileEvidence } from "./MultiFileSourceEvidence";
 export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFlowObservation, MultiFileEvidenceInput, BoundCrossFileCandidate, MultiFileEvidenceReport } from "./MultiFileSourceEvidence";
 
 export { MultiFileSourceResearchPipeline, type MultiFileSourceResearchResult } from "./MultiFileSourceResearchPipeline";
+
+export { AuthorizationRelationshipModel, checkAuthorizationRelationships } from "./AuthorizationRelationshipModel";
+export type {
+  PermissionEffect,
+  OwnershipRequirement,
+  AuthorizationInvariantKind,
+  RolePermissionGrant,
+  ResourceOwnershipRule,
+  AuthorizationRouteBinding,
+  AuthorizationInvariant,
+  AuthorizationRelationshipModelInput,
+  AuthorizationCounterexample,
+  AuthorizationRelationshipCheck
+} from "./AuthorizationRelationshipModel";
