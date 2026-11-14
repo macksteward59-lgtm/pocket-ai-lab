@@ -243,11 +243,15 @@ describe("ModelPluginManager", () => {
       const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
       const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
       await manager.addModel(baseInput(filePath));
-      await router.route("agent-1", registry.get("local-llama"), []);
+      const descriptor = registry.get("local-llama")!;
+      const lease = await router.route("agent-1", descriptor, []);
 
       expect(() => manager.removeModel("local-llama")).toThrow(/currently loaded/);
       expect(manager.removeModel("local-llama", { confirmReplaceLoaded: true })).toBe(true);
       expect(registry.has("local-llama")).toBe(false);
+      expect(router.getLoadedModels()).toContain("local-llama");
+      router.release(lease);
+      expect(router.getLoadedModels()).not.toContain("local-llama");
       expect(manager.removeModel("local-llama")).toBe(false); // already gone, no throw, no duplicate log entry
       expect(manager.getChangeLog().filter(e => e.action === "removed")).toHaveLength(1);
     }));
