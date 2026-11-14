@@ -38,14 +38,17 @@ final class RuntimeProofVerifierTests: XCTestCase {
         let signed = makeProof(session: unsigned.sessionId, build: unsigned.runtimeBuildId,
             generation: unsigned.generationCounter, keyId: unsigned.keyId, signature: signature)
 
-        XCTAssertTrue(await verifier.verify(signed, expectedModelId: "model-a",
-            expectedModelFileSHA256: unsigned.modelFileSHA256))
-        XCTAssertFalse(await verifier.verify(signed, expectedModelId: "model-a",
-            expectedModelFileSHA256: unsigned.modelFileSHA256))
+        let firstAccepted = await verifier.verify(signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256)
+        XCTAssertTrue(firstAccepted)
+        let replayAccepted = await verifier.verify(signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256)
+        XCTAssertFalse(replayAccepted)
 
         let recreated = Ed25519RuntimeProofVerifier(trustedKeys: [trustedKey], replayStore: replayStore)
-        XCTAssertFalse(await recreated.verify(signed, expectedModelId: "model-a",
-            expectedModelFileSHA256: unsigned.modelFileSHA256))
+        let afterRecreationAccepted = await recreated.verify(signed, expectedModelId: "model-a",
+            expectedModelFileSHA256: unsigned.modelFileSHA256)
+        XCTAssertFalse(afterRecreationAccepted)
 
         let failing = Ed25519RuntimeProofVerifier(trustedKeys: [trustedKey],
             replayStore: FailingRuntimeProofReplayStore())
@@ -56,8 +59,9 @@ final class RuntimeProofVerifierTests: XCTestCase {
         ).base64EncodedString()
         let freshSigned = makeProof(session: fresh.sessionId, build: fresh.runtimeBuildId,
             generation: fresh.generationCounter, keyId: fresh.keyId, signature: freshSignature)
-        XCTAssertFalse(await failing.verify(freshSigned, expectedModelId: "model-a",
-            expectedModelFileSHA256: fresh.modelFileSHA256))
+        let storageFailureAccepted = await failing.verify(freshSigned, expectedModelId: "model-a",
+            expectedModelFileSHA256: fresh.modelFileSHA256)
+        XCTAssertFalse(storageFailureAccepted)
     }
 
     func testVerifierRejectsUnknownKeyUnapprovedBuildAndForgedSignature() async throws {
@@ -68,17 +72,20 @@ final class RuntimeProofVerifierTests: XCTestCase {
         let verifier = Ed25519RuntimeProofVerifier(trustedKeys: [trusted], replayStore: TestRuntimeProofReplayStore())
 
         let unapproved = makeProof(session: "s1", build: "other-build", generation: 1, keyId: "trusted-key")
-        XCTAssertFalse(await verifier.verify(unapproved, expectedModelId: "model-a",
-            expectedModelFileSHA256: unapproved.modelFileSHA256))
+        let unapprovedAccepted = await verifier.verify(unapproved, expectedModelId: "model-a",
+            expectedModelFileSHA256: unapproved.modelFileSHA256)
+        XCTAssertFalse(unapprovedAccepted)
 
         let unknown = makeProof(session: "s2", build: "approved-build", generation: 1, keyId: "unknown-key")
-        XCTAssertFalse(await verifier.verify(unknown, expectedModelId: "model-a",
-            expectedModelFileSHA256: unknown.modelFileSHA256))
+        let unknownAccepted = await verifier.verify(unknown, expectedModelId: "model-a",
+            expectedModelFileSHA256: unknown.modelFileSHA256)
+        XCTAssertFalse(unknownAccepted)
 
         let forged = makeProof(session: "s3", build: "approved-build", generation: 1,
             keyId: "trusted-key", signature: Data(repeating: 0, count: 64).base64EncodedString())
-        XCTAssertFalse(await verifier.verify(forged, expectedModelId: "model-a",
-            expectedModelFileSHA256: forged.modelFileSHA256))
+        let forgedAccepted = await verifier.verify(forged, expectedModelId: "model-a",
+            expectedModelFileSHA256: forged.modelFileSHA256)
+        XCTAssertFalse(forgedAccepted)
     }
 
     func testDuplicateTrustedKeyIdsAreRejected() async throws {
@@ -88,8 +95,9 @@ final class RuntimeProofVerifierTests: XCTestCase {
         let verifier = Ed25519RuntimeProofVerifier(trustedKeys: [duplicate, duplicate],
             replayStore: TestRuntimeProofReplayStore())
         let proof = makeProof(session: "s", build: "approved-build", generation: 1, keyId: "same")
-        XCTAssertFalse(await verifier.verify(proof, expectedModelId: "model-a",
-            expectedModelFileSHA256: proof.modelFileSHA256))
+        let duplicateKeyAccepted = await verifier.verify(proof, expectedModelId: "model-a",
+            expectedModelFileSHA256: proof.modelFileSHA256)
+        XCTAssertFalse(duplicateKeyAccepted)
     }
 
     #if os(iOS)
@@ -103,11 +111,15 @@ final class RuntimeProofVerifierTests: XCTestCase {
         defer { SecItemDelete(cleanup as CFDictionary) }
 
         let first = KeychainRuntimeProofReplayStore(service: service)
-        XCTAssertTrue(try await first.accept(sessionId: "session", keyId: "key", generationCounter: 1))
+        let firstAccepted = try await first.accept(sessionId: "session", keyId: "key", generationCounter: 1)
+        XCTAssertTrue(firstAccepted)
         let recreated = KeychainRuntimeProofReplayStore(service: service)
-        XCTAssertFalse(try await recreated.accept(sessionId: "session", keyId: "key", generationCounter: 1))
-        XCTAssertTrue(try await recreated.accept(sessionId: "session", keyId: "key", generationCounter: 2))
-        XCTAssertFalse(try await recreated.accept(sessionId: "session", keyId: "rotated-key", generationCounter: 3))
+        let replayAccepted = try await recreated.accept(sessionId: "session", keyId: "key", generationCounter: 1)
+        XCTAssertFalse(replayAccepted)
+        let nextGenerationAccepted = try await recreated.accept(sessionId: "session", keyId: "key", generationCounter: 2)
+        XCTAssertTrue(nextGenerationAccepted)
+        let rotatedKeyAccepted = try await recreated.accept(sessionId: "session", keyId: "rotated-key", generationCounter: 3)
+        XCTAssertFalse(rotatedKeyAccepted)
     }
     #endif
 
