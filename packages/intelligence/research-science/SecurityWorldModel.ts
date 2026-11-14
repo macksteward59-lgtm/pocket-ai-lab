@@ -48,6 +48,10 @@ export class SecurityWorldModel {
     const operationIds = requireUniqueIds(input.operations, "operations");
     requireUniqueIds(input.invariants, "invariants");
     requireUniqueIds(input.facts, "facts");
+    const stateCombinations = input.operations.length * input.identities.length * input.resources.length;
+    if (stateCombinations > 100_000) {
+      throw new Error("World model state space exceeds the 100,000-combination POC limit");
+    }
 
     this.components = Object.freeze(input.components.map(item => {
       requireText(item.name, "component.name");
