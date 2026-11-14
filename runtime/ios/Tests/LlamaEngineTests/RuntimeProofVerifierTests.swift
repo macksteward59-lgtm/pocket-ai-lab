@@ -88,6 +88,22 @@ final class RuntimeProofVerifierTests: XCTestCase {
         XCTAssertFalse(forgedAccepted)
     }
 
+    func testVerifierRejectsEmptyKeyAndBuildIdentifiers() async {
+        let invalidTrustedKey = RuntimeProofTrustedKey(
+            keyId: "",
+            rawPublicKey: Data(repeating: 1, count: 32),
+            allowedRuntimeBuildIds: [""]
+        )
+        let verifier = Ed25519RuntimeProofVerifier(
+            trustedKeys: [invalidTrustedKey],
+            replayStore: TestRuntimeProofReplayStore()
+        )
+        let proof = makeProof(session: "s", build: "", generation: 1, keyId: "")
+        let accepted = await verifier.verify(proof, expectedModelId: "model-a",
+            expectedModelFileSHA256: proof.modelFileSHA256)
+        XCTAssertFalse(accepted)
+    }
+
     func testDuplicateTrustedKeyIdsAreRejected() async throws {
         let privateKey = Curve25519.Signing.PrivateKey()
         let duplicate = RuntimeProofTrustedKey(keyId: "same", rawPublicKey: privateKey.publicKey.rawRepresentation,
