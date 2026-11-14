@@ -102,6 +102,7 @@ public actor ModelPool {
         model: ModelDescriptor,
         estimatedMemoryMB: Int
     ) async throws -> ModelPoolLease {
+        try Task.checkCancellation()
         try LlamaEngineSupport.validateModel(model)
         guard estimatedMemoryMB > 0 else {
             throw ModelPoolError.invalidMemoryEstimate
@@ -235,21 +236,24 @@ public actor ModelPool {
                 throw ModelPoolError.descriptorConflict(pending.descriptor.id)
             }
         } else if pendingLoads[pending.descriptor.id]?.token == pending.token {
-            guard session.modelId == pending.descriptor.id else {
-                pendingLoads[pending.descriptor.id] = nil
-                reservedMemoryMB = max(0, reservedMemoryMB - pending.estimatedMemoryMB)
-                await engine.unload(sessionId: session.id)
-                throw ModelPoolError.runtimeReturnedWrongModel(
-                    expected: pending.descriptor.id,
-                    actual: session.modelId
-                )
-            }
             let collision = entries.values.contains { $0.session.id == session.id }
             guard !collision else {
                 pendingLoads[pending.descriptor.id] = nil
                 reservedMemoryMB = max(0, reservedMemoryMB - pending.estimatedMemoryMB)
-                await engine.unload(sessionId: session.id)
+                // Never unload a colliding ID: it may be the active session
+                // already owned by another model entry.
                 throw ModelPoolError.runtimeSessionCollision(session.id)
+            }
+            guard session.modelId == pending.descriptor.id else {
+                pendingLoads[pending.descriptor.id] = nil
+                reservedMemoryMB = max(0, reservedMemoryMB - pending.estimatedMemoryMB)
+                unloading.insert(pending.descriptor.id)
+                await engine.unload(sessionId: session.id)
+                unloading.remove(pending.descriptor.id)
+                throw ModelPoolError.runtimeReturnedWrongModel(
+                    expected: pending.descriptor.id,
+                    actual: session.modelId
+                )
             }
             pendingLoads[pending.descriptor.id] = nil
             entries[pending.descriptor.id] = Entry(
