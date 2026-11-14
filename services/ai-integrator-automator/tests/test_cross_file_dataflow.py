@@ -71,3 +71,11 @@ def test_source_is_never_executed_and_evidence_is_unverified():
     assert report.observations
     assert report.authorized is False
     assert report.executes is False
+
+def test_ast_node_budget_stops_counting_at_the_configured_limit():
+    source = "\\n".join(["value = 1"] * 6000)
+    report = analyze_python_project([ProjectSourceFile(path="app/large.py", source=source)])
+    assert report.parser_status == "unsupported"
+    assert report.observations == []
+    assert report.authorized is False
+    assert report.executes is False
