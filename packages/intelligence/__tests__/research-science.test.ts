@@ -80,6 +80,17 @@ describe("PAL research science proof of concept", () => {
     expect(report.hypotheses).toHaveLength(0);
   });
 
+  it("honors a decisive deny even when another modeled guard is unknown", () => {
+    const input = {
+      ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
+      operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], tenantIsolationGuard: "unknown" as const, residualAuthorization: "deny" as const }],
+      facts: []
+    };
+    const report = runResearchPoc(input);
+    expect(report.modelCheck.status).toBe("no-counterexample");
+    expect(report.modelCheck.unknownPairs).toBe(0);
+  });
+
   it("returns inconclusive when no cross-tenant pair exists", () => {
     const input = {
       ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
@@ -88,6 +99,19 @@ describe("PAL research science proof of concept", () => {
     const result = checkTenantIsolation(new SecurityWorldModel(input));
     expect(result.status).toBe("inconclusive");
     expect(result.checkedPairs).toBe(0);
+  });
+
+  it("bounds the finite state space before enumeration", () => {
+    const identities = Array.from({ length: 450 }, (_, index) => ({
+      id: "identity-" + index, tenantId: "tenant-" + index, role: "member"
+    }));
+    const resources = Array.from({ length: 450 }, (_, index) => ({
+      id: "resource-" + index, tenantId: "tenant-" + index, ownerIdentityId: "identity-" + index, kind: "document"
+    }));
+    expect(() => new SecurityWorldModel({
+      ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
+      identities, resources
+    })).toThrow(/100,000-combination/);
   });
 
   it("rejects contradictory facts instead of silently choosing one", () => {
