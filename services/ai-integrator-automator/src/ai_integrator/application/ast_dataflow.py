@@ -102,7 +102,7 @@ def _sink(node: ast.Call) -> tuple[str, str] | None:
     name = _name(node.func)
     for kind, target in _SINKS:
         if name == target or (target in {"execute", "executemany"} and name.endswith("." + target)):
-            return kind, name
+            return kind, name[:128]
     return None
 
 
@@ -165,7 +165,7 @@ class _Analyzer:
                         origins.append(origin)
                 for subnode in ast.walk(argument):
                     if isinstance(subnode, ast.Name) and subnode.id in env and subnode.id not in variables:
-                        variables.append(subnode.id)
+                        variables.append(subnode.id[:128])
             for source_line, source_expression, _ in origins:
                 key = (source_line, getattr(child, "lineno", 1), sink_name, source_expression)
                 if key in self.seen:
