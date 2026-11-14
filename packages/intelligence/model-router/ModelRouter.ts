@@ -50,7 +50,7 @@ export class ModelRouter {
       throw new Error("Model " + String(preferred.id) + " has no configured runtime path");
     }
     this.descriptorIds.set(preferred, preferred.id);
-    if (!Number.isFinite(preferred.memoryEstimateMB) || preferred.memoryEstimateMB <= 0) {
+    if (!Number.isSafeInteger(preferred.memoryEstimateMB) || preferred.memoryEstimateMB <= 0) {
       throw new Error("Model " + preferred.id + " has an invalid memory estimate");
     }
     if (!Array.isArray(preferred.capabilities) ||
@@ -65,7 +65,7 @@ export class ModelRouter {
     }
 
     const resources = this.getResources();
-    if (!resources || !Number.isFinite(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
+    if (!resources || !Number.isSafeInteger(resources.availableMemoryMB) || resources.availableMemoryMB < 0) {
       throw new Error("Resource provider returned invalid available memory");
     }
     if (!Array.isArray(resources.loadedModels) ||
