@@ -29,3 +29,5 @@ export { runResearchBenchmark, type ResearchBenchmarkCase, type ResearchBenchmar
 
 export { bindMultiFileEvidence } from "./MultiFileSourceEvidence";
 export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFlowObservation, MultiFileEvidenceInput, BoundCrossFileCandidate, MultiFileEvidenceReport } from "./MultiFileSourceEvidence";
+
+export { MultiFileSourceResearchPipeline, type MultiFileSourceResearchResult } from "./MultiFileSourceResearchPipeline";

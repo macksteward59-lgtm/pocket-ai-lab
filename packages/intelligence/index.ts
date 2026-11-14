@@ -79,3 +79,6 @@ export type { StaticObservationInput, StaticAnalysisInput, SourceEvidenceCandida
 export { SourceResearchPipeline, type SourceResearchResult } from "./research-science/SourceResearchPipeline";
 
 export { runResearchBenchmark, type ResearchBenchmarkCase, type ResearchBenchmarkReport } from "./research-science/ResearchBenchmark";
+
+export { bindMultiFileEvidence, MultiFileSourceResearchPipeline, type MultiFileSourceResearchResult } from "./research-science";
+export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFlowObservation, MultiFileEvidenceInput, BoundCrossFileCandidate, MultiFileEvidenceReport } from "./research-science";
