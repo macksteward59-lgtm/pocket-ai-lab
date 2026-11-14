@@ -32,7 +32,8 @@ const validResponse = {
     remediation: "Avoid evaluating untrusted input."
   }],
   context: { imports: ["flask"], functions: ["run"], classes: [] },
-  authorization_surface: { parser_status: "parsed", routes: [], limitations: ["No routes in fixture."], authorized: false, executes: false },\n  data_flows: {
+  authorization_surface: { parser_status: "parsed", routes: [], limitations: ["No routes in fixture."], authorized: false, executes: false },
+  data_flows: {
     language: "python",
     parser_status: "parsed",
     signals: [{
@@ -106,7 +107,7 @@ describe("SourceResearchPipeline", () => {
 
 
   it("binds route authorization signals to the exact source digest and excerpt", async () => {
-    const routeSource = 'from fastapi import Depends\\n@app.get("/private")\\ndef private(user=Depends(require_auth)): return user';
+    const routeSource = 'from fastapi import Depends\n@app.get("/private")\ndef private(user=Depends(require_auth)): return user';
     const response = {
       ...validResponse,
       filename: "src/routes.py",
@@ -132,7 +133,7 @@ describe("SourceResearchPipeline", () => {
   });
 
   it("rejects fabricated authorization route excerpts", async () => {
-    const routeSource = 'from fastapi import Depends\\n@app.get("/private")\\ndef private(user=Depends(require_auth)): return user';
+    const routeSource = 'from fastapi import Depends\n@app.get("/private")\ndef private(user=Depends(require_auth)): return user';
     const response = {
       ...validResponse,
       filename: "src/routes.py",
