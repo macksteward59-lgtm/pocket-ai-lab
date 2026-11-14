@@ -2,8 +2,8 @@
  * Retry a failed model selection a bounded number of times.
  * A failed route stays a failure. This class does not invent a model.
  */
-import { ModelDescriptor } from "../model-registry/ModelRegistry";
-import { ModelRouter } from "./ModelRouter";
+import type { ModelDescriptor } from "../model-registry/ModelRegistry";
+import type { ModelRouter } from "./ModelRouter";
 
 type Route = ModelRouter["route"];
 type RouterLifecycle = { route: Route } &
