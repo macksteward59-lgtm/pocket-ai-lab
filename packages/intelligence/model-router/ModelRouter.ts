@@ -6,7 +6,7 @@
  * a new descriptor with the same ID can route. A reservation is not proof that
  * the runtime loaded a model; callers confirm only after successful inference.
  */
-import { ModelDescriptor } from "../model-registry/ModelRegistry";
+import type { ModelDescriptor } from "../model-registry/ModelRegistry";
 
 export interface ResourceReport {
   availableMemoryMB: number;
