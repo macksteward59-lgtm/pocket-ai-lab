@@ -205,7 +205,10 @@ class _Analyzer:
             if len(self.signals) >= self.max_signals:
                 self.partial = True
                 return
-            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(statement, (ast.Import, ast.ImportFrom, ast.Pass)):
+                # Import declarations are syntax only; they are never executed.
+                continue
+            elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 local_env: dict[str, list[tuple[int, str, str]]] = {}
                 self.statements(statement.body, local_env)
             elif isinstance(statement, ast.ClassDef):
