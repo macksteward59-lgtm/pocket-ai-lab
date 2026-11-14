@@ -57,13 +57,10 @@ describe("ModelRouter generation-aware reservation leases", () => {
     await expect(router.route("researcher", descriptor, ["reason"]))
       .rejects.toThrow(/descriptor changed/);
     descriptor.id = "changed-id";
+    await expect(router.route("validator", descriptor, ["reason"]))
+      .rejects.toThrow(/identity changed/);
+    // Release locates the exact descriptor object, even if its mutable ID was changed.
     router.release(descriptor);
-    expect(router.getLoadedModels()).toEqual(["mutable"]);
-    // The ID mutation is also rejected by the descriptor's original identity;
-    // the stored lease remains addressable and can be drained by its original key.
-    const originalIdDescriptor = descriptor as ModelDescriptor & { id: string };
-    originalIdDescriptor.id = "mutable";
-    router.release(originalIdDescriptor);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
