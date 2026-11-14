@@ -34,11 +34,25 @@ public enum NativeAgentCoordinatorError: Error, Equatable, Sendable {
     case invalidPlan
     case busy
     case emptyModelResponse
+    case responseTooLarge
 }
 
 /// Native, sequential multi-role orchestration over an injected inference runtime.
 /// Agent messages are untrusted proposals. This actor has no APEX/East authorization API.
 public actor NativeAgentCoordinator {
+    private static let maxObjectiveCharacters = 4_000
+    private static let maxConversationIdCharacters = 128
+    private static let maxCapabilities = 16
+    private static let maxCapabilityCharacters = 64
+    private static let maxSteps = 8
+    private static let maxAgentIdCharacters = 64
+    private static let maxInstructionCharacters = 1_000
+    private static let maxPromptCharacters = 12_000
+    private static let maxPriorMessages = 4
+    private static let maxPriorMessageCharacters = 1_200
+    private static let maxOutputCharacters = 8_000
+    private static let maxTokensPerStep = 512
+
     private let engine: any LlamaEngine
     private let session: RuntimeSession
     private var activeTaskId: String?
@@ -52,13 +66,26 @@ public actor NativeAgentCoordinator {
     public func run(task: AgentTaskRequest, conversationId: String = UUID().uuidString,
                     steps: [NativeAgentStep], maxTokens: Int = 512,
                     temperature: Double = 0.2) async throws -> NativeAgentRunResult {
-        guard !task.id.isEmpty, !task.objective.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let objective = task.objective.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !task.id.isEmpty, task.id.count <= Self.maxConversationIdCharacters,
+              !objective.isEmpty, objective.count <= Self.maxObjectiveCharacters,
+              task.requiredCapabilities.count <= Self.maxCapabilities,
+              task.requiredCapabilities.allSatisfy({
+                  !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                  $0.count <= Self.maxCapabilityCharacters
+              }) else {
             throw NativeAgentCoordinatorError.invalidTask
         }
-        guard !steps.isEmpty,
-              steps.allSatisfy({ !$0.agentId.isEmpty && !$0.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }),
+        guard !conversationId.isEmpty, conversationId.count <= Self.maxConversationIdCharacters,
+              !steps.isEmpty, steps.count <= Self.maxSteps,
+              steps.allSatisfy({
+                  !$0.agentId.isEmpty && $0.agentId.count <= Self.maxAgentIdCharacters &&
+                  !$0.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                  $0.instructions.count <= Self.maxInstructionCharacters
+              }),
               Set(steps.map(\.agentId)).count == steps.count,
-              maxTokens > 0, (0...2).contains(temperature) else {
+              (1...Self.maxTokensPerStep).contains(maxTokens),
+              temperature.isFinite, (0...2).contains(temperature) else {
             throw NativeAgentCoordinatorError.invalidPlan
         }
         guard activeTaskId == nil else { throw NativeAgentCoordinatorError.busy }
@@ -71,8 +98,12 @@ public actor NativeAgentCoordinator {
         var messages: [AgentMessageEnvelope] = []
         for (index, step) in steps.enumerated() {
             try Task.checkCancellation()
+            let prompt = Self.makePrompt(task: task, step: step, priorMessages: messages)
+            guard prompt.count <= Self.maxPromptCharacters else {
+                throw NativeAgentCoordinatorError.invalidPlan
+            }
             let request = GenerationRequest(
-                prompt: Self.makePrompt(task: task, step: step, priorMessages: messages),
+                prompt: prompt,
                 maxTokens: maxTokens,
                 temperature: temperature
             )
@@ -82,6 +113,10 @@ public actor NativeAgentCoordinator {
             do {
                 for try await token in stream {
                     try Task.checkCancellation()
+                    guard output.count + token.text.count <= Self.maxOutputCharacters else {
+                        await engine.cancel(sessionId: session.id, requestId: request.requestId)
+                        throw NativeAgentCoordinatorError.responseTooLarge
+                    }
                     output += token.text
                 }
             } catch {
@@ -127,11 +162,15 @@ public actor NativeAgentCoordinator {
 
     private static func makePrompt(task: AgentTaskRequest, step: NativeAgentStep,
                                    priorMessages: [AgentMessageEnvelope]) -> String {
-        let prior = priorMessages.map { message -> String in
+        let prior = priorMessages.suffix(maxPriorMessages).map { message -> String in
             let content: String
             if case .object(let payload) = message.payload,
                case .string(let text)? = payload["text"] {
-                content = text
+                if text.count > maxPriorMessageCharacters {
+                    content = String(text.prefix(maxPriorMessageCharacters)) + " [truncated]"
+                } else {
+                    content = text
+                }
             } else {
                 content = "[non-text proposal]"
             }
