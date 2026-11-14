@@ -1,0 +1,189 @@
+import XCTest
+@testable import PocketLlamaEngine
+
+final class InferenceSchedulerTests: XCTestCase {
+    func testFIFOWaitersReceivePermitsInArrivalOrder() async throws {
+        let scheduler = try InferenceScheduler(maxConcurrentRequests: 1)
+        let gate = SchedulerGate()
+
+        let first = Task {
+            try await scheduler.withPermit {
+                await gate.hold(1)
+                return 1
+            }
+        }
+        while await gate.orderSnapshot().isEmpty { await Task.yield() }
+
+        let second = Task {
+            try await scheduler.withPermit {
+                await gate.record(2)
+                return 2
+            }
+        }
+        let third = Task {
+            try await scheduler.withPermit {
+                await gate.record(3)
+                return 3
+            }
+        }
+        while (await scheduler.snapshot()).waitingRequests < 2 { await Task.yield() }
+
+        await gate.releaseOne()
+        let firstResult = try await first.value
+        let secondResult = try await second.value
+        let thirdResult = try await third.value
+        XCTAssertEqual([firstResult, secondResult, thirdResult], [1, 2, 3])
+        let order = await gate.orderSnapshot()
+        XCTAssertEqual(order, [1, 2, 3])
+        let snapshot = await scheduler.snapshot()
+        XCTAssertEqual(snapshot.activeRequests, 0)
+        XCTAssertEqual(snapshot.waitingRequests, 0)
+    }
+
+    func testConcurrencyLimitAllowsTwoAndQueuesTheThird() async throws {
+        let scheduler = try InferenceScheduler(maxConcurrentRequests: 2)
+        let gate = MultiWaiterGate()
+        let tasks = (1...3).map { value in
+            Task {
+                try await scheduler.withPermit {
+                    await gate.hold(value)
+                    return value
+                }
+            }
+        }
+
+        while await gate.startedCount() < 2 { await Task.yield() }
+        let waiting = await scheduler.snapshot()
+        XCTAssertEqual(waiting.activeRequests, 2)
+        XCTAssertEqual(waiting.waitingRequests, 1)
+        XCTAssertEqual(await gate.maximumActiveCount(), 2)
+
+        await gate.releaseOne()
+        while await gate.startedCount() < 3 { await Task.yield() }
+        await gate.releaseAll()
+
+        let results = try await tasks.asyncMap { try await $0.value }
+        XCTAssertEqual(results.sorted(), [1, 2, 3])
+        XCTAssertLessThanOrEqual(await gate.maximumActiveCount(), 2)
+        let final = await scheduler.snapshot()
+        XCTAssertEqual(final.activeRequests, 0)
+        XCTAssertEqual(final.waitingRequests, 0)
+    }
+
+    func testCancelledWaiterIsRemovedWithoutConsumingCapacity() async throws {
+        let scheduler = try InferenceScheduler(maxConcurrentRequests: 1)
+        let gate = SchedulerGate()
+        let first = Task {
+            try await scheduler.withPermit {
+                await gate.hold(1)
+                return 1
+            }
+        }
+        while await gate.orderSnapshot().isEmpty { await Task.yield() }
+
+        let second = Task {
+            try await scheduler.withPermit {
+                await gate.record(2)
+                return 2
+            }
+        }
+        while (await scheduler.snapshot()).waitingRequests == 0 { await Task.yield() }
+        second.cancel()
+        do {
+            _ = try await second.value
+            XCTFail("Cancelled waiter must not run")
+        } catch is CancellationError {
+        }
+
+        let waiting = await scheduler.snapshot()
+        XCTAssertEqual(waiting.waitingRequests, 0)
+        await gate.releaseOne()
+        let firstResult = try await first.value
+        XCTAssertEqual(firstResult, 1)
+        let order = await gate.orderSnapshot()
+        XCTAssertEqual(order, [1])
+        XCTAssertEqual((await scheduler.snapshot()).activeRequests, 0)
+    }
+
+    func testOperationFailureReleasesItsPermit() async throws {
+        let scheduler = try InferenceScheduler(maxConcurrentRequests: 1)
+        do {
+            let _: Int = try await scheduler.withPermit {
+                throw SchedulerTestError.failed
+            }
+            XCTFail("The operation should fail")
+        } catch SchedulerTestError.failed {
+        }
+        let result = try await scheduler.withPermit { 42 }
+        XCTAssertEqual(result, 42)
+        XCTAssertEqual((await scheduler.snapshot()).activeRequests, 0)
+    }
+
+    func testInvalidConcurrencyLimitIsRejected() {
+        XCTAssertThrowsError(try InferenceScheduler(maxConcurrentRequests: 0))
+        XCTAssertThrowsError(try InferenceScheduler(maxConcurrentRequests: 9))
+    }
+}
+
+private enum SchedulerTestError: Error {
+    case failed
+}
+
+private actor SchedulerGate {
+    private var order: [Int] = []
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func hold(_ value: Int) async {
+        order.append(value)
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func record(_ value: Int) { order.append(value) }
+    func releaseOne() {
+        continuation?.resume()
+        continuation = nil
+    }
+    func orderSnapshot() -> [Int] { order }
+}
+
+private actor MultiWaiterGate {
+    private var active = 0
+    private var maximumActive = 0
+    private var started: [Int] = []
+    private var continuations: [CheckedContinuation<Void, Never>] = []
+
+    func hold(_ value: Int) async {
+        active += 1
+        maximumActive = max(maximumActive, active)
+        started.append(value)
+        await withCheckedContinuation { continuations.append($0) }
+        active -= 1
+    }
+
+    func startedCount() -> Int { started.count }
+    func maximumActiveCount() -> Int { maximumActive }
+
+    func releaseOne() {
+        guard !continuations.isEmpty else { return }
+        continuations.removeFirst().resume()
+    }
+
+    func releaseAll() {
+        let pending = continuations
+        continuations.removeAll()
+        pending.forEach { $0.resume() }
+    }
+}
+
+private extension Array where Element == Task<Int, Error> {
+    func asyncMap<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            for element in self {
+                group.addTask { try await transform(element) }
+            }
+            var values: [T] = []
+            for try await value in group { values.append(value) }
+            return values
+        }
+    }
+}
