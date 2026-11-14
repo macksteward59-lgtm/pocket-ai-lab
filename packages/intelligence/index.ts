@@ -72,3 +72,6 @@ export {
   type SecurityWorldModelInput, type Counterexample, type ModelCheckResult,
   type ResearchHypothesis, type ExperimentProposal, type ResearchPocReport
 } from "./research-science";
+
+export { ingestStaticAnalysis } from "./research-science/SourceEvidenceAdapter";
+export type { StaticObservationInput, StaticAnalysisInput, SourceEvidenceCandidate, SourceEvidenceReport } from "./research-science/SourceEvidenceAdapter";
