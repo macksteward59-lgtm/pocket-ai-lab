@@ -202,7 +202,7 @@ public actor ModelPool {
         let idle = entries
             .filter { $0.value.leaseIDs.isEmpty }
             .sorted { $0.value.lastUsedSequence < $1.value.lastUsedSequence }
-            .map(\.key)
+            .map { $0.key }
         var unloaded: [String] = []
         for modelId in idle {
             do {
