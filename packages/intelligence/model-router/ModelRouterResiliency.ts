@@ -6,15 +6,25 @@ import { ModelDescriptor } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "./ModelRouter";
 
 type Route = ModelRouter["route"];
+type RouterLifecycle = { route: Route } &
+  Partial<Pick<ModelRouter, "release" | "confirmLoaded">>;
 
 export class ModelRouterResiliency {
   constructor(
-    private readonly router: { route: Route },
+    private readonly router: RouterLifecycle,
     private readonly maxAttempts = 2
   ) {
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 3) {
       throw new Error("maxAttempts must be 1, 2, or 3");
     }
+  }
+
+  confirmLoaded(descriptor: ModelDescriptor): void {
+    this.router.confirmLoaded?.(descriptor);
+  }
+
+  release(descriptor: ModelDescriptor): void {
+    this.router.release?.(descriptor);
   }
 
   async routeWithRetry(...args: Parameters<Route>): Promise<ModelDescriptor> {
