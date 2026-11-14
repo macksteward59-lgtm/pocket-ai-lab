@@ -45,7 +45,7 @@ export class SourceResearchPipeline {
       executes: analysis.executes,
       truncated: analysis.truncated
     });
-    const sourceLines = input.source.split(/\r?\n/);
+    const sourceLines = input.source.split(/\r\n|\n|\r/);
     const boundFlows = analysis.dataFlows.signals.map(signal => {
       if (!Number.isSafeInteger(signal.sourceLine) || signal.sourceLine < 1 ||
           signal.sourceLine > sourceLines.length || !Number.isSafeInteger(signal.sinkLine) ||
