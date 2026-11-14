@@ -247,6 +247,36 @@ final class ModelPoolTests: XCTestCase {
         try await pool.unload(modelId: "second")
     }
 
+    func testUnloadingSessionCountsTowardLoadedModelLimit() async throws {
+        let engine = BlockingUnloadPoolTestEngine()
+        let configuration = try ModelPoolConfiguration(
+            maxResidentMemoryMB: 1_024,
+            maxLoadedModels: 1,
+            minimumFreeMemoryMB: 64
+        )
+        let pool = ModelPool(engine: engine, configuration: configuration, availableMemoryMB: { 2_048 })
+        let first = try await pool.acquire(model: model("first"), estimatedMemoryMB: 128)
+        let released = await pool.release(first)
+        XCTAssertTrue(released)
+
+        let unloadTask = Task { try await pool.unload(modelId: "first") }
+        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+
+        do {
+            _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 128)
+            XCTFail("An unloading native session must count toward the model limit")
+        } catch ModelPoolError.modelLimitExceeded {
+        }
+
+        await engine.finishUnloading()
+        try await unloadTask.value
+        let second = try await pool.acquire(model: model("second"), estimatedMemoryMB: 128)
+        XCTAssertEqual(second.session.modelId, "second")
+        let secondReleased = await pool.release(second)
+        XCTAssertTrue(secondReleased)
+        try await pool.unload(modelId: "second")
+    }
+
     private func makePool(
         engine: any LlamaEngine,
         maxMemory: Int = 2_048,
