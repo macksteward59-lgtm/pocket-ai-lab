@@ -47,14 +47,14 @@ export type RuntimeReadinessState = z.infer<typeof RuntimeReadinessStateSchema>;
  */
 export const RuntimeSessionProofSchema = z.object({
   protocolVersion: z.literal(1),
-  sessionId: z.string().min(1),
-  modelId: z.string().min(1),
+  sessionId: z.string().min(1).max(256),
+  modelId: z.string().min(1).max(256),
   modelFileSHA256: z.string().regex(/^[a-f0-9]{64}$/i),
-  runtimeBuildId: z.string().min(1),
-  expiresAt: z.string().datetime(),
+  runtimeBuildId: z.string().min(1).max(128),
+  expiresAt: z.string().max(64).datetime(),
   generationCounter: z.number().int().positive(),
-  keyId: z.string().min(1),
-  signature: z.string().min(1),
+  keyId: z.string().min(1).max(128),
+  signature: z.string().length(88).regex(/^[A-Za-z0-9+/]{86}==$/),
   algorithm: z.literal("Ed25519")
 }).strict();
 export type RuntimeSessionProof = z.infer<typeof RuntimeSessionProofSchema>;
