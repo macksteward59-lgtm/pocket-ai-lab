@@ -173,13 +173,55 @@ function validateArtifact(value: unknown): asserts value is ToolArtifact {
   validateToolId(artifact.toolId);
   if (!Number.isSafeInteger(artifact.version) || (artifact.version ?? 0) < 1) throw new Error("Invalid artifact version");
   if (typeof artifact.digest !== "string" || !/^[a-f0-9]{64}$/.test(artifact.digest)) throw new Error("Invalid artifact digest");
-  if (!artifact.spec || typeof artifact.spec !== "object" || artifact.spec.id !== artifact.toolId) throw new Error("Invalid artifact specification");
+  const spec = artifact.spec;
+  if (!spec || typeof spec !== "object" || spec.id !== artifact.toolId ||
+      typeof spec.name !== "string" || !spec.name.trim() ||
+      typeof spec.purpose !== "string" || !spec.purpose.trim() ||
+      !["create", "extend", "revise"].includes(String(spec.change)) ||
+      !Array.isArray(spec.specialists) || spec.specialists.length === 0 ||
+      !spec.specialists.every(item => typeof item === "string" && item.length > 0) ||
+      !Array.isArray(spec.requirements) || spec.requirements.length === 0 ||
+      !spec.requirements.every(item => typeof item === "string" && item.trim())) {
+    throw new Error("Invalid artifact specification");
+  }
   if (!artifact.files || typeof artifact.files !== "object" || Array.isArray(artifact.files)) throw new Error("Invalid artifact files");
+  const fileEntries = Object.entries(artifact.files);
+  if (fileEntries.length === 0 || fileEntries.length > 40) throw new Error("Invalid artifact file count");
+  let sourceBytes = 0;
+  for (const [filePath, source] of fileEntries) {
+    if (!filePath || filePath.startsWith("/") || filePath.includes("\\\\") ||
+        filePath.split("/").some(part => !part || part === "." || part === ".." ||
+          ["__proto__", "prototype", "constructor"].includes(part))) {
+      throw new Error("Unsafe artifact source path");
+    }
+    if (typeof source !== "string") throw new Error("Artifact source files must be strings");
+    sourceBytes += Buffer.byteLength(source, "utf8");
+    if (sourceBytes > 1_000_000) throw new Error("Artifact source exceeds 1 MB");
+  }
   if (!["draft", "testing", "quarantined", "ready", "active", "retired"].includes(String(artifact.status))) {
     throw new Error("Invalid artifact status");
   }
   if (typeof artifact.createdAt !== "string" || !Number.isFinite(Date.parse(artifact.createdAt))) {
     throw new Error("Invalid artifact timestamp");
+  }
+  if (artifact.previousDigest !== undefined &&
+      (typeof artifact.previousDigest !== "string" || !/^[a-f0-9]{64}$/.test(artifact.previousDigest))) {
+    throw new Error("Invalid previous artifact digest");
+  }
+  if (artifact.testSummary !== undefined) {
+    const summary = artifact.testSummary;
+    if (!summary || typeof summary.passed !== "boolean" ||
+        !Number.isSafeInteger(summary.testsRun) || summary.testsRun < 0 || summary.testsRun > 10_000 ||
+        !Number.isSafeInteger(summary.testsPassed) || summary.testsPassed < 0 || summary.testsPassed > summary.testsRun ||
+        !Array.isArray(summary.findings) || !summary.findings.every(item => typeof item === "string") ||
+        typeof summary.completedAt !== "string" || !Number.isFinite(Date.parse(summary.completedAt))) {
+      throw new Error("Invalid artifact test summary");
+    }
+  }
+  if ((artifact.status === "ready" || artifact.status === "active") &&
+      (!artifact.testSummary?.passed || artifact.testSummary.testsRun < 1 ||
+       artifact.testSummary.testsPassed !== artifact.testSummary.testsRun)) {
+    throw new Error("Ready artifacts must have a complete passing test summary");
   }
 }
 
