@@ -89,7 +89,7 @@ describe("ModelRouter", () => {
     await expect(router.route("reasoner", model, ["vision"])).rejects.toThrow(/lacks required capabilities/);
     await expect(router.route("reasoner", model, ["reason", "code"])).resolves.toEqual(model);
     expect(router.getLoadedModels()).toEqual(["test-model"]);
-    router.release("test-model");
+    router.release(model);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
