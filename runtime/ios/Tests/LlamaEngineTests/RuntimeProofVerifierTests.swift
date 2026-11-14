@@ -104,6 +104,37 @@ final class RuntimeProofVerifierTests: XCTestCase {
         XCTAssertFalse(accepted)
     }
 
+    func testVerifierRejectsOversizedProofFieldsBeforeCanonicalization() async throws {
+        let privateKey = Curve25519.Signing.PrivateKey()
+        let trusted = RuntimeProofTrustedKey(
+            keyId: "trusted-key",
+            rawPublicKey: privateKey.publicKey.rawRepresentation,
+            allowedRuntimeBuildIds: ["approved-build"]
+        )
+        let verifier = Ed25519RuntimeProofVerifier(
+            trustedKeys: [trusted],
+            replayStore: TestRuntimeProofReplayStore()
+        )
+        let signature = Data(repeating: 0, count: 64).base64EncodedString()
+        let candidates = [
+            makeProof(session: String(repeating: "s", count: 257), build: "approved-build",
+                generation: 1, keyId: "trusted-key", signature: signature),
+            makeProof(session: "s", build: String(repeating: "b", count: 129),
+                generation: 1, keyId: "trusted-key", signature: signature),
+            makeProof(session: "s", build: "approved-build",
+                generation: 1, keyId: String(repeating: "k", count: 129), signature: signature)
+        ]
+
+        for proof in candidates {
+            let accepted = await verifier.verify(
+                proof,
+                expectedModelId: "model-a",
+                expectedModelFileSHA256: proof.modelFileSHA256
+            )
+            XCTAssertFalse(accepted)
+        }
+    }
+
     func testDuplicateTrustedKeyIdsAreRejected() async throws {
         let privateKey = Curve25519.Signing.PrivateKey()
         let duplicate = RuntimeProofTrustedKey(keyId: "same", rawPublicKey: privateKey.publicKey.rawRepresentation,
