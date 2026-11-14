@@ -130,7 +130,7 @@ function parseDataFlows(value: unknown): StaticDataFlowReport {
     throw new PolicyCheckError("Static AST data-flow report failed schema or trust-boundary validation");
   }
   const signals = value.signals.map(item => {
-    if (!isRecord(item) || typeof item.kind !== "string" || !DATA_FLOW_KINDS.has(item.kind) ||
+    if (!isRecord(item) || typeof item.kind !== "string" || !DATA_FLOW_KINDS.has(item.kind) ||\n        (item.analysis_scope !== undefined && item.analysis_scope !== "intraprocedural" && item.analysis_scope !== "interprocedural") ||
         !Number.isSafeInteger(item.source_line) || (item.source_line as number) < 1 ||
         !Number.isSafeInteger(item.sink_line) || (item.sink_line as number) < 1 ||
         typeof item.source_expression !== "string" || item.source_expression.length > 240 ||
