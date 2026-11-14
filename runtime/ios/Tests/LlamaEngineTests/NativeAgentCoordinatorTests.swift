@@ -78,6 +78,18 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
 
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "t", objective: String(repeating: "界", count: 1_500),
+                    requiredCapabilities: []),
+                steps: [NativeAgentStep(agentId: "reasoner", instructions: "Analyze")]
+            )
+            XCTFail("oversized UTF-8 objective should be rejected")
+        } catch NativeAgentCoordinatorError.invalidTask {
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+
         let tooManySteps = (0..<9).map {
             NativeAgentStep(agentId: "role-\($0)", instructions: "Analyze")
         }
