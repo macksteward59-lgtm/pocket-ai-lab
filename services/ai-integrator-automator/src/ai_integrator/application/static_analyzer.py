@@ -36,6 +36,8 @@ class StaticAnalysisReport(BaseModel):
 
 def analyze_source(source: str, *, filename: str = "", limit: int = 1_000_000) -> StaticAnalysisReport:
     text = source if isinstance(source, str) else ""
+    if limit < 1:
+        raise ValueError("Analysis limit must be positive")
     truncated = len(text) > limit
     body = text[:limit]
     observations: list[StaticObservation] = []
@@ -49,6 +51,7 @@ def analyze_source(source: str, *, filename: str = "", limit: int = 1_000_000) -
                     remediation="Remove or gate this call. This review did not run it.",
                 ))
         if len(observations) >= 100:
+            truncated = True
             break
     data_flows = None
     if filename.lower().endswith(".py"):
