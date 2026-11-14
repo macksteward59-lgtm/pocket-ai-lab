@@ -102,4 +102,4 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 - Unauthorized actions are denied by APEX.
 - Repair operations require independent authorization.
 
-See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` and `docs/implementation/consumer-prototype-acceptance.md` for the architecture and measurable product acceptance criteria.
+See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md`, `docs/architecture/mobile-intelligence-competitive-gap-analysis-2026-11.md`, and `docs/implementation/consumer-prototype-acceptance.md` for the architecture, competitive capability gaps, and measurable product acceptance criteria.
