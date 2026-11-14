@@ -88,7 +88,23 @@ describe("SourceResearchPipeline", () => {
     expect(result.evidence.vulnerabilityConfirmed).toBe(false);
   });
 
-  it("preserves partial-analysis status through the full pipeline", async () => {
+
+  it("preserves interprocedural scope through source evidence binding", async () => {
+    const response = {
+      ...validResponse,
+      data_flows: {
+        ...validResponse.data_flows,
+        signals: [{
+          ...validResponse.data_flows.signals[0],
+          analysis_scope: "interprocedural"
+        }]
+      }
+    };
+    const result = await pipelineFor(response).analyze({ filename: "src/handlers.py", source });
+    expect(result.dataFlows.signals[0].analysisScope).toBe("interprocedural");
+    expect(result.dataFlows.signals[0].status).toBe("unverified");
+  });
+\n  it("preserves partial-analysis status through the full pipeline", async () => {
     const result = await pipelineFor({
       ...validResponse,
       observations: [],
