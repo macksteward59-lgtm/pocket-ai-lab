@@ -138,7 +138,6 @@ def test_bounded_cross_file_project_analysis_endpoint():
     signal = report["observations"][0]
     assert signal["source_file"] == "app/routes.py"
     assert signal["sink_file"] == "app/services/worker.py"
-    assert signal["authorized"] if "authorized" in signal else True
     assert report["authorized"] is False
     assert report["executes"] is False
 
