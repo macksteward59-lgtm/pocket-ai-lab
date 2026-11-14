@@ -179,8 +179,9 @@ export class Orchestrator {
           if (!agent) throw new Error("Unknown agent: " + agentId);
           const model = this.models.getPreferredModel(agentId);
           const selected = await this.router.route(agentId, model, requiredCapabilities);
-          const sessionId = this.agents.startSession(agentId, request.id, selected.id);
+          let sessionId: string | undefined;
           try {
+            sessionId = this.agents.startSession(agentId, request.id, selected.id);
             this.agents.updateStatus(sessionId, "running");
             const result = await this.inference.generate({
               agentId,
@@ -212,7 +213,7 @@ export class Orchestrator {
             generated.push(this.bus.publish(message));
             this.agents.updateStatus(sessionId, "complete");
           } finally {
-            this.agents.releaseSession(sessionId);
+            if (sessionId) this.agents.releaseSession(sessionId);
             this.router.release(selected);
           }
         }
