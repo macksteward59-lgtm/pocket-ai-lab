@@ -45,8 +45,26 @@ describe("ModelRouter generation-aware reservation leases", () => {
     await router.route("reasoner", shared, ["reason"]);
     shared.memoryEstimateMB = 512;
     await expect(router.route("researcher", shared, ["reason"]))
-      .rejects.toThrow(/changed its memory estimate/);
+      .rejects.toThrow(/descriptor changed/);
     router.release(shared);
+  });
+
+  it("rejects path or ID mutation while preserving exact lease release", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const descriptor = model("mutable", 256);
+    await router.route("reasoner", descriptor, ["reason"]);
+    descriptor.path = "/models/changed.gguf";
+    await expect(router.route("researcher", descriptor, ["reason"]))
+      .rejects.toThrow(/descriptor changed/);
+    descriptor.id = "changed-id";
+    router.release(descriptor);
+    expect(router.getLoadedModels()).toEqual(["mutable"]);
+    // The ID mutation is also rejected by the descriptor's original identity;
+    // the stored lease remains addressable and can be drained by its original key.
+    const originalIdDescriptor = descriptor as ModelDescriptor & { id: string };
+    originalIdDescriptor.id = "mutable";
+    router.release(originalIdDescriptor);
+    expect(router.getLoadedModels()).toEqual([]);
   });
 
   it("rejects a different descriptor generation until the old generation drains", async () => {
