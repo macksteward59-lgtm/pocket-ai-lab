@@ -114,7 +114,6 @@ public actor NativeAgentCoordinator {
                 for try await token in stream {
                     try Task.checkCancellation()
                     guard output.count + token.text.count <= Self.maxOutputCharacters else {
-                        await engine.cancel(sessionId: session.id, requestId: request.requestId)
                         throw NativeAgentCoordinatorError.responseTooLarge
                     }
                     output += token.text
