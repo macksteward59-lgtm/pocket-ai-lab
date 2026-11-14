@@ -7,7 +7,7 @@ import json
 from collections import deque
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_integrator.api.dependencies import get_orchestrator
@@ -81,7 +81,10 @@ def replace_allowlist(body: AllowlistBody) -> dict:
 @router.post("/api/v1/governance/analyze-project")
 def analyze_project(body: AnalyzeProjectRequest) -> dict:
     """Analyze a bounded in-memory Python project without executing submitted source."""
-    report = analyze_python_project(body.files)
+    try:
+        report = analyze_python_project(body.files)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return report.model_dump(mode="json")
 
 
