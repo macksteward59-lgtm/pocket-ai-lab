@@ -230,6 +230,9 @@ function decide(
   if ((ownership?.requirement === "unknown") || (!ownership && model.ownershipInventory === "partial")) {
     return { decision: "unknown", evidenceRefs: refs };
   }
+  if (!allow && model.permissionInventory === "complete") {
+    return { decision: "deny", evidenceRefs: refs };
+  }
   if (operation.residualAuthorization === "unknown") {
     return { decision: "unknown", evidenceRefs: refs };
   }
