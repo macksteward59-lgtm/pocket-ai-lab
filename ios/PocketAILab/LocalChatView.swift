@@ -70,7 +70,7 @@ final class LocalChatModel: ObservableObject {
         // Verify the selected file before disturbing a previously loaded session.
         // If it changed or became unreadable, unload the stale session and fail closed.
         do {
-            let currentFingerprint = try ModelArtifactFingerprint.compute(at: modelURL)
+            let currentFingerprint = try await fingerprintFile(at: modelURL)
             guard currentFingerprint == expectedFingerprint else {
                 if let previousSession = session {
                     await engine.unload(sessionId: previousSession.id)
@@ -105,7 +105,7 @@ final class LocalChatModel: ObservableObject {
             // Detect replacement or mutation while the native loader was reading.
             // Any post-load fingerprint error must unload the just-created session.
             do {
-                let afterLoadFingerprint = try ModelArtifactFingerprint.compute(at: modelURL)
+                let afterLoadFingerprint = try await fingerprintFile(at: modelURL)
                 guard afterLoadFingerprint == expectedFingerprint else {
                     throw LocalChatError.modelChanged
                 }
@@ -122,6 +122,14 @@ final class LocalChatModel: ObservableObject {
             session = nil
             status = "Model load failed: \(error.localizedDescription) Runtime trust remains unverified."
         }
+    }
+
+    /// Hash large model files away from the main actor so import/load checks
+    /// do not freeze SwiftUI while reading multi-gigabyte GGUF artifacts.
+    private func fingerprintFile(at url: URL) async throws -> ModelArtifactFingerprint {
+        try await Task.detached(priority: .utility) {
+            try ModelArtifactFingerprint.compute(at: url)
+        }.value
     }
 
     func send(_ prompt: String) async {
