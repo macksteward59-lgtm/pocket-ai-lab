@@ -78,9 +78,12 @@ export function canonicalRuntimeSessionProofPayload(proof: RuntimeSessionProof):
     proof.algorithm
   ];
   const encoder = new TextEncoder();
-  const chunks = fields.map((field) => {
+  const fieldLimits = [64, 8, 256, 256, 64, 128, 64, 20, 128, 16];
+  const chunks = fields.map((field, index) => {
     const bytes = encoder.encode(field);
-    if (bytes.byteLength > 0xffff_ffff) throw new RangeError("Runtime proof field is too large");
+    if (bytes.byteLength > fieldLimits[index] || bytes.byteLength > 0xffff_ffff) {
+      throw new RangeError("Runtime proof field exceeds its protocol limit");
+    }
     const prefix = new Uint8Array(4);
     new DataView(prefix.buffer).setUint32(0, bytes.byteLength, false);
     return [prefix, bytes] as const;
