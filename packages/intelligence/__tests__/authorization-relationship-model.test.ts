@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AuthorizationRelationshipModel, checkAuthorizationRelationships } from "../research-science/AuthorizationRelationshipModel";
+import { AuthorizationRelationshipModel, checkAuthorizationRelationships, type AuthorizationRelationshipModelInput } from "../research-science/AuthorizationRelationshipModel";
 import { SecurityWorldModel } from "../research-science/SecurityWorldModel";
 import { SYNTHETIC_TENANT_ISOLATION_FIXTURE } from "../research-science/fixtures/synthetic-tenant-isolation";
 
@@ -8,7 +8,7 @@ const grants = [
   { id: "member-read", role: "member", action: "read" as const, resourceKind: "document", effect: "allow" as const, confidence: 1, evidenceRef: "fixture://grant/member-read" }
 ];
 
-function makeModel(overrides: Record<string, unknown> = {}) {
+function makeModel(overrides: Partial<AuthorizationRelationshipModelInput> = {}) {
   return new AuthorizationRelationshipModel({
     id: "synthetic:authorization-relationships",
     version: 1,
@@ -128,7 +128,6 @@ describe("AuthorizationRelationshipModel", () => {
         { id: "tenant-a-member", tenantId: "tenant-a", role: "member" }
       ],
       operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], action: "write" }],
-      invariants: [{ id: "owner-only-write", kind: "owner-only-write", description: "Only the resource owner may write." }],
       facts: []
     });
     const writeGrants = [
