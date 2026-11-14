@@ -22,11 +22,28 @@ export interface StaticDataFlowReport {
   limitations: string[];
 }
 
-export interface StaticAuthorizationRoute {\n  path: string | null;\n  methods: string[];\n  function: string;\n  line: number;\n  guardStatus: "local-guard-observed" | "no-local-guard-observed" | "indeterminate";\n  guardSignals: string[];\n  excerpt: string;\n}\n\nexport interface StaticAuthorizationSurface {\n  parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";\n  routes: StaticAuthorizationRoute[];\n  limitations: string[];\n}\n\nexport interface StaticAnalysisReport {
+export interface StaticAuthorizationRoute {
+  path: string | null;
+  methods: string[];
+  function: string;
+  line: number;
+  guardStatus: "local-guard-observed" | "no-local-guard-observed" | "indeterminate";
+  guardSignals: string[];
+  excerpt: string;
+}
+
+export interface StaticAuthorizationSurface {
+  parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";
+  routes: StaticAuthorizationRoute[];
+  limitations: string[];
+}
+
+export interface StaticAnalysisReport {
   filename: string;
   observations: Array<{ kind: string; line: number; excerpt: string; remediation: string }>;
   context: { imports: string[]; functions: string[]; classes: string[] };
   dataFlows: StaticDataFlowReport;
+  authorizationSurface: StaticAuthorizationSurface;
   truncated: boolean;
   authorized: false;
   executes: false;
@@ -64,6 +81,7 @@ export class StaticAnalysisOrchestratorBridge {
     }
     const context = isRecord(body.context) ? body.context : {};
     const dataFlows = parseDataFlows(body.data_flows);
+    const authorizationSurface = parseAuthorizationSurface(body.authorization_surface);
     return {
       filename: input.filename,
       observations: parseObservations(body.observations),
@@ -73,6 +91,7 @@ export class StaticAnalysisOrchestratorBridge {
         classes: stringList(context.classes)
       },
       dataFlows,
+      authorizationSurface,
       truncated: body.truncated || dataFlows.parserStatus === "truncated",
       authorized: false,
       executes: false
