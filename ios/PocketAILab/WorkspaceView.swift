@@ -5,6 +5,8 @@ struct WorkspaceView: View {
     @AppStorage("workspaceURL") private var workspaceURL = ""
     @State private var address = ""
     @State private var loadURL: URL?
+    @State private var loadRequestID = UUID()
+    @State private var restoreGate = WorkspaceRestoreGate()
     @State private var validationMessage = "Enter the HTTPS address of your deployed Pocket AI Lab workspace."
 
     var body: some View {
@@ -18,7 +20,8 @@ struct WorkspaceView: View {
                 }.padding(.horizontal)
                 Text(validationMessage).font(.caption).foregroundStyle(.secondary).padding(.horizontal)
                 if let loadURL {
-                    PrivateWorkspaceWebView(url: loadURL).clipShape(RoundedRectangle(cornerRadius: 12))
+                    PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     VStack(spacing: 10) {
                         Image(systemName: "globe").font(.largeTitle)
@@ -29,35 +32,101 @@ struct WorkspaceView: View {
                 }
             }
             .navigationTitle("Web Workspace")
-            .onAppear { if !workspaceURL.isEmpty { address = workspaceURL; openWorkspace() } }
+            .onAppear {
+                // Restore the saved workspace only once. Returning to this tab
+                // must preserve the page's current navigation and form state.
+                guard restoreGate.beginRestore() else { return }
+                guard !workspaceURL.isEmpty else { return }
+                address = workspaceURL
+                openWorkspace()
+            }
         }
     }
 
     private func openWorkspace() {
         guard let components = URLComponents(string: address),
-              let scheme = components.scheme?.lowercased(),
-              scheme == "https" || (scheme == "http" && (components.host == "localhost" || components.host == "127.0.0.1")),
-              let url = components.url else {
-            validationMessage = "Use HTTPS. HTTP is allowed only for localhost development."
-            loadURL = nil
+              let url = components.url,
+              isAllowedWorkspaceURL(url) else {
+            validationMessage = "Use a valid HTTPS address with a host. HTTP is allowed only for localhost development."
             return
         }
         workspaceURL = url.absoluteString
+        address = url.absoluteString
         loadURL = url
+        loadRequestID = UUID()
         validationMessage = "Address saved on this device. The web server must enforce authentication and authorization."
     }
 }
 
+struct WorkspaceRestoreGate {
+    private(set) var hasRestoredSavedAddress = false
+
+    mutating func beginRestore() -> Bool {
+        guard !hasRestoredSavedAddress else { return false }
+        hasRestoredSavedAddress = true
+        return true
+    }
+}
+
+func isAllowedWorkspaceURL(_ url: URL) -> Bool {
+    guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+          let host = components.host?.lowercased(),
+          !host.isEmpty,
+          let scheme = components.scheme?.lowercased(),
+          components.user == nil,
+          components.password == nil else {
+        return false
+    }
+
+    let isLoopback = host == "localhost" || host == "127.0.0.1" || host == "::1"
+    return scheme == "https" || (scheme == "http" && isLoopback)
+}
+
 struct PrivateWorkspaceWebView: UIViewRepresentable {
     let url: URL
+    let requestID: UUID
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
-        let view = WKWebView(frame: .zero, configuration: config)
-        view.load(URLRequest(url: url))
-        return view
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        _ = context.coordinator.shouldLoad(requestID)
+        webView.load(URLRequest(url: url))
+        return webView
     }
-    func updateUIView(_ view: WKWebView, context: Context) {
-        if view.url != url { view.load(URLRequest(url: url)) }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        // The browser's current URL may legitimately differ after a redirect
+        // or in-page navigation. Only an explicit Open request should reload.
+        guard context.coordinator.shouldLoad(requestID) else { return }
+        webView.load(URLRequest(url: url))
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        private(set) var lastRequestID: UUID?
+
+        func shouldLoad(_ requestID: UUID) -> Bool {
+            guard lastRequestID != requestID else { return false }
+            lastRequestID = requestID
+            return true
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let destination = navigationAction.request.url,
+                  isAllowedWorkspaceURL(destination) else {
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
+        }
     }
 }
