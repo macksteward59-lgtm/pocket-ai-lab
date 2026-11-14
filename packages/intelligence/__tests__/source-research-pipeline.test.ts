@@ -10,13 +10,13 @@ const source = [
   "    return value"
 ].join("\n");
 
-function pipelineFor(body: Record<string, unknown>) {
+function pipelineFor(body: Record<string, unknown>, expectedSource = source) {
   const bridge = new StaticAnalysisOrchestratorBridge({
     baseUrl: "http://127.0.0.1:8765",
     fetchImpl: async (_url, init) => {
       const submitted = JSON.parse(String(init?.body)) as { filename: string; source: string };
       expect(submitted.filename).toBe("src/handlers.py");
-      expect(submitted.source).toBe(source);
+      expect(submitted.source).toBe(expectedSource);
       return new Response(JSON.stringify(body), { status: 200 });
     }
   });
@@ -32,7 +32,7 @@ const validResponse = {
     remediation: "Avoid evaluating untrusted input."
   }],
   context: { imports: ["flask"], functions: ["run"], classes: [] },
-  data_flows: {
+  authorization_surface: { parser_status: "parsed", routes: [], limitations: ["No routes in fixture."], authorized: false, executes: false },\n  data_flows: {
     language: "python",
     parser_status: "parsed",
     signals: [{
