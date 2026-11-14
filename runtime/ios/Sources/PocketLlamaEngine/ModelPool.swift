@@ -187,8 +187,12 @@ public actor ModelPool {
 
         unloading.insert(modelId)
         entries[modelId] = nil
-        reservedMemoryMB = max(0, reservedMemoryMB - entry.estimatedMemoryMB)
+        // Keep the reservation until the native engine confirms unload has
+        // returned. Actor reentrancy allows other models to acquire while this
+        // await is suspended; releasing the budget first would over-admit
+        // memory while the old session may still be resident.
         await engine.unload(sessionId: entry.session.id)
+        reservedMemoryMB = max(0, reservedMemoryMB - entry.estimatedMemoryMB)
         unloading.remove(modelId)
     }
 
