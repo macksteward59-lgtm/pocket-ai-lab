@@ -39,3 +39,15 @@ def test_helper_summary_does_not_cross_file_or_dynamic_dispatch():
 """
     report = analyze_python_dataflow(source)
     assert not [signal for signal in report.signals if signal.analysis_scope == "interprocedural"]
+
+def test_keyword_helper_arguments_are_not_misbound_to_positional_summaries():
+    source = """def helper(value):
+    eval(value)
+
+def handler():
+    item = request.args.get("q")
+    helper(value=item)
+"""
+    report = analyze_python_dataflow(source)
+    assert report.parser_status == "unsupported"
+    assert not [signal for signal in report.signals if signal.analysis_scope == "interprocedural"]
