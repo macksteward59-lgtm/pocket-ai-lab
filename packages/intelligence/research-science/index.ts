@@ -22,3 +22,5 @@ export type {
 
 export { ingestStaticAnalysis } from "./SourceEvidenceAdapter";
 export type { StaticObservationInput, StaticAnalysisInput, SourceEvidenceCandidate, SourceEvidenceReport } from "./SourceEvidenceAdapter";
+
+export { SourceResearchPipeline, type SourceResearchResult } from "./SourceResearchPipeline";
