@@ -127,8 +127,13 @@ def test_bounded_cross_file_project_analysis_endpoint():
     response = client.post(
         "/api/v1/governance/analyze-project",
         json={"files": [
-            {"path": "app/routes.py", "source": "from services.worker import run\nvalue = request.args.get('q')\nrun(value)\n"},
-            {"path": "app/services/worker.py", "source": "def run(value):\n    eval(value)\n"},
+            {"path": "app/routes.py", "source": """from services.worker import run
+value = request.args.get('q')
+run(value)
+"""},
+            {"path": "app/services/worker.py", "source": """def run(value):
+    eval(value)
+"""},
         ]},
     )
     assert response.status_code == 200
