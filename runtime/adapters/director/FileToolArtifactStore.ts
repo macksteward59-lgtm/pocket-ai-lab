@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import { chmod, mkdir, open, readdir, realpath, rename, rm, lstat } from "node:fs/promises";
 import path from "node:path";
@@ -180,8 +180,9 @@ function validateArtifact(value: unknown): asserts value is ToolArtifact {
       !["create", "extend", "revise"].includes(String(spec.change)) ||
       !Array.isArray(spec.specialists) || spec.specialists.length === 0 ||
       !spec.specialists.every(item => typeof item === "string" && item.length > 0) ||
-      !Array.isArray(spec.requirements) || spec.requirements.length === 0 ||
-      !spec.requirements.every(item => typeof item === "string" && item.trim())) {
+      !Array.isArray(spec.requirements) || spec.requirements.length === 0 || spec.requirements.length > 20 ||
+      !spec.requirements.every(item => typeof item === "string" && item.trim() && item.length <= 1000) ||
+      spec.name.length > 120 || spec.purpose.length > 1000) {
     throw new Error("Invalid artifact specification");
   }
   if (!artifact.files || typeof artifact.files !== "object" || Array.isArray(artifact.files)) throw new Error("Invalid artifact files");
@@ -189,7 +190,7 @@ function validateArtifact(value: unknown): asserts value is ToolArtifact {
   if (fileEntries.length === 0 || fileEntries.length > 40) throw new Error("Invalid artifact file count");
   let sourceBytes = 0;
   for (const [filePath, source] of fileEntries) {
-    if (!filePath || filePath.startsWith("/") || filePath.includes("\\\\") ||
+    if (!filePath || filePath.startsWith("/") || filePath.includes("\\") ||
         filePath.split("/").some(part => !part || part === "." || part === ".." ||
           ["__proto__", "prototype", "constructor"].includes(part))) {
       throw new Error("Unsafe artifact source path");
@@ -223,6 +224,18 @@ function validateArtifact(value: unknown): asserts value is ToolArtifact {
        artifact.testSummary.testsPassed !== artifact.testSummary.testsRun)) {
     throw new Error("Ready artifacts must have a complete passing test summary");
   }
+  const canonicalSpec = {
+    id: spec.id,
+    name: spec.name,
+    purpose: spec.purpose,
+    specialists: [...spec.specialists],
+    change: spec.change,
+    requirements: [...spec.requirements]
+  };
+  const canonicalFiles = Object.keys(artifact.files).sort().map(filePath => [filePath, artifact.files![filePath]]);
+  const canonical = JSON.stringify({ spec: canonicalSpec, files: canonicalFiles });
+  const expectedDigest = createHash("sha256").update(canonical, "utf8").digest("hex");
+  if (artifact.digest !== expectedDigest) throw new Error("Artifact digest does not match its stored source");
 }
 
 function cloneArtifact(artifact: ToolArtifact): ToolArtifact {
