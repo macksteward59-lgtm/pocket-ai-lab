@@ -1,17 +1,41 @@
 /**
- * Forward source text to the sidecar's static review.
- * The source is not evaluated in this process.
+ * Forward source text to the loopback-only, non-executing static-analysis sidecar.
+ * Sidecar output is untrusted and is shape-checked before it enters research.
  */
 import { PolicyCheckError, assertLoopback } from "../security/PolicyChecker";
+
+export interface StaticDataFlowSignal {
+  kind: string;
+  sourceLine: number;
+  sinkLine: number;
+  sourceExpression: string;
+  sinkExpression: string;
+  sinkName: string;
+  variables: string[];
+  sourceExcerpt: string;
+  sinkExcerpt: string;
+}
+
+export interface StaticDataFlowReport {
+  parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";
+  signals: StaticDataFlowSignal[];
+  limitations: string[];
+}
 
 export interface StaticAnalysisReport {
   filename: string;
   observations: Array<{ kind: string; line: number; excerpt: string; remediation: string }>;
   context: { imports: string[]; functions: string[]; classes: string[] };
+  dataFlows: StaticDataFlowReport;
   truncated: boolean;
   authorized: false;
   executes: false;
 }
+
+const DATA_FLOW_KINDS = new Set([
+  "dynamic-exec", "process-spawn", "deserialization", "sql-query", "network-client"
+]);
+const PARSER_STATUSES = new Set(["parsed", "syntax-error", "unsupported", "truncated"]);
 
 export class StaticAnalysisOrchestratorBridge {
   constructor(private readonly opts: { baseUrl: string; fetchImpl?: typeof fetch }) {}
@@ -38,19 +62,81 @@ export class StaticAnalysisOrchestratorBridge {
       throw new PolicyCheckError("Static analysis must report whether the input was truncated");
     }
     const context = isRecord(body.context) ? body.context : {};
+    const dataFlows = parseDataFlows(body.data_flows);
     return {
       filename: input.filename,
-      observations: Array.isArray(body.observations) ? body.observations as StaticAnalysisReport["observations"] : [],
+      observations: parseObservations(body.observations),
       context: {
         imports: stringList(context.imports),
         functions: stringList(context.functions),
         classes: stringList(context.classes)
       },
-      truncated: body.truncated,
+      dataFlows,
+      truncated: body.truncated || dataFlows.parserStatus === "truncated",
       authorized: false,
       executes: false
     };
   }
+}
+
+function parseObservations(value: unknown): StaticAnalysisReport["observations"] {
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new PolicyCheckError("Static analysis observation list is malformed or exceeds its limit");
+  }
+  return value.map(item => {
+    if (!isRecord(item) || typeof item.kind !== "string" ||
+        !Number.isSafeInteger(item.line) || typeof item.excerpt !== "string" ||
+        typeof item.remediation !== "string") {
+      throw new PolicyCheckError("Static analysis observation is malformed");
+    }
+    return {
+      kind: item.kind,
+      line: item.line as number,
+      excerpt: item.excerpt,
+      remediation: item.remediation
+    };
+  });
+}
+
+function parseDataFlows(value: unknown): StaticDataFlowReport {
+  if (value === undefined || value === null) {
+    return { parserStatus: "not-applicable", signals: [], limitations: ["The sidecar did not provide AST data-flow results."] };
+  }
+  if (!isRecord(value) || typeof value.parser_status !== "string" ||
+      !PARSER_STATUSES.has(value.parser_status) || value.authorized !== false || value.executes !== false ||
+      !Array.isArray(value.signals) || value.signals.length > 100 ||
+      !Array.isArray(value.limitations) || value.limitations.length > 20) {
+    throw new PolicyCheckError("Static AST data-flow report failed schema or trust-boundary validation");
+  }
+  const signals = value.signals.map(item => {
+    if (!isRecord(item) || typeof item.kind !== "string" || !DATA_FLOW_KINDS.has(item.kind) ||
+        !Number.isSafeInteger(item.source_line) || !Number.isSafeInteger(item.sink_line) ||
+        typeof item.source_expression !== "string" || typeof item.sink_expression !== "string" ||
+        typeof item.sink_name !== "string" || !Array.isArray(item.variables) ||
+        item.variables.length > 100 || !item.variables.every(x => typeof x === "string") ||
+        typeof item.source_excerpt !== "string" || typeof item.sink_excerpt !== "string") {
+      throw new PolicyCheckError("Static AST data-flow signal is malformed");
+    }
+    return {
+      kind: item.kind,
+      sourceLine: item.source_line as number,
+      sinkLine: item.sink_line as number,
+      sourceExpression: item.source_expression,
+      sinkExpression: item.sink_expression,
+      sinkName: item.sink_name,
+      variables: item.variables as string[],
+      sourceExcerpt: item.source_excerpt,
+      sinkExcerpt: item.sink_excerpt
+    };
+  });
+  if (!value.limitations.every(x => typeof x === "string" && x.length <= 500)) {
+    throw new PolicyCheckError("Static AST data-flow limitations are malformed");
+  }
+  return {
+    parserStatus: value.parser_status as StaticDataFlowReport["parserStatus"],
+    signals,
+    limitations: value.limitations as string[]
+  };
 }
 
 function stringList(value: unknown): string[] {
