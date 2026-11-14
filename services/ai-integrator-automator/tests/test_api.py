@@ -119,3 +119,31 @@ def test_review_and_analyze_routes(monkeypatch, tmp_path: Path):
     invalid = client.post("/api/v1/governance/review", json={"source_format": "live-probe", "content": BURP})
     assert invalid.status_code == 422
     assert invalid.json()["authorized"] is False
+
+
+
+def test_bounded_cross_file_project_analysis_endpoint():
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/governance/analyze-project",
+        json={"files": [
+            {"path": "app/routes.py", "source": "from services.worker import run\\nvalue = request.args.get('q')\\nrun(value)\\n"},
+            {"path": "app/services/worker.py", "source": "def run(value):\\n    eval(value)\\n"},
+        ]},
+    )
+    assert response.status_code == 200
+    report = response.json()
+    assert report["parser_status"] == "parsed"
+    assert len(report["observations"]) == 1
+    signal = report["observations"][0]
+    assert signal["source_file"] == "app/routes.py"
+    assert signal["sink_file"] == "app/services/worker.py"
+    assert signal["authorized"] if "authorized" in signal else True
+    assert report["authorized"] is False
+    assert report["executes"] is False
+
+    invalid = client.post(
+        "/api/v1/governance/analyze-project",
+        json={"files": [{"path": "../outside.py", "source": "x = 1"}]},
+    )
+    assert invalid.status_code == 400
