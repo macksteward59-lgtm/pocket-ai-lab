@@ -61,11 +61,96 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    func testOversizedTaskAndPlanAreRejectedBeforeInference() async {
+        let engine = RecordingInferenceEngine(responses: [])
+        let coordinator = NativeAgentCoordinator(engine: engine,
+            session: RuntimeSession(id: "s", modelId: "m"))
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "t", objective: String(repeating: "x", count: 4_001),
+                    requiredCapabilities: []),
+                steps: [NativeAgentStep(agentId: "reasoner", instructions: "Analyze")]
+            )
+            XCTFail("oversized objective should be rejected")
+        } catch NativeAgentCoordinatorError.invalidTask {
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+
+        let tooManySteps = (0..<9).map {
+            NativeAgentStep(agentId: "role-\($0)", instructions: "Analyze")
+        }
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "t", objective: "Do work", requiredCapabilities: []),
+                steps: tooManySteps
+            )
+            XCTFail("too many roles should be rejected")
+        } catch NativeAgentCoordinatorError.invalidPlan {
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "t", objective: "Do work", requiredCapabilities: []),
+                steps: [NativeAgentStep(agentId: "reasoner", instructions: "Analyze")],
+                maxTokens: 513
+            )
+            XCTFail("per-step token budget should be bounded")
+        } catch NativeAgentCoordinatorError.invalidPlan {
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        let count = await engine.recordedPrompts.count
+        XCTAssertEqual(count, 0)
+    }
+
+    func testPriorRoleOutputIsTruncatedBeforeItEntersTheNextPrompt() async throws {
+        let engine = RecordingInferenceEngine(responses: [
+            String(repeating: "A", count: 2_000),
+            "criticized"
+        ])
+        let coordinator = NativeAgentCoordinator(engine: engine,
+            session: RuntimeSession(id: "s", modelId: "m"))
+        _ = try await coordinator.run(
+            task: AgentTaskRequest(id: "t", objective: "Review this", requiredCapabilities: []),
+            steps: [
+                NativeAgentStep(agentId: "reasoner", instructions: "Analyze"),
+                NativeAgentStep(agentId: "critic", instructions: "Challenge")
+            ],
+            maxTokens: 128
+        )
+        let prompts = await engine.recordedPrompts
+        XCTAssertEqual(prompts.count, 2)
+        XCTAssertTrue(prompts[1].contains("[truncated]"))
+        XCTAssertLessThanOrEqual(prompts[1].count, 12_000)
+    }
+
+    func testOversizedModelResponseIsRejectedAndCancelled() async {
+        let engine = RecordingInferenceEngine(responses: [String(repeating: "x", count: 8_001)])
+        let coordinator = NativeAgentCoordinator(engine: engine,
+            session: RuntimeSession(id: "s", modelId: "m"))
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "t", objective: "Do work", requiredCapabilities: []),
+                steps: [NativeAgentStep(agentId: "reasoner", instructions: "Analyze")]
+            )
+            XCTFail("oversized response should fail")
+        } catch NativeAgentCoordinatorError.responseTooLarge {
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        let cancellations = await engine.cancelledRequestIDs
+        XCTAssertEqual(cancellations.count, 1)
+    }
 }
 
 private actor RecordingInferenceEngine: LlamaEngine {
     private var responses: [String]
     private(set) var recordedPrompts: [String] = []
+    private(set) var cancelledRequestIDs: [String] = []
 
     init(responses: [String]) { self.responses = responses }
 
@@ -82,6 +167,9 @@ private actor RecordingInferenceEngine: LlamaEngine {
         }
     }
 
-    func cancel(sessionId: String, requestId: String) async {}
+    func cancel(sessionId: String, requestId: String) async {
+        cancelledRequestIDs.append(requestId)
+    }
+
     func unload(sessionId: String) async {}
 }
