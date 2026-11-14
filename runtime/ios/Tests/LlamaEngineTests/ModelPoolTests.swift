@@ -24,10 +24,12 @@ final class ModelPoolTests: XCTestCase {
             XCTAssertEqual(count, 2)
         }
 
-        XCTAssertTrue(awaitRelease(pool, first))
+        let firstReleased = await pool.release(first)
+        XCTAssertTrue(firstReleased)
         let duplicateRelease = await pool.release(first)
         XCTAssertFalse(duplicateRelease)
-        XCTAssertTrue(awaitRelease(pool, second))
+        let secondReleased = await pool.release(second)
+        XCTAssertTrue(secondReleased)
         try await pool.unload(modelId: "alpha")
 
         let unloaded = await engine.unloadedSessionIDs()
@@ -55,7 +57,8 @@ final class ModelPoolTests: XCTestCase {
             XCTFail("Loaded-model limit should reject a second model")
         } catch ModelPoolError.modelLimitExceeded {
         }
-        XCTAssertTrue(awaitRelease(pool, lease))
+        let leaseReleased = await pool.release(lease)
+        XCTAssertTrue(leaseReleased)
         try await pool.unload(modelId: "fits")
         let calls = await engine.loadCallCount()
         XCTAssertEqual(calls, 1)
@@ -123,8 +126,10 @@ final class ModelPoolTests: XCTestCase {
         let calls = await engine.loadCallCount()
         XCTAssertEqual(calls, 1)
 
-        XCTAssertTrue(awaitRelease(pool, first))
-        XCTAssertTrue(awaitRelease(pool, second))
+        let firstReleased = await pool.release(first)
+        let secondReleased = await pool.release(second)
+        XCTAssertTrue(firstReleased)
+        XCTAssertTrue(secondReleased)
         try await pool.unload(modelId: "shared")
     }
 
@@ -133,7 +138,8 @@ final class ModelPoolTests: XCTestCase {
         let pool = try makePool(engine: engine, maxMemory: 2_048, maxModels: 2)
         let idle = try await pool.acquire(model: model("idle"), estimatedMemoryMB: 256)
         let active = try await pool.acquire(model: model("active"), estimatedMemoryMB: 256)
-        XCTAssertTrue(awaitRelease(pool, idle))
+        let idleReleased = await pool.release(idle)
+        XCTAssertTrue(idleReleased)
 
         let unloaded = await pool.unloadIdleModels()
         XCTAssertEqual(unloaded, ["idle"])
@@ -141,7 +147,8 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertEqual(snapshot.loadedModelIDs, ["active"])
         XCTAssertEqual(snapshot.activeLeaseCount, 1)
 
-        XCTAssertTrue(awaitRelease(pool, active))
+        let activeReleased = await pool.release(active)
+        XCTAssertTrue(activeReleased)
         let remaining = await pool.unloadIdleModels()
         XCTAssertEqual(remaining, ["active"])
         let final = await pool.snapshot()
@@ -177,10 +184,6 @@ final class ModelPoolTests: XCTestCase {
 
     private func model(_ id: String) -> ModelDescriptor {
         ModelDescriptor(id: id, name: id, path: "/tmp/\(id).gguf", contextLength: 512, quantization: "Q4_K_M")
-    }
-
-    private func awaitRelease(_ pool: ModelPool, _ lease: ModelPoolLease) async -> Bool {
-        await pool.release(lease)
     }
 }
 
