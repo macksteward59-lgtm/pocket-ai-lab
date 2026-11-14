@@ -8,6 +8,20 @@ export interface BoundSourceDataFlow extends StaticDataFlowSignal {
   status: "unverified";
 }
 
+export interface BoundAuthorizationRoute {
+  path: string | null;
+  methods: readonly string[];
+  function: string;
+  line: number;
+  guardStatus: "local-guard-observed" | "no-local-guard-observed" | "indeterminate";
+  guardSignals: readonly string[];
+  excerpt: string;
+  filename: string;
+  sourceSha256: string;
+  evidenceRef: string;
+  status: "unverified";
+}
+
 export interface SourceResearchResult {
   evidence: SourceEvidenceReport;
   context: {
@@ -17,7 +31,7 @@ export interface SourceResearchResult {
   };
   authorizationSurface: {
     parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";
-    routes: readonly Readonly<{ path: string | null; methods: readonly string[]; function: string; line: number; guardStatus: "local-guard-observed" | "no-local-guard-observed" | "indeterminate"; guardSignals: readonly string[]; excerpt: string; filename: string; sourceSha256: string; evidenceRef: string; status: "unverified" }>[];
+    routes: readonly Readonly<BoundAuthorizationRoute>[];
     limitations: readonly string[];
   };
   dataFlows: {
@@ -29,10 +43,7 @@ export interface SourceResearchResult {
   sourceExecuted: false;
 }
 
-/**
- * Connects loopback static analysis to provenance-bound research candidates.
- * AST paths are re-bound to exact submitted source lines before being exposed.
- */
+/** Loopback static analysis; all source claims are rebound to exact submitted lines. */
 export class SourceResearchPipeline {
   constructor(private readonly bridge: StaticAnalysisOrchestratorBridge) {}
 
@@ -41,7 +52,6 @@ export class SourceResearchPipeline {
     if (analysis.filename !== input.filename) {
       throw new Error("Static analysis filename does not match the submitted source");
     }
-
     const evidence = ingestStaticAnalysis({
       filename: input.filename,
       source: input.source,
@@ -50,8 +60,8 @@ export class SourceResearchPipeline {
       executes: analysis.executes,
       truncated: analysis.truncated
     });
-    const sourceLines = input.source.split(/\r\n|\n|\r/);
-    const boundRoutes = analysis.authorizationSurface.routes.map(route => {\n      if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||\n          sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {\n        throw new Error("Authorization route provenance does not exactly match submitted source lines");\n      }\n      return Object.freeze({ ...route, filename: input.filename, sourceSha256: evidence.sourceSha256,\n        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" + encodeURIComponent(input.filename) + "#L" + route.line,\n        status: "unverified" as const });\n    });\n    const boundRoutes = analysis.authorizationSurface.routes.map(route => {
+    const sourceLines = input.source.split(/\\r\\n|\\n|\\r/);
+    const boundRoutes = analysis.authorizationSurface.routes.map(route => {
       if (!Number.isSafeInteger(route.line) || route.line < 1 || route.line > sourceLines.length ||
           sourceLines[route.line - 1].trim().slice(0, 240) !== route.excerpt) {
         throw new Error("Authorization route provenance does not exactly match submitted source lines");
@@ -60,7 +70,8 @@ export class SourceResearchPipeline {
         ...route,
         filename: input.filename,
         sourceSha256: evidence.sourceSha256,
-        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" + encodeURIComponent(input.filename) + "#L" + route.line,
+        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" +
+          encodeURIComponent(input.filename) + "#L" + route.line,
         status: "unverified" as const
       });
     });
@@ -72,17 +83,15 @@ export class SourceResearchPipeline {
           sourceLines[signal.sinkLine - 1].trim().slice(0, 240) !== signal.sinkExcerpt) {
         throw new Error("AST data-flow provenance does not exactly match submitted source lines");
       }
-      const evidenceRef = "source://sha256/" + evidence.sourceSha256 + "/" +
-        encodeURIComponent(input.filename) + "#L" + signal.sourceLine + "-L" + signal.sinkLine;
       return Object.freeze({
         ...signal,
         filename: input.filename,
         sourceSha256: evidence.sourceSha256,
-        evidenceRef,
+        evidenceRef: "source://sha256/" + evidence.sourceSha256 + "/" +
+          encodeURIComponent(input.filename) + "#L" + signal.sourceLine + "-L" + signal.sinkLine,
         status: "unverified" as const
       });
     });
-
     return Object.freeze({
       evidence,
       context: Object.freeze({
