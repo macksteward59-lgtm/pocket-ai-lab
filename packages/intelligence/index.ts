@@ -82,3 +82,6 @@ export { runResearchBenchmark, type ResearchBenchmarkCase, type ResearchBenchmar
 
 export { bindMultiFileEvidence, MultiFileSourceResearchPipeline, type MultiFileSourceResearchResult } from "./research-science";
 export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFlowObservation, MultiFileEvidenceInput, BoundCrossFileCandidate, MultiFileEvidenceReport } from "./research-science";
+
+export { AuthorizationRelationshipModel, checkAuthorizationRelationships } from "./research-science";
+export type { PermissionEffect, OwnershipRequirement, AuthorizationInvariantKind, RolePermissionGrant, ResourceOwnershipRule, AuthorizationRouteBinding, AuthorizationInvariant, AuthorizationRelationshipModelInput, AuthorizationCounterexample, AuthorizationRelationshipCheck } from "./research-science";
