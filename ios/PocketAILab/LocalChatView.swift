@@ -103,10 +103,15 @@ final class LocalChatModel: ObservableObject {
             let loadedSession = try await engine.load(model: descriptor)
 
             // Detect replacement or mutation while the native loader was reading.
-            let afterLoadFingerprint = try ModelArtifactFingerprint.compute(at: modelURL)
-            guard afterLoadFingerprint == expectedFingerprint else {
+            // Any post-load fingerprint error must unload the just-created session.
+            do {
+                let afterLoadFingerprint = try ModelArtifactFingerprint.compute(at: modelURL)
+                guard afterLoadFingerprint == expectedFingerprint else {
+                    throw LocalChatError.modelChanged
+                }
+            } catch {
                 await engine.unload(sessionId: loadedSession.id)
-                throw LocalChatError.modelChanged
+                throw error
             }
 
             session = loadedSession
