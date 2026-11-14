@@ -104,7 +104,8 @@ describe("SourceResearchPipeline", () => {
     expect(result.dataFlows.signals[0].analysisScope).toBe("interprocedural");
     expect(result.dataFlows.signals[0].status).toBe("unverified");
   });
-\n  it("preserves partial-analysis status through the full pipeline", async () => {
+
+  it("preserves partial-analysis status through the full pipeline", async () => {
     const result = await pipelineFor({
       ...validResponse,
       observations: [],
