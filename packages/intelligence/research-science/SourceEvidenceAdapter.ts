@@ -64,7 +64,7 @@ export function ingestStaticAnalysis(input: StaticAnalysisInput): SourceEvidence
   }
   if (typeof input.filename !== "string" || input.filename.length < 1 ||
       input.filename.length > MAX_FILENAME || input.filename.startsWith("/") ||
-      /^[A-Za-z]:/.test(input.filename) || /[\\u0000-\\u001f\\u007f]/.test(input.filename) ||
+      /^[A-Za-z]:/.test(input.filename) || /[\x00-\x1f\x7f]/.test(input.filename) ||
       input.filename.includes("\\") || input.filename.split("/").some(part => part === ".." || part === "." || part === "")) {
     throw new Error("Filename must be a bounded relative path without traversal segments");
   }
