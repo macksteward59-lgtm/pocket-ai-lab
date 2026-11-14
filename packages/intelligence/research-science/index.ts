@@ -19,3 +19,6 @@ export type {
   ExperimentProposal,
   ResearchPocReport
 } from "./types";
+
+export { ingestStaticAnalysis } from "./SourceEvidenceAdapter";
+export type { StaticObservationInput, StaticAnalysisInput, SourceEvidenceCandidate, SourceEvidenceReport } from "./SourceEvidenceAdapter";
