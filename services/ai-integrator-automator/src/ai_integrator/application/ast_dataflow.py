@@ -314,9 +314,21 @@ def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) ->
                     partial = True
                     for field in ("body", "orelse", "finalbody"):
                         nested = getattr(st, field, None)
-                        if isinstance(nested, list): walk(nested)
-                    for handler in getattr(st, "handlers", []): walk(handler.body)
-                    for case in getattr(st, "cases", []): walk(case.body)
+                        if isinstance(nested, list):
+                            snapshot = dict(env)
+                            walk(nested)
+                            env.clear()
+                            env.update(snapshot)
+                    for handler in getattr(st, "handlers", []):
+                        snapshot = dict(env)
+                        walk(handler.body)
+                        env.clear()
+                        env.update(snapshot)
+                    for case in getattr(st, "cases", []):
+                        snapshot = dict(env)
+                        walk(case.body)
+                        env.clear()
+                        env.update(snapshot)
         walk(fn.body)
         return out
 
@@ -399,9 +411,21 @@ def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) ->
                     partial = True
                     for field in ("body", "orelse", "finalbody"):
                         nested = getattr(st, field, None)
-                        if isinstance(nested, list): walk(nested)
-                    for handler in getattr(st, "handlers", []): walk(handler.body)
-                    for case in getattr(st, "cases", []): walk(case.body)
+                        if isinstance(nested, list):
+                            snapshot = dict(env)
+                            walk(nested)
+                            env.clear()
+                            env.update(snapshot)
+                    for handler in getattr(st, "handlers", []):
+                        snapshot = dict(env)
+                        walk(handler.body)
+                        env.clear()
+                        env.update(snapshot)
+                    for case in getattr(st, "cases", []):
+                        snapshot = dict(env)
+                        walk(case.body)
+                        env.clear()
+                        env.update(snapshot)
         walk(fn.body)
     return signals, partial
 
