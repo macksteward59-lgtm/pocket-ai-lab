@@ -128,14 +128,23 @@ describe("ModelPluginManager", () => {
       const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
       const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
       await manager.addModel(baseInput(filePath));
-      await router.route("agent-1", registry.get("local-llama"), []);
+      const oldDescriptor = registry.get("local-llama")!;
+      await router.route("agent-1", oldDescriptor, []);
 
       await expect(manager.replaceModel("local-llama", baseInput(filePath, "local-llama")))
         .rejects.toThrow(/currently loaded/);
 
       const replaced = await manager.replaceModel("local-llama", baseInput(filePath, "local-llama"), { confirmReplaceLoaded: true });
       expect(replaced.id).toBe("local-llama");
-      expect(router.getLoadedModels()).not.toContain("local-llama");
+      expect(router.getLoadedModels()).toContain("local-llama");
+      await expect(router.route("agent-2", registry.get("local-llama"), []))
+        .rejects.toThrow(/previous generation drains/);
+
+      router.release(oldDescriptor);
+      await expect(router.route("agent-2", replaced, [])).resolves.toBe(replaced);
+      router.confirmLoaded(replaced);
+      router.release(replaced);
+      expect(router.getLoadedModels()).toEqual([]);
     }));
 
   it("confirmed remove with concurrent routes drops the full reservation, not one lease", async () =>
@@ -145,17 +154,22 @@ describe("ModelPluginManager", () => {
       const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
       await manager.addModel({ ...baseInput(filePath), memoryEstimateMB: 512 });
 
-      await router.route("agent-1", registry.get("local-llama")!, []);
-      await router.route("agent-2", registry.get("local-llama")!, []);
+      const descriptor = registry.get("local-llama")!;
+      await router.route("agent-1", descriptor, []);
+      await router.route("agent-2", descriptor, []);
       expect(router.getLoadedModels()).toEqual(["local-llama"]);
 
-      // Confirmed admin remove must not leave a half-open lease that a later
-      // route release would incorrectly free while another consumer still ran.
+      // Confirmed removal retires the generation but does not steal in-flight leases.
       expect(manager.removeModel("local-llama", { confirmReplaceLoaded: true })).toBe(true);
       expect(registry.has("local-llama")).toBe(false);
+      expect(router.getLoadedModels()).toEqual(["local-llama"]);
+      await expect(router.route("agent-3", descriptor, [])).rejects.toThrow(/retired/);
+      router.release(descriptor);
+      expect(router.getLoadedModels()).toEqual(["local-llama"]);
+      router.release(descriptor);
       expect(router.getLoadedModels()).toEqual([]);
 
-      // Memory is fully available again for a different model.
+      // Memory is available again only after both exact route leases drain.
       await expect(router.route("agent-3", {
         id: "other",
         name: "other",
@@ -178,12 +192,16 @@ describe("ModelPluginManager", () => {
       const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
       const manager = new ModelPluginManager({ registry, router, fetcher: new LocalFileFetcher() });
       await manager.addModel(baseInput(filePath));
-      await router.route("agent-1", registry.get("local-llama"), []);
+      const descriptor = registry.get("local-llama")!;
+      await router.route("agent-1", descriptor, []);
 
       expect(() => manager.removeModel("local-llama")).toThrow(/currently loaded/);
       expect(manager.removeModel("local-llama", { confirmReplaceLoaded: true })).toBe(true);
       expect(registry.has("local-llama")).toBe(false);
-      expect(manager.removeModel("local-llama")).toBe(false); // already gone, no throw, no duplicate log entry
+      expect(router.getLoadedModels()).toEqual(["local-llama"]);
+      router.release(descriptor);
+      expect(router.getLoadedModels()).toEqual([]);
+      expect(manager.removeModel("local-llama")).toBe(false); // already gone, no duplicate log entry
       expect(manager.getChangeLog().filter(e => e.action === "removed")).toHaveLength(1);
     }));
 
