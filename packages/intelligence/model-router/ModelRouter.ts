@@ -45,11 +45,11 @@ export class ModelRouter {
     if (originalId !== undefined && originalId !== preferred.id) {
       throw new Error("Model descriptor identity changed its model ID");
     }
-    this.descriptorIds.set(preferred, preferred.id);
     if (typeof preferred.id !== "string" || !preferred.id.trim() ||
         typeof preferred.path !== "string" || !preferred.path.trim()) {
       throw new Error("Model " + String(preferred.id) + " has no configured runtime path");
     }
+    this.descriptorIds.set(preferred, preferred.id);
     if (!Number.isFinite(preferred.memoryEstimateMB) || preferred.memoryEstimateMB <= 0) {
       throw new Error("Model " + preferred.id + " has an invalid memory estimate");
     }
