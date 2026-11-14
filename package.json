@@ -19,7 +19,8 @@
     "lab": "tsx runtime/lab/server.ts",
     "test:engine": "vitest run packages/intelligence/__tests__",
     "test:governance": "python3 -m pytest --rootdir services/ai-integrator-automator services/ai-integrator-automator/tests",
-    "test:simulation": "node --import tsx scripts/local-gguf/SimulationEnvironment.ts"
+    "test:simulation": "node --import tsx scripts/local-gguf/SimulationEnvironment.ts",
+    "poc:research": "tsx scripts/research-poc.ts"
   },
   "dependencies": {
     "@elaraai/east": "^1.0.96",
