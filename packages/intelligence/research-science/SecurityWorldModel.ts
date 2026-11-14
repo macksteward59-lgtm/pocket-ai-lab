@@ -41,6 +41,7 @@ export class SecurityWorldModel {
     if (!input || typeof input !== "object") throw new Error("World model input is required");
     this.id = requireText(input.id, "model.id");
     if (!Number.isSafeInteger(input.version) || input.version < 1) throw new Error("model.version must be a positive integer");
+    this.version = input.version;
 
     const componentIds = requireUniqueIds(input.components, "components");
     const identityIds = requireUniqueIds(input.identities, "identities");
