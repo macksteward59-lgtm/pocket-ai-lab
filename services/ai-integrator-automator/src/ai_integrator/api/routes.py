@@ -14,6 +14,7 @@ from ai_integrator.api.dependencies import get_orchestrator
 from ai_integrator.application.allowlist_store import read_allowlist, write_allowlist
 from ai_integrator.application.authorization_surface import analyze_authorization_surface
 from ai_integrator.application.dependency_triage import triage_package_json, triage_requirements
+from ai_integrator.application.cross_file_dataflow import ProjectSourceFile, analyze_python_project
 from ai_integrator.application.report import render_review_markdown
 from ai_integrator.application.services import PolicyReviewOrchestrator, ReviewEnvelope
 from ai_integrator.application.source_parser import StaticContextExtractor
@@ -44,6 +45,12 @@ class AnalyzeSourceRequest(BaseModel):
     source: str = Field(max_length=1_000_000)
 
 
+class AnalyzeProjectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    files: list[ProjectSourceFile] = Field(min_length=1, max_length=50)
+
+
 def recent_reviews() -> list[dict]:
     return list(_RECENT)
 
@@ -69,6 +76,13 @@ def show_allowlist() -> dict:
 @router.put("/api/v1/governance/allowlist")
 def replace_allowlist(body: AllowlistBody) -> dict:
     return {"hosts": write_allowlist(body.hosts), "authorized": False}
+
+
+@router.post("/api/v1/governance/analyze-project")
+def analyze_project(body: AnalyzeProjectRequest) -> dict:
+    """Analyze a bounded in-memory Python project without executing submitted source."""
+    report = analyze_python_project(body.files)
+    return report.model_dump(mode="json")
 
 
 @router.post("/api/v1/governance/analyze-source")
