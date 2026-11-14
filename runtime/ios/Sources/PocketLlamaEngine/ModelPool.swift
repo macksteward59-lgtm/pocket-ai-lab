@@ -257,9 +257,11 @@ public actor ModelPool {
             }
             guard session.modelId == pending.descriptor.id else {
                 pendingLoads[pending.descriptor.id] = nil
-                reservedMemoryMB = max(0, reservedMemoryMB - pending.estimatedMemoryMB)
                 unloading.insert(pending.descriptor.id)
+                // The unexpected native session may still occupy memory while
+                // unload suspends. Keep its reservation until unload returns.
                 await engine.unload(sessionId: session.id)
+                reservedMemoryMB = max(0, reservedMemoryMB - pending.estimatedMemoryMB)
                 unloading.remove(pending.descriptor.id)
                 throw ModelPoolError.runtimeReturnedWrongModel(
                     expected: pending.descriptor.id,
