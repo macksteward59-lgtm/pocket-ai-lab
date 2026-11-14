@@ -77,6 +77,7 @@ export interface AuthorizationRelationshipCheck {
 
 const MAX_ITEMS = 500;
 const MAX_TEXT = 512;
+const MAX_COUNTEREXAMPLES = 1_000;
 
 function text(value: unknown, field: string, max = MAX_TEXT): string {
   if (typeof value !== "string" || value.trim().length === 0 || value.length > max) {
@@ -262,7 +263,8 @@ export function checkAuthorizationRelationships(model: AuthorizationRelationship
   const counterexamples: AuthorizationCounterexample[] = [];
   let checkedPairs = 0;
   let unknownPairs = 0;
-  for (const operation of model.world.operations) {
+  let truncated = false;
+  evaluation: for (const operation of model.world.operations) {
     for (const identity of model.world.identities) {
       for (const resource of model.world.resources) {
         const result = decide(model, operation, identity, resource);
@@ -288,6 +290,10 @@ export function checkAuthorizationRelationships(model: AuthorizationRelationship
               actorTenantId: identity.tenantId, resourceTenantId: resource.tenantId,
               predictedDecision: "allow", reason: "cross-tenant-allow", evidenceRefs
             });
+            if (counterexamples.length >= MAX_COUNTEREXAMPLES) {
+              truncated = true;
+              break evaluation;
+            }
           }
           if (invariant.kind === "owner-only-write" &&
               (operation.action === "write" || operation.action === "delete") &&
@@ -299,6 +305,10 @@ export function checkAuthorizationRelationships(model: AuthorizationRelationship
               actorTenantId: identity.tenantId, resourceTenantId: resource.tenantId,
               predictedDecision: "allow", reason: "non-owner-write-allow", evidenceRefs
             });
+            if (counterexamples.length >= MAX_COUNTEREXAMPLES) {
+              truncated = true;
+              break evaluation;
+            }
           }
         }
       }
@@ -315,6 +325,7 @@ export function checkAuthorizationRelationships(model: AuthorizationRelationship
       "Results describe only the supplied authorization relationship model; they are not observations of a live application.",
       "Explicit deny grants take precedence over allow grants.",
       ...(unknownPairs > 0 ? ["Incomplete inventories or unknown guards were not treated as secure or vulnerable."] : []),
+      ...(truncated ? ["Counterexample output reached the 1,000-item cap; remaining states were not enumerated."] : []),
       "A no-counterexample result is bounded by the declared inventory completeness and modeled relationships."
     ],
     findingStatus: "unverified", authorized: false, executionPerformed: false
