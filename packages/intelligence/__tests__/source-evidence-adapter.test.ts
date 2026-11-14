@@ -48,7 +48,7 @@ describe("SourceEvidenceAdapter", () => {
     expect(() => ingestStaticAnalysis({
       ...base,
       observations: [{ ...base.observations[0], excerpt: "eval(other)" }]
-    })).toThrow(/does not match/);
+    })).toThrow(/exactly match/);
   });
 
   it("rejects out-of-range source line references", () => {
@@ -67,7 +67,7 @@ describe("SourceEvidenceAdapter", () => {
 
   it("rejects any analysis result claiming authorization or execution", () => {
     expect(() => ingestStaticAnalysis({ ...base, authorized: true as unknown as false })).toThrow(/non-executing/);
-    expect(() => ingestStaticAnalysis({ ...base, executes: true as false })).toThrow(/non-executing/);
+    expect(() => ingestStaticAnalysis({ ...base, executes: true as unknown as false })).toThrow(/non-executing/);
   });
 
   it("rejects absolute and traversal filenames", () => {
