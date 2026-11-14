@@ -14,7 +14,7 @@ export const SYNTHETIC_TENANT_ISOLATION_FIXTURE: SecurityWorldModelInput = {
     { id: "tenant-a-document", tenantId: "tenant-a", ownerIdentityId: "tenant-a-owner", kind: "document" }
   ],
   operations: [
-    { id: "document-read", componentId: "document-service", action: "read", tenantIsolationGuard: "absent" }
+    { id: "document-read", componentId: "document-service", action: "read", tenantIsolationGuard: "absent", residualAuthorization: "allow" }
   ],
   invariants: [
     {
