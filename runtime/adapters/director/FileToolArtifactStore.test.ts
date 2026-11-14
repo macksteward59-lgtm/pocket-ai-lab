@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -12,19 +13,31 @@ async function temporaryRoot() {
   return root;
 }
 
+const artifactSpec = {
+  id: "artifact-inspector",
+  name: "Artifact Inspector",
+  purpose: "Inspect explicitly supplied project artifacts.",
+  specialists: ["reverse-engineering" as const],
+  change: "create" as const,
+  requirements: ["Read only supplied files", "Return structured metadata"]
+};
+const artifactFiles = { "src/index.ts": "export const inspect = () => true;" };
+function digestFor(spec: typeof artifactSpec, files: typeof artifactFiles) {
+  const canonical = JSON.stringify({
+    spec: {
+      id: spec.id, name: spec.name, purpose: spec.purpose,
+      specialists: [...spec.specialists], change: spec.change, requirements: [...spec.requirements]
+    },
+    files: Object.keys(files).sort().map(filePath => [filePath, files[filePath]])
+  });
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
+}
 const artifact: ToolArtifact = {
   toolId: "artifact-inspector",
   version: 1,
-  spec: {
-    id: "artifact-inspector",
-    name: "Artifact Inspector",
-    purpose: "Inspect explicitly supplied project artifacts.",
-    specialists: ["reverse-engineering"],
-    change: "create",
-    requirements: ["Read only supplied files", "Return structured metadata"]
-  },
-  digest: "a".repeat(64),
-  files: { "src/index.ts": "export const inspect = () => true;" },
+  spec: artifactSpec,
+  digest: digestFor(artifactSpec, artifactFiles),
+  files: artifactFiles,
   createdAt: new Date(0).toISOString(),
   status: "ready",
   testSummary: {
@@ -41,7 +54,8 @@ describe("FileToolArtifactStore", () => {
     const root = await temporaryRoot();
     const first = new FileToolArtifactStore(root);
     await first.put(artifact);
-    await first.put({ ...artifact, version: 2, digest: "b".repeat(64), previousDigest: artifact.digest });
+    const nextSpec = { ...artifactSpec, requirements: [...artifactSpec.requirements, "Record provenance"] };
+    await first.put({ ...artifact, version: 2, spec: nextSpec, digest: digestFor(nextSpec, artifactFiles), previousDigest: artifact.digest });
     const reopened = new FileToolArtifactStore(root);
     expect((await reopened.getLatest(artifact.toolId))?.version).toBe(2);
     expect((await reopened.list()).map(item => item.version)).toEqual([1, 2]);
@@ -74,6 +88,17 @@ describe("FileToolArtifactStore", () => {
     await writeFile(path.join(directory, "1.json"), "{broken");
     const store = new FileToolArtifactStore(root);
     await expect(store.getLatest(artifact.toolId)).rejects.toThrow(/Corrupt artifact record/);
+  });
+
+  it("rejects source tampering even when the stored digest field is unchanged", async () => {
+    const root = await temporaryRoot();
+    const store = new FileToolArtifactStore(root);
+    await store.put(artifact);
+    const filename = path.join(root, artifact.toolId, "1.json");
+    const record = JSON.parse(await readFile(filename, "utf8"));
+    record.files["src/index.ts"] = "export const inspect = () => false;";
+    await writeFile(filename, JSON.stringify(record));
+    await expect(store.getLatest(artifact.toolId)).rejects.toThrow(/digest does not match/);
   });
 
   it("writes owner-only files and atomically replaces lifecycle state", async () => {
