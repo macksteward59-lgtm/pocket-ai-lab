@@ -26,11 +26,11 @@ export function checkTenantIsolation(model: SecurityWorldModel): ModelCheckResul
       for (const resource of model.resources) {
         if (identity.tenantId === resource.tenantId) continue;
         checkedPairs += 1;
+        if (operation.tenantIsolationGuard === "enforced" || operation.residualAuthorization === "deny") continue;
         if (operation.tenantIsolationGuard === "unknown" || operation.residualAuthorization === "unknown") {
           unknownPairs += 1;
           continue;
         }
-        if (operation.tenantIsolationGuard === "enforced" || operation.residualAuthorization === "deny") continue;
         if (operation.residualAuthorization !== "allow") {
           unknownPairs += 1;
           continue;
