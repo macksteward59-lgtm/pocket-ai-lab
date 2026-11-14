@@ -78,7 +78,7 @@ export function ingestStaticAnalysis(input: StaticAnalysisInput): SourceEvidence
     throw new Error("Truncation flag must be boolean");
   }
 
-  const lines = input.source.split(/\r?\n/);
+  const lines = input.source.split(/\r\n|\n|\r/);
   const sourceSha256 = createHash("sha256").update(input.source, "utf8").digest("hex");
   const seen = new Set<string>();
   const candidates: SourceEvidenceCandidate[] = [];
