@@ -22,7 +22,7 @@ export interface StaticDataFlowReport {
   limitations: string[];
 }
 
-export interface StaticAnalysisReport {
+export interface StaticAuthorizationRoute {\n  path: string | null;\n  methods: string[];\n  function: string;\n  line: number;\n  guardStatus: "local-guard-observed" | "no-local-guard-observed" | "indeterminate";\n  guardSignals: string[];\n  excerpt: string;\n}\n\nexport interface StaticAuthorizationSurface {\n  parserStatus: "parsed" | "syntax-error" | "unsupported" | "truncated" | "not-applicable";\n  routes: StaticAuthorizationRoute[];\n  limitations: string[];\n}\n\nexport interface StaticAnalysisReport {
   filename: string;
   observations: Array<{ kind: string; line: number; excerpt: string; remediation: string }>;
   context: { imports: string[]; functions: string[]; classes: string[] };
@@ -152,4 +152,47 @@ function stringList(value: unknown): string[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseAuthorizationSurface(value: unknown): StaticAuthorizationSurface {
+  if (value === undefined || value === null) {
+    return { parserStatus: "not-applicable", routes: [], limitations: ["The sidecar did not provide an authorization route inventory."] };
+  }
+  if (!isRecord(value) || typeof value.parser_status !== "string" ||
+      !PARSER_STATUSES.has(value.parser_status) || value.authorized !== false || value.executes !== false ||
+      !Array.isArray(value.routes) || value.routes.length > 200 ||
+      !Array.isArray(value.limitations) || value.limitations.length > 20) {
+    throw new PolicyCheckError("Authorization surface report failed schema or trust-boundary validation");
+  }
+  const routes = value.routes.map(item => {
+    const statuses = ["local-guard-observed", "no-local-guard-observed", "indeterminate"];
+    if (!isRecord(item) || (item.path !== null && (typeof item.path !== "string" || item.path.length > 500)) ||
+        !Array.isArray(item.methods) || item.methods.length > 8 ||
+        !item.methods.every(x => typeof x === "string" && x.length <= 16) ||
+        typeof item.function !== "string" || item.function.length > 128 ||
+        !Number.isSafeInteger(item.line) || (item.line as number) < 1 ||
+        typeof item.guard_status !== "string" || !statuses.includes(item.guard_status) ||
+        !Array.isArray(item.guard_signals) || item.guard_signals.length > 20 ||
+        !item.guard_signals.every(x => typeof x === "string" && x.length <= 128) ||
+        typeof item.excerpt !== "string" || item.excerpt.length > 240) {
+      throw new PolicyCheckError("Authorization route record is malformed");
+    }
+    return {
+      path: item.path as string | null,
+      methods: item.methods as string[],
+      function: item.function,
+      line: item.line as number,
+      guardStatus: item.guard_status as StaticAuthorizationRoute["guardStatus"],
+      guardSignals: item.guard_signals as string[],
+      excerpt: item.excerpt
+    };
+  });
+  if (!value.limitations.every(x => typeof x === "string" && x.length <= 500)) {
+    throw new PolicyCheckError("Authorization surface limitations are malformed");
+  }
+  return {
+    parserStatus: value.parser_status as StaticAuthorizationSurface["parserStatus"],
+    routes,
+    limitations: value.limitations as string[]
+  };
 }
