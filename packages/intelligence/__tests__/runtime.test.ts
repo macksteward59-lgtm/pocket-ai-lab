@@ -224,5 +224,6 @@ describe("Orchestrator", () => {
     const thread = orchestrator.bus.getThread("orchestration-test");
     expect(thread).toHaveLength(10);
     expect(thread.map(item => item.sequence)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(orchestrator.router.getLoadedModels()).toEqual([]);
   });
 });
