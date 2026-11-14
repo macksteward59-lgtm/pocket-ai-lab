@@ -163,6 +163,21 @@ export class FileToolArtifactStore implements ToolArtifactStore {
   }
 }
 
+async function syncDirectory(directory: string): Promise<void> {
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(directory, fsConstants.O_RDONLY);
+    await handle.sync();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    // Some platforms do not expose fsync for directory handles. The artifact
+    // file has already been synced and atomically renamed on those platforms.
+    if (!["EISDIR", "EPERM", "EACCES", "EINVAL", "ENOTSUP", "EOPNOTSUPP"].includes(String(code))) throw error;
+  } finally {
+    if (handle) await handle.close();
+  }
+}
+
 function validateToolId(value: unknown): asserts value is string {
   if (typeof value !== "string" || !TOOL_ID.test(value)) throw new Error("Invalid tool id");
 }
