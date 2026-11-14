@@ -36,6 +36,7 @@ const DATA_FLOW_KINDS = new Set([
   "dynamic-exec", "process-spawn", "deserialization", "sql-query", "network-client"
 ]);
 const PARSER_STATUSES = new Set(["parsed", "syntax-error", "unsupported", "truncated"]);
+const OBSERVATION_KINDS = new Set(["dynamic-exec", "process-spawn", "deserialization", "network-client"]);
 
 export class StaticAnalysisOrchestratorBridge {
   constructor(private readonly opts: { baseUrl: string; fetchImpl?: typeof fetch }) {}
@@ -84,9 +85,10 @@ function parseObservations(value: unknown): StaticAnalysisReport["observations"]
     throw new PolicyCheckError("Static analysis observation list is malformed or exceeds its limit");
   }
   return value.map(item => {
-    if (!isRecord(item) || typeof item.kind !== "string" ||
-        !Number.isSafeInteger(item.line) || typeof item.excerpt !== "string" ||
-        typeof item.remediation !== "string") {
+    if (!isRecord(item) || typeof item.kind !== "string" || !OBSERVATION_KINDS.has(item.kind) ||
+        !Number.isSafeInteger(item.line) || (item.line as number) < 1 ||
+        typeof item.excerpt !== "string" || item.excerpt.length < 1 || item.excerpt.length > 180 ||
+        typeof item.remediation !== "string" || item.remediation.length < 1 || item.remediation.length > 500) {
       throw new PolicyCheckError("Static analysis observation is malformed");
     }
     return {
@@ -110,11 +112,15 @@ function parseDataFlows(value: unknown): StaticDataFlowReport {
   }
   const signals = value.signals.map(item => {
     if (!isRecord(item) || typeof item.kind !== "string" || !DATA_FLOW_KINDS.has(item.kind) ||
-        !Number.isSafeInteger(item.source_line) || !Number.isSafeInteger(item.sink_line) ||
-        typeof item.source_expression !== "string" || typeof item.sink_expression !== "string" ||
-        typeof item.sink_name !== "string" || !Array.isArray(item.variables) ||
-        item.variables.length > 100 || !item.variables.every(x => typeof x === "string") ||
-        typeof item.source_excerpt !== "string" || typeof item.sink_excerpt !== "string") {
+        !Number.isSafeInteger(item.source_line) || (item.source_line as number) < 1 ||
+        !Number.isSafeInteger(item.sink_line) || (item.sink_line as number) < 1 ||
+        typeof item.source_expression !== "string" || item.source_expression.length > 240 ||
+        typeof item.sink_expression !== "string" || item.sink_expression.length > 240 ||
+        typeof item.sink_name !== "string" || item.sink_name.length > 128 ||
+        !Array.isArray(item.variables) || item.variables.length > 100 ||
+        !item.variables.every(x => typeof x === "string" && x.length <= 128) ||
+        typeof item.source_excerpt !== "string" || item.source_excerpt.length > 240 ||
+        typeof item.sink_excerpt !== "string" || item.sink_excerpt.length > 240) {
       throw new PolicyCheckError("Static AST data-flow signal is malformed");
     }
     return {
