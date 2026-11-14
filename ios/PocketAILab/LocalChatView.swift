@@ -84,8 +84,6 @@ final class LocalChatModel: ObservableObject {
     }
 
     func send(_ prompt: String) async {
-        // UI button state is not a concurrency lock: queued Tasks can enter
-        // before SwiftUI has rendered the disabled state.
         guard !isBusy else { return }
         let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -112,6 +110,78 @@ final class LocalChatModel: ObservableObject {
             status = "Generation failed; no synthetic response was substituted. Runtime trust remains unverified."
         }
     }
+
+    /// Runs a bounded sequential role plan over the same loaded local model session.
+    /// These are logical roles, not independent models, and they cannot call tools.
+    func runAgentTeam(_ objective: String) async {
+        guard !isBusy else { return }
+        let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        guard let session else {
+            status = "Load the selected model before running Agent Team."
+            return
+        }
+
+        let steps = [
+            NativeAgentStep(
+                agentId: "reasoner",
+                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work."
+            ),
+            NativeAgentStep(
+                agentId: "researcher",
+                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations."
+            ),
+            NativeAgentStep(
+                agentId: "engineer",
+                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code."
+            ),
+            NativeAgentStep(
+                agentId: "security-analyst",
+                instructions: "Review threats, trust boundaries, privacy, misuse, and failure modes. Preserve all APEX/East authorization boundaries.",
+                messageType: .counterargument
+            ),
+            NativeAgentStep(
+                agentId: "critic",
+                instructions: "Challenge assumptions and earlier proposals. Find contradictions, missing cases, and simpler alternatives.",
+                messageType: .counterargument
+            ),
+            NativeAgentStep(
+                agentId: "validator",
+                instructions: "Synthesize a concise result. Label unverified claims, list remaining gaps, and propose next steps. Never claim tests or external actions occurred.",
+                messageType: .validation
+            )
+        ]
+
+        isBusy = true
+        messages.append(ChatLine(role: "You · Agent Team task", text: text))
+        defer { isBusy = false }
+        do {
+            let task = AgentTaskRequest(
+                id: UUID().uuidString,
+                objective: text,
+                requiredCapabilities: ["reasoning", "analysis", "engineering", "security-review", "critique", "validation"]
+            )
+            let coordinator = NativeAgentCoordinator(engine: engine, session: session)
+            let result = try await coordinator.run(
+                task: task,
+                steps: steps,
+                maxTokens: 192,
+                temperature: 0.2
+            )
+            for message in result.messages {
+                guard case .object(let payload) = message.payload,
+                      case .string(let output)? = payload["text"] else { continue }
+                messages.append(ChatLine(
+                    role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
+                    text: output
+                ))
+            }
+            status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+        } catch {
+            messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
+            status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
+        }
+    }
 }
 
 struct ChatLine: Identifiable {
@@ -131,11 +201,18 @@ enum LocalChatError: LocalizedError {
     }
 }
 
+private enum LocalInteractionMode: String, CaseIterable, Identifiable {
+    case chat = "Chat"
+    case agentTeam = "Agent Team"
+    var id: String { rawValue }
+}
+
 struct LocalChatView: View {
     @StateObject private var model = LocalChatModel()
     @State private var showImporter = false
     @State private var prompt = ""
     @State private var importError: String?
+    @State private var mode: LocalInteractionMode = .chat
 
     var body: some View {
         NavigationStack {
@@ -161,17 +238,38 @@ struct LocalChatView: View {
                         Text(line.text).textSelection(.enabled)
                     }.listRowSeparator(.hidden)
                 }
-                HStack(alignment: .bottom) {
-                    TextField("Message your local model…", text: $prompt, axis: .vertical)
-                        .textFieldStyle(.roundedBorder).lineLimit(1...4)
-                    Button {
-                        let value = prompt
-                        prompt = ""
-                        Task { await model.send(value) }
-                    } label: { Image(systemName: "arrow.up.circle.fill").font(.title) }
-                    .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isBusy)
+                VStack(spacing: 6) {
+                    Picker("Interaction mode", selection: $mode) {
+                        ForEach(LocalInteractionMode.allCases) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if mode == .agentTeam {
+                        Text("Six sequential logical roles share one loaded local model. They do not represent six independent models and cannot run tools.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    HStack(alignment: .bottom) {
+                        TextField(mode == .chat ? "Message your local model…" : "Describe a task for Agent Team…", text: $prompt, axis: .vertical)
+                            .textFieldStyle(.roundedBorder).lineLimit(1...4)
+                        Button {
+                            let value = prompt
+                            prompt = ""
+                            Task {
+                                if mode == .chat {
+                                    await model.send(value)
+                                } else {
+                                    await model.runAgentTeam(value)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: mode == .chat ? "arrow.up.circle.fill" : "person.3.fill")
+                                .font(.title)
+                        }
+                        .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isBusy)
+                    }
                 }.padding(.horizontal)
-                Text("Local model output cannot approve actions or create APEX evidence.")
+                Text("Model output is untrusted proposal data. It cannot approve actions or create APEX evidence.")
                     .font(.caption2).foregroundStyle(.secondary).padding(.bottom, 6)
             }
             .navigationTitle("Pocket AI Lab")
