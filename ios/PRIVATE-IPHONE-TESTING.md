@@ -49,11 +49,12 @@ The Workspace tab accepts HTTPS URLs. HTTP is accepted only for localhost develo
 
 ## Model import and acceptance
 
-1. Import a .gguf model. It is copied into the app's private Documents/Models directory.
-2. Tap Load model. A session is reported only if the linked llama.cpp backend loads it.
-3. Send a short prompt and verify non-empty text returned by the engine.
-4. Confirm runtime diagnostics on the physical device.
-5. Record model name, file size/hash, iOS version, device model, memory behavior, thermal behavior, and a repeatable prompt/result.
+1. Import a .gguf model. It is copied into the app's private Documents/Models directory, checked for the GGUF magic prefix, and streamed through SHA-256 without loading the full file into memory.
+2. The app records the digest and byte count. Tap Load model; the app checks the file hash before and after native loading and identifies the session with a content-addressed model ID. A changed file is rejected and any session loaded during a detected mutation is unloaded.
+3. A session is reported only if the linked llama.cpp backend loads it.
+4. Send a short prompt and verify non-empty text returned by the engine.
+5. Confirm runtime diagnostics on the physical device; runtime trust must still display Unverified.
+6. Record model name, full SHA-256, file size, iOS version, device model, memory behavior, thermal behavior, and a repeatable prompt/result.
 
 Simulator success does not prove physical iPhone Metal execution. Physical-device model load, generation, memory, and thermal checks remain an explicit acceptance gate. Start with a small quantized GGUF model.
 
@@ -81,4 +82,4 @@ Simulator success does not prove physical iPhone Metal execution. Physical-devic
 - Pocket AI Lab must beat the PocketPal baseline by at least 10% on one primary metric (median generation throughput or peak resident memory) while staying within 5% on the other performance metric and meeting the quality gate.
 - Any result without the same device, model hash, and runtime settings is reported as a limitation, not as evidence of superiority.
 
-**Current status:** This is a test plan, not a result. No Pocket AI Lab versus PocketPal performance claim is made until physical iPhone Air measurements have been collected and reviewed.
+**Current status:** The app now computes a streaming SHA-256 fingerprint at import and rechecks it around native loading. This is local integrity metadata, not publisher authenticity or runtime attestation. This document remains a test plan, not a result. No Pocket AI Lab versus PocketPal performance claim is made until physical iPhone Air measurements have been collected and reviewed.
