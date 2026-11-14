@@ -139,6 +139,8 @@ describe("SourceResearchPipeline", () => {
     const response = {
       ...validResponse,
       filename: "src/routes.py",
+      observations: [],
+      data_flows: { ...validResponse.data_flows, signals: [] },
       authorization_surface: {
         parser_status: "parsed",
         routes: [{
