@@ -151,7 +151,8 @@ describe("SourceResearchPipeline", () => {
       .analyze({ filename: "src/routes.py", source: routeSource }))
       .rejects.toThrow(/Authorization route provenance/);
   });
-\n  it("rejects a sidecar filename that does not match the submitted source", async () => {
+
+  it("rejects a sidecar filename that does not match the submitted source", async () => {
     await expect(pipelineFor({
       ...validResponse,
       filename: "src/other.py"
