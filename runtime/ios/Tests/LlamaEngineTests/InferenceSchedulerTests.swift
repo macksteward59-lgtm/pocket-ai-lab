@@ -56,15 +56,19 @@ final class InferenceSchedulerTests: XCTestCase {
         let waiting = await scheduler.snapshot()
         XCTAssertEqual(waiting.activeRequests, 2)
         XCTAssertEqual(waiting.waitingRequests, 1)
-        XCTAssertEqual(await gate.maximumActiveCount(), 2)
+        let maximumBeforeRelease = await gate.maximumActiveCount()
+        XCTAssertEqual(maximumBeforeRelease, 2)
 
         await gate.releaseOne()
         while await gate.startedCount() < 3 { await Task.yield() }
         await gate.releaseAll()
 
-        let results = try await tasks.asyncMap { try await $0.value }
-        XCTAssertEqual(results.sorted(), [1, 2, 3])
-        XCTAssertLessThanOrEqual(await gate.maximumActiveCount(), 2)
+        let firstResult = try await tasks[0].value
+        let secondResult = try await tasks[1].value
+        let thirdResult = try await tasks[2].value
+        XCTAssertEqual([firstResult, secondResult, thirdResult].sorted(), [1, 2, 3])
+        let maximumAfterRelease = await gate.maximumActiveCount()
+        XCTAssertLessThanOrEqual(maximumAfterRelease, 2)
         let final = await scheduler.snapshot()
         XCTAssertEqual(final.activeRequests, 0)
         XCTAssertEqual(final.waitingRequests, 0)
@@ -102,7 +106,8 @@ final class InferenceSchedulerTests: XCTestCase {
         XCTAssertEqual(firstResult, 1)
         let order = await gate.orderSnapshot()
         XCTAssertEqual(order, [1])
-        XCTAssertEqual((await scheduler.snapshot()).activeRequests, 0)
+        let finalSnapshot = await scheduler.snapshot()
+        XCTAssertEqual(finalSnapshot.activeRequests, 0)
     }
 
     func testOperationFailureReleasesItsPermit() async throws {
@@ -116,7 +121,8 @@ final class InferenceSchedulerTests: XCTestCase {
         }
         let result = try await scheduler.withPermit { 42 }
         XCTAssertEqual(result, 42)
-        XCTAssertEqual((await scheduler.snapshot()).activeRequests, 0)
+        let finalSnapshot = await scheduler.snapshot()
+        XCTAssertEqual(finalSnapshot.activeRequests, 0)
     }
 
     func testInvalidConcurrencyLimitIsRejected() {
@@ -175,15 +181,3 @@ private actor MultiWaiterGate {
     }
 }
 
-private extension Array where Element == Task<Int, Error> {
-    func asyncMap<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            for element in self {
-                group.addTask { try await transform(element) }
-            }
-            var values: [T] = []
-            for try await value in group { values.append(value) }
-            return values
-        }
-    }
-}
