@@ -210,6 +210,40 @@ final class ModelPoolTests: XCTestCase {
         }
     }
 
+    func testMemoryReservationRemainsHeldUntilNativeUnloadCompletes() async throws {
+        let engine = BlockingUnloadPoolTestEngine()
+        let configuration = try ModelPoolConfiguration(
+            maxResidentMemoryMB: 512,
+            maxLoadedModels: 2,
+            minimumFreeMemoryMB: 64
+        )
+        let pool = ModelPool(engine: engine, configuration: configuration, availableMemoryMB: { 512 })
+        let first = try await pool.acquire(model: model("unloading"), estimatedMemoryMB: 400)
+        XCTAssertTrue(await pool.release(first))
+
+        let unloadTask = Task { try await pool.unload(modelId: "unloading") }
+        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+
+        let duringUnload = await pool.snapshot()
+        XCTAssertEqual(duringUnload.reservedMemoryMB, 400)
+        do {
+            _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 200)
+            XCTFail("The old model's memory reservation must remain until unload returns")
+        } catch ModelPoolError.insufficientMemory(let required, let available) {
+            XCTAssertEqual(required, 200)
+            XCTAssertEqual(available, 112)
+        }
+
+        await engine.finishUnloading()
+        try await unloadTask.value
+        XCTAssertEqual((await pool.snapshot()).reservedMemoryMB, 0)
+
+        let second = try await pool.acquire(model: model("second"), estimatedMemoryMB: 200)
+        XCTAssertEqual(second.session.modelId, "second")
+        XCTAssertTrue(await pool.release(second))
+        try await pool.unload(modelId: "second")
+    }
+
     private func makePool(
         engine: any LlamaEngine,
         maxMemory: Int = 2_048,
@@ -302,4 +336,33 @@ private actor FixedSessionPoolTestEngine: LlamaEngine {
     func cancel(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async { unloaded.append(sessionId) }
     func unloadedSessionIDs() -> [String] { unloaded }
+}
+
+private actor BlockingUnloadPoolTestEngine: LlamaEngine {
+    private var nextSession = 0
+    private var unloadingStarted = false
+    private var unloadContinuation: CheckedContinuation<Void, Never>?
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        nextSession += 1
+        return RuntimeSession(id: "blocking-unload-\(nextSession)", modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+
+    func unload(sessionId: String) async {
+        unloadingStarted = true
+        await withCheckedContinuation { unloadContinuation = $0 }
+    }
+
+    func hasStartedUnloading() -> Bool { unloadingStarted }
+
+    func finishUnloading() {
+        unloadContinuation?.resume()
+        unloadContinuation = nil
+    }
 }
