@@ -102,4 +102,12 @@ describe("MultiFileSourceResearchPipeline", () => {
     await expect(new MultiFileSourceResearchPipeline({ baseUrl: "https://example.com" }).analyze(files))
       .rejects.toThrow(/loopback/);
   });
+  it("accepts null symbol metadata on module-level import edges", async () => {
+    const moduleImport = {
+      ...validReport,
+      resolved_imports: [{ ...validReport.resolved_imports[0], symbol: null }]
+    };
+    const result = await pipelineFor(moduleImport).analyze(files);
+    expect(result.evidence.candidates).toHaveLength(1);
+  });
 });
