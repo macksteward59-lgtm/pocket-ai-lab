@@ -127,7 +127,8 @@ export async function runLabSession(options: {
         }
         const profile = agents.getAgent(agentId);
         const selected = await router.route(agentId, registry.getPreferredModel(agentId), ["reason"]);
-        const inference = await generateWithSignal(options.provider, {
+        try {
+          const inference = await generateWithSignal(options.provider, {
           agentId,
           modelId: selected.id,
           stage,
@@ -143,12 +144,14 @@ export async function runLabSession(options: {
           ...(options.memoryContext && options.memoryContext.length > 0
             ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
             : {})
-        }, options.signal);
-        if (!isRecord(inference.payload)) {
+          }, options.signal);
+          // Confirm only after the provider returned successfully.
+          router.confirmLoaded(selected);
+          if (!isRecord(inference.payload)) {
           throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");
         }
-        const payload = { ...inference.payload };
-        const message: AgentMessage = {
+          const payload = { ...inference.payload };
+          const message: AgentMessage = {
           protocolVersion: 1,
           messageId: crypto.randomUUID(),
           taskId,
@@ -161,9 +164,9 @@ export async function runLabSession(options: {
           createdAt: new Date().toISOString(),
           sequence: sequence++
         };
-        const published = bus.publish(message);
-        generated.push(published);
-        const transcript: LabTranscriptMessage = {
+          const published = bus.publish(message);
+          generated.push(published);
+          const transcript: LabTranscriptMessage = {
           messageId: published.messageId,
           agentId,
           role: profile?.role ?? agentId,
@@ -172,8 +175,11 @@ export async function runLabSession(options: {
           payload: published.payload,
           evidenceRefs: [...published.evidenceRefs]
         };
-        messages.push(transcript);
-        emit({ type: "message", message: transcript });
+          messages.push(transcript);
+          emit({ type: "message", message: transcript });
+        } finally {
+          router.release(selected);
+        }
       }
       return [...prior, ...generated];
     });
