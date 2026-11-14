@@ -86,7 +86,7 @@ def test_review_and_analyze_routes(monkeypatch, tmp_path: Path):
     assert "sample" in report["context"]["functions"]
     assert marker.exists() is False
 
-    flow_source = "value = request.args.get('query')\\neval(value)\\n"
+    flow_source = "value = request.args.get('query')\neval(value)\n"
     flow_response = client.post(
         "/api/v1/governance/analyze-source",
         json={"filename": "handler.py", "source": flow_source},
