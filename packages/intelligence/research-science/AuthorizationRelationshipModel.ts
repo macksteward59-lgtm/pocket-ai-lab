@@ -219,9 +219,6 @@ function decide(
     if (ownership.requirement === "owner-only" && resource.ownerIdentityId !== identity.id) {
       return { decision: "deny", evidenceRefs: refs };
     }
-    if (ownership.requirement === "unknown") return { decision: "unknown", evidenceRefs: refs };
-  } else if (model.ownershipInventory === "partial") {
-    return { decision: "unknown", evidenceRefs: refs };
   }
 
   if (operation.residualAuthorization === "deny") {
@@ -229,6 +226,9 @@ function decide(
   }
   if (crossTenant && operation.tenantIsolationGuard === "enforced") {
     return { decision: "deny", evidenceRefs: refs };
+  }
+  if ((ownership?.requirement === "unknown") || (!ownership && model.ownershipInventory === "partial")) {
+    return { decision: "unknown", evidenceRefs: refs };
   }
   if (operation.residualAuthorization === "unknown") {
     return { decision: "unknown", evidenceRefs: refs };
