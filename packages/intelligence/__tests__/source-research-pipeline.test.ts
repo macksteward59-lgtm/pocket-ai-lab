@@ -4,8 +4,9 @@ import { SourceResearchPipeline } from "../research-science/SourceResearchPipeli
 
 const source = [
   "from flask import request",
-  "def run(user_input):",
-  "    value = eval(user_input)",
+  "def run():",
+  "    value = request.args.get('code')",
+  "    eval(value)",
   "    return value"
 ].join("\n");
 
@@ -26,18 +27,38 @@ const validResponse = {
   filename: "src/handlers.py",
   observations: [{
     kind: "dynamic-exec",
-    line: 3,
-    excerpt: "value = eval(user_input)",
+    line: 4,
+    excerpt: "eval(value)",
     remediation: "Avoid evaluating untrusted input."
   }],
   context: { imports: ["flask"], functions: ["run"], classes: [] },
+  data_flows: {
+    language: "python",
+    parser_status: "parsed",
+    signals: [{
+      kind: "dynamic-exec",
+      source_line: 3,
+      sink_line: 4,
+      source_expression: "request.args.get('code')",
+      sink_expression: "eval(value)",
+      sink_name: "eval",
+      variables: ["value"],
+      source_excerpt: "value = request.args.get('code')",
+      sink_excerpt: "eval(value)"
+    }],
+    nodes_visited: 42,
+    truncated: false,
+    limitations: ["Intraprocedural, straight-line name propagation only."],
+    authorized: false,
+    executes: false
+  },
   truncated: false,
   authorized: false,
   executes: false
 };
 
 describe("SourceResearchPipeline", () => {
-  it("runs sidecar analysis through provenance binding without executing source", async () => {
+  it("binds AST source-to-sink paths to the exact submitted source and digest", async () => {
     const result = await pipelineFor(validResponse).analyze({
       filename: "src/handlers.py",
       source
@@ -45,12 +66,22 @@ describe("SourceResearchPipeline", () => {
     expect(result.evidence.candidates).toHaveLength(1);
     expect(result.evidence.candidates[0]).toMatchObject({
       filename: "src/handlers.py",
-      line: 3,
+      line: 4,
       status: "unverified",
       classification: "static-review-signal"
     });
     expect(result.evidence.completeness).toBe("complete");
     expect(result.context.functions).toEqual(["run"]);
+    expect(result.dataFlows.parserStatus).toBe("parsed");
+    expect(result.dataFlows.signals).toHaveLength(1);
+    expect(result.dataFlows.signals[0]).toMatchObject({
+      filename: "src/handlers.py",
+      sourceLine: 3,
+      sinkLine: 4,
+      status: "unverified",
+      sourceSha256: result.evidence.sourceSha256
+    });
+    expect(result.dataFlows.signals[0].evidenceRef).toContain(result.evidence.sourceSha256);
     expect(result.authorized).toBe(false);
     expect(result.sourceExecuted).toBe(false);
     expect(result.evidence.vulnerabilityConfirmed).toBe(false);
@@ -60,10 +91,17 @@ describe("SourceResearchPipeline", () => {
     const result = await pipelineFor({
       ...validResponse,
       observations: [],
+      data_flows: {
+        ...validResponse.data_flows,
+        parser_status: "truncated",
+        signals: [],
+        truncated: true
+      },
       truncated: true
     }).analyze({ filename: "src/handlers.py", source });
     expect(result.evidence.completeness).toBe("partial");
-    expect(result.evidence.candidates).toHaveLength(0);
+    expect(result.dataFlows.parserStatus).toBe("truncated");
+    expect(result.dataFlows.signals).toHaveLength(0);
   });
 
   it("rejects a sidecar filename that does not match the submitted source", async () => {
@@ -78,8 +116,21 @@ describe("SourceResearchPipeline", () => {
       ...validResponse,
       observations: [{
         ...validResponse.observations[0],
-        excerpt: "value = eval(attacker_controlled)"
+        excerpt: "eval(attacker_controlled)"
       }]
     }).analyze({ filename: "src/handlers.py", source })).rejects.toThrow(/exactly match/);
+  });
+
+  it("rejects AST flow provenance that does not match either claimed source line", async () => {
+    await expect(pipelineFor({
+      ...validResponse,
+      data_flows: {
+        ...validResponse.data_flows,
+        signals: [{
+          ...validResponse.data_flows.signals[0],
+          source_excerpt: "request.args.get('forged')"
+        }]
+      }
+    }).analyze({ filename: "src/handlers.py", source })).rejects.toThrow(/provenance/);
   });
 });
