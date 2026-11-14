@@ -82,3 +82,8 @@ Simulator success does not prove physical iPhone Metal execution. Physical-devic
 - Any result without the same device, model hash, and runtime settings is reported as a limitation, not as evidence of superiority.
 
 **Current status:** This is a test plan, not a result. No Pocket AI Lab versus PocketPal performance claim is made until physical iPhone Air measurements have been collected and reviewed.
+
+
+## GGUF import validation scope
+
+The current importer checks the `GGUF` magic prefix and performs a staged file replacement. This is an early corruption/type guard, not full format validation. The authoritative parser is the pinned llama.cpp loader during model load. A file that passes the prefix check may still fail to load; the app must preserve the failure state and must never substitute placeholder output. Before release, add metadata parsing for tensor count, architecture, context metadata, file-size bounds, and malformed-header cases, then verify the selected artifact by SHA-256.
