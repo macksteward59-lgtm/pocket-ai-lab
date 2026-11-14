@@ -31,12 +31,15 @@ export class StaticAnalysisOrchestratorBridge {
     if (body.authorized !== false || body.executes !== false) {
       throw new PolicyCheckError("Static analysis must stay non-executing and unauthorized");
     }
+    if (body.filename !== undefined && body.filename !== input.filename) {
+      throw new PolicyCheckError("Static analysis filename does not match the submitted source");
+    }
     if (typeof body.truncated !== "boolean") {
       throw new PolicyCheckError("Static analysis must report whether the input was truncated");
     }
     const context = isRecord(body.context) ? body.context : {};
     return {
-      filename: typeof body.filename === "string" ? body.filename : input.filename,
+      filename: input.filename,
       observations: Array.isArray(body.observations) ? body.observations as StaticAnalysisReport["observations"] : [],
       context: {
         imports: stringList(context.imports),
