@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { MultiFileSourceResearchPipeline } from "../research-science/MultiFileSourceResearchPipeline";
 
 const files = [
-  { path: "app/routes.py", source: "from services.worker import run\nvalue = request.args.get('q')\nrun(value)\n" },
-  { path: "app/services/worker.py", source: "def run(value):\n    eval(value)\n" }
+  { path: "app/routes.py", source: `from services.worker import run
+value = request.args.get('q')
+run(value)
+` },
+  { path: "app/services/worker.py", source: `def run(value):
+    eval(value)
+` }
 ];
 
 const validReport = {
