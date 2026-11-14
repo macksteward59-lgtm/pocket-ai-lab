@@ -8,6 +8,7 @@ export interface StaticAnalysisReport {
   filename: string;
   observations: Array<{ kind: string; line: number; excerpt: string; remediation: string }>;
   context: { imports: string[]; functions: string[]; classes: string[] };
+  truncated: boolean;
   authorized: false;
   executes: false;
 }
@@ -30,6 +31,9 @@ export class StaticAnalysisOrchestratorBridge {
     if (body.authorized !== false || body.executes !== false) {
       throw new PolicyCheckError("Static analysis must stay non-executing and unauthorized");
     }
+    if (typeof body.truncated !== "boolean") {
+      throw new PolicyCheckError("Static analysis must report whether the input was truncated");
+    }
     const context = isRecord(body.context) ? body.context : {};
     return {
       filename: typeof body.filename === "string" ? body.filename : input.filename,
@@ -39,6 +43,7 @@ export class StaticAnalysisOrchestratorBridge {
         functions: stringList(context.functions),
         classes: stringList(context.classes)
       },
+      truncated: body.truncated,
       authorized: false,
       executes: false
     };
