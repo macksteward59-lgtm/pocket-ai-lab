@@ -93,6 +93,8 @@ def _source_node(node: ast.AST) -> bool:
         call_name = _name(node.func)
         if call_name in _SOURCE_CALLS or call_name.endswith(".get_json") or call_name.endswith(".get_data"):
             return True
+        if any(call_name == prefix or call_name.startswith(prefix + ".") for prefix in _SOURCE_PREFIXES):
+            return True
     return False
 
 
