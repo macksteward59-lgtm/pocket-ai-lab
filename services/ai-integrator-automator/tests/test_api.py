@@ -100,6 +100,14 @@ def test_review_and_analyze_routes(monkeypatch, tmp_path: Path):
     assert flow_report["authorized"] is False
     assert flow_report["executes"] is False
 
+    auth_source = "from fastapi import Depends\\n@app.get(\\"/private\\")\\ndef private(user=Depends(require_auth)): return user\\n"
+    auth_response = client.post("/api/v1/governance/analyze-source", json={"filename": "routes.py", "source": auth_source})
+    assert auth_response.status_code == 200
+    auth_surface = auth_response.json()["authorization_surface"]
+    assert auth_surface["authorized"] is False
+    assert auth_surface["executes"] is False
+    assert auth_surface["routes"][0]["guard_status"] == "local-guard-observed"
+
     saved = client.put("/api/v1/governance/allowlist", json={"hosts": ["app.example.com", "not a host"]})
     assert saved.status_code == 200
     assert saved.json()["authorized"] is False
