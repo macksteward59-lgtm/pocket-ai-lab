@@ -226,6 +226,8 @@ final class ModelPoolTests: XCTestCase {
         while !(await engine.hasStartedUnloading()) { await Task.yield() }
 
         let duringUnload = await pool.snapshot()
+        XCTAssertEqual(duringUnload.loadedModelIDs, [])
+        XCTAssertEqual(duringUnload.unloadingModelIDs, ["unloading"])
         XCTAssertEqual(duringUnload.reservedMemoryMB, 400)
         do {
             _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 200)
@@ -238,6 +240,7 @@ final class ModelPoolTests: XCTestCase {
         await engine.finishUnloading()
         try await unloadTask.value
         let afterUnload = await pool.snapshot()
+        XCTAssertEqual(afterUnload.unloadingModelIDs, [])
         XCTAssertEqual(afterUnload.reservedMemoryMB, 0)
 
         let second = try await pool.acquire(model: model("second"), estimatedMemoryMB: 200)
