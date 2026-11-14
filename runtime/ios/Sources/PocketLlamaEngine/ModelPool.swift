@@ -51,6 +51,8 @@ public struct ModelPoolLease: Sendable, Equatable {
 public struct ModelPoolSnapshot: Sendable, Equatable {
     public let loadedModelIDs: [String]
     public let pendingModelIDs: [String]
+    /// Models whose native unload call has not returned yet.
+    public let unloadingModelIDs: [String]
     public let activeLeaseCount: Int
     public let pendingAcquirerCount: Int
     public let reservedMemoryMB: Int
@@ -223,6 +225,7 @@ public actor ModelPool {
         ModelPoolSnapshot(
             loadedModelIDs: entries.keys.sorted(),
             pendingModelIDs: pendingLoads.keys.sorted(),
+            unloadingModelIDs: unloading.sorted(),
             activeLeaseCount: entries.values.reduce(0) { $0 + $1.leaseIDs.count },
             pendingAcquirerCount: pendingLoads.values.reduce(0) { $0 + $1.waitingAcquirers },
             reservedMemoryMB: reservedMemoryMB
