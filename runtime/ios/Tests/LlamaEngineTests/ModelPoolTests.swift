@@ -41,7 +41,8 @@ final class ModelPoolTests: XCTestCase {
 
     func testMemoryBudgetAndModelCountAreEnforcedBeforeLoading() async throws {
         let engine = PoolTestEngine()
-        let pool = try makePool(engine: engine, maxMemory: 512, maxModels: 1, minimumFree: 64)
+        let configuration = try ModelPoolConfiguration(maxResidentMemoryMB: 512, maxLoadedModels: 1, minimumFreeMemoryMB: 64)
+        let pool = ModelPool(engine: engine, configuration: configuration, availableMemoryMB: { 512 })
 
         do {
             _ = try await pool.acquire(model: model("too-large"), estimatedMemoryMB: 480)
