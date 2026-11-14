@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ai_integrator.application.ast_dataflow import analyze_python_dataflow
+
 _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("dynamic-exec", re.compile(r"\b(eval|exec|Function)\s*\(")),
     ("process-spawn", re.compile(r"\b(subprocess|os\.system|child_process|spawn|popen)\b")),
@@ -26,12 +28,13 @@ class StaticAnalysisReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     observations: list[StaticObservation] = Field(default_factory=list)
+    data_flows: dict[str, object] | None = None
     truncated: bool = False
     authorized: Literal[False] = False
     executes: Literal[False] = False
 
 
-def analyze_source(source: str, *, limit: int = 1_000_000) -> StaticAnalysisReport:
+def analyze_source(source: str, *, filename: str = "", limit: int = 1_000_000) -> StaticAnalysisReport:
     text = source if isinstance(source, str) else ""
     truncated = len(text) > limit
     body = text[:limit]
@@ -47,4 +50,11 @@ def analyze_source(source: str, *, limit: int = 1_000_000) -> StaticAnalysisRepo
                 ))
         if len(observations) >= 100:
             break
-    return StaticAnalysisReport(observations=observations, truncated=truncated)
+    data_flows = None
+    if filename.lower().endswith(".py"):
+        data_flows = analyze_python_dataflow(text, limit=limit).model_dump(mode="json")
+    return StaticAnalysisReport(
+        observations=observations,
+        data_flows=data_flows,
+        truncated=truncated or bool(data_flows and data_flows.get("truncated")),
+    )
