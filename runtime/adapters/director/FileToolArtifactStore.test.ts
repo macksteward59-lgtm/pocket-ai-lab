@@ -21,8 +21,8 @@ const artifactSpec = {
   change: "create" as const,
   requirements: ["Read only supplied files", "Return structured metadata"]
 };
-const artifactFiles = { "src/index.ts": "export const inspect = () => true;" };
-function digestFor(spec: typeof artifactSpec, files: typeof artifactFiles) {
+const artifactFiles: Record<string, string> = { "src/index.ts": "export const inspect = () => true;" };
+function digestFor(spec: typeof artifactSpec, files: Record<string, string>) {
   const canonical = JSON.stringify({
     spec: {
       id: spec.id, name: spec.name, purpose: spec.purpose,
