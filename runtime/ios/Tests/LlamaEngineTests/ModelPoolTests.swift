@@ -196,7 +196,7 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertEqual(unloadedAfter, ["fixed-session"])
     }
 
-    func testInvalidConfigurationAndResourceSnapshotAreRejected() throws {
+    func testInvalidConfigurationAndResourceSnapshotAreRejected() async throws {
         XCTAssertThrowsError(try ModelPoolConfiguration(maxResidentMemoryMB: 0, maxLoadedModels: 1))
         let engine = PoolTestEngine()
         let configuration = try ModelPoolConfiguration(maxResidentMemoryMB: 1_024, maxLoadedModels: 1)
