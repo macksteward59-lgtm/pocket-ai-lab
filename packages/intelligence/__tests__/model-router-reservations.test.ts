@@ -14,37 +14,40 @@ const model = (id: string, memoryEstimateMB: number): ModelDescriptor => ({
 describe("ModelRouter reservation leases", () => {
   it("keeps a shared model reservation until every concurrent route releases", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 512, loadedModels: [] }));
+    const shared = model("shared", 512);
 
-    await router.route("reasoner", model("shared", 512), ["reason"]);
-    await router.route("researcher", model("shared", 512), ["reason"]);
+    const first = await router.route("reasoner", shared, ["reason"]);
+    const second = await router.route("researcher", shared, ["reason"]);
     expect(router.getLoadedModels()).toEqual(["shared"]);
 
-    // One consumer finishing must not free memory while another still uses the model.
-    router.release("shared");
+    router.release(first);
     await expect(router.route("engineer", model("other", 128), ["reason"]))
       .rejects.toThrow(/Insufficient memory/);
 
-    router.release("shared");
+    router.release(second);
     expect(router.getLoadedModels()).toEqual([]);
-    await expect(router.route("engineer", model("other", 128), ["reason"])).resolves.toMatchObject({
-      id: "other"
-    });
+    const other = await router.route("engineer", model("other", 128), ["reason"]);
+    expect(other.id).toBe("other");
+    router.release(other);
   });
 
   it("does not reserve or release models owned by the runtime", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 0, loadedModels: ["runtime-owned"] }));
-    await router.route("reasoner", model("runtime-owned", 512), ["reason"]);
+    const external = model("runtime-owned", 512);
+    const lease = await router.route("reasoner", external, ["reason"]);
     expect(router.getLoadedModels()).toEqual([]);
-    router.release("runtime-owned");
+    router.release(lease);
     expect(router.getLoadedModels()).toEqual([]);
   });
 
   it("rejects a changed memory estimate while route leases are active", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
-    await router.route("reasoner", model("shared", 256), ["reason"]);
-    await expect(router.route("researcher", model("shared", 512), ["reason"]))
+    const shared = model("shared", 256);
+    await router.route("reasoner", shared, ["reason"]);
+    shared.memoryEstimateMB = 512;
+    await expect(router.route("researcher", shared, ["reason"]))
       .rejects.toThrow(/changed its memory estimate/);
-    router.release("shared");
+    router.release(shared);
   });
 
   it("rejects malformed runtime resource reports", async () => {
@@ -56,24 +59,25 @@ describe("ModelRouter reservation leases", () => {
       .rejects.toThrow(/invalid loaded-model list/);
   });
 
-  it("forceDropReservation clears all route leases without partial release", async () => {
+  it("keeps retired generations reserved until all old leases drain", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 512, loadedModels: [] }));
+    const oldModel = model("shared", 512);
+    const first = await router.route("reasoner", oldModel, ["reason"]);
+    const second = await router.route("researcher", oldModel, ["reason"]);
 
-    await router.route("reasoner", model("shared", 512), ["reason"]);
-    await router.route("researcher", model("shared", 512), ["reason"]);
+    router.retire("shared", oldModel);
     expect(router.getLoadedModels()).toEqual(["shared"]);
+    await expect(router.route("engineer", oldModel, ["reason"])).rejects.toThrow(/retired/);
+    const replacement = model("shared", 128);
+    await expect(router.route("engineer", replacement, ["reason"])).rejects.toThrow(/being replaced/);
 
-    // Admin drop must not leave a half-open lease count.
-    router.forceDropReservation("shared");
+    router.release(first);
+    expect(router.getLoadedModels()).toEqual(["shared"]);
+    router.release(second);
     expect(router.getLoadedModels()).toEqual([]);
 
-    // Subsequent per-route releases are no-ops once the reservation is gone.
-    router.release("shared");
-    router.release("shared");
-    expect(router.getLoadedModels()).toEqual([]);
-
-    await expect(router.route("engineer", model("other", 128), ["reason"])).resolves.toMatchObject({
-      id: "other"
-    });
+    const replacementLease = await router.route("engineer", replacement, ["reason"]);
+    expect(replacementLease).toBe(replacement);
+    router.release(replacementLease);
   });
 });
