@@ -21,6 +21,18 @@ final class RuntimeProofVerifierTests: XCTestCase {
         let payload = try XCTUnwrap(RuntimeSessionProofCanonicalizer.canonicalPayload(proof))
         XCTAssertEqual(payload.base64EncodedString(),
             "AAAAInBvY2tldC1haS1ydW50aW1lLXNlc3Npb24tcHJvb2YtdjEAAAABMQAAAAlzZXNzaW9uLTEAAAAKcXdlbi1sb2NhbAAAAEBhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhAAAAEWlvcy1sbGFtYS0yMDI2LjExAAAAGDIwMzAtMDEtMDFUMDA6MDA6MDAuMDAwWgAAAAExAAAAFGRldmljZS1ydW50aW1lLWtleS0xAAAAB0VkMjU1MTk=")
+        let oversized = RuntimeSessionProof(
+            protocolVersion: .v1,
+            sessionId: String(repeating: "s", count: 257),
+            modelId: "qwen-local",
+            modelFileSHA256: String(repeating: "a", count: 64),
+            runtimeBuildId: "ios-llama-2026.11",
+            expiresAt: "2030-01-01T00:00:00.000Z",
+            generationCounter: 1,
+            keyId: "device-runtime-key-1",
+            signature: "ignored"
+        )
+        XCTAssertNil(RuntimeSessionProofCanonicalizer.canonicalPayload(oversized))
     }
 
     func testVerifierAuthenticatesAndRejectsReplayAndStorageFailure() async throws {
