@@ -158,6 +158,44 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertEqual(final.reservedMemoryMB, 0)
     }
 
+    func testWrongModelSessionIsUnloadedAndReservationIsReleased() async throws {
+        let engine = WrongModelPoolTestEngine()
+        let pool = try makePool(engine: engine)
+        do {
+            _ = try await pool.acquire(model: model("requested"), estimatedMemoryMB: 256)
+            XCTFail("A session for a different model must be rejected")
+        } catch ModelPoolError.runtimeReturnedWrongModel(let expected, let actual) {
+            XCTAssertEqual(expected, "requested")
+            XCTAssertEqual(actual, "unexpected")
+        }
+        let snapshot = await pool.snapshot()
+        XCTAssertEqual(snapshot.reservedMemoryMB, 0)
+        XCTAssertTrue(snapshot.pendingModelIDs.isEmpty)
+        let unloaded = await engine.unloadedSessionIDs()
+        XCTAssertEqual(unloaded, ["wrong-session"])
+    }
+
+    func testSessionIdCollisionNeverUnloadsAnExistingOwnedSession() async throws {
+        let engine = FixedSessionPoolTestEngine()
+        let pool = try makePool(engine: engine, maxMemory: 2_048, maxModels: 2)
+        let first = try await pool.acquire(model: model("first"), estimatedMemoryMB: 256)
+        do {
+            _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 256)
+            XCTFail("A duplicate runtime session ID must be rejected")
+        } catch ModelPoolError.runtimeSessionCollision("fixed-session") {
+        }
+        let unloadedBeforeRelease = await engine.unloadedSessionIDs()
+        XCTAssertTrue(unloadedBeforeRelease.isEmpty)
+        let snapshot = await pool.snapshot()
+        XCTAssertEqual(snapshot.loadedModelIDs, ["first"])
+        XCTAssertEqual(snapshot.reservedMemoryMB, 256)
+        let released = await pool.release(first)
+        XCTAssertTrue(released)
+        try await pool.unload(modelId: "first")
+        let unloadedAfter = await engine.unloadedSessionIDs()
+        XCTAssertEqual(unloadedAfter, ["fixed-session"])
+    }
+
     func testInvalidConfigurationAndResourceSnapshotAreRejected() throws {
         XCTAssertThrowsError(try ModelPoolConfiguration(maxResidentMemoryMB: 0, maxLoadedModels: 1))
         let engine = PoolTestEngine()
@@ -237,4 +275,31 @@ private actor BlockingPoolTestEngine: LlamaEngine {
     }
     func cancel(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async {}
+}
+
+
+private actor WrongModelPoolTestEngine: LlamaEngine {
+    private var unloaded: [String] = []
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: "wrong-session", modelId: "unexpected")
+    }
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    func cancel(sessionId: String, requestId: String) async {}
+    func unload(sessionId: String) async { unloaded.append(sessionId) }
+    func unloadedSessionIDs() -> [String] { unloaded }
+}
+
+private actor FixedSessionPoolTestEngine: LlamaEngine {
+    private var unloaded: [String] = []
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: "fixed-session", modelId: model.id)
+    }
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    func cancel(sessionId: String, requestId: String) async {}
+    func unload(sessionId: String) async { unloaded.append(sessionId) }
+    func unloadedSessionIDs() -> [String] { unloaded }
 }
