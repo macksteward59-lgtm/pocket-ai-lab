@@ -52,6 +52,7 @@ public struct ModelPoolSnapshot: Sendable, Equatable {
     public let loadedModelIDs: [String]
     public let pendingModelIDs: [String]
     public let activeLeaseCount: Int
+    public let pendingAcquirerCount: Int
     public let reservedMemoryMB: Int
 }
 
@@ -74,6 +75,7 @@ public actor ModelPool {
         let descriptor: ModelDescriptor
         let estimatedMemoryMB: Int
         let task: Task<RuntimeSession, Error>
+        var waitingAcquirers: Int
     }
 
     private let engine: any LlamaEngine
@@ -121,7 +123,10 @@ public actor ModelPool {
                   pending.estimatedMemoryMB == estimatedMemoryMB else {
                 throw ModelPoolError.descriptorConflict(model.id)
             }
-            return try await resolve(pending)
+            var joined = pending
+            joined.waitingAcquirers += 1
+            pendingLoads[model.id] = joined
+            return try await resolve(joined)
         }
 
         guard entries.count + pendingLoads.count < configuration.maxLoadedModels else {
@@ -143,7 +148,8 @@ public actor ModelPool {
             token: UUID().uuidString,
             descriptor: model,
             estimatedMemoryMB: estimatedMemoryMB,
-            task: Task { try await engine.load(model: model) }
+            task: Task { try await engine.load(model: model) },
+            waitingAcquirers: 1
         )
         reservedMemoryMB += estimatedMemoryMB
         pendingLoads[model.id] = pending
@@ -209,6 +215,7 @@ public actor ModelPool {
             loadedModelIDs: entries.keys.sorted(),
             pendingModelIDs: pendingLoads.keys.sorted(),
             activeLeaseCount: entries.values.reduce(0) { $0 + $1.leaseIDs.count },
+            pendingAcquirerCount: pendingLoads.values.reduce(0) { $0 + $1.waitingAcquirers },
             reservedMemoryMB: reservedMemoryMB
         )
     }
