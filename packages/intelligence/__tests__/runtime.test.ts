@@ -123,6 +123,16 @@ describe("ModelRouter", () => {
     router.release(otherLease);
   });
 
+  it("rejects a new descriptor for an active ID unless the old generation was retired", async () => {
+    const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
+    const original = { ...model };
+    const lease = await router.route("reasoner", original, []);
+    const unretiredReplacement = { ...original, path: "./replacement.gguf" };
+    await expect(router.route("researcher", unretiredReplacement, []))
+      .rejects.toThrow(/changed its descriptor while routes are active/);
+    router.release(lease);
+  });
+
   it("accounts for replacement generations while old concurrent leases drain", async () => {
     const router = new ModelRouter(() => ({ availableMemoryMB: 1024, loadedModels: [] }));
     const oldModel = { ...model, memoryEstimateMB: 256 };
