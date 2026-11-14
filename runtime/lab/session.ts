@@ -127,6 +127,7 @@ export async function runLabSession(options: {
         }
         const profile = agents.getAgent(agentId);
         const selected = await router.route(agentId, registry.getPreferredModel(agentId), ["reason"]);
+        try {
         const inference = await generateWithSignal(options.provider, {
           agentId,
           modelId: selected.id,
@@ -174,6 +175,10 @@ export async function runLabSession(options: {
         };
         messages.push(transcript);
         emit({ type: "message", message: transcript });
+        router.confirmLoaded(selected);
+        } finally {
+          router.release(selected);
+        }
       }
       return [...prior, ...generated];
     });
