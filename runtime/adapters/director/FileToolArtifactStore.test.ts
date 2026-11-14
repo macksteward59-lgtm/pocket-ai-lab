@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { FileToolArtifactStore } from "./FileToolArtifactStore";
@@ -84,5 +84,7 @@ describe("FileToolArtifactStore", () => {
     const record = JSON.parse(await readFile(path.join(root, artifact.toolId, "1.json"), "utf8"));
     expect(record.status).toBe("active");
     expect((await store.getLatest(artifact.toolId))?.status).toBe("active");
+    expect((await stat(path.join(root, artifact.toolId))).mode & 0o777).toBe(0o700);
+    expect((await stat(path.join(root, artifact.toolId, "1.json"))).mode & 0o777).toBe(0o600);
   });
 });
