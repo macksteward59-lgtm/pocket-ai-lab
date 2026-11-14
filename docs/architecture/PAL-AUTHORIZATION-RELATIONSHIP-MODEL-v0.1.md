@@ -47,3 +47,7 @@ Every result remains `findingStatus: unverified`, `authorized: false`, and `exec
 ## Governance
 
 APEX/Director remains the authority for scope and approvals. The relationship checker can propose counterexamples only; it cannot authorize tests, invoke tools, modify applications, or issue trusted receipts. East/e3, ExploitGym, BridgeGate, RuntimeController, LlamaEngine, and signed evidence boundaries remain unchanged.
+
+## Validation gate
+
+Run the complete repository CI suite against the final pull-request head before merging. A passing CI run validates the implementation and its tests only; it does not verify real-world authorization behavior, establish runtime readiness, or authorize testing against a live target.
