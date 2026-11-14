@@ -94,3 +94,13 @@ These remain separate research milestones.
 ## Integrated research pipeline
 
 `SourceResearchPipeline` now connects the existing loopback-only static-analysis bridge to this adapter. It rejects a sidecar filename that differs from the submitted filename, binds the returned observations to the exact submitted source, and preserves the upstream truncation flag. Its result contains source-review context and immutable unverified candidates only; it does not promote them to findings or authorize tests.
+
+## Synthetic benchmark
+
+The repository exposes `npm run benchmark:research`. It runs three explicit synthetic cases:
+
+- A missing tenant-isolation guard that should produce a model counterexample.
+- An enforced tenant-isolation guard that should produce no counterexample.
+- An unknown guard and unknown residual authorization state that should remain inconclusive.
+
+The benchmark reports exact fixture agreement, per-case results, and unresolved cases. It is deliberately not marketed as real-world detection accuracy. The full `npm test` command includes both the research POC and this benchmark.
