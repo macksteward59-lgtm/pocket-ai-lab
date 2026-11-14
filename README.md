@@ -103,3 +103,7 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 - Repair operations require independent authorization.
 
 See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` and `docs/implementation/consumer-prototype-acceptance.md` for the architecture and measurable product acceptance criteria.
+
+### Model routing lifecycle
+
+The generation-aware reservation contract is documented in `docs/architecture/model-router-generation-reservations-v1.md`. It binds route release to the exact descriptor generation and prevents stale runtime model IDs from bypassing replacement admission.
