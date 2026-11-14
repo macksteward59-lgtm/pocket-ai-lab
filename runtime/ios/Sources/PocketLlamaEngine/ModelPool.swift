@@ -145,11 +145,12 @@ public actor ModelPool {
             throw ModelPoolError.insufficientMemory(requiredMB: estimatedMemoryMB, availableMB: available)
         }
 
+        let inferenceEngine = engine
         let pending = PendingLoad(
             token: UUID().uuidString,
             descriptor: model,
             estimatedMemoryMB: estimatedMemoryMB,
-            task: Task { try await engine.load(model: model) },
+            task: Task { try await inferenceEngine.load(model: model) },
             waitingAcquirers: 1
         )
         reservedMemoryMB += estimatedMemoryMB
