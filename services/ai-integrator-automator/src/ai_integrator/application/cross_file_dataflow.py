@@ -277,8 +277,12 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
                     if target is None and "." in local:
                         root, attr = local.split(".", 1)
                         imported = bindings.get((path, root))
-                        if imported and imported[1] and attr.startswith(imported[1] + "."):
-                            target = (imported[0], attr[len(imported[1]) + 1:])
+                        if imported and imported[1]:
+                            module_tail = imported[1].split(".")[-1]
+                            if attr.startswith(module_tail + "."):
+                                target = (imported[0], attr[len(module_tail) + 1:])
+                            elif "." not in attr:
+                                target = (imported[0], attr)
                     if target is None or call.keywords or any(isinstance(arg, ast.Starred) for arg in call.args):
                         continue
                     summary = summaries.get(target)
