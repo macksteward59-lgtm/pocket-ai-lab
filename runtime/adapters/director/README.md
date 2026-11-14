@@ -52,3 +52,29 @@ const approvalRef = approvals.grant({
 ```
 
 A future UI must calculate the action digest from the same canonical action snapshot the host will execute, show the user the target and consequences, and issue a grant only after explicit confirmation. A production host also needs authenticated UI/session protection, a concrete OS-sandboxed device bridge, and an audit trail that never records the bearer approval reference.
+
+
+## Durable tool artifact history
+
+`FileToolArtifactStore` implements the workshop's `ToolArtifactStore` port for a private local application-data directory:
+
+- Stores each tool version as JSON under a validated kebab-case tool ID and numeric version.
+- Uses owner-only directory/file modes where supported, temporary files plus atomic rename, and file/directory synchronization.
+- Rejects symlinked tool directories, unsafe IDs, corrupt records, mismatched record identities, and records larger than 2 MB.
+- Returns detached copies and preserves version history while allowing lifecycle status updates to replace the same version record.
+- Never imports or executes generated source.
+
+Example:
+
+```ts
+const artifacts = new FileToolArtifactStore(appPrivateDataDirectory);
+const toolDirector = new ToolDirector({
+  registry,
+  builder,
+  sandbox,
+  store: artifacts,
+  approvalVerifier: approvals
+});
+```
+
+The adapter is intentionally not wired into the web runtime yet: the runtime still lacks a real isolated sandbox, builder, and authenticated human approval surface. This is a single-process local store, not a multi-host database, and it does not encrypt source at rest. Use an OS-protected/encrypted app-data volume for sensitive artifacts.

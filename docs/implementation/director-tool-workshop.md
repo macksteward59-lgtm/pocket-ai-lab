@@ -127,3 +127,12 @@ Run each task with at least three seeds against (a) a human-only reference workf
 - Tool build specifications are copied before asynchronous builder/hash work. The digest and saved artifact use the same immutable snapshot.
 - Only one artifact version is marked active. Activating a newer version deactivates the previous version and clears the registry's installation-availability flag so the host must re-install or re-verify the new adapter. Retirement locates the actual active version even if a newer unactivated candidate exists.
 - Artifact status updates are persisted before registry changes. If a multi-record write fails, prior artifact records are restored; if registry mutation fails, persisted records are rolled back. Durable host stores should provide transactional writes where available and must surface rollback failures.
+
+
+## Durable artifact-store adapter
+
+`runtime/adapters/director/FileToolArtifactStore.ts` implements the existing `ToolArtifactStore` contract for a private local application-data directory. It stores versioned JSON records, uses owner-only modes where supported, writes through temporary files and atomic rename, syncs the file and containing directory, returns detached copies, and rejects unsafe IDs, symlinked tool directories, corrupt records, identity mismatches and oversized records.
+
+This adapter persists tool source as inert data. It does not import, evaluate, or execute it. It is single-process local storage, not a multi-host database, and does not encrypt source at rest. A production host must choose an OS-protected/encrypted app-data location and provide a transactional database or explicit cross-process locking if multiple processes may write artifacts.
+
+The adapter is not connected to `apps/web/directorRuntime.ts` yet. The runtime must remain fail-closed until a real disposable sandbox, bounded builder, and authenticated approval UI are implemented and tested together. Durable storage alone is not permission to test or activate generated code.
