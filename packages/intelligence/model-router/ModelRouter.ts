@@ -16,6 +16,7 @@ export interface ResourceReport {
 interface Reservation {
   descriptor: ModelDescriptor;
   memoryMB: number;
+  fingerprint: string;
   references: number;
   retired: boolean;
 }
@@ -26,6 +27,7 @@ export class ModelRouter {
   /** IDs whose prior artifact was retired and whose replacement load is unconfirmed. */
   private requiresFreshLoad = new Set<string>();
   private retiredDescriptors = new WeakSet<ModelDescriptor>();
+  private descriptorIds = new WeakMap<ModelDescriptor, string>();
 
   constructor(private readonly getResources: () => ResourceReport) {}
 
@@ -39,6 +41,11 @@ export class ModelRouter {
     if (this.retiredDescriptors.has(preferred)) {
       throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
     }
+    const originalId = this.descriptorIds.get(preferred);
+    if (originalId !== undefined && originalId !== preferred.id) {
+      throw new Error("Model descriptor identity changed its model ID");
+    }
+    this.descriptorIds.set(preferred, preferred.id);
     if (typeof preferred.id !== "string" || !preferred.id.trim() ||
         typeof preferred.path !== "string" || !preferred.path.trim()) {
       throw new Error("Model " + String(preferred.id) + " has no configured runtime path");
@@ -68,8 +75,9 @@ export class ModelRouter {
 
     const generations = this.reservations.get(preferred.id) ?? [];
     const existing = generations.find(reservation => reservation.descriptor === preferred);
-    if (existing && existing.memoryMB !== preferred.memoryEstimateMB) {
-      throw new Error("Model " + preferred.id + " changed its memory estimate while route leases are active");
+    const fingerprint = descriptorFingerprint(preferred);
+    if (existing && existing.fingerprint !== fingerprint) {
+      throw new Error("Model " + preferred.id + " descriptor changed while route leases are active");
     }
     if (existing?.retired || this.retiredDescriptors.has(preferred)) {
       throw new Error("Model " + preferred.id + " has been retired and cannot accept new routes");
@@ -102,6 +110,7 @@ export class ModelRouter {
       generations.push({
         descriptor: preferred,
         memoryMB: preferred.memoryEstimateMB,
+        fingerprint,
         references: 1,
         retired: false
       });
@@ -133,24 +142,29 @@ export class ModelRouter {
    */
   confirmLoaded(descriptor: ModelDescriptor): void {
     if (this.retiredDescriptors.has(descriptor)) return;
-    const generations = this.reservations.get(descriptor.id);
-    const activeGeneration = generations?.some(
-      reservation => reservation.descriptor === descriptor && !reservation.retired
-    );
-    if (activeGeneration) this.requiresFreshLoad.delete(descriptor.id);
+    for (const [modelId, generations] of this.reservations) {
+      const activeGeneration = generations.some(
+        reservation => reservation.descriptor === descriptor && !reservation.retired
+      );
+      if (activeGeneration) {
+        this.requiresFreshLoad.delete(modelId);
+        return;
+      }
+    }
   }
 
   /** Release the exact descriptor generation returned by route(). */
   release(descriptor: ModelDescriptor): void {
-    const generations = this.reservations.get(descriptor.id);
-    if (!generations) return;
-    const reservation = generations.find(item => item.descriptor === descriptor);
-    if (!reservation) return;
-    reservation.references -= 1;
-    if (reservation.references <= 0) {
-      const remaining = generations.filter(item => item !== reservation);
-      if (remaining.length) this.reservations.set(descriptor.id, remaining);
-      else this.reservations.delete(descriptor.id);
+    for (const [modelId, generations] of this.reservations) {
+      const reservation = generations.find(item => item.descriptor === descriptor);
+      if (!reservation) continue;
+      reservation.references -= 1;
+      if (reservation.references <= 0) {
+        const remaining = generations.filter(item => item !== reservation);
+        if (remaining.length) this.reservations.set(modelId, remaining);
+        else this.reservations.delete(modelId);
+      }
+      return;
     }
   }
 
@@ -158,4 +172,17 @@ export class ModelRouter {
   getLoadedModels(): string[] {
     return [...this.reservations.keys()];
   }
+}
+
+
+function descriptorFingerprint(descriptor: ModelDescriptor): string {
+  return JSON.stringify({
+    id: descriptor.id,
+    name: descriptor.name,
+    path: descriptor.path,
+    contextLength: descriptor.contextLength,
+    quantization: descriptor.quantization ?? null,
+    capabilities: [...descriptor.capabilities],
+    memoryEstimateMB: descriptor.memoryEstimateMB
+  });
 }
