@@ -24,3 +24,5 @@ export { ingestStaticAnalysis } from "./SourceEvidenceAdapter";
 export type { StaticObservationInput, StaticAnalysisInput, SourceEvidenceCandidate, SourceEvidenceReport } from "./SourceEvidenceAdapter";
 
 export { SourceResearchPipeline, type SourceResearchResult } from "./SourceResearchPipeline";
+
+export { runResearchBenchmark, type ResearchBenchmarkCase, type ResearchBenchmarkReport } from "./ResearchBenchmark";
