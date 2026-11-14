@@ -92,7 +92,7 @@ export class StaticAnalysisOrchestratorBridge {
       },
       dataFlows,
       authorizationSurface,
-      truncated: body.truncated || dataFlows.parserStatus === "truncated",
+      truncated: body.truncated || dataFlows.parserStatus === "truncated" || authorizationSurface.parserStatus === "truncated",
       authorized: false,
       executes: false
     };
