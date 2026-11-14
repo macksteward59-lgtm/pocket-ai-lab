@@ -26,11 +26,15 @@ export function checkTenantIsolation(model: SecurityWorldModel): ModelCheckResul
       for (const resource of model.resources) {
         if (identity.tenantId === resource.tenantId) continue;
         checkedPairs += 1;
-        if (operation.tenantIsolationGuard === "unknown") {
+        if (operation.tenantIsolationGuard === "unknown" || operation.residualAuthorization === "unknown") {
           unknownPairs += 1;
           continue;
         }
-        if (operation.tenantIsolationGuard === "enforced") continue;
+        if (operation.tenantIsolationGuard === "enforced" || operation.residualAuthorization === "deny") continue;
+        if (operation.residualAuthorization !== "allow") {
+          unknownPairs += 1;
+          continue;
+        }
 
         const evidenceRefs = model.facts
           .filter(fact =>
@@ -56,7 +60,7 @@ export function checkTenantIsolation(model: SecurityWorldModel): ModelCheckResul
 
   const status = counterexamples.length > 0
     ? "counterexample"
-    : unknownPairs > 0
+    : unknownPairs > 0 || checkedPairs === 0
       ? "inconclusive"
       : "no-counterexample";
 
@@ -67,7 +71,8 @@ export function checkTenantIsolation(model: SecurityWorldModel): ModelCheckResul
     counterexamples,
     notes: [
       "Results describe the supplied model only; they are not observations of a live application.",
-      ...(unknownPairs > 0 ? ["Unknown guard states were not treated as secure or vulnerable."] : [])
+      ...(unknownPairs > 0 ? ["Unknown guard or residual-authorization states were not treated as secure or vulnerable."] : []),
+      ...(checkedPairs === 0 ? ["No cross-tenant identity/resource pair was available to exercise the invariant."] : [])
     ]
   };
 }
