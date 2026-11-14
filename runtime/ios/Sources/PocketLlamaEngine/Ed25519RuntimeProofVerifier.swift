@@ -32,10 +32,12 @@ public enum RuntimeSessionProofCanonicalizer {
             proof.algorithm
         ]
 
+        let fieldLimits = [64, 8, 256, 256, 64, 128, 64, 20, 128, 16]
         var output = Data()
-        for field in fields {
+        for (index, field) in fields.enumerated() {
             let bytes = Data(field.utf8)
-            guard bytes.count <= Int(UInt32.max) else { return nil }
+            guard bytes.count <= fieldLimits[index],
+                  bytes.count <= Int(UInt32.max) else { return nil }
             var length = UInt32(bytes.count).bigEndian
             withUnsafeBytes(of: &length) { output.append(contentsOf: $0) }
             output.append(bytes)
