@@ -219,7 +219,8 @@ final class ModelPoolTests: XCTestCase {
         )
         let pool = ModelPool(engine: engine, configuration: configuration, availableMemoryMB: { 512 })
         let first = try await pool.acquire(model: model("unloading"), estimatedMemoryMB: 400)
-        XCTAssertTrue(await pool.release(first))
+        let firstReleased = await pool.release(first)
+        XCTAssertTrue(firstReleased)
 
         let unloadTask = Task { try await pool.unload(modelId: "unloading") }
         while !(await engine.hasStartedUnloading()) { await Task.yield() }
@@ -236,11 +237,13 @@ final class ModelPoolTests: XCTestCase {
 
         await engine.finishUnloading()
         try await unloadTask.value
-        XCTAssertEqual((await pool.snapshot()).reservedMemoryMB, 0)
+        let afterUnload = await pool.snapshot()
+        XCTAssertEqual(afterUnload.reservedMemoryMB, 0)
 
         let second = try await pool.acquire(model: model("second"), estimatedMemoryMB: 200)
         XCTAssertEqual(second.session.modelId, "second")
-        XCTAssertTrue(await pool.release(second))
+        let secondReleased = await pool.release(second)
+        XCTAssertTrue(secondReleased)
         try await pool.unload(modelId: "second")
     }
 
