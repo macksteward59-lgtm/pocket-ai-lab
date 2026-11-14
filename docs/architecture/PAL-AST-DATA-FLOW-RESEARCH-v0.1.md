@@ -1,6 +1,6 @@
 # PAL AST Data-Flow Research v0.1
 
-**Status:** Implemented on `codex/pal-ast-dataflow-poc`; CI pending  
+**Status:** Implemented and CI-validated on `codex/pal-ast-dataflow-poc`  
 **Parent POC:** [PAL Omniscience integrated POC](./PAL-OMNISCIENCE-INTEGRATED-POC-v0.2.md)
 
 ## Purpose
@@ -112,3 +112,17 @@ Then from the repository root:
 ```bash
 npm test
 ```
+
+
+## CI validation
+
+Validated head: `a1f2acea4d4f11f602b43d2e86a00a407d1e67bd`.
+
+All four repository workflows passed:
+
+- [Pocket AI Lab CI #862](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43629453423): TypeScript build; 62 intelligence test files / 512 tests; research POC and 3-case synthetic benchmark; 26 adapter/runtime test files / 300 passed / 2 skipped; remaining local GGUF, Eagle Python, custom GGUF, and desktop checks.
+- [Governance sidecar CI #164](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43629453441): 27 Python tests passed and offline simulation passed (3 cases).
+- [Consumer prototype CI #269](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43629453364): 31 test files / 256 tests passed, 13 additional test files / 150 passed / 1 skipped, plus build.
+- [Cursor collaboration plugin CI #214](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43629453403): passed.
+
+CI validates the implemented bounded behavior and integration tests; it does not establish real-world detection accuracy or completeness.
