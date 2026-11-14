@@ -52,3 +52,5 @@ const approvalRef = approvals.grant({
 ```
 
 A future UI must calculate the action digest from the same canonical action snapshot the host will execute, show the user the target and consequences, and issue a grant only after explicit confirmation. A production host also needs authenticated UI/session protection, a concrete OS-sandboxed device bridge, and an audit trail that never records the bearer approval reference.
+
+The current implementation additionally uses a process-wide per-root/per-tool write lock, rejects symlinked version records and over-broad POSIX record permissions, and validates allowed specialist IDs and the canonical digest on read. These controls do not provide cross-process locking or encryption at rest. Keep the root in private app data and use a single writer or transactional database if multiple processes can modify the same history.
