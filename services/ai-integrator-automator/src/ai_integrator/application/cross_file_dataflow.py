@@ -158,7 +158,7 @@ def _function_summaries(files: dict[str, _File]) -> dict[tuple[str, str], dict[i
     for path, item in files.items():
         functions = [n for n in ast.walk(item.tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
         for fn in functions:
-            params = [*fn.args.posonlyargs, *fn.args.args, *fn.args.kwonlyargs]
+            params = [*fn.args.posonlyargs, *fn.args.args]
             env = {arg.arg: {i} for i, arg in enumerate(params)}
             summary: dict[int, list[_SinkSite]] = {}
             def walk(body: list[ast.stmt]) -> None:
@@ -240,6 +240,7 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
     summaries = _function_summaries(files)
     observations: list[CrossFileObservation] = []
     seen: set[tuple[str, int, str, int, str]] = set()
+    analysis_partial = bool(unresolved)
     limitations = [
         "Only direct calls to statically resolved imported Python functions are followed across files.",
         "The analyzer does not execute imports or source code; it parses submitted text only.",
@@ -267,6 +268,7 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
         lines = source.splitlines()
         return lines[line - 1].strip()[:240] if 1 <= line <= len(lines) else ""
     def process_scope(path: str, body: list[ast.stmt]) -> None:
+        nonlocal analysis_partial
         env: dict[str, list[tuple[int, str]]] = {}
         for statement in body:
             expr = statement.value if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.Expr, ast.Return)) else None
@@ -283,7 +285,10 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
                                 target = (imported[0], attr[len(module_tail) + 1:])
                             elif "." not in attr:
                                 target = (imported[0], attr)
-                    if target is None or call.keywords or any(isinstance(arg, ast.Starred) for arg in call.args):
+                    if target is None:
+                        continue
+                    if call.keywords or any(isinstance(arg, ast.Starred) for arg in call.args):
+                        analysis_partial = True
                         continue
                     summary = summaries.get(target)
                     if not summary:
@@ -316,6 +321,7 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
             elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 process_scope(path, statement.body)
             elif isinstance(statement, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+                analysis_partial = True
                 for field in ("body", "orelse", "finalbody"):
                     nested = getattr(statement, field, None)
                     if isinstance(nested, list): process_scope(path, nested)
@@ -323,9 +329,9 @@ def analyze_python_project(files_input: list[ProjectSourceFile]) -> CrossFileAna
                 for case in getattr(statement, "cases", []): process_scope(path, case.body)
     for path, item in files.items():
         process_scope(path, item.tree.body)
-    partial = bool(unresolved) or len(observations) >= _MAX_SIGNALS
+    analysis_partial = analysis_partial or len(observations) >= _MAX_SIGNALS
     return CrossFileAnalysisReport(
-        parser_status="partial" if partial else "parsed",
+        parser_status="partial" if analysis_partial else "parsed",
         observations=observations, resolved_imports=edges, unresolved_imports=unresolved,
         files_analyzed=len(files), nodes_visited=total_nodes, authorized=False, executes=False,
         limitations=limitations,
