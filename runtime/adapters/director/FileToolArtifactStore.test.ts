@@ -105,6 +105,7 @@ describe("FileToolArtifactStore", () => {
     const directory = path.join(root, artifact.toolId);
     await mkdir(directory);
     await writeFile(path.join(directory, "1.json"), "{broken");
+    if (process.platform !== "win32") await chmod(path.join(directory, "1.json"), 0o600);
     const store = new FileToolArtifactStore(root);
     await expect(store.getLatest(artifact.toolId)).rejects.toThrow(/Corrupt artifact record/);
   });
