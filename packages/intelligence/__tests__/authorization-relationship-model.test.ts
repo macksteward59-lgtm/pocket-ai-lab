@@ -112,7 +112,10 @@ describe("AuthorizationRelationshipModel", () => {
   it("treats unknown tenant guards as unknown rather than secure or vulnerable", () => {
     const world = new SecurityWorldModel({
       ...SYNTHETIC_TENANT_ISOLATION_FIXTURE,
-      operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], tenantIsolationGuard: "unknown" }]
+      operations: [{ ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0], tenantIsolationGuard: "unknown" }],
+      facts: SYNTHETIC_TENANT_ISOLATION_FIXTURE.facts.map(fact =>
+        fact.predicate === "tenant-isolation-guard" ? { ...fact, value: "unknown" } : fact
+      )
     });
     const result = checkAuthorizationRelationships(makeModel({ world }));
     expect(result.status).toBe("inconclusive");
@@ -196,7 +199,10 @@ describe("AuthorizationRelationshipModel", () => {
         ...SYNTHETIC_TENANT_ISOLATION_FIXTURE.operations[0],
         tenantIsolationGuard: "enforced" as const,
         residualAuthorization: "unknown" as const
-      }]
+      }],
+      facts: SYNTHETIC_TENANT_ISOLATION_FIXTURE.facts.map(fact =>
+        fact.predicate === "tenant-isolation-guard" ? { ...fact, value: "enforced" } : fact
+      )
     });
     const result = checkAuthorizationRelationships(makeModel({ world }));
     expect(result.status).toBe("inconclusive");
