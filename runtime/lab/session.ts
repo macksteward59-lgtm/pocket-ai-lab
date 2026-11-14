@@ -145,6 +145,7 @@ export async function runLabSession(options: {
             ? { memoryContext: options.memoryContext.map(item => ({ ...item })) }
             : {})
         }, options.signal);
+        router.confirmLoaded(selected);
         if (!isRecord(inference.payload)) {
           throw new LlamaCppInferenceError("malformed_response", "Inference provider returned a non-object stage payload.");
         }
@@ -175,7 +176,6 @@ export async function runLabSession(options: {
         };
         messages.push(transcript);
         emit({ type: "message", message: transcript });
-        router.confirmLoaded(selected);
         } finally {
           router.release(selected);
         }
