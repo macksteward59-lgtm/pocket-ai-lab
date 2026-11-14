@@ -4,7 +4,7 @@
  */
 import { PolicyCheckError, assertLoopback } from "../security/PolicyChecker";
 
-export interface StaticDataFlowSignal {
+export interface StaticDataFlowSignal {\n  analysisScope: "intraprocedural" | "interprocedural";
   kind: string;
   sourceLine: number;
   sinkLine: number;
