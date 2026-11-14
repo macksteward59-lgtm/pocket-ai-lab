@@ -153,6 +153,28 @@ describe("Orchestrator", () => {
     })).toThrow(/InferenceProvider must be supplied/);
   });
 
+  it("releases a routed model lease when agent-session creation fails", async () => {
+    const orchestrator = new Orchestrator({
+      maxDeliberationRounds: 0,
+      getResources: () => ({ availableMemoryMB: 1024, loadedModels: [] }),
+      inference: { async generate() { throw new Error("Inference must not run"); } }
+    });
+    orchestrator.models.register(model);
+    for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+      orchestrator.models.associateAgent(agentId, model.id);
+    }
+    orchestrator.agents.startSession = (() => {
+      throw new Error("synthetic session registry failure");
+    }) as typeof orchestrator.agents.startSession;
+
+    await expect(orchestrator.executeTask({
+      id: "session-failure",
+      objective: "Exercise route cleanup",
+      requiredCapabilities: []
+    })).rejects.toThrow(/synthetic session registry failure/);
+    expect(orchestrator.router.getLoadedModels()).toEqual([]);
+  });
+
   it("executes each stage through the injected provider and records unverified synthesis", async () => {
     const orchestrator = new Orchestrator({
       maxDeliberationRounds: 1,
