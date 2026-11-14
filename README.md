@@ -38,7 +38,7 @@ The Memory screen supports explicit user-initiated save, list, edit, and delete 
 
 ## Local llama.cpp adapter
 
-A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The consumer Agent Team view and the loopback harness both run multi-stage sessions through the existing message bus and deliberation engine. The harness remains a developer surface; neither UI authorizes anything.
+A separate `InferenceProvider` lives in `runtime/adapters/llama-cpp`. Core orchestration does not import it. The consumer Agent Team view and the loopback harness both run multi-stage sessions through the existing message bus and deliberation engine. The harness remains a developer surface; neither UI authorizes anything. The ModelRouter now retains memory reservations per descriptor generation until every active route releases, retires old generations during replacement/removal, and requires a successful provider response before a replacement ID can be trusted as loaded. See `docs/architecture/model-router-generation-reservations-v1.md`.
 
 ```bash
 node scripts/local-gguf/fetch-smoke-gguf.mjs
