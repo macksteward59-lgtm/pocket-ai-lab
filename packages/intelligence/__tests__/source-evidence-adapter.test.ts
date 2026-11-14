@@ -73,6 +73,8 @@ describe("SourceEvidenceAdapter", () => {
   it("rejects absolute and traversal filenames", () => {
     expect(() => ingestStaticAnalysis({ ...base, filename: "/etc/passwd" })).toThrow(/relative path/);
     expect(() => ingestStaticAnalysis({ ...base, filename: "src/../secret.py" })).toThrow(/relative path/);
+    expect(() => ingestStaticAnalysis({ ...base, filename: "C:/secret.py" })).toThrow(/relative path/);
+    expect(() => ingestStaticAnalysis({ ...base, filename: "src/\u0000secret.py" })).toThrow(/relative path/);
   });
 
   it("deduplicates identical signals while preserving distinct line evidence", () => {
