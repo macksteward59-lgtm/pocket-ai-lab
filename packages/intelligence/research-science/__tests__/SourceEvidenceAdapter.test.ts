@@ -66,7 +66,7 @@ describe("SourceEvidenceAdapter", () => {
   });
 
   it("rejects any analysis result claiming authorization or execution", () => {
-    expect(() => ingestStaticAnalysis({ ...base, authorized: true as false })).toThrow(/non-executing/);
+    expect(() => ingestStaticAnalysis({ ...base, authorized: true as unknown as false })).toThrow(/non-executing/);
     expect(() => ingestStaticAnalysis({ ...base, executes: true as false })).toThrow(/non-executing/);
   });
 
