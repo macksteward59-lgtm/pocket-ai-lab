@@ -71,6 +71,9 @@ export class SecurityWorldModel {
       if (!["enforced", "absent", "unknown"].includes(item.tenantIsolationGuard)) {
         throw new Error("Invalid tenant isolation guard state");
       }
+      if (!["allow", "deny", "unknown"].includes(item.residualAuthorization)) {
+        throw new Error("Invalid residual authorization state");
+      }
       return Object.freeze({ ...item });
     }));
     this.invariants = Object.freeze(input.invariants.map(item => {
@@ -93,6 +96,14 @@ export class SecurityWorldModel {
       }
       return Object.freeze({ ...item });
     }));
+    for (const fact of this.facts) {
+      if (fact.predicate === "tenant-isolation-guard") {
+        const operation = this.operations.find(item => item.id === fact.subjectId);
+        if (!operation || fact.value !== operation.tenantIsolationGuard) {
+          throw new Error("Tenant-isolation fact conflicts with the modeled operation state");
+        }
+      }
+    }
     Object.freeze(this);
   }
 }
