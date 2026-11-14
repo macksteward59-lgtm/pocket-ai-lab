@@ -24,6 +24,7 @@ class DataFlowSignal(BaseModel):
     variables: list[str] = Field(default_factory=list)
     source_excerpt: str
     sink_excerpt: str
+    analysis_scope: Literal["intraprocedural", "interprocedural"] = "intraprocedural"
 
 
 class PythonDataFlowReport(BaseModel):
@@ -43,8 +44,8 @@ _MAX_SOURCE_CHARS = 1_000_000
 _MAX_AST_NODES = 20_000
 _MAX_SIGNALS = 100
 _LIMITATIONS = [
-    "Intraprocedural, straight-line name propagation only; branches and loops make the result partial.",
-    "No interprocedural, attribute, container, alias, reflection, framework, or sanitizer semantics.",
+    "Interprocedural summaries are bounded to local Python functions in one file and simple name-based argument propagation.",
+    "Branches, loops, recursion, dynamic dispatch, attributes, containers, aliases, reflection, frameworks, and sanitizers are incomplete or unsupported.",
     "A source-to-sink signal is a review lead, not proof of exploitability or a vulnerability.",
     "Absence of a signal does not establish that the source is safe.",
 ]
@@ -248,6 +249,156 @@ class _Analyzer:
                 self.partial = True
 
 
+_MAX_FUNCTIONS = 200
+_MAX_SUMMARY_ROUNDS = 8
+
+def _interprocedural_signals(source: str, tree: ast.Module, max_signals: int) -> tuple[list[DataFlowSignal], bool]:
+    """Bounded local-function summaries: parameter -> sensitive sink."""
+    functions = {n.name: n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    if len(functions) > _MAX_FUNCTIONS:
+        return [], True
+    # Each summary maps a positional parameter index to sink sites reachable
+    # through local helper calls. No imports or dynamic dispatch are resolved.
+    summaries: dict[str, dict[int, list[tuple[str, str, int, str]]]] = {n: {} for n in functions}
+    partial = False
+
+    def tainted(node: ast.AST, env: dict[str, set[int]]) -> set[int]:
+        result: set[int] = set()
+        for part in ast.walk(node):
+            if isinstance(part, ast.Name):
+                result.update(env.get(part.id, set()))
+        return result
+
+    def summary_for(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[int, list[tuple[str, str, int, str]]]:
+        nonlocal partial
+        params = [*fn.args.posonlyargs, *fn.args.args, *fn.args.kwonlyargs]
+        env = {arg.arg: {i} for i, arg in enumerate(params)}
+        out: dict[int, list[tuple[str, str, int, str]]] = {}
+        def add(origins: set[int], site: tuple[str, str, int, str]) -> None:
+            for i in origins:
+                sites = out.setdefault(i, [])
+                if site not in sites: sites.append(site)
+        def walk(body: list[ast.stmt]) -> None:
+            nonlocal partial
+            for st in body:
+                if isinstance(st, (ast.Import, ast.ImportFrom, ast.Pass, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    continue
+                expr = st.value if isinstance(st, (ast.Assign, ast.AnnAssign)) else st.value if isinstance(st, ast.Expr) else None
+                if expr is not None:
+                    for call in (x for x in ast.walk(expr) if isinstance(x, ast.Call)):
+                        sink = _sink(call)
+                        if sink:
+                            for arg in [*call.args, *(k.value for k in call.keywords)]:
+                                add(tainted(arg, env), (sink[0], sink[1], getattr(call, "lineno", 1), _render(call)))
+                        else:
+                            callee = _name(call.func).split(".")[-1]
+                            args = [*call.args, *(k.value for k in call.keywords)]
+                            for i, arg in enumerate(args):
+                                for site in summaries.get(callee, {}).get(i, []):
+                                    add(tainted(arg, env), site)
+                    if isinstance(st, ast.Assign):
+                        origins = tainted(expr, env)
+                        for target in st.targets:
+                            if isinstance(target, ast.Name):
+                                if origins: env[target.id] = set(origins)
+                                else: env.pop(target.id, None)
+                            else: partial = True
+                    elif isinstance(st, ast.AnnAssign) and isinstance(st.target, ast.Name):
+                        origins = tainted(expr, env)
+                        if origins: env[st.target.id] = origins
+                        else: env.pop(st.target.id, None)
+                elif isinstance(st, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+                    partial = True
+                    for field in ("body", "orelse", "finalbody"):
+                        nested = getattr(st, field, None)
+                        if isinstance(nested, list): walk(nested)
+                    for handler in getattr(st, "handlers", []): walk(handler.body)
+                    for case in getattr(st, "cases", []): walk(case.body)
+        walk(fn.body)
+        return out
+
+    for _ in range(_MAX_SUMMARY_ROUNDS):
+        changed = False
+        for name, fn in functions.items():
+            new = summary_for(fn)
+            for index, sites in new.items():
+                current = summaries[name].setdefault(index, [])
+                for site in sites:
+                    if site not in current:
+                        current.append(site)
+                        changed = True
+        if not changed: break
+    else:
+        partial = True
+
+    lines = source.splitlines()
+    signals: list[DataFlowSignal] = []
+    seen: set[tuple[int, int, str, str]] = set()
+    for fn in functions.values():
+        env: dict[str, list[tuple[int, str, str]]] = {}
+        def origins(node: ast.AST) -> list[tuple[int, str, str]]:
+            found: list[tuple[int, str, str]] = []
+            def visit(part: ast.AST) -> None:
+                if _source_node(part):
+                    item = (getattr(part, "lineno", 1), _render(part), "")
+                    if item not in found: found.append(item)
+                    return
+                if isinstance(part, ast.Name) and part.id in env:
+                    for item in env[part.id]:
+                        if item not in found: found.append(item)
+                    return
+                for child in ast.iter_child_nodes(part): visit(child)
+            visit(node)
+            return found
+        def excerpt(line: int) -> str:
+            return lines[line-1].strip()[:240] if 1 <= line <= len(lines) else ""
+        def walk(body: list[ast.stmt]) -> None:
+            nonlocal partial
+            for st in body:
+                if len(signals) >= max_signals:
+                    partial = True
+                    return
+                if isinstance(st, (ast.Import, ast.ImportFrom, ast.Pass, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    continue
+                expr = st.value if isinstance(st, (ast.Assign, ast.AnnAssign)) else st.value if isinstance(st, ast.Expr) else None
+                if expr is not None:
+                    for call in (x for x in ast.walk(expr) if isinstance(x, ast.Call) and _sink(x) is None):
+                        callee = _name(call.func).split(".")[-1]
+                        args = [*call.args, *(k.value for k in call.keywords)]
+                        for i, arg in enumerate(args):
+                            for source_line, source_expr, _ in origins(arg):
+                                for kind, sink_name, sink_line, sink_expr in summaries.get(callee, {}).get(i, []):
+                                    key = (source_line, sink_line, sink_name, source_expr)
+                                    if key in seen: continue
+                                    seen.add(key)
+                                    signals.append(DataFlowSignal(
+                                        kind=kind, source_line=source_line, sink_line=sink_line,
+                                        source_expression=source_expr, sink_expression=sink_expr,
+                                        sink_name=sink_name, variables=[],
+                                        source_excerpt=excerpt(source_line), sink_excerpt=excerpt(sink_line),
+                                        analysis_scope="interprocedural"
+                                    ))
+                    if isinstance(st, ast.Assign):
+                        found = origins(expr)
+                        for target in st.targets:
+                            if isinstance(target, ast.Name):
+                                if found: env[target.id] = found
+                                else: env.pop(target.id, None)
+                            else: partial = True
+                    elif isinstance(st, ast.AnnAssign) and isinstance(st.target, ast.Name):
+                        found = origins(expr)
+                        if found: env[st.target.id] = found
+                        else: env.pop(st.target.id, None)
+                elif isinstance(st, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+                    partial = True
+                    for field in ("body", "orelse", "finalbody"):
+                        nested = getattr(st, field, None)
+                        if isinstance(nested, list): walk(nested)
+                    for handler in getattr(st, "handlers", []): walk(handler.body)
+                    for case in getattr(st, "cases", []): walk(case.body)
+        walk(fn.body)
+    return signals, partial
+
 def analyze_python_dataflow(source: str, *, limit: int = _MAX_SOURCE_CHARS, max_nodes: int = _MAX_AST_NODES, max_signals: int = _MAX_SIGNALS) -> PythonDataFlowReport:
     if not isinstance(source, str):
         source = ""
@@ -277,10 +428,12 @@ def analyze_python_dataflow(source: str, *, limit: int = _MAX_SOURCE_CHARS, max_
 
     analyzer = _Analyzer(body, min(max_signals, _MAX_SIGNALS))
     analyzer.statements(tree.body, {})
-    status: Literal["parsed", "unsupported"] = "unsupported" if analyzer.partial else "parsed"
+    cross_function, cross_partial = _interprocedural_signals(body, tree, min(max_signals, _MAX_SIGNALS))
+    combined_signals = [*analyzer.signals, *cross_function][:min(max_signals, _MAX_SIGNALS)]
+    status: Literal["parsed", "unsupported"] = "unsupported" if analyzer.partial or cross_partial else "parsed"
     return PythonDataFlowReport(
         parser_status=status,
-        signals=analyzer.signals,
+        signals=combined_signals,
         nodes_visited=count,
         truncated=False,
         limitations=_LIMITATIONS,
