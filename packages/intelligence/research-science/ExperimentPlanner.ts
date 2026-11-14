@@ -39,7 +39,7 @@ export function planExperiments(
       priority,
       executionMode: "proposal-only",
       authorizationStatus: "not-requested"
-    };
+    } satisfies ExperimentProposal;
   }).sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
 }
 
