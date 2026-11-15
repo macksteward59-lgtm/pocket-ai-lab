@@ -122,6 +122,31 @@ BEGIN
 END;
 $$;
 
+-- The composite foreign key prevents a job from pairing a valid row ID with a
+-- different claimed allowlist hostname.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO proofhunt.assessment_jobs (
+      job_id, project_id, program_authorization_id, operational_authorization_id,
+      policy_id, policy_version, policy_hash, check_type,
+      authorized_target_id, authorized_target_hostname, target_hostname, program_scope_hash,
+      decision, decision_reason, job_status, decision_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000014', 'project-a',
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
+      '00000000-0000-0000-0000-000000000003', 'exact.example.net', 'exact.example.net', repeat('a',64),
+      'approved_plan', 'Should be denied by composite FK', 'planned', CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'expected composite allowlist FK to reject mismatched hostname';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+END;
+$$;
+
 -- A child hostname explicitly covered by the approved subdomain flag is admitted.
 INSERT INTO proofhunt.assessment_jobs (
   job_id, project_id, program_authorization_id, operational_authorization_id,
@@ -306,31 +331,6 @@ BEGIN
     IF SQLERRM <> 'ProofHunt job target is explicitly excluded' THEN
       RAISE;
     END IF;
-  END;
-END;
-$$;
-
--- The composite foreign key prevents a job from pairing a valid row ID with a
--- different claimed allowlist hostname.
-DO $$
-BEGIN
-  BEGIN
-    INSERT INTO proofhunt.assessment_jobs (
-      job_id, project_id, program_authorization_id, operational_authorization_id,
-      policy_id, policy_version, policy_hash, check_type,
-      authorized_target_id, authorized_target_hostname, target_hostname, program_scope_hash,
-      decision, decision_reason, job_status, decision_at
-    ) VALUES (
-      '00000000-0000-0000-0000-000000000014', 'project-a',
-      '00000000-0000-0000-0000-000000000001',
-      '00000000-0000-0000-0000-000000000002',
-      '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
-      '00000000-0000-0000-0000-000000000003', 'exact.example.net', 'exact.example.net', repeat('a',64),
-      'approved_plan', 'Should be denied by composite FK', 'planned', CURRENT_TIMESTAMP
-    );
-    RAISE EXCEPTION 'expected composite allowlist FK to reject mismatched hostname';
-  EXCEPTION WHEN foreign_key_violation THEN
-    NULL;
   END;
 END;
 $$;
