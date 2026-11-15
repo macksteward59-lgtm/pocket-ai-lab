@@ -84,3 +84,20 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Repository visibility and permissions remain unchanged.
 - No physical-device test is claimed. Hosted device-slice linking and simulator tests do not prove behavior on the user's iPhone.
 - Current active task selection must be re-evaluated against the requested task and live GitHub state on every resume.
+
+
+## 2026-11-15 17:39 UTC — Current continuation checkpoint
+
+- Main remains `818799eced634577c8f1760fa2bdd1f657bd8427`; no main writes, merges, or repository setting changes.
+- PR #110 remains open/draft against main, branch `codex/ios-agent-team-workspace-mainline`, current head `b865b519084e0287f8680e7610bdc69b852fdaf1`.
+- Additional implementation commits since the prior checkpoint:
+  - `5560375a6944fa07d9199451b96189c7206e1f37`: architecture docs for lease-bound generation pins.
+  - `7850347b38313dcb3d6ef89057c4158df1123ce2`: regression test that cancelling a scheduler-queued generation releases only its use pin and does not disturb the active generation.
+  - `91c6c10e652271bee3382c9b8b6b44a8025bea39`: bounded in-memory multi-turn chat context, up to eight prior user/assistant messages, 6,000 UTF-8 byte prompt cap; excludes Agent Team/runtime messages.
+  - `7b4ceac25617c2c5b2c11fd85b6021410f25560f`: XCTest coverage for chat history carry-forward and oversized message truncation.
+  - `e134c89e4317207ab0752ad71577a584c83f40e2`: architecture docs specify chat context limits, ephemeral scope, and non-security nature of prompt framing.
+  - `b865b519084e0287f8680e7610bdc69b852fdaf1`: regression test that output-limit rejection keeps the session use pin and scheduler permit until cancellation drain completes.
+- CI on #110 latest test commit is starting; earlier exact-head companion workflow runs for `e134c89e...` were in progress except Cursor collaboration plugin passed. iOS LlamaEngine run `43742213693` was in progress on `e134c89e...`; refresh exact latest-head run status before making claims.
+- Earlier #110 iOS run `43741621034` and the interim run `43742194939` were cancelled as newer commits superseded them. Cancellation is concurrency behavior, not a test failure.
+- #107 iOS run `43740561987` and #109 iOS run `43740720673` remained in progress on their respective older heads at last check; do not claim they validate #110.
+- No native XCTest result yet for latest #110 changes. No physical iPhone validation. Runtime trust remains Unverified.
