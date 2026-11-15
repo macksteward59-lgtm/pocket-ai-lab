@@ -30,7 +30,8 @@ final class NativeEvaluationRuntimeTests: XCTestCase {
         let engine = PartialFailureEvaluationEngine()
         let runtime = try makeRuntime(engine: engine)
         let lease = try await runtime.acquire(model: model("released-evaluation"), estimatedMemoryMB: 128)
-        XCTAssertTrue(await runtime.release(lease))
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
         do {
             _ = try await runtime.generateForEvaluation(
                 lease: lease,
