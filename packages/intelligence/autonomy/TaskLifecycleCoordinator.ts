@@ -446,8 +446,16 @@ function assertAcyclic(steps: readonly TaskStepRecord[]): void {
 function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
   if (task.status === "cancelled") return task;
   const next = cloneTask(task);
-  if (next.steps.some(step => step.status === "failed")) next.status = "failed";
-  else if (next.steps.every(step => step.status === "succeeded")) next.status = "completed";
+  if (next.steps.some(step => step.status === "failed")) {
+    next.status = "failed";
+    // A terminal task cannot retain live leases or runnable descendants.
+    for (const step of next.steps) {
+      if (step.status === "pending" || step.status === "running") {
+        step.status = "cancelled";
+        step.currentAttempt = null;
+      }
+    }
+  } else if (next.steps.every(step => step.status === "succeeded")) next.status = "completed";
   else if (next.steps.some(step => step.status === "running")) next.status = "running";
   else next.status = "ready";
   next.updatedAt = now.toISOString();
