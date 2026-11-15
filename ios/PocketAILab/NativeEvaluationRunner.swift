@@ -9,12 +9,14 @@ struct NativeEvaluationCase: Sendable {
     let prompt: String
     let evaluationCriteria: String
     let expectedOutcome: String
+    let scoringRule: NativeEvaluationScoringRule
     let maxTokens: Int
     let temperature: Double
 
     init(category: NativeEvaluationCategory, suiteID: String, suiteVersion: String,
          caseID: String, prompt: String, evaluationCriteria: String,
-         expectedOutcome: String = "", maxTokens: Int = 256, temperature: Double = 0) {
+         expectedOutcome: String = "", scoringRule: NativeEvaluationScoringRule = .manualReview,
+         maxTokens: Int = 256, temperature: Double = 0) {
         self.category = category
         self.suiteID = suiteID
         self.suiteVersion = suiteVersion
@@ -22,6 +24,7 @@ struct NativeEvaluationCase: Sendable {
         self.prompt = prompt
         self.evaluationCriteria = evaluationCriteria
         self.expectedOutcome = expectedOutcome
+        self.scoringRule = scoringRule
         self.maxTokens = maxTokens
         self.temperature = temperature
     }
@@ -39,14 +42,14 @@ enum NativeEvaluationSuite {
             caseID: "reasoning-usable-units",
             prompt: "A delivery has 4 boxes with 6 units each. 5 units are damaged. How many usable units remain? Show the arithmetic.",
             evaluationCriteria: "Compute the total, subtract damaged units, and explain the arithmetic without contradiction.",
-            expectedOutcome: "19 usable units."
+            expectedOutcome: "19", scoringRule: .containsExpectedOutcome
         ),
         NativeEvaluationCase(
             category: .factualAccuracyEvidence, suiteID: id, suiteVersion: version,
             caseID: "factual-capital-japan",
             prompt: "What is the capital of Japan? Answer with the city only.",
             evaluationCriteria: "Return the correct capital without adding unsupported claims.",
-            expectedOutcome: "Tokyo"
+            expectedOutcome: "Tokyo", scoringRule: .exactMatch
         ),
         NativeEvaluationCase(
             category: .codingEngineering, suiteID: id, suiteVersion: version,
@@ -60,7 +63,7 @@ enum NativeEvaluationSuite {
             caseID: "task-exact-token",
             prompt: "Return exactly this token and nothing else: PAL_TASK_COMPLETE",
             evaluationCriteria: "Match the requested token exactly with no extra whitespace or explanation.",
-            expectedOutcome: "PAL_TASK_COMPLETE",
+            expectedOutcome: "PAL_TASK_COMPLETE", scoringRule: .exactMatch,
             maxTokens: 32
         ),
         NativeEvaluationCase(
@@ -75,7 +78,7 @@ enum NativeEvaluationSuite {
             caseID: "memory-single-prompt-recall",
             prompt: "For this request, remember the code ORBIT-731. Repeat the code exactly and nothing else.",
             evaluationCriteria: "Recall the exact code from the same request. This measures immediate context recall only, not persistent memory.",
-            expectedOutcome: "ORBIT-731",
+            expectedOutcome: "ORBIT-731", scoringRule: .exactMatch,
             maxTokens: 32
         ),
         NativeEvaluationCase(
@@ -89,7 +92,7 @@ enum NativeEvaluationSuite {
             caseID: "runtime-reliability-token",
             prompt: "Return exactly this token: PAL_RUNTIME_READY",
             evaluationCriteria: "Complete a bounded generation successfully; latency, output completeness, and runtime errors are recorded separately.",
-            expectedOutcome: "PAL_RUNTIME_READY",
+            expectedOutcome: "PAL_RUNTIME_READY", scoringRule: .exactMatch,
             maxTokens: 32
         )
     ]
@@ -131,6 +134,7 @@ struct NativeEvaluationRunner: Sendable {
               !evaluationCase.caseID.isEmpty,
               !evaluationCase.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !evaluationCase.evaluationCriteria.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              evaluationCase.scoringRule == .manualReview || !evaluationCase.expectedOutcome.isEmpty,
               evaluationCase.maxTokens > 0, evaluationCase.maxTokens <= 4096,
               evaluationCase.temperature.isFinite,
               (0...2).contains(evaluationCase.temperature) else {
@@ -212,6 +216,16 @@ struct NativeEvaluationRunner: Sendable {
             case .failed, .none: status = .failed
             }
         }
+        let deterministicPassed: Bool?
+        switch evaluationCase.scoringRule {
+        case .manualReview:
+            deterministicPassed = nil
+        case .exactMatch:
+            deterministicPassed = status == .completed && output.trimmingCharacters(in: .whitespacesAndNewlines) == evaluationCase.expectedOutcome
+        case .containsExpectedOutcome:
+            deterministicPassed = status == .completed && output.localizedCaseInsensitiveContains(evaluationCase.expectedOutcome)
+        }
+        let deterministicScore = deterministicPassed.map { $0 ? 1.0 : 0.0 }
         let providerKind: NativeEvaluationAttempt.ProviderKind =
             runtime.providerKind == .llamaCpp ? .llamaCppBackend : .unverifiedProvider
         let nativeObserved = providerKind == .llamaCppBackend && status == .completed && failure == nil
@@ -223,6 +237,9 @@ struct NativeEvaluationRunner: Sendable {
             caseID: evaluationCase.caseID,
             evaluationCriteria: evaluationCase.evaluationCriteria,
             expectedOutcome: evaluationCase.expectedOutcome,
+            scoringRule: evaluationCase.scoringRule,
+            deterministicPassed: deterministicPassed,
+            deterministicScore: deterministicScore,
             modelID: lease.model.id,
             modelArtifactSHA256: modelArtifactSHA256,
             runtimeSessionID: lease.session.id,
@@ -247,5 +264,31 @@ struct NativeEvaluationRunner: Sendable {
             throw NativeEvaluationJournalError.invalidAttempt("Model artifact must be an existing regular file.")
         }
         return try ModelArtifactFingerprint.compute(at: fileURL).sha256
+    }
+}
+
+/// A transparent score summary for only the cases with deterministic checks.
+/// Manual-review categories are counted as uncovered, never silently scored.
+struct NativeEvaluationScoreSummary: Sendable, Equatable {
+    let totalAttempts: Int
+    let scoredAttempts: Int
+    let passedAttempts: Int
+    let unscoredAttempts: Int
+    let scorePercent: Int?
+
+    init(attempts: [NativeEvaluationAttempt]) {
+        totalAttempts = attempts.count
+        let scored = attempts.compactMap(\.deterministicScore)
+        scoredAttempts = scored.count
+        passedAttempts = attempts.filter { $0.deterministicPassed == true }.count
+        unscoredAttempts = totalAttempts - scoredAttempts
+        scorePercent = scored.isEmpty ? nil : Int((scored.reduce(0, +) / Double(scored.count) * 100).rounded())
+    }
+
+    var displayText: String {
+        guard let scorePercent else {
+            return "No objective score yet · \(unscoredAttempts) cases awaiting review"
+        }
+        return "Objective checks: \(scorePercent)% · \(passedAttempts)/\(scoredAttempts) passed · \(unscoredAttempts) need independent review"
     }
 }
