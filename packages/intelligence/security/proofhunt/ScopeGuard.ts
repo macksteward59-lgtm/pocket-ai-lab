@@ -86,6 +86,11 @@ export interface ScopeGuardAuditWriter {
   append(payload: Record<string, unknown>): Promise<unknown>;
 }
 
+export interface EmergencyStopProvider {
+  isGlobalStopActive(): boolean | Promise<boolean>;
+  isProjectStopActive(projectId: string): boolean | Promise<boolean>;
+}
+
 export interface ScopeGuardDecision {
   readonly decision: "approved_plan" | "denied";
   readonly permitted: boolean;
@@ -104,6 +109,7 @@ export interface ScopeGuardOptions {
   readonly programVerifier: ProgramEvidenceVerifier;
   readonly operationalVerifier: OperationalApprovalVerifier;
   readonly audit: ScopeGuardAuditWriter;
+  readonly emergencyStop: EmergencyStopProvider;
   readonly now?: () => number;
 }
 
@@ -114,7 +120,7 @@ export class ScopeGuard {
   private auditTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: ScopeGuardOptions) {
-    if (!options.programVerifier || !options.operationalVerifier || !options.audit) {
+    if (!options.programVerifier || !options.operationalVerifier || !options.audit || !options.emergencyStop) {
       throw new ScopeGuardError("Independent verifiers and an audit writer are required");
     }
     this.now = options.now ?? (() => Date.now());
@@ -135,6 +141,10 @@ export class ScopeGuard {
       // from changing the target list or policy while authorization is pending.
       assessmentConfig = structuredClone(config);
       validateConfig(assessmentConfig);
+      if ((await this.options.emergencyStop.isGlobalStopActive()) ||
+          (await this.options.emergencyStop.isProjectStopActive(assessmentConfig.projectId))) {
+        throw new ScopeGuardError("Emergency stop is active; new assessment plans are disabled");
+      }
       hostname = normalizeTargetHostname(target);
 
       const program = assessmentConfig.programAuthorization;
