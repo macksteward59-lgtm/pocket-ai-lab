@@ -17,6 +17,8 @@ struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let suiteID: String
     let suiteVersion: String
     let caseID: String
+    let evaluationCriteria: String
+    let expectedOutcome: String
     let attemptNumber: Int
     let retryOfAttemptID: String?
     let modelID: String
@@ -44,6 +46,8 @@ struct NativeEvaluationAttemptDraft {
     let suiteID: String
     let suiteVersion: String
     let caseID: String
+    let evaluationCriteria: String
+    let expectedOutcome: String
     let modelID: String
     let modelArtifactSHA256: String
     let runtimeSessionID: String
@@ -60,6 +64,22 @@ struct NativeEvaluationAttemptDraft {
     let maxTokens: Int
 }
 
+enum NativeEvaluationCategory: String, Codable, CaseIterable {
+    case reasoningProblemSolving
+    case factualAccuracyEvidence
+    case codingEngineering
+    case taskCompletion
+    case collaboration
+    case memoryRetention
+    case securityPolicyCompliance
+    case runtimeEfficiencyReliability
+}
+
+struct NativeEvaluationCategoryScore: Codable, Equatable {
+    let category: NativeEvaluationCategory
+    let score: Double
+}
+
 struct NativeEvaluationAssessment: Codable, Equatable, Identifiable {
     let id: String
     let attemptID: String
@@ -69,6 +89,7 @@ struct NativeEvaluationAssessment: Codable, Equatable, Identifiable {
     let evaluatorRuntimeSessionID: String
     let rubricVersion: String
     let score: Double
+    let categoryScores: [NativeEvaluationCategoryScore]
     let passed: Bool
     let rationale: String
     let assessedAt: Date
@@ -148,7 +169,8 @@ actor NativeEvaluationJournal {
 
     func appendAttempt(_ draft: NativeEvaluationAttemptDraft) throws -> NativeEvaluationAttempt {
         guard !draft.id.isEmpty, !draft.suiteID.isEmpty, !draft.suiteVersion.isEmpty,
-              !draft.caseID.isEmpty, !draft.modelID.isEmpty, !draft.runtimeSessionID.isEmpty,
+              !draft.caseID.isEmpty, !draft.evaluationCriteria.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !draft.modelID.isEmpty, !draft.runtimeSessionID.isEmpty,
               !draft.requestID.isEmpty, !draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               draft.modelArtifactSHA256.count == 64,
               draft.modelArtifactSHA256.allSatisfy({ $0.isHexDigit }),
@@ -161,7 +183,8 @@ actor NativeEvaluationJournal {
                     $0.modelID == draft.modelID && $0.modelArtifactSHA256 == draft.modelArtifactSHA256 }
         let attempt = NativeEvaluationAttempt(
             id: draft.id, suiteID: draft.suiteID, suiteVersion: draft.suiteVersion,
-            caseID: draft.caseID, attemptNumber: (prior?.attemptNumber ?? 0) + 1,
+            caseID: draft.caseID, evaluationCriteria: draft.evaluationCriteria,
+            expectedOutcome: draft.expectedOutcome, attemptNumber: (prior?.attemptNumber ?? 0) + 1,
             retryOfAttemptID: prior?.id, modelID: draft.modelID,
             modelArtifactSHA256: draft.modelArtifactSHA256, runtimeSessionID: draft.runtimeSessionID,
             requestID: draft.requestID, prompt: draft.prompt, output: draft.output,
@@ -178,7 +201,9 @@ actor NativeEvaluationJournal {
         guard !assessment.id.isEmpty, !assessment.evaluatorAgentID.isEmpty,
               !assessment.evaluatorModelID.isEmpty, !assessment.evaluatorRuntimeSessionID.isEmpty,
               !assessment.rubricVersion.isEmpty, !assessment.rationale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              assessment.score.isFinite, (0...1).contains(assessment.score) else {
+              assessment.evaluatorAgentID.lowercased() == assessment.evaluatorRole.rawValue,
+              assessment.score.isFinite, (0...1).contains(assessment.score),
+              Self.hasCompleteCategoryScores(assessment.categoryScores) else {
             throw NativeEvaluationJournalError.invalidAssessment("Assessment metadata, rationale, or score is invalid.")
         }
         try verifyDiskState()
@@ -274,7 +299,8 @@ actor NativeEvaluationJournal {
             case .attempt:
                 guard let attempt = event.payload.attempt,
                       event.payload.assessment == nil, event.payload.challenge == nil,
-                      !attempt.id.isEmpty, attemptsByID[attempt.id] == nil else {
+                      !attempt.id.isEmpty, !attempt.evaluationCriteria.isEmpty,
+                      attemptsByID[attempt.id] == nil else {
                     throw NativeEvaluationJournalError.corruptJournal("Attempt event has an invalid or duplicate payload.")
                 }
                 attemptsByID[attempt.id] = attempt
@@ -284,7 +310,9 @@ actor NativeEvaluationJournal {
                       !assessment.id.isEmpty, assessmentIDs.insert(assessment.id).inserted,
                       let target = attemptsByID[assessment.attemptID],
                       target.runtimeSessionID != assessment.evaluatorRuntimeSessionID,
-                      assessment.score.isFinite, (0...1).contains(assessment.score) else {
+                      assessment.evaluatorAgentID.lowercased() == assessment.evaluatorRole.rawValue,
+                      assessment.score.isFinite, (0...1).contains(assessment.score),
+                      Self.hasCompleteCategoryScores(assessment.categoryScores) else {
                     throw NativeEvaluationJournalError.corruptJournal("Assessment event is invalid or references no prior attempt.")
                 }
             case .challenge:
@@ -299,6 +327,13 @@ actor NativeEvaluationJournal {
             verified.append(event)
         }
         return verified
+    }
+
+    private static func hasCompleteCategoryScores(_ scores: [NativeEvaluationCategoryScore]) -> Bool {
+        let categories = scores.map(\.category)
+        return Set(categories).count == NativeEvaluationCategory.allCases.count &&
+            Set(categories) == Set(NativeEvaluationCategory.allCases) &&
+            scores.allSatisfy { $0.score.isFinite && (0...1).contains($0.score) }
     }
 
     private static func hash(sequence: Int, eventID: String, previousHash: String, payload: NativeEvaluationJournalPayload) throws -> String {
