@@ -92,3 +92,16 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - PR #107 iOS run `43740561987` advanced to native app XCTest; simulator/macOS XCTest remain pending. PR #109 iOS run `43740720673` remains in the pinned llama.cpp build step.
 - No physical iPhone validation. Hosted device-slice linking is compile/link validation only. Runtime trust remains Unverified; APEX/Director and East/e3 authorization boundaries remain unchanged.
 - Next: refresh #107/#109/#110 iOS runs; inspect app, simulator, and macOS XCTest outcomes; fix only concrete failures; update the #110 architecture doc to describe lease-use pins; then address multi-turn native chat context and persistence as separate gated work. Keep all PRs draft and do not merge.
+
+
+## 2026-11-15 17:39 UTC — Bounded chat context and cancellation lifetime tests
+
+- Continued PR #110 on safe feature branch `codex/ios-agent-team-workspace-mainline`; main remains unchanged.
+- Updated `native-ios-inference-composition-root-v1.md` to define exact active lease requirements, ModelPool in-flight use pins acquired before scheduler admission, unload protection through stream/cancellation drain, and rejection of stale/foreign leases.
+- Added `testCancelledQueuedGenerationReleasesItsUsePin`: while one request owns the scheduler permit, a second request obtains a use pin while queued; cancellation must remove its waiter and release only its pin, leaving the active request intact.
+- Implemented bounded multi-turn chat in `LocalChatView.swift`: carries up to eight recent `You`/`Pocket AI` messages, caps prompt at 6,000 UTF-8 bytes, drops oldest history first, truncates oversized newest input at Unicode-scalar boundaries, and excludes Agent Team/runtime diagnostics.
+- Added iOS app tests for follow-up context and oversized prompt bounds; `FingerprintTestEngine` records prompts for assertions.
+- Updated architecture docs: context is ephemeral, not persistent memory, and prompt framing is not a security boundary.
+- Added `testOutputLimitFailureKeepsUsePinUntilCancellationDrainCompletes` to verify response-size rejection waits for engine drain before releasing the scheduler permit and ModelPool pin.
+- Latest #110 head `b865b519084e0287f8680e7610bdc69b852fdaf1`; exact-head CI must be refreshed. Do not infer native XCTest success from companion workflows.
+- No physical iPhone validation; runtime trust remains Unverified. APEX/Director and East/e3 remain authorization authorities; model outputs remain untrusted.
