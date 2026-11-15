@@ -176,11 +176,7 @@ public actor NativeAgentCoordinator {
             task: task,
             conversationId: conversationId,
             messages: messages,
-            finalResponse: messages.last.map { message in
-                if case .object(let payload) = message.payload,
-                   case .string(let text)? = payload["text"] { return text }
-                return ""
-            } ?? ""
+            finalResponse: messages.last?.untrustedText ?? ""
         )
     }
 
@@ -245,8 +241,7 @@ public actor NativeAgentCoordinator {
                                    priorMessages: [AgentMessageEnvelope]) -> String {
         let prior = priorMessages.suffix(maxPriorMessages).map { message -> String in
             let content: String
-            if case .object(let payload) = message.payload,
-               case .string(let text)? = payload["text"] {
+            if let text = message.untrustedText {
                 if text.utf8.count > maxPriorMessageBytes {
                     content = String(decoding: text.utf8.prefix(maxPriorMessageBytes), as: UTF8.self) + " [truncated]"
                 } else {
