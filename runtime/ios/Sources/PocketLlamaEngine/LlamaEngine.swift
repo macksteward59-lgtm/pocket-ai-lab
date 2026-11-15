@@ -99,6 +99,8 @@ public protocol LlamaEngine: Sendable {
     func load(model: ModelDescriptor) async throws -> RuntimeSession
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error>
     func cancel(sessionId: String, requestId: String) async
+    /// Requests cancellation and waits until the matching native generation has drained.
+    func cancelAndWait(sessionId: String, requestId: String) async
     func unload(sessionId: String) async
 }
 
@@ -115,6 +117,8 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
     }
 
     public func cancel(sessionId: String, requestId: String) async {}
+
+    public func cancelAndWait(sessionId: String, requestId: String) async {}
 
     public func unload(sessionId: String) async {}
 }
@@ -133,6 +137,7 @@ public actor LlamaCppMetalBackend: LlamaEngine {
     #endif
     private var reports: [String: LlamaOffloadReport] = [:]
     private var generation: [String: UUID] = [:]
+    private var generationTasks: [String: (requestId: String, task: Task<Void, Never>)] = [:]
 
     public init(requireMetal: Bool = true) {
         self.requireMetal = requireMetal
@@ -249,6 +254,7 @@ public actor LlamaCppMetalBackend: LlamaEngine {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
         generation[session.id] = token
+        let slot = TaskSlot()
         let stream = AsyncThrowingStream<Token, Error> { continuation in
             let task = Task {
                 do {
@@ -265,10 +271,14 @@ public actor LlamaCppMetalBackend: LlamaEngine {
                     continuation.finish(throwing: error)
                 }
             }
+            slot.task = task
             continuation.onTermination = { @Sendable _ in
                 task.cancel()
-                Task { await self.cancel(sessionId: session.id, requestId: token.uuidString) }
+                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
             }
+        }
+        if let task = slot.task {
+            generationTasks[session.id] = (requestId: token.uuidString, task: task)
         }
         return stream
         #endif
@@ -286,8 +296,19 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         #endif
     }
 
+    public func cancelAndWait(sessionId: String, requestId: String) async {
+        guard let active = generationTasks[sessionId],
+              active.requestId.caseInsensitiveCompare(requestId) == .orderedSame else { return }
+        await cancel(sessionId: sessionId, requestId: requestId)
+        await active.task.value
+    }
+
     public func unload(sessionId: String) async {
+        if let active = generationTasks[sessionId] {
+            await cancelAndWait(sessionId: sessionId, requestId: active.requestId)
+        }
         generation[sessionId] = nil
+        generationTasks[sessionId] = nil
         reports[sessionId] = nil
         #if POCKET_LLAMA_LINKED
         let loaded = sessions.removeValue(forKey: sessionId)
@@ -300,8 +321,12 @@ public actor LlamaCppMetalBackend: LlamaEngine {
     }
 
     private func finishGeneration(sessionId: String, token: UUID) {
-        guard generation[sessionId] == token else { return }
-        generation[sessionId] = nil
+        if generation[sessionId] == token {
+            generation[sessionId] = nil
+        }
+        if generationTasks[sessionId]?.requestId.caseInsensitiveCompare(token.uuidString) == .orderedSame {
+            generationTasks[sessionId] = nil
+        }
     }
 
     #if POCKET_LLAMA_LINKED
@@ -430,6 +455,7 @@ public actor LoopbackLlamaEngine: LlamaEngine {
     private let session: URLSession
     private var loaded: [String: RuntimeSession] = [:]
     private var generation: [String: UUID] = [:]
+    private var requestIds: [String: String] = [:]
     private var tasks: [String: Task<Void, Never>] = [:]
 
     public init(baseURL: URL, session: URLSession? = nil) throws {
@@ -462,6 +488,7 @@ public actor LoopbackLlamaEngine: LlamaEngine {
         )
         let token = UUID()
         generation[session.id] = token
+        requestIds[session.id] = request.requestId
         let slot = TaskSlot()
         let stream = AsyncThrowingStream<Token, Error> { continuation in
             let task = Task {
@@ -477,10 +504,13 @@ public actor LoopbackLlamaEngine: LlamaEngine {
                     }
                     let text = try LlamaEngineSupport.completionContent(data)
                     continuation.yield(Token(text: text, isComplete: true))
+                    await self.finishGeneration(sessionId: session.id, token: token)
                     continuation.finish()
                 } catch is CancellationError {
+                    await self.finishGeneration(sessionId: session.id, token: token)
                     continuation.finish(throwing: LlamaEngineError.cancelled)
                 } catch {
+                    await self.finishGeneration(sessionId: session.id, token: token)
                     continuation.finish(throwing: error)
                 }
             }
@@ -494,21 +524,40 @@ public actor LoopbackLlamaEngine: LlamaEngine {
     }
 
     public func cancel(sessionId: String, requestId: String) async {
-        guard !requestId.isEmpty else { return }
+        guard let activeRequestId = requestIds[sessionId],
+              activeRequestId.caseInsensitiveCompare(requestId) == .orderedSame else { return }
         generation[sessionId] = nil
         tasks[sessionId]?.cancel()
-        tasks[sessionId] = nil
+    }
+
+    public func cancelAndWait(sessionId: String, requestId: String) async {
+        guard let activeRequestId = requestIds[sessionId],
+              activeRequestId.caseInsensitiveCompare(requestId) == .orderedSame,
+              let task = tasks[sessionId] else { return }
+        await cancel(sessionId: sessionId, requestId: requestId)
+        await task.value
     }
 
     public func unload(sessionId: String) async {
+        if let requestId = requestIds[sessionId] {
+            await cancelAndWait(sessionId: sessionId, requestId: requestId)
+        }
         generation[sessionId] = nil
-        tasks[sessionId]?.cancel()
+        requestIds[sessionId] = nil
         tasks[sessionId] = nil
         loaded[sessionId] = nil
     }
 
     private func isCurrent(_ sessionId: String, _ token: UUID) -> Bool {
         generation[sessionId] == token
+    }
+
+    private func finishGeneration(sessionId: String, token: UUID) {
+        if generation[sessionId] == token { generation[sessionId] = nil }
+        if requestIds[sessionId]?.caseInsensitiveCompare(token.uuidString) == .orderedSame {
+            requestIds[sessionId] = nil
+            tasks[sessionId] = nil
+        }
     }
 
     private func data(from url: URL, method: String, body: Data?) async throws -> (Data, URLResponse) {
