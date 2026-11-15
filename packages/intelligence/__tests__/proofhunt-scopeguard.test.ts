@@ -80,6 +80,8 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     ...config,
     operationalAuthorization: {
       ...config.operationalAuthorization,
+      projectId: overrides.operationalAuthorization?.projectId ?? config.projectId,
+      environment: overrides.operationalAuthorization?.environment ?? config.environment,
       policyHash: hashOperationalAuthorizationSnapshot(
         config.projectId,
         config.environment,
@@ -184,7 +186,11 @@ describe("ProofHunt ScopeGuard", () => {
     };
     const wrongEnvironment = {
       ...base,
-      environment: "owned" as const
+      environment: "owned" as const,
+      programAuthorization: {
+        ...base.programAuthorization,
+        kind: "asset_ownership" as const
+      }
     };
     // Even if both project identifiers are rewritten together, the original
     // signed digest must not be reusable in the new project.
