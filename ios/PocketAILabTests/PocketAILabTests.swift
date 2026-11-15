@@ -137,7 +137,7 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertTrue(prompts[1].contains("You: What is a model lease?"))
         XCTAssertTrue(prompts[1].contains("Pocket AI: test"))
         XCTAssertTrue(prompts[1].contains("You: Why does it matter during cancellation?"))
-        XCTAssertLessThanOrEqual(prompts[1].utf8.count, 6_000)
+        XCTAssertLessThanOrEqual(prompts[1].utf8.count, 1_500)
         XCTAssertTrue(model.isModelLoaded)
         await model.unloadModel()
     }
@@ -157,7 +157,7 @@ final class PocketAILabTests: XCTestCase {
 
         let prompts = await engine.recordedPrompts()
         XCTAssertEqual(prompts.count, 1)
-        XCTAssertLessThanOrEqual(prompts[0].utf8.count, 6_000)
+        XCTAssertLessThanOrEqual(prompts[0].utf8.count, 1_500)
         XCTAssertTrue(prompts[0].contains("Pocket AI:"))
         await model.unloadModel()
     }
