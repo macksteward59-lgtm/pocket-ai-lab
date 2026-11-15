@@ -142,8 +142,10 @@ final class LocalChatModel: ObservableObject {
             let runner = try NativeEvaluationRunner(
                 runtime: runtime, lease: lease, journal: journal, modelFileURL: modelURL
             )
-            for evaluationCase in NativeEvaluationSuite.cases {
+            for (index, evaluationCase) in NativeEvaluationSuite.cases.enumerated() {
+                evaluationStatus = "Running self-evaluation \(index + 1)/\(NativeEvaluationSuite.cases.count): \(evaluationCase.caseID)"
                 _ = try await runner.run(evaluationCase)
+                if Task.isCancelled { break }
             }
             evaluationEvents = try await journal.events()
             let summary = currentEvaluationSummary
