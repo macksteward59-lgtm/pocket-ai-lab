@@ -1254,3 +1254,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Limitations:** the adapter is an integration seam, not a production scheduler. East task state remains in-memory; lifecycle persistence is injected; no cross-process transactional store, cancellation propagation, or actual APEX authorization is added. No authorization contract was invented.
 - **CI:** latest PR #94 head `19e38bf10caa1fced102aa09aa91d558b195df67`: Governance Sidecar and Cursor collaboration workflows succeeded; Pocket AI Lab CI and Consumer prototype CI were still running. No full green status claimed.
 - **Safety:** feature branches/draft PRs only; no merge, main changes, permissions/settings changes, device installation, secrets, or live-target testing.
+
+
+## 2026-11-15 — Owner direction: ChatGPT designated primary Pocket AI Lab project lead
+
+- **Direction:** The repository owner designated ChatGPT to take primary responsibility for the whole Pocket AI Lab project, including repository reconciliation, architecture/dependency planning, implementation, testing, PR preparation, integration coordination, and evidence-based reporting.
+- **Other agents:** No other AI is assumed active from historical branches or PRs. The owner will announce any additional AI, or that agent must announce itself in `agent-coordination` before starting work. Its identity, environment, authorization, exact scope/files, branch, dependencies, exclusions, and validation plan must be recorded. ChatGPT will coordinate and confirm a non-overlapping board claim.
+- **Coordination updates:** Added `coordination/LEADERSHIP.md` and updated `coordination/PROTOCOL.md` to record this direction. The coordination branch remains documentation-only; implementation remains on feature branches.
+- **Operating limits:** Existing branches and PRs are preserved pending inspection. Owner-controlled decisions remain with the repository owner. No background execution, test success, merge, deployment, or device validation will be claimed without actual evidence. All APEX/East authorization and trust boundaries remain unchanged.
+- **Commits on `agent-coordination`:** Leadership note `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`; protocol update `7f73c6e966258668b8f8a5a046d71a15fe7fdb25`.
