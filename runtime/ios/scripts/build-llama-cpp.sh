@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Download, verify, and build the pinned llama.cpp static library.
-# Destinations: verify, simulator, ios-device, macos, linux, xcframework, fetch-gguf, write-smoke-path
+# Destinations: verify, verify-artifacts, simulator, ios-device, macos, linux, xcframework, fetch-gguf, write-smoke-path
 set -euo pipefail
 
 IOS="$(cd "$(dirname "$0")/.." && pwd)"
