@@ -1350,3 +1350,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Superseded source:** PR #120 head `814f3a5120f5f91f9a35533dab01036e2c456b80` diverged from the refreshed base after the catalog initializer/test-isolation fix.
 - **Plan:** replay the five-file PR #120 change set onto the refreshed base, retain the `self.modelCatalogStore` initializer fix, validate diff and open a replacement draft PR.
 - **Boundary:** typed payload extraction returns untrusted display/context text only; it does not verify evidence or grant authority. No APEX/East or signed Evidence changes.
+
+## 2026-11-16 UTC — ChatGPT native self-evaluation journal claim
+
+- **Branch:** `codex/native-self-evaluation-journal` (to be created from current `main` after this claim).
+- **Status:** in progress; claim recorded before application changes.
+- **Scope:** new Swift files only: `ios/PocketAILab/NativeEvaluationRunner.swift`, `ios/PocketAILab/NativeEvaluationJournal.swift`, and `ios/PocketAILabTests/NativeEvaluationTests.swift`.
+- **Goal:** run evaluation cases through the actual injected native `LlamaEngine` and loaded `RuntimeSession`; append every completed, partial, and failed attempt; preserve prompt/output and provenance; hash-chain journal entries; record Critic/Validator assessments and model challenges as separate immutable events.
+- **Exclusions:** no changes to `LocalChatView.swift`, `ios/project.yml`, `runtime/ios/` engine contracts, APEX/East authorization, signed Evidence, or existing catalog/task-history files. The app target already includes the `PocketAILab` source directory and test target includes `PocketAILabTests`.
+- **Validation plan:** focused Swift unit tests for native-runtime invocation, append-only persistence, chain verification/tamper detection, failed/partial attempt retention, assessment role separation, and no test-double native-proof promotion; hosted iOS CI on the exact PR head. No physical-device result will be claimed.
