@@ -245,9 +245,19 @@ actor NativeEvaluationJournal {
         guard data.last == 0x0A else {
             throw NativeEvaluationJournalError.corruptJournal("Journal ends with an incomplete record.")
         }
-        let lines = data.split(separator: 0x0A, omittingEmptySubsequences: true)
+        let components = data.split(separator: 0x0A, omittingEmptySubsequences: false)
+        guard components.last?.isEmpty == true else {
+            throw NativeEvaluationJournalError.corruptJournal("Journal must end with exactly one record delimiter.")
+        }
+        let lines = components.dropLast()
+        guard lines.allSatisfy({ !$0.isEmpty }) else {
+            throw NativeEvaluationJournalError.corruptJournal("Journal contains an empty record.")
+        }
         var previous = genesis
         var verified: [NativeEvaluationJournalEvent] = []
+        var attemptsByID: [String: NativeEvaluationAttempt] = [:]
+        var assessmentIDs = Set<String>()
+        var challengeIDs = Set<String>()
         for (offset, line) in lines.enumerated() {
             let event: NativeEvaluationJournalEvent
             do {
@@ -256,8 +266,34 @@ actor NativeEvaluationJournal {
                 throw NativeEvaluationJournalError.corruptJournal("Record \(offset + 1) cannot be decoded.")
             }
             let expected = try hash(sequence: offset + 1, eventID: event.id, previousHash: previous, payload: event.payload)
-            guard event.sequence == offset + 1, event.previousHash == previous, event.eventHash == expected else {
+            guard !event.id.isEmpty, event.sequence == offset + 1,
+                  event.previousHash == previous, event.eventHash == expected else {
                 throw NativeEvaluationJournalError.corruptJournal("Hash-chain verification failed at record \(offset + 1).")
+            }
+            switch event.payload.kind {
+            case .attempt:
+                guard let attempt = event.payload.attempt,
+                      event.payload.assessment == nil, event.payload.challenge == nil,
+                      !attempt.id.isEmpty, attemptsByID[attempt.id] == nil else {
+                    throw NativeEvaluationJournalError.corruptJournal("Attempt event has an invalid or duplicate payload.")
+                }
+                attemptsByID[attempt.id] = attempt
+            case .assessment:
+                guard let assessment = event.payload.assessment,
+                      event.payload.attempt == nil, event.payload.challenge == nil,
+                      !assessment.id.isEmpty, assessmentIDs.insert(assessment.id).inserted,
+                      let target = attemptsByID[assessment.attemptID],
+                      target.runtimeSessionID != assessment.evaluatorRuntimeSessionID,
+                      assessment.score.isFinite, (0...1).contains(assessment.score) else {
+                    throw NativeEvaluationJournalError.corruptJournal("Assessment event is invalid or references no prior attempt.")
+                }
+            case .challenge:
+                guard let challenge = event.payload.challenge,
+                      event.payload.attempt == nil, event.payload.assessment == nil,
+                      !challenge.id.isEmpty, challengeIDs.insert(challenge.id).inserted,
+                      attemptsByID[challenge.attemptID] != nil else {
+                    throw NativeEvaluationJournalError.corruptJournal("Challenge event is invalid or references no prior attempt.")
+                }
             }
             previous = event.eventHash
             verified.append(event)
