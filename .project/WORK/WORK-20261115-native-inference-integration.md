@@ -73,6 +73,33 @@ Complete the shared native inference composition root and bind every native mode
 - iOS run `43731823992` completed successfully through app XCTest, simulator XCTest, pinned smoke GGUF download, and macOS XCTest.
 - Keep #104 as a validated predecessor, not the preferred integration base.
 
+## PR #110 — full native UI integration
+
+- Branch: `codex/ios-agent-team-workspace-mainline`; base main; head `c2e15444395d4536081a0e52cdb83e6b4afb5710`; 49 ahead / 0 behind; 18 files changed.
+- Draft PR: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/110
+- This branch is based on the #109 mainline aggregate and carries forward:
+  - #84 Workspace restore/navigation improvements, URL allowlist, credential rejection, and explicit reload request identity.
+  - #85 native Chat/Agent Team mode and six logical roles, now routed through the shared ModelPool lease and InferenceScheduler.
+  - #85 bounded coordinator limits: objective 4,000 UTF-8 bytes; 16 capabilities; 1–8 unique roles; 64-byte role IDs; 1,000-byte instructions; 12,000-byte prompts; last four prior outputs truncated to 1,200 bytes; 8,000-byte output cap; 512 tokens per role.
+  - #107/#109 shared runtime, staged 24-byte GGUF guard, content-addressed SHA-256 identity, and lease-retention fix.
+- Added native XCTest coverage for workspace URL/restore/reload behavior, six-role shared-runtime flow, bounded tasks/plans/context/responses, and artifact lease retention.
+- Updated README and coordinator architecture docs.
+- CI on this exact head:
+  - iOS LlamaEngine: `43741079412` (in progress; initial setup at last check).
+  - Pocket AI Lab: `43741079416` (in progress).
+  - Consumer prototype: `43741079393` (in progress).
+  - Cursor collaboration plugin: `43741079479` (in progress).
+  - Governance sidecar: `43741079363` (in progress).
+- No XCTest result is available yet. Do not treat the branch as validated until all relevant jobs complete.
+
+### Older dependency-chain reconciliation
+
+- #84: 7 ahead / 10 behind current main, open non-draft; historical iOS run `43653686561` and four companion workflows succeeded. Workspace improvements are carried forward; older importer superseded.
+- #85: 19 ahead / 10 behind, open draft stacked on #84; no independent workflow run found. Agent Team UI and bounded coordinator behavior are carried forward through the shared runtime.
+- #86: 26 ahead / 14 behind, open draft; historical iOS run `43654228679` cancelled. Standalone ModelPool/Scheduler primitives are superseded by #107's app-wired composition.
+- #88: 29 ahead / 10 behind, open draft stacked on #85; historical iOS run `43728039752` failed. Its content hashing/import path is superseded by #109.
+- #104: older aggregate with the Agent Team/import stack; iOS run `43731823992` passed app, simulator, smoke-model and macOS XCTest. Keep as validated predecessor, not primary integration branch.
+
 ## Risks / limitations
 
 - The 24-byte GGUF check is a minimum header guard, not full metadata/tensor parsing; llama.cpp performs authoritative parsing.
@@ -84,4 +111,4 @@ Complete the shared native inference composition root and bind every native mode
 
 ## Next action
 
-Refresh runs `43740561987` (#107) and `43740720673` (#109), inspect XCTest logs and all workflow conclusions, and fix only concrete failures. Then inspect the combined #109 diff and review threads. Do not merge. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.
+Refresh runs `43740561987` (#107), `43740720673` (#109), and `43741079412` (#110), inspect XCTest logs and all workflow conclusions, and fix only concrete failures. Then inspect the combined #110 diff and review threads. Do not merge. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.
