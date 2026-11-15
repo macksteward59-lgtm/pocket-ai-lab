@@ -267,3 +267,7 @@ CREATE INDEX assessment_events_job_sequence_idx
   ON proofhunt.assessment_events (project_id, job_id, event_sequence);
 CREATE INDEX validation_results_job_state_idx
   ON proofhunt.validation_results (project_id, job_id, validation_state);
+
+
+COMMENT ON COLUMN proofhunt.authorization_records.policy_hash IS
+  'SHA-256 of the canonical operational policy plus exact authorized-target and excluded-target snapshots; any change requires a new approval.';
