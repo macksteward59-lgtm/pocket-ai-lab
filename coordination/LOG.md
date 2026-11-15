@@ -1620,3 +1620,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Mainline validation PR #135 refreshed at head `520b3fea98affd5bd533a5030698e8e4ff25e1e9`; its new exact-head workflows started. Cursor passed; iOS queued, other companion workflows were in progress at inspection.
 - Correction from source review: `NativeEvaluationScoringRule` currently has only `.exactMatch` and `.manualReview`; the runner's switch is exhaustive. No `.containsExpectedOutcome` rule is part of this version, so no such case is needed.
 - Existing PR #115 iOS failure log was inspected: in addition to the task-history timestamp assertions, app XCTest exposed temporary-root cleanup errors in multiple tests. The timestamp comparisons are now fixed; cleanup errors remain under investigation and must be rechecked in the latest run before claiming the suite passes.
+
+
+## 2026-11-15 — Known task-history XCTest precision failures propagated to all validation stacks
+
+- Inspected exact failure output from PR #115 run `43755647177`: `LocalAgentTaskHistoryStoreTests` had two whole-second ISO-8601 timestamp comparisons failing despite matching displayed values. The exact corrected test file from PR #115 head `b61b1b64b44319c37f220413c83cd9a417c6cde4` was copied into PR #129, PR #133, and PR #135 branches.
+- PR #129 now head `7b04fc424574e15ecf046939c60390ee0188336a`, includes both MainActor factory and timestamp-precision repairs; new CI workflows started, iOS run pending.
+- PR #135 now head `520b3fea98affd5bd533a5030698e8e4ff25e1e9`; four companion workflows passed; iOS run `43760492451` in progress at app build after device link.
+- PR #133 feature head `3355e89505482e868b4be8f3a573deabb69d7865` explicitly includes current PR #115 base as second parent; PR reports mergeable.
+- PR #115 exact-head iOS run `43760034998` remains in pinned llama.cpp build. Its earlier app XCTest run also exposed eight unexpected temporary-directory removal errors in tests including artifact-mutation, chat, and Agent Team cases; these remain open and must be examined against the current rerun. No production cleanup behavior has been changed without a proven defect.
