@@ -63,3 +63,12 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - Updated continuity state and work record on `codex/project-continuity-system`.
 - No merges, main changes, visibility changes, permission changes, or physical-device tests.
 
+
+
+## 2026-11-15 — Full aggregate CI checkpoint
+
+- PR #110 exact-head companion workflows now all pass: Pocket AI Lab `43741079416`, Consumer prototype `43741079393`, Cursor collaboration plugin `43741079479`, and Governance sidecar `43741079363`.
+- PR #110 iOS LlamaEngine run `43741079412` remains in progress on step 5, building pinned llama.cpp for simulator/macOS. App build, XCTest, simulator XCTest, and macOS XCTest have not started; no native XCTest pass is claimed.
+- PR #107 iOS run `43740561987` and PR #109 aggregate iOS run `43740720673` are also still on the pinned llama.cpp build step.
+- PR #110 has no submitted reviews or inline review threads at last check.
+- Refreshed the continuity state/work record to reflect companion CI successes and remaining native CI gate.
