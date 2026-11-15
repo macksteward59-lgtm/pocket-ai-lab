@@ -3,6 +3,7 @@ import XCTest
 import PocketLlamaEngine
 
 final class PocketAILabTests: XCTestCase {
+    @MainActor
     private func makeLocalChatModel(engine: any LlamaEngine, root: URL) -> LocalChatModel {
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
         let catalogStore = LocalModelCatalogStore(
