@@ -1657,3 +1657,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #133 feature branch `codex/native-self-evaluation-runtime-reconciled`: mirrored both test-only repairs and merged refreshed catalog base `373a0a0c2fcb6d123c52a19c3a542097b98b022a`; current merge head `8e5e1620751a46a19862c007751c0da82436f483`. The branch now includes the latest catalog base as a parent; its intelligence workflow is running.
 - Reviewed `NativeInferenceRuntime.generateForEvaluation`: it retains exact lease/use pin/scheduler/cancellation-drain behavior; test-provider output remains unverified. No production runtime changes were made in this checkpoint.
 - All four PRs remain draft/open/unmerged. No simulator XCTest, pinned-GGUF smoke, macOS XCTest, physical iPhone run, attestation, or production readiness is claimed until exact-head checks complete.
+
+
+## 2026-11-15 21:55 UTC — Remaining self-evaluation review gaps closed in source/tests/docs
+
+- Added `testManualReviewAttemptIsPersistedAsUnscored`: persists a completed manual-review attempt and asserts nil deterministic pass/score, one unscored attempt, and no objective percentage. The helper now accepts a scoring-rule override.
+- Updated `docs/architecture/Native-Self-Evaluation-and-Evidence-Journal.md` to state the in-flight durability limit explicitly: hard termination during generation can lose the active case and uncheckpointed tokens; this version has no `started` event or periodic output checkpoints.
+- Verified same-model Critic/Validator rejection exists in both append validation and journal replay, with a regression test using the subject model ID and a different session.
+- Verified the pinned GGUF runtime smoke exists as `testPinnedGgufSmokeGenerationThroughNativeInferenceRuntime` in `LlamaEngineTests.swift`; it uses `SmokePath.path`, the runtime-owned llama.cpp provider, exact ModelPool lease, `generateForEvaluation`, unchanged digest, release, and unload.
+- Mirrored the manual-review test and durability note into PR #133 feature branch (head `8700bae3b27b8aad3ca64212770aa3245c137197`) and PR #135 mainline validation branch (head `dbee3be4355b740e5d71deeeb258d9feca0899d2`). Posted a consolidated review follow-up comment on PR #133.
+- New exact-head CI is running: PR #135 iOS `43764653370`; PR #133 intelligence `43764643572`. Earlier fixture-repair runs remain in progress on PR #115 iOS `43764211279` and PR #129 iOS `43764214487`. All PRs remain draft/unmerged pending exact-head checks.
