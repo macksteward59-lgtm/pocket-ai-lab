@@ -1276,3 +1276,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #94 head `19e38bf10caa1fced102aa09aa91d558b195df67`: all four associated workflows succeeded. Production transactional persistence, cross-process scheduler, and governed host integration remain open.
 - PR #95 head `a21dec1525d8281e88fc3790c99191075d5bdce7`: all four associated workflows succeeded. Documentation-only roadmap; not implementation evidence.
 - No PRs merged; main unchanged. No physical iPhone test, signing, install, APEX authorization, or East/e3 durable execution claimed.
+
+
+## 2026-11-15 — Parallel native iOS sprint workstreams
+
+- Opened draft PR #121 on `codex/ios-native-ci-hardening`, stacked on PR #88. Exact changes: normalize IPv6 URL host brackets before loopback matching; align the six-role Agent Team status string with its acceptance test. Head `7b146d69b9053f14d6ccd0eb54cbdc5ce7391a59`. PR #121 currently has no workflow runs returned because it targets a feature branch; CI is not claimed.
+- Reviewed PR #86 ModelPool and InferenceScheduler implementation and tests. Found a resource-admission gap: existing pool reservations were subtracted from the pool budget but not from the host available-memory snapshot, allowing over-admission if the OS snapshot lags model allocations.
+- Opened draft PR #122 on `codex/ios-model-pool-memory-accounting`, stacked on PR #86. The fix subtracts `reservedMemoryMB` from host available memory before applying the configured free-memory safety margin; a deterministic regression test uses a constant 600 MB host snapshot, a 400 MB existing reservation, and verifies a 101 MB second request is rejected with 100 MB available. Head `49e22305a92a3a1f4b1ac2e988b6d0efedc3970f`. PR #122 has no workflow runs returned because it targets a feature branch; CI is not claimed.
+- Requested rerun of PR #86's cancelled iOS LlamaEngine job. Rerun is now executing as workflow run #110 / run ID `43654228679`; CMake/llama.cpp build is still running at last inspection. Other four PR #86 workflows remain green. No native app XCTest result from this rerun yet.
+- Both new workstreams have non-overlapping file ownership and are recorded on the coordination board. No merges, main changes, physical-device tests, or trust/authorization changes.
