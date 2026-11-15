@@ -225,7 +225,7 @@ final class LocalChatModel: ObservableObject {
                     text: output
                 ))
             }
-            status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+            status = "Agent Team completed: six sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
         } catch {
             messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
             status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
