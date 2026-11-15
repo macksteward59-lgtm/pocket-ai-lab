@@ -1536,3 +1536,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added review comment `5912649921` on PR #133 requesting a pinned-GGUF smoke test through `NativeInferenceRuntime.generateForEvaluation` with a real ModelPool lease. The existing macOS smoke stage already downloads/verifies the GGUF and writes `SmokePath.swift`; the current smoke test still exercises `LlamaCppMetalBackend.generate` directly, while the new evaluation-specific runtime tests use mocks.
 - Requested assertions: runtime-owned provider is `.llamaCpp`, generation completes with non-empty output, and the ModelPool lease is released/unloaded. This would validate the evaluation runtime path with a real model artifact in CI.
 - At this observation, PR #135 head `c11761fe2fab002390178aca6753664dc4e840e1` had four non-iOS workflows passed/in progress and iOS LlamaEngine CI `43756039544` pending. PR #129 cache warm/build run `43753665375` had restored artifacts, completed pinned llama.cpp simulator/macOS build, saved the cache, and was linking the generic iOS device slice. No cache-hit claim for PR #135 until its own restore step reports one.
+
+## 2026-11-16 UTC — Cache warm-run outcome and refreshed iOS validation
+
+- PR #129 iOS run `43753665375` completed with **failure**. The pinned llama.cpp simulator/macOS archive build and cache save completed; the generic iOS device archive linked successfully; the later `Run Pocket AI Lab XCTest` step failed, so simulator/macOS tests were skipped. Job logs were not available through the connector, so no root cause is asserted here.
+- PR #129's cache build is therefore a successful cache-warm/build stage, not a successful end-to-end iOS validation. Do not report the overall run as green.
+- PR #135 contains the refreshed MainActor test-factory fix from PR #115. Its exact-head iOS run `43756039544` remains queued. The four non-iOS workflows on PR #135 have passed.
