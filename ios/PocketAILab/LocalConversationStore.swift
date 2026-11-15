@@ -37,6 +37,12 @@ struct LocalConversationStore {
 
     func load() throws -> [ChatLine] {
         guard fileManager.fileExists(atPath: fileURL.path) else { return [] }
+        let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
+        guard let size = attributes[.size] as? NSNumber,
+              size.int64Value >= 0,
+              size.int64Value <= Int64(Self.maximumArchiveBytes) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
         let data = try Data(contentsOf: fileURL)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -48,11 +54,14 @@ struct LocalConversationStore {
     }
 
     func save(_ messages: [ChatLine]) throws {
-        let boundedMessages = Self.bounded(messages, now: now())
-        let archive = Archive(version: Self.currentVersion, savedAt: now(), messages: boundedMessages)
+        var boundedMessages = Self.bounded(messages, now: now())
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(archive)
+        var data = try encoder.encode(Archive(version: Self.currentVersion, savedAt: now(), messages: boundedMessages))
+        while data.count > Self.maximumArchiveBytes, !boundedMessages.isEmpty {
+            boundedMessages.removeFirst()
+            data = try encoder.encode(Archive(version: Self.currentVersion, savedAt: now(), messages: boundedMessages))
+        }
         guard data.count <= Self.maximumArchiveBytes else {
             throw CocoaError(.fileWriteOutOfSpace)
         }
