@@ -27,6 +27,27 @@ final class AgentProtocolTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(AgentMessageEnvelope.self, from: data), message)
     }
 
+
+    func testMessageEnvelopeExtractsTextFromTypeSpecificWirePayloads() {
+        let cases: [(AgentMessageType, AgentJSONValue, String)] = [
+            (.analysis, .object(["analysis": .string("analysis text")]), "analysis text"),
+            (.question, .object(["question": .string("question text")]), "question text"),
+            (.counterargument, .object(["claim": .string("claim"), "objection": .string("objection text"), "evidenceRefs": .array([])]), "objection text"),
+            (.revision, .object(["revision": .string("revision text"), "addressesMessageIds": .array([])]), "revision text"),
+            (.validation, .object(["claim": .string("claim"), "verified": .boolean(false), "reason": .string("validation text")]), "validation text"),
+            (.completion, .object(["synthesis": .string("synthesis text"), "evidenceRefs": .array([])]), "synthesis text")
+        ]
+        for (type, payload, expected) in cases {
+            let message = AgentMessageEnvelope(
+                messageId: UUID(), taskId: "task", conversationId: "conversation",
+                senderAgentId: "agent", recipientAgentId: "user",
+                messageType: type, payload: payload,
+                createdAt: "2026-11-15T00:00:00Z", sequence: 0
+            )
+            XCTAssertEqual(message.untrustedText, expected)
+        }
+    }
+
     func testReadinessNeverAcceptsMissingOrStructurallyInvalidProof() async {
         let verifier = RejectingRuntimeProofVerifier()
         let missing = await RuntimeReadinessEvaluator.evaluate(nil, expectedModelId: "m",
