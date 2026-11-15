@@ -5,6 +5,30 @@ public enum NativeInferenceRuntimeError: Error, Equatable, Sendable {
     case responseTooLarge
 }
 
+
+public enum NativeInferenceProviderKind: String, Sendable, Equatable {
+    case llamaCpp
+    case other
+}
+
+public struct NativeInferenceEvaluationResult: Sendable, Equatable {
+    public enum Status: String, Sendable, Equatable {
+        case completed
+        case partial
+        case failed
+    }
+
+    public let output: String
+    public let status: Status
+    public let errorMessage: String?
+
+    public init(output: String, status: Status, errorMessage: String?) {
+        self.output = output
+        self.status = status
+        self.errorMessage = errorMessage
+    }
+}
+
 /// The single native composition root for model ownership and inference admission.
 ///
 /// A ModelPool lease protects a session; an InferenceScheduler permit protects
@@ -14,6 +38,11 @@ public struct NativeInferenceRuntime: Sendable {
     let engine: any LlamaEngine
     private let pool: ModelPool
     private let scheduler: InferenceScheduler
+
+    /// Derived from the engine this runtime actually owns; callers cannot label a mock as llama.cpp.
+    public var providerKind: NativeInferenceProviderKind {
+        engine is LlamaCppMetalBackend ? .llamaCpp : .other
+    }
 
     public init(
         engine: any LlamaEngine,
@@ -111,6 +140,65 @@ public struct NativeInferenceRuntime: Sendable {
                 } catch {
                     await engine.cancelAndWait(sessionId: lease.session.id, requestId: request.requestId)
                     throw error
+                }
+            }
+            await pool.endUse(use)
+            return result
+        } catch {
+            await pool.endUse(use)
+            throw error
+        }
+    }
+
+
+    /// Evaluation variant of generate that retains partial output and structured failure details.
+    /// It uses the same exact lease, use pin, scheduler permit, output bound, and cancellation drain
+    /// as ordinary chat. Invalid/released/foreign leases still throw before inference.
+    public func generateForEvaluation(
+        lease: ModelPoolLease,
+        request: GenerationRequest,
+        maxOutputBytes: Int = 64_000
+    ) async throws -> NativeInferenceEvaluationResult {
+        guard maxOutputBytes > 0 else {
+            throw NativeInferenceRuntimeError.invalidOutputLimit
+        }
+        let use = try await pool.beginUse(lease)
+        do {
+            let result = try await scheduler.withPermit {
+                var output = ""
+                do {
+                    let stream = try await engine.generate(session: lease.session, request: request)
+                    do {
+                        for try await token in stream {
+                            try Task.checkCancellation()
+                            let (nextCount, overflow) = output.utf8.count.addingReportingOverflow(token.text.utf8.count)
+                            guard !overflow, nextCount <= maxOutputBytes else {
+                                throw NativeInferenceRuntimeError.responseTooLarge
+                            }
+                            output += token.text
+                        }
+                        try Task.checkCancellation()
+                        let hasOutput = !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        return NativeInferenceEvaluationResult(
+                            output: output,
+                            status: hasOutput ? .completed : .failed,
+                            errorMessage: hasOutput ? nil : "Runtime completed without producing output."
+                        )
+                    } catch {
+                        await engine.cancelAndWait(sessionId: lease.session.id, requestId: request.requestId)
+                        let hasPartialOutput = !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        return NativeInferenceEvaluationResult(
+                            output: output,
+                            status: hasPartialOutput ? .partial : .failed,
+                            errorMessage: String(describing: error)
+                        )
+                    }
+                } catch {
+                    return NativeInferenceEvaluationResult(
+                        output: output,
+                        status: .failed,
+                        errorMessage: String(describing: error)
+                    )
                 }
             }
             await pool.endUse(use)
