@@ -28,12 +28,14 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         XCTAssertEqual(duringFirst.waitingRequests, 1)
 
         await engine.finish(firstRequest.requestId)
-        XCTAssertEqual(try await first.value, "first result")
+        let firstResult = try await first.value
+        XCTAssertEqual(firstResult, "first result")
         while !(await engine.activeRequestIDs()).contains(secondRequest.requestId) {
             await Task.yield()
         }
         await engine.finish(secondRequest.requestId)
-        XCTAssertEqual(try await second.value, "second result")
+        let secondResult = try await second.value
+        XCTAssertEqual(secondResult, "second result")
 
         let final = await runtime.schedulerSnapshot()
         XCTAssertEqual(final.activeRequests, 0)
@@ -90,7 +92,8 @@ final class NativeInferenceRuntimeTests: XCTestCase {
                 return "completed"
             }
         }
-        XCTAssertEqual(try await operation.value, "completed")
+        let operationResult = try await operation.value
+        XCTAssertEqual(operationResult, "completed")
 
         let snapshot = await runtime.snapshot()
         XCTAssertEqual(snapshot.activeLeaseCount, 0)
@@ -118,6 +121,7 @@ final class NativeInferenceRuntimeTests: XCTestCase {
 
 private actor ControlledRuntimeTestEngine: LlamaEngine {
     private var continuations: [String: AsyncThrowingStream<Token, Error>.Continuation] = [:]
+    private var responseText: [String: String] = [:]
     private var cancellationDrainContinuation: CheckedContinuation<Void, Never>?
     private var cancellationDrainBlocked = false
 
@@ -130,7 +134,7 @@ private actor ControlledRuntimeTestEngine: LlamaEngine {
         request: GenerationRequest
     ) async throws -> AsyncThrowingStream<Token, Error> {
         AsyncThrowingStream { continuation in
-            Task { await self.register(request.requestId, continuation: continuation) }
+            Task { await self.register(request.requestId, response: request.prompt + " result", continuation: continuation) }
         }
     }
 
@@ -146,9 +150,11 @@ private actor ControlledRuntimeTestEngine: LlamaEngine {
 
     func register(
         _ requestId: String,
+        response: String,
         continuation: AsyncThrowingStream<Token, Error>.Continuation
     ) {
         continuations[requestId] = continuation
+        responseText[requestId] = response
     }
 
     func activeRequestIDs() -> [String] {
@@ -157,12 +163,13 @@ private actor ControlledRuntimeTestEngine: LlamaEngine {
 
     func finish(_ requestId: String) {
         guard let continuation = continuations.removeValue(forKey: requestId) else { return }
-        continuation.yield(Token(text: "\(requestId == "first" ? "first" : "second") result", isComplete: true))
+        continuation.yield(Token(text: responseText.removeValue(forKey: requestId) ?? "", isComplete: true))
         continuation.finish()
     }
 
     func finishWithCancellation(_ requestId: String) {
         guard let continuation = continuations.removeValue(forKey: requestId) else { return }
+        responseText[requestId] = nil
         continuation.finish(throwing: CancellationError())
     }
 
