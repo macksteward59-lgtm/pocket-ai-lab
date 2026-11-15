@@ -35,6 +35,7 @@ public enum NativeAgentCoordinatorError: Error, Equatable, Sendable {
     case busy
     case emptyModelResponse
     case responseTooLarge
+    case messageSinkRejected
 }
 
 /// Native, sequential multi-role orchestration over an injected inference runtime.
@@ -79,7 +80,8 @@ public actor NativeAgentCoordinator {
 
     public func run(task: AgentTaskRequest, conversationId: String = UUID().uuidString,
                     steps: [NativeAgentStep], maxTokens: Int = 512,
-                    temperature: Double = 0.2) async throws -> NativeAgentRunResult {
+                    temperature: Double = 0.2,
+                    onMessage: (@Sendable (AgentMessageEnvelope) async -> Bool)? = nil) async throws -> NativeAgentRunResult {
         let objective = task.objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !task.id.isEmpty, task.id.utf8.count <= Self.maxConversationIdBytes,
               !objective.isEmpty, objective.utf8.count <= Self.maxObjectiveBytes,
@@ -165,6 +167,9 @@ public actor NativeAgentCoordinator {
                 sequence: index
             )
             messages.append(message)
+            if let onMessage, !(await onMessage(message)) {
+                throw NativeAgentCoordinatorError.messageSinkRejected
+            }
         }
         return NativeAgentRunResult(
             task: task,
