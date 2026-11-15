@@ -5,6 +5,7 @@ import PocketLlamaEngine
 final class LocalChatModel: ObservableObject {
     @Published var modelURL: URL?
     @Published var modelName = "No model imported"
+    @Published var modelFingerprintSummary = "No model fingerprint"
     @Published var status = "Import a GGUF model to begin."
     @Published var messages: [ChatLine] = []
     @Published var isBusy = false
@@ -14,6 +15,7 @@ final class LocalChatModel: ObservableObject {
     private let engine: any LlamaEngine
     private let modelDirectory: URL
     private var session: RuntimeSession?
+    private var artifactFingerprint: ModelArtifactFingerprint?
 
     init(
         modelDirectory: URL? = nil,
@@ -37,7 +39,7 @@ final class LocalChatModel: ObservableObject {
 
         // Import and validate first. A failed copy leaves the selected model
         // and its currently loaded session untouched.
-        let destination = try await LocalModelImporter.importGGUF(
+        let imported = try await LocalModelImporter.importGGUF(
             from: source,
             into: modelDirectory
         )
@@ -48,39 +50,86 @@ final class LocalChatModel: ObservableObject {
             await engine.unload(sessionId: previousSession.id)
             session = nil
         }
-        modelURL = destination
-        modelName = destination.lastPathComponent
-        status = "Model imported into private storage. Load the selected model before prompting. Runtime trust remains unverified."
+        modelURL = imported.url
+        modelName = imported.url.lastPathComponent
+        artifactFingerprint = imported.fingerprint
+        modelFingerprintSummary = "SHA-256 \(imported.fingerprint.sha256.prefix(16))… · \(imported.fingerprint.byteCount) bytes"
+        status = "Model imported and fingerprinted in private storage. Load the selected model before prompting. Fingerprint is integrity metadata, not attestation."
     }
 
     func loadModel() async {
         guard !isBusy else { return }
-        guard let modelURL else {
-            status = "Import a .gguf model first."
+        guard let modelURL, let expectedFingerprint = artifactFingerprint else {
+            status = "Import a .gguf model first so its SHA-256 identity is recorded."
             return
         }
 
         isBusy = true
         defer { isBusy = false }
+
+        // Verify the selected file before disturbing a previously loaded session.
+        // If it changed or became unreadable, unload the stale session and fail closed.
+        do {
+            let currentFingerprint = try await fingerprintFile(at: modelURL)
+            guard currentFingerprint == expectedFingerprint else {
+                if let previousSession = session {
+                    await engine.unload(sessionId: previousSession.id)
+                }
+                session = nil
+                status = "The selected model file changed after import. Re-import it before loading; no session was retained."
+                return
+            }
+        } catch {
+            if let previousSession = session {
+                await engine.unload(sessionId: previousSession.id)
+            }
+            session = nil
+            status = "Could not verify the selected model file: \(error.localizedDescription)"
+            return
+        }
+
         do {
             if let previousSession = session {
                 await engine.unload(sessionId: previousSession.id)
                 session = nil
             }
             let descriptor = ModelDescriptor(
-                id: UUID().uuidString,
+                id: "sha256-\(expectedFingerprint.sha256)",
                 name: modelName,
                 path: modelURL.path,
                 contextLength: 2048,
                 quantization: "GGUF"
             )
             let loadedSession = try await engine.load(model: descriptor)
+
+            // Detect replacement or mutation while the native loader was reading.
+            // Any post-load fingerprint error must unload the just-created session.
+            do {
+                let afterLoadFingerprint = try await fingerprintFile(at: modelURL)
+                guard afterLoadFingerprint == expectedFingerprint else {
+                    throw LocalChatError.modelChanged
+                }
+            } catch {
+                await engine.unload(sessionId: loadedSession.id)
+                throw error
+            }
+
             session = loadedSession
-            status = RuntimeTrustPresentation.statusMessage(after: "A real llama.cpp model session is loaded.")
+            status = RuntimeTrustPresentation.statusMessage(
+                after: "A real llama.cpp session is loaded for SHA-256 \(expectedFingerprint.sha256.prefix(16))…"
+            )
         } catch {
             session = nil
             status = "Model load failed: \(error.localizedDescription) Runtime trust remains unverified."
         }
+    }
+
+    /// Hash large model files away from the main actor so import/load checks
+    /// do not freeze SwiftUI while reading multi-gigabyte GGUF artifacts.
+    private func fingerprintFile(at url: URL) async throws -> ModelArtifactFingerprint {
+        try await Task.detached(priority: .utility) {
+            try ModelArtifactFingerprint.compute(at: url)
+        }.value
     }
 
     func send(_ prompt: String) async {
@@ -191,12 +240,13 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError {
-    case notGGUF, emptyOutput, busy
+    case notGGUF, emptyOutput, busy, modelChanged
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
         case .emptyOutput: return "The model returned no text."
         case .busy: return "Another model operation is already in progress."
+        case .modelChanged: return "The model file changed while the native runtime was loading it."
         }
     }
 }
@@ -219,6 +269,7 @@ struct LocalChatView: View {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(model.modelName).font(.headline)
+                    Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
