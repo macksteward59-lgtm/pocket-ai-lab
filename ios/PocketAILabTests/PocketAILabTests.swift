@@ -118,6 +118,28 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testDefaultAgentTeamRunsSixLogicalRolesThroughSharedLease() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        try await model.importModel(from: source)
+        await model.loadModel()
+        XCTAssertTrue(model.isModelLoaded)
+
+        await model.runDefaultAgentTeam("Review the shared native inference architecture")
+
+        let roleMessages = model.messages.filter { $0.role.hasPrefix("Agent Team ·") }
+        XCTAssertEqual(roleMessages.count, 6)
+        XCTAssertTrue(roleMessages[0].role.contains("reasoner"))
+        XCTAssertTrue(roleMessages[5].role.contains("validator"))
+        XCTAssertTrue(model.status.contains("six sequential logical roles"))
+        XCTAssertTrue(model.isModelLoaded, "Agent Team must retain the shared model lease.")
+    }
+
+    @MainActor
     func testNativeSessionUsesContentAddressedModelId() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
