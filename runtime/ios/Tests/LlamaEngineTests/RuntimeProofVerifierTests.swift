@@ -170,7 +170,24 @@ final class RuntimeProofVerifierTests: XCTestCase {
         defer { SecItemDelete(cleanup as CFDictionary) }
 
         let first = KeychainRuntimeProofReplayStore(service: service)
-        let firstAccepted = try await first.accept(sessionId: "session", keyId: "key", generationCounter: 1)
+        let firstAccepted: Bool
+        do {
+            firstAccepted = try await first.accept(
+                sessionId: "session",
+                keyId: "key",
+                generationCounter: 1
+            )
+        } catch let error as RuntimeProofReplayStoreError {
+            // GitHub's unsigned simulator test host has no Keychain entitlement.
+            // Preserve fail-closed production behavior and skip only this
+            // persistence integration test when the OS explicitly reports
+            // errSecMissingEntitlement. All verifier replay semantics remain
+            // covered by the injected deterministic replay-store tests above.
+            if case .keychainStatus(let status) = error, status == errSecMissingEntitlement {
+                throw XCTSkip("Keychain integration requires a signed test host with Keychain entitlement")
+            }
+            throw error
+        }
         XCTAssertTrue(firstAccepted)
         let recreated = KeychainRuntimeProofReplayStore(service: service)
         let replayAccepted = try await recreated.accept(sessionId: "session", keyId: "key", generationCounter: 1)
