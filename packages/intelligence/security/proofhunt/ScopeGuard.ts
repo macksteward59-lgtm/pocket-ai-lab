@@ -26,6 +26,10 @@ export interface ProgramAuthorizationRecord {
   readonly subjectId: string;
   readonly evidenceReference: string;
   readonly sourceRevision: string;
+  /** Human-reviewed intersection of methods the source/owner permits. */
+  readonly permittedChecks: readonly string[];
+  readonly permittedChecksReviewedBy: string;
+  readonly permittedChecksReviewReference: string;
   /** Immutable normalized bounty scope snapshot; required for bounty assessments. */
   readonly scopePolicy?: NormalizedProgramPolicy;
   readonly scopePolicyHash?: string;
@@ -191,6 +195,9 @@ export class ScopeGuard {
       if (!(PROOFHUNT_SAFE_CHECKS as readonly string[]).includes(check)) {
         throw new ScopeGuardError("Assessment type is not supported by the non-destructive implementation");
       }
+      if (!program.permittedChecks.includes(check)) {
+        throw new ScopeGuardError("Assessment type is not permitted by the independently reviewed program or ownership record");
+      }
       if (!policy.allowedChecks.includes(check)) {
         throw new ScopeGuardError("Assessment type is not included in the approved policy");
       }
@@ -308,7 +315,9 @@ function validateConfig(config: ProofHuntAssessmentConfig): void {
   const program = config.programAuthorization;
   const operational = config.operationalAuthorization;
   if (!program?.recordId?.trim() || !program.subjectId?.trim() || !program.evidenceReference?.trim() ||
-      !program.sourceRevision?.trim() || !program.verifiedAt?.trim() || !program.expiresAt?.trim()) {
+      !program.sourceRevision?.trim() || !program.verifiedAt?.trim() || !program.expiresAt?.trim() ||
+      !Array.isArray(program.permittedChecks) || !program.permittedChecksReviewedBy?.trim() ||
+      !program.permittedChecksReviewReference?.trim()) {
     throw new ScopeGuardError("Program authorization record is incomplete");
   }
   if (!operational?.recordId?.trim() || !operational.policyVersion?.trim() ||
