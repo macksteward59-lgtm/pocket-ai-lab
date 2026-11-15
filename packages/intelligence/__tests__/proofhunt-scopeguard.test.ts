@@ -120,7 +120,13 @@ describe("ProofHunt ScopeGuard", () => {
       executionPerformed: false,
       programAuthorizationId: "PROGRAM-1",
       operationalAuthorizationId: "OPS-1",
-      policyVersion: "policy-1"
+      policyVersion: "policy-1",
+      operationalPolicyHash: hashOperationalAuthorizationSnapshot(
+        makeConfig().policy,
+        makeConfig().targets,
+        makeConfig().excludedTargets
+      ),
+      programScopeHash: makeConfig().programAuthorization.scopePolicyHash
     });
     expect(audit.append).toHaveBeenCalledOnce();
   });
@@ -275,6 +281,8 @@ describe("ProofHunt ScopeGuard", () => {
       expect(records[0].payload).toMatchObject({
         event: "proofhunt.scope_decision",
         permitted: true,
+        operationalPolicyHash: expect.any(String),
+        programScopeHash: expect.any(String),
         executionPerformed: false
       });
     } finally {
