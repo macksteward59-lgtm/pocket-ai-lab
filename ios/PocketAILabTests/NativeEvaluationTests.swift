@@ -3,13 +3,14 @@ import XCTest
 import PocketLlamaEngine
 
 final class NativeEvaluationTests: XCTestCase {
-    private let fingerprint = String(repeating: "a", count: 64)
-
-    private func makeJournal() throws -> (NativeEvaluationJournal, URL) {
+    private func makeJournal() throws -> (NativeEvaluationJournal, URL, URL) {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("PocketAILab-NativeEvaluation-\(UUID().uuidString)", isDirectory: true)
-        let file = directory.appendingPathComponent("history.ndjson")
-        return (try NativeEvaluationJournal(fileURL: file), directory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let journalURL = directory.appendingPathComponent("history.ndjson")
+        let modelURL = directory.appendingPathComponent("test-model.gguf")
+        try Data("test model artifact".utf8).write(to: modelURL)
+        return (try NativeEvaluationJournal(fileURL: journalURL), directory, modelURL)
     }
 
     private func evaluationCase(caseID: String = "basic-math") -> NativeEvaluationCase {
@@ -21,12 +22,10 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testRunnerExecutesInjectedEngineAndNeverPromotesTestDoubleToNativeEvidence() async throws {
-        let (journal, directory) = try makeJournal()
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let engine = MockEvaluationEngine(responses: ["42"])
-        let runner = try NativeEvaluationRunner(
-            engine: engine, journal: journal, modelArtifactSHA256: fingerprint
-        )
+        let runner = try NativeEvaluationRunner(engine: engine, journal: journal, modelFileURL: modelURL)
 
         let attempt = try await runner.run(
             evaluationCase(), session: RuntimeSession(id: "test-session", modelId: "model-a")
@@ -37,6 +36,7 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(attempt.providerKind, .unverifiedProvider)
         XCTAssertFalse(attempt.nativeExecutionObserved)
         XCTAssertFalse(attempt.runtimeTrustVerified)
+        XCTAssertEqual(attempt.modelArtifactSHA256.count, 64)
         let prompts = await engine.prompts()
         XCTAssertEqual(prompts, ["What is 6 multiplied by 7?"])
         let events = try await journal.events()
@@ -45,12 +45,10 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testPartialOutputAndFailureArePersistedAndRetriesDoNotOverwriteHistory() async throws {
-        let (journal, directory) = try makeJournal()
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let partialEngine = MockEvaluationEngine(responses: ["partial answer"], failAfterOutput: true)
-        let partialRunner = try NativeEvaluationRunner(
-            engine: partialEngine, journal: journal, modelArtifactSHA256: fingerprint
-        )
+        let partialRunner = try NativeEvaluationRunner(engine: partialEngine, journal: journal, modelFileURL: modelURL)
         let first = try await partialRunner.run(
             evaluationCase(), session: RuntimeSession(id: "session-1", modelId: "model-a")
         )
@@ -61,9 +59,7 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertNil(first.retryOfAttemptID)
 
         let retryEngine = MockEvaluationEngine(responses: ["42"])
-        let retryRunner = try NativeEvaluationRunner(
-            engine: retryEngine, journal: journal, modelArtifactSHA256: fingerprint
-        )
+        let retryRunner = try NativeEvaluationRunner(engine: retryEngine, journal: journal, modelFileURL: modelURL)
         let second = try await retryRunner.run(
             evaluationCase(), session: RuntimeSession(id: "session-2", modelId: "model-a")
         )
@@ -81,12 +77,10 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testEmptyGenerationIsRetainedAsFailedAttempt() async throws {
-        let (journal, directory) = try makeJournal()
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let engine = MockEvaluationEngine(responses: [""])
-        let runner = try NativeEvaluationRunner(
-            engine: engine, journal: journal, modelArtifactSHA256: fingerprint
-        )
+        let runner = try NativeEvaluationRunner(engine: engine, journal: journal, modelFileURL: modelURL)
 
         let attempt = try await runner.run(
             evaluationCase(), session: RuntimeSession(id: "session-empty", modelId: "model-a")
@@ -95,16 +89,15 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(attempt.status, .failed)
         XCTAssertEqual(attempt.output, "")
         XCTAssertNotNil(attempt.errorMessage)
-        XCTAssertEqual(try await journal.events().count, 1)
+        let events = try await journal.events()
+        XCTAssertEqual(events.count, 1)
     }
 
-    func testRealLlamaCppProviderFailureDoesNotClaimNativeGeneration() async throws {
-        let (journal, directory) = try makeJournal()
+    func testLlamaCppProviderFailureDoesNotClaimNativeGeneration() async throws {
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let engine = LlamaCppMetalBackend(requireMetal: true)
-        let runner = try NativeEvaluationRunner(
-            engine: engine, journal: journal, modelArtifactSHA256: fingerprint
-        )
+        let runner = try NativeEvaluationRunner(engine: engine, journal: journal, modelFileURL: modelURL)
 
         let attempt = try await runner.run(
             evaluationCase(), session: RuntimeSession(id: "not-loaded", modelId: "model-a")
@@ -118,11 +111,11 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testCriticValidatorAndModelChallengesAreSeparateAppendOnlyEvents() async throws {
-        let (journal, directory) = try makeJournal()
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try NativeEvaluationRunner(
             engine: MockEvaluationEngine(responses: ["42"]),
-            journal: journal, modelArtifactSHA256: fingerprint
+            journal: journal, modelFileURL: modelURL
         )
         let attempt = try await runner.run(
             evaluationCase(), session: RuntimeSession(id: "subject-session", modelId: "model-a")
@@ -166,11 +159,11 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testHashChainDetectsModifiedHistoricalOutput() async throws {
-        let (journal, directory) = try makeJournal()
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try NativeEvaluationRunner(
             engine: MockEvaluationEngine(responses: ["original-output"]),
-            journal: journal, modelArtifactSHA256: fingerprint
+            journal: journal, modelFileURL: modelURL
         )
         _ = try await runner.run(
             evaluationCase(), session: RuntimeSession(id: "session", modelId: "model-a")
@@ -183,12 +176,29 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertThrowsError(try NativeEvaluationJournal(fileURL: file))
     }
 
-    func testInvalidFingerprintIsRejectedBeforeInference() async throws {
-        let (journal, directory) = try makeJournal()
+    func testModelMutationDuringGenerationIsRetainedButNotCountedAsNative() async throws {
+        let (journal, directory, modelURL) = try makeJournal()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let engine = MockEvaluationEngine(responses: ["42"], mutateFile: modelURL)
+        let runner = try NativeEvaluationRunner(engine: engine, journal: journal, modelFileURL: modelURL)
+
+        let attempt = try await runner.run(
+            evaluationCase(), session: RuntimeSession(id: "session", modelId: "model-a")
+        )
+
+        XCTAssertEqual(attempt.output, "42")
+        XCTAssertEqual(attempt.status, .partial)
+        XCTAssertFalse(attempt.nativeExecutionObserved)
+        XCTAssertTrue(attempt.errorMessage?.contains("Model file changed") == true)
+    }
+
+    func testMissingModelFileIsRejectedBeforeInference() async throws {
+        let (journal, directory, modelURL) = try makeJournal()
         defer { try? FileManager.default.removeItem(at: directory) }
         let engine = MockEvaluationEngine(responses: ["must not run"])
+        try FileManager.default.removeItem(at: modelURL)
         XCTAssertThrowsError(try NativeEvaluationRunner(
-            engine: engine, journal: journal, modelArtifactSHA256: "not-a-hash"
+            engine: engine, journal: journal, modelFileURL: modelURL
         ))
         let prompts = await engine.prompts()
         XCTAssertTrue(prompts.isEmpty)
@@ -198,11 +208,13 @@ final class NativeEvaluationTests: XCTestCase {
 private actor MockEvaluationEngine: LlamaEngine {
     private let responses: [String]
     private let failAfterOutput: Bool
+    private let mutateFile: URL?
     private var recordedPrompts: [String] = []
 
-    init(responses: [String], failAfterOutput: Bool = false) {
+    init(responses: [String], failAfterOutput: Bool = false, mutateFile: URL? = nil) {
         self.responses = responses
         self.failAfterOutput = failAfterOutput
+        self.mutateFile = mutateFile
     }
 
     func prompts() -> [String] { recordedPrompts }
@@ -215,6 +227,10 @@ private actor MockEvaluationEngine: LlamaEngine {
         recordedPrompts.append(request.prompt)
         let chunks = responses
         let shouldFail = failAfterOutput
+        let mutationURL = mutateFile
+        if let mutationURL {
+            try Data("mutated model artifact".utf8).write(to: mutationURL)
+        }
         return AsyncThrowingStream { continuation in
             for chunk in chunks {
                 continuation.yield(Token(text: chunk, isComplete: false))
