@@ -144,7 +144,10 @@ public actor ModelPool {
             throw ModelPoolError.invalidResourceSnapshot
         }
         let poolAvailable = configuration.maxResidentMemoryMB - reservedMemoryMB
-        let systemAvailableAfterReserve = max(0, systemAvailable - configuration.minimumFreeMemoryMB)
+        let systemAvailableAfterReserve = max(
+            0,
+            systemAvailable - reservedMemoryMB - configuration.minimumFreeMemoryMB
+        )
         let available = min(poolAvailable, systemAvailableAfterReserve)
         guard estimatedMemoryMB <= available else {
             throw ModelPoolError.insufficientMemory(requiredMB: estimatedMemoryMB, availableMB: available)
