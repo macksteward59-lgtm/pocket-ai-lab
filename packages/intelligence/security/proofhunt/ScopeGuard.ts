@@ -182,6 +182,16 @@ export class ScopeGuard {
         if (programScope.disposition !== "in-scope") {
           throw new ScopeGuardError("Target is not explicitly in the verified published program scope: " + programScope.reason);
         }
+        const publishedRateLimits = [
+          scopePolicy.rateLimit?.requestsPerSecond,
+          scopePolicy.rateLimit?.requestsPerMinute === undefined
+            ? undefined
+            : scopePolicy.rateLimit.requestsPerMinute / 60
+        ].filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0);
+        if (publishedRateLimits.length === 0 ||
+            policy.maxRequestsPerSecond > Math.min(...publishedRateLimits)) {
+          throw new ScopeGuardError("Operational request rate exceeds or cannot be reconciled with the published program limit");
+        }
       }
 
       if (operational.status !== "approved") {
