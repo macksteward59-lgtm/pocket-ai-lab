@@ -184,6 +184,89 @@ CREATE TABLE proofhunt.assessment_jobs (
   CHECK (authorized_target_id IS NULL OR authorized_target_hostname IS NOT NULL)
 );
 
+-- Enforce the operational allowlist/exclusion relation again at job admission.
+-- Denied decision records may be stored without an allowlist match; approved
+-- plans must reference the exact matched row and satisfy its subdomain flag.
+CREATE OR REPLACE FUNCTION proofhunt.validate_assessment_job_target()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+DECLARE
+  allowed_subdomains BOOLEAN;
+  target_is_excluded BOOLEAN;
+BEGIN
+  IF NEW.decision <> 'approved_plan' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.target_hostname <> lower(rtrim(NEW.target_hostname, '.')) OR
+     NEW.authorized_target_hostname <> lower(rtrim(NEW.authorized_target_hostname, '.')) THEN
+    RAISE EXCEPTION 'ProofHunt job hostnames must be canonical lowercase DNS/IP values';
+  END IF;
+
+  SELECT include_subdomains INTO allowed_subdomains
+  FROM proofhunt.authorized_targets
+  WHERE project_id = NEW.project_id
+    AND authorization_record_id = NEW.program_authorization_id
+    AND target_id = NEW.authorized_target_id
+    AND hostname = NEW.authorized_target_hostname;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'ProofHunt approved job has no matching authorized target record';
+  END IF;
+
+  IF NEW.target_hostname <> NEW.authorized_target_hostname AND
+     (NOT allowed_subdomains OR
+      right(NEW.target_hostname, length(NEW.authorized_target_hostname) + 1)
+        <> '.' || NEW.authorized_target_hostname) THEN
+    RAISE EXCEPTION 'ProofHunt job target is outside the matched allowlist hostname';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM proofhunt.excluded_targets e
+    WHERE e.project_id = NEW.project_id
+      AND e.authorization_record_id = NEW.program_authorization_id
+      AND (
+        e.hostname = NEW.target_hostname OR
+        (e.include_subdomains AND
+         right(NEW.target_hostname, length(e.hostname) + 1) = '.' || e.hostname)
+      )
+  ) INTO target_is_excluded;
+
+  IF target_is_excluded THEN
+    RAISE EXCEPTION 'ProofHunt job target is explicitly excluded';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER proofhunt_job_target_guard
+  BEFORE INSERT ON proofhunt.assessment_jobs
+  FOR EACH ROW EXECUTE FUNCTION proofhunt.validate_assessment_job_target();
+
+-- The job's authorization basis is immutable after admission. Only job_status
+-- may advance; lifecycle details are appended to assessment_events.
+CREATE OR REPLACE FUNCTION proofhunt.protect_assessment_job_basis()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'ProofHunt assessment jobs cannot be deleted';
+  END IF;
+  IF (to_jsonb(NEW) - 'job_status') IS DISTINCT FROM (to_jsonb(OLD) - 'job_status') THEN
+    RAISE EXCEPTION 'ProofHunt assessment job authorization basis is immutable';
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER proofhunt_job_basis_immutable
+  BEFORE UPDATE OR DELETE ON proofhunt.assessment_jobs
+  FOR EACH ROW EXECUTE FUNCTION proofhunt.protect_assessment_job_basis();
+
 CREATE TABLE proofhunt.assessment_events (
   event_id UUID PRIMARY KEY,
   project_id TEXT NOT NULL,
