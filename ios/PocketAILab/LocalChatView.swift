@@ -59,8 +59,9 @@ final class LocalChatModel: ObservableObject {
         let access = source.startAccessingSecurityScopedResource()
         defer { if access { source.stopAccessingSecurityScopedResource() } }
 
+        let directory = modelDirectory
         let imported = try await Task.detached(priority: .utility) {
-            try LocalGGUFImporter.copy(source: source, into: self.modelDirectory)
+            try LocalGGUFImporter.copy(source: source, into: directory)
         }.value
 
         // Update selection only after staged validation and hashing succeed.
