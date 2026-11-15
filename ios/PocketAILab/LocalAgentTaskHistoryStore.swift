@@ -127,8 +127,33 @@ struct LocalAgentTaskHistoryStore {
         try write(tasks)
     }
 
-    func complete(id: String, roleResults: [AgentTaskRoleResult], finalResponse: String) throws {
-        try transition(id: id, status: .completed, roleResults: roleResults,
+    func appendRoleResult(taskID: String, result: AgentTaskRoleResult) throws {
+        var tasks = try readTasks()
+        guard let index = tasks.firstIndex(where: { $0.id == taskID }) else {
+            throw StoreError.taskNotFound
+        }
+        guard tasks[index].status == .running,
+              tasks[index].roleResults.count < Self.maximumRoleResults,
+              result.sequence == tasks[index].roleResults.count,
+              !result.id.isEmpty,
+              !tasks[index].roleResults.contains(where: { $0.id == result.id }) else {
+            throw StoreError.invalidTransition
+        }
+        tasks[index].roleResults.append(
+            AgentTaskRoleResult(
+                id: result.id,
+                role: Self.clipped(result.role, limit: 128),
+                sequence: result.sequence,
+                text: Self.clipped(result.text, limit: Self.maximumRoleTextBytes),
+                createdAt: result.createdAt
+            )
+        )
+        tasks[index].updatedAt = now()
+        try write(tasks)
+    }
+
+    func complete(id: String, finalResponse: String) throws {
+        try transition(id: id, status: .completed, roleResults: nil,
                        finalResponse: finalResponse, failureSummary: nil)
     }
 
