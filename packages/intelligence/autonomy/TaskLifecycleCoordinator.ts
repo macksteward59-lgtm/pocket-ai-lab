@@ -184,7 +184,7 @@ export class TaskLifecycleCoordinator {
       }
 
       const attemptId = this.createId();
-      if (typeof attemptId !== "string" || !attemptId.trim()) {
+      if (typeof attemptId !== "string" || !attemptId.trim() || attemptId.length > 256) {
         throw new TaskLifecycleError("invalid_attempt_id", "Attempt id generator returned an invalid id");
       }
       const expires = new Date(now.getTime() + task.leaseMs);
@@ -230,12 +230,12 @@ export class TaskLifecycleCoordinator {
       const now = this.now();
       const updated = cloneTask(task);
       const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
-      if (typeof input.result !== "string" || !input.result.trim()) {
-        throw new TaskLifecycleError("invalid_result", "A non-empty step result is required");
+      if (typeof input.result !== "string" || !input.result.trim() || input.result.length > 16_000) {
+        throw new TaskLifecycleError("invalid_result", "A non-empty step result up to 16000 characters is required");
       }
       const refs = input.evidenceRefs ?? [];
-      if (!Array.isArray(refs) || refs.some(ref => typeof ref !== "string" || !ref.trim())) {
-        throw new TaskLifecycleError("invalid_evidence_refs", "Evidence references must be non-empty strings");
+      if (!Array.isArray(refs) || refs.length > 100 || refs.some(ref => typeof ref !== "string" || !ref.trim())) {
+        throw new TaskLifecycleError("invalid_evidence_refs", "At most 100 non-empty evidence references are allowed");
       }
       step.status = "succeeded";
       step.result = input.result.trim();
@@ -261,8 +261,8 @@ export class TaskLifecycleCoordinator {
       const now = this.now();
       const updated = cloneTask(task);
       const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
-      if (typeof input.error !== "string" || !input.error.trim()) {
-        throw new TaskLifecycleError("invalid_error", "A failure reason is required");
+      if (typeof input.error !== "string" || !input.error.trim() || (input.retryable !== undefined && typeof input.retryable !== "boolean")) {
+        throw new TaskLifecycleError("invalid_error", "A failure reason and boolean retryable flag are required");
       }
       step.lastError = input.error.trim().slice(0, 2_000);
       step.currentAttempt = null;
@@ -390,7 +390,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) {
       throw new TaskLifecycleError("invalid_attempt_limit", "Step maxAttempts must be from 1 to 5");
     }
-    const dependsOn = [...(step.dependsOn ?? [])];
+    if (step.dependsOn !== undefined && !Array.isArray(step.dependsOn)) {\n      throw new TaskLifecycleError("invalid_dependency", "Step dependencies must be an array");\n    }\n    const dependsOn = [...(step.dependsOn ?? [])];
     if (dependsOn.some(id => typeof id !== "string" || !id.trim() || id === step.id)) {
       throw new TaskLifecycleError("invalid_dependency", "Step dependencies must reference other step ids");
     }
@@ -465,18 +465,36 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
 
 function validateStoredTask(task: TaskRecord): TaskRecord {
   if (!task || typeof task.id !== "string" || !task.id.trim() ||
+      typeof task.objective !== "string" || !task.objective.trim() ||
       !Array.isArray(task.steps) || task.steps.length < 1 ||
-      !["ready", "running", "completed", "failed", "cancelled"].includes(task.status)) {
+      !["ready", "running", "completed", "failed", "cancelled"].includes(task.status) ||
+      !Number.isInteger(task.maxConcurrentSteps) || task.maxConcurrentSteps < 1 || task.maxConcurrentSteps > 8 ||
+      !Number.isInteger(task.leaseMs) || task.leaseMs < 1_000 || task.leaseMs > 900_000 ||
+      !task.metadata || typeof task.metadata !== "object" || Array.isArray(task.metadata)) {
     throw new TaskLifecycleError("corrupt_store", "Stored task record is invalid");
   }
-  const ids = new Set(task.steps.map(step => step.id));
+  const ids = new Set(task.steps.map(step => step?.id));
   if (ids.size !== task.steps.length || task.steps.some(step =>
-    !step || !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
+    !step || typeof step.id !== "string" || !step.id.trim() ||
+    typeof step.description !== "string" || !step.description.trim() ||
+    !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
     !Array.isArray(step.dependsOn) || step.dependsOn.some(id => !ids.has(id)) ||
     !Number.isInteger(step.attempts) || step.attempts < 0 ||
     !Number.isInteger(step.maxAttempts) || step.maxAttempts < 1 || step.maxAttempts > 5 ||
-    (step.status === "running") !== (step.currentAttempt !== null)
+    !Array.isArray(step.evidenceRefs) ||
+    (step.status === "running") !== (step.currentAttempt !== null) ||
+    (step.currentAttempt !== null && (!step.currentAttempt ||
+      typeof step.currentAttempt.id !== "string" || !step.currentAttempt.id.trim() ||
+      !Number.isFinite(Date.parse(step.currentAttempt.leaseExpiresAt)) ||
+      !Number.isFinite(Date.parse(step.currentAttempt.startedAt))))
   )) throw new TaskLifecycleError("corrupt_store", "Stored task step is invalid");
+  if (task.status === "completed" && task.steps.some(step => step.status !== "succeeded")) {
+    throw new TaskLifecycleError("corrupt_store", "Completed task contains unfinished steps");
+  }
+  if ((task.status === "failed" || task.status === "cancelled") &&
+      task.steps.some(step => step.status === "running" || step.status === "pending")) {
+    throw new TaskLifecycleError("corrupt_store", "Terminal task contains runnable steps");
+  }
   assertAcyclic(task.steps);
   return cloneTask(task);
 }
