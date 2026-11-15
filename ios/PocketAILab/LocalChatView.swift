@@ -31,13 +31,14 @@ final class LocalChatModel: ObservableObject {
         engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true),
         modelDirectory: URL? = nil,
         conversationStore: LocalConversationStore = LocalConversationStore(),
-        agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore()
+        agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore(),
+        modelCatalogStore: LocalModelCatalogStore? = nil
     ) {
         self.conversationStore = conversationStore
         self.agentTaskHistoryStore = agentTaskHistoryStore
         self.modelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
-        self.modelCatalogStore = LocalModelCatalogStore(modelDirectory: self.modelDirectory)
+        self.modelCatalogStore = modelCatalogStore ?? LocalModelCatalogStore(modelDirectory: self.modelDirectory)
         do {
             let configuration = try ModelPoolConfiguration(
                 maxResidentMemoryMB: 4_096,
