@@ -162,6 +162,13 @@ final class LocalChatModel: ObservableObject {
                 status = "Choose an imported model or import a GGUF file."
                 return
             }
+            // Clear the previous selection before resolving the new artifact.
+            // If the file disappears between catalog validation and resolution,
+            // loadModel must not accidentally pair the new ID with the old path.
+            modelURL = nil
+            artifactFingerprint = nil
+            modelName = "Selected model unavailable"
+            modelFingerprintSummary = "Fingerprint unavailable"
             modelURL = try modelCatalogStore.resolve(selected)
             modelName = selected.name
             artifactFingerprint = ModelArtifactFingerprint(sha256: selected.sha256, byteCount: selected.byteCount)
@@ -204,8 +211,11 @@ final class LocalChatModel: ObservableObject {
                 lease = nil
                 try await runtime.unload(modelId: previous.model.id)
             }
-            guard let catalogEntry = availableModels.first(where: { $0.id == selectedModelID }) else {
-                status = "The selected model is no longer registered in the local catalog."
+            guard let catalogEntry = availableModels.first(where: { $0.id == selectedModelID }),
+                  catalogEntry.sha256 == expectedFingerprint.sha256,
+                  catalogEntry.id == "sha256-\(expectedFingerprint.sha256)",
+                  catalogEntry.fileName == modelURL.lastPathComponent else {
+                status = "Selected model identity does not match its catalog record. Loading failed closed."
                 return
             }
             let estimate = catalogEntry.estimatedMemoryMB
