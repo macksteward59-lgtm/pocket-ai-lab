@@ -521,6 +521,7 @@ function cloneTask(task: TaskRecord): TaskRecord {
     steps: task.steps.map(step => ({
       ...step,
       dependsOn: [...step.dependsOn],
+      attemptIds: [...step.attemptIds],
       currentAttempt: step.currentAttempt ? { ...step.currentAttempt } : null,
       evidenceRefs: [...step.evidenceRefs]
     }))
