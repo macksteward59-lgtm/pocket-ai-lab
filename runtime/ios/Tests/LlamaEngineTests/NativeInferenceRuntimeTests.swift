@@ -88,6 +88,57 @@ final class NativeInferenceRuntimeTests: XCTestCase {
     }
 
 
+    func testCancelledQueuedGenerationReleasesItsUsePin() async throws {
+        let engine = ControlledRuntimeTestEngine()
+        let runtime = try makeRuntime(engine: engine)
+        let lease = try await runtime.acquire(model: model("queued-cancel"), estimatedMemoryMB: 128)
+        let firstRequest = GenerationRequest(prompt: "first", maxTokens: 16, temperature: 0)
+        let queuedRequest = GenerationRequest(prompt: "queued", maxTokens: 16, temperature: 0)
+
+        let first = Task {
+            try await runtime.generate(lease: lease, request: firstRequest)
+        }
+        while !(await engine.activeRequestIDs()).contains(firstRequest.requestId) {
+            await Task.yield()
+        }
+
+        let queued = Task {
+            try await runtime.generate(lease: lease, request: queuedRequest)
+        }
+        while (await runtime.schedulerSnapshot()).waitingRequests == 0 {
+            await Task.yield()
+        }
+
+        let queuedSnapshot = await runtime.snapshot()
+        XCTAssertEqual(queuedSnapshot.activeUseCount, 2)
+        let schedulerQueued = await runtime.schedulerSnapshot()
+        XCTAssertEqual(schedulerQueued.activeRequests, 1)
+        XCTAssertEqual(schedulerQueued.waitingRequests, 1)
+
+        queued.cancel()
+        do {
+            _ = try await queued.value
+            XCTFail("A cancelled queued generation must not run")
+        } catch is CancellationError {
+        }
+
+        let afterCancel = await runtime.snapshot()
+        XCTAssertEqual(afterCancel.activeUseCount, 1)
+        let schedulerAfterCancel = await runtime.schedulerSnapshot()
+        XCTAssertEqual(schedulerAfterCancel.activeRequests, 1)
+        XCTAssertEqual(schedulerAfterCancel.waitingRequests, 0)
+        let activeIDs = await engine.activeRequestIDs()
+        XCTAssertEqual(activeIDs, [firstRequest.requestId])
+
+        await engine.finish(firstRequest.requestId)
+        _ = try await first.value
+        let final = await runtime.snapshot()
+        XCTAssertEqual(final.activeUseCount, 0)
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+        try await runtime.unload(modelId: lease.model.id)
+    }
+
     func testReleasedLeaseCannotStartGeneration() async throws {
         let engine = ControlledRuntimeTestEngine()
         let runtime = try makeRuntime(engine: engine)
