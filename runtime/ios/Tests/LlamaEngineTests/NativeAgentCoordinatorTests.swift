@@ -25,7 +25,9 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         let prompts = await engine.recordedPrompts
         XCTAssertEqual(prompts.count, 3)
         XCTAssertTrue(prompts[1].contains("UNTRUSTED PROPOSAL FROM reasoner"))
+        XCTAssertTrue(prompts[1].contains("reasoned"))
         XCTAssertTrue(prompts[2].contains("UNTRUSTED PROPOSAL FROM critic"))
+        XCTAssertTrue(prompts[2].contains("criticized"))
     }
 
     func testEmptyPlanIsRejectedBeforeInference() async {
