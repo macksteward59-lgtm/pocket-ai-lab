@@ -94,7 +94,12 @@ struct LocalModelCatalogStore {
     func register(_ artifact: ImportedModelArtifact, displayName: String) throws -> LocalModelCatalogSnapshot {
         let fileName = artifact.url.lastPathComponent
         let resolved = try resolveFile(named: fileName)
-        guard resolved == artifact.url.standardizedFileURL,
+        guard resolved == artifact.url.standardizedFileURL else {
+            throw StoreError.unsafeModelPath
+        }
+        let normalizedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty,
+              normalizedName.count <= 120,
               artifact.fingerprint.sha256.count == 64,
               Self.isHexDigest(artifact.fingerprint.sha256),
               artifact.fingerprint.byteCount > 0 else {
@@ -114,7 +119,7 @@ struct LocalModelCatalogStore {
         }
         let entry = LocalModelCatalogEntry(
             id: id,
-            name: String(displayName.prefix(120)),
+            name: normalizedName,
             fileName: fileName,
             sha256: artifact.fingerprint.sha256.lowercased(),
             byteCount: artifact.fingerprint.byteCount,
