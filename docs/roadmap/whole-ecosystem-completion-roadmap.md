@@ -12,6 +12,15 @@ For one person working intermittently, plan on approximately **4–8 months**. T
 
 The project is not at the start line: substantial components and CI workflows already exist. It is also not close enough to claim completion: native iOS/runtime, durable execution, governance, memory, and product experience still need proven end-to-end integration.
 
+## Confirmed product decisions
+
+**User-confirmed direction (2026-11-15):**
+- Completion priority: **complete the entire ecosystem**, not a reduced feature set or a quick demo.
+- Local model priority: **Automatic**. The router must choose among genuinely available local models using measured device capability, task requirements, model readiness, context capacity, resource budget, and policy. It must never report a model as usable merely because it appears in a picker or registry. Cloud fallback, if enabled, must be explicit, disclosed, and policy-governed; offline-first remains the default.
+- User involvement: **testing and real-world feedback**. The engineering workflow should minimize requests for manual coding or routine technical decisions. Ask the user for physical-device validation, observed failures/performance, and owner-only actions (Apple signing, account authorization, or approvals that cannot be delegated).
+
+These decisions do not authorize merging PRs, changing protected repository settings, bypassing authorization, exposing secrets, or installing builds on the user's device without their participation.
+
 ## Current repository evidence snapshot
 
 The following is a snapshot of visible pull requests and reported checks, not a statement that changes are merged or accepted:
@@ -54,18 +63,20 @@ Durations are sequential planning ranges. Some work can overlap after interfaces
 - Preserve separate user-owned and AI-owned task lists.
 - Add fault injection for store failure, process restart, duplicate delivery, partial effects, and cancellation races.
 
-**Exit evidence:** a repeatable end-to-end workflow survives process termination and resumes without duplicate consequential effects; APEX denies unauthorized actions; East/e3 records durable execution.
+**Exit evidence:** a repeatable end-to-end workflow survives process termination and resumes without duplicate consequential effects; APEX denies unauthorized actions; East/e3 records durable execution. User participation is limited to real-world acceptance feedback and owner-only actions.
 
 ### Phase 2 — Native inference and model lifecycle
 **Estimate: 2–4 weeks**
 
 - Reconcile native model import, content-addressing, runtime-proof, ModelPool, and scheduler branches.
 - Complete the iOS device build and distinguish compile, simulator, device-install, runtime-load, and successful-generation evidence.
+- Make **Automatic** the default model policy: rank only runtime-verified local candidates using task fit, device memory/thermal/resource budgets, context limits, readiness, and measured latency; expose the selection rationale and allow safe fallback.
 - Connect model picker and automatic routing to actual runtime readiness, model identity/hash, session proof, resource limits, and failure states.
+- Keep cloud fallback disabled unless explicitly enabled and disclosed; never silently substitute cloud execution for unavailable offline inference.
 - Integrate cancellation, unload, memory pressure, thermal state, concurrency, and model replacement.
 - Keep optional cloud inference explicitly disclosed and governed; offline-first remains the default.
 
-**Exit evidence:** on a supported physical iPhone, import a supported GGUF, verify its content identity, load it, generate a response, cancel/unload it, recover from interruption, and report truthful readiness states.
+**Exit evidence:** on a supported physical iPhone, import at least two supported GGUFs, verify content identity, let Automatic select a model using real device/runtime constraints, generate a response, cancel/unload it, recover from interruption, and demonstrate honest fallback/unavailable behavior.
 
 ### Phase 3 — Multi-agent collaboration, knowledge, and evaluation
 **Estimate: 2–3 weeks**
