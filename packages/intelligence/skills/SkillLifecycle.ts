@@ -288,6 +288,9 @@ export async function authorizeSkillPromotion(
     assignmentDigest,
     verifiedAt: new Date().toISOString()
   };
+  // A WeakSet membership check is only a capability if callers cannot mutate
+  // the verified digest fields after the verifier has accepted this object.
+  Object.freeze(authorization);
   verifiedPromotionTokens.add(authorization);
   return {
     authorized: true,
