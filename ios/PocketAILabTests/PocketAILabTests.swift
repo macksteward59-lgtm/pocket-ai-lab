@@ -210,6 +210,86 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: model.modelURL!.path))
     }
 
+    func testModelArtifactFingerprintUsesStreamingSHA256() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("fingerprint.gguf")
+        let bytes = Data("GGUF-fingerprint-fixture".utf8)
+        try bytes.write(to: file)
+
+        let fingerprint = try ModelArtifactFingerprint.compute(at: file)
+        XCTAssertEqual(fingerprint.sha256, "4a0ae22e3e562bbb3e742b2ad5a8dd87013f48dca67df5757e819772488dd69d")
+        XCTAssertEqual(fingerprint.byteCount, UInt64(bytes.count))
+    }
+
+    @MainActor
+    func testChangedModelFileIsRejectedBeforeNativeLoad() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
+        try Data("GGUF-original".utf8).write(to: source)
+
+        let engine = TestLlamaEngine()
+        let model = LocalChatModel(modelDirectory: modelDirectory, engine: engine)
+        try await model.importModel(from: source)
+        let destination = try XCTUnwrap(model.modelURL)
+        try Data("GGUF-tampered".utf8).write(to: destination)
+
+        await model.loadModel()
+        let loadCalls = await engine.loadCallCount()
+        let loaded = await engine.loadedSessionIDs()
+        XCTAssertEqual(loadCalls, 0)
+        XCTAssertTrue(loaded.isEmpty)
+        XCTAssertTrue(model.status.contains("changed after import"))
+    }
+
+    @MainActor
+    func testNativeSessionUsesContentAddressedModelId() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("content-addressed.gguf")
+        try Data("GGUF-content-addressed".utf8).write(to: source)
+
+        let engine = TestLlamaEngine()
+        let model = LocalChatModel(
+            modelDirectory: root.appendingPathComponent("models", isDirectory: true),
+            engine: engine
+        )
+        try await model.importModel(from: source)
+        let destination = try XCTUnwrap(model.modelURL)
+        let fingerprint = try ModelArtifactFingerprint.compute(at: destination)
+
+        await model.loadModel()
+        let modelIDs = await engine.loadedModelIdentifiers()
+        XCTAssertEqual(modelIDs, ["sha256-\(fingerprint.sha256)"])
+        XCTAssertTrue(model.modelFingerprintSummary.contains(String(fingerprint.sha256.prefix(16))))
+        XCTAssertEqual(model.trustStatus, "Unverified")
+    }
+
+    @MainActor
+    func testFileMutationDuringNativeLoadUnloadsTheUnboundSession() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("mutating.gguf")
+        try Data("GGUF-before-load".utf8).write(to: source)
+
+        let engine = TestLlamaEngine(mutateModelFileOnLoad: true)
+        let model = LocalChatModel(
+            modelDirectory: root.appendingPathComponent("models", isDirectory: true),
+            engine: engine
+        )
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        let loaded = await engine.loadedSessionIDs()
+        let unloaded = await engine.unloadedSessionIDs()
+        XCTAssertTrue(loaded.isEmpty)
+        XCTAssertEqual(unloaded, ["test-session-1"])
+        XCTAssertTrue(model.status.contains("changed while the native runtime was loading"))
+        XCTAssertEqual(model.trustStatus, "Unverified")
+    }
+
     @MainActor
     func testBusyGuardRejectsASecondQueuedModelLoad() async throws {
         let root = try makeTemporaryDirectory()
@@ -246,11 +326,22 @@ private actor TestLlamaEngine: LlamaEngine {
     private var loaded: [String] = []
     private var unloaded: [String] = []
     private var generated: [String] = []
+    private var modelIdentifiers: [String] = []
+    private var mutateModelFileOnLoad: Bool
+
+    init(mutateModelFileOnLoad: Bool = false) {
+        self.mutateModelFileOnLoad = mutateModelFileOnLoad
+    }
 
     func load(model: ModelDescriptor) async throws -> RuntimeSession {
         nextSession += 1
+        modelIdentifiers.append(model.id)
         let session = RuntimeSession(id: "test-session-\(nextSession)", modelId: model.id)
         loaded.append(session.id)
+        if mutateModelFileOnLoad {
+            mutateModelFileOnLoad = false
+            try Data("GGUF-mutated-during-load".utf8).write(to: URL(fileURLWithPath: model.path))
+        }
         return session
     }
 
@@ -272,6 +363,8 @@ private actor TestLlamaEngine: LlamaEngine {
     func loadedSessionIDs() -> [String] { loaded }
     func unloadedSessionIDs() -> [String] { unloaded }
     func generatedSessionIDs() -> [String] { generated }
+    func loadedModelIdentifiers() -> [String] { modelIdentifiers }
+    func loadCallCount() -> Int { nextSession }
 }
 
 private actor BlockingTestLlamaEngine: LlamaEngine {
