@@ -98,6 +98,24 @@ CREATE TABLE proofhunt.authorization_revocations (
     REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
 
+-- Serialize authorization revocation with approved-job admission without
+-- granting the runtime role UPDATE permission on immutable authorization rows.
+CREATE OR REPLACE FUNCTION proofhunt.lock_authorization_revocation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    'proofhunt:' || NEW.project_id || ':' || NEW.authorization_record_id::TEXT, 0
+  ));
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER proofhunt_authorization_revocation_lock
+  BEFORE INSERT ON proofhunt.authorization_revocations
+  FOR EACH ROW EXECUTE FUNCTION proofhunt.lock_authorization_revocation();
+
 CREATE TABLE proofhunt.authorized_targets (
   target_id UUID PRIMARY KEY,
   project_id TEXT NOT NULL,
@@ -222,13 +240,22 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  -- Acquire both authorization locks in stable order. Revocation insertion
+  -- takes the same per-record lock, preventing a check/insert race.
+  IF NEW.program_authorization_id::TEXT < NEW.operational_authorization_id::TEXT THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended('proofhunt:' || NEW.project_id || ':' || NEW.program_authorization_id::TEXT, 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('proofhunt:' || NEW.project_id || ':' || NEW.operational_authorization_id::TEXT, 0));
+  ELSE
+    PERFORM pg_advisory_xact_lock(hashtextextended('proofhunt:' || NEW.project_id || ':' || NEW.operational_authorization_id::TEXT, 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('proofhunt:' || NEW.project_id || ':' || NEW.program_authorization_id::TEXT, 0));
+  END IF;
+
   SELECT record_kind, record_status, expires_at, scope_policy_hash,
          scope_policy_snapshot, permitted_checks, environment
   INTO program_kind, program_status, program_expires_at, stored_program_scope_hash,
        program_scope_snapshot, program_checks, program_environment
   FROM proofhunt.authorization_records
-  WHERE project_id = NEW.project_id AND record_id = NEW.program_authorization_id
-  FOR UPDATE;
+  WHERE project_id = NEW.project_id AND record_id = NEW.program_authorization_id;
   IF NOT FOUND OR program_status <> 'verified' OR program_expires_at <= CURRENT_TIMESTAMP THEN
     RAISE EXCEPTION 'ProofHunt program/ownership authorization is missing, unverified, or expired';
   END IF;
@@ -241,8 +268,7 @@ BEGIN
   INTO operational_kind, operational_status, operational_expires_at, operational_parent,
        operational_environment, operational_policy_version, operational_policy_hash
   FROM proofhunt.authorization_records
-  WHERE project_id = NEW.project_id AND record_id = NEW.operational_authorization_id
-  FOR UPDATE;
+  WHERE project_id = NEW.project_id AND record_id = NEW.operational_authorization_id;
   IF NOT FOUND OR operational_kind <> 'operational_approval' OR
      operational_status <> 'approved' OR operational_expires_at <= CURRENT_TIMESTAMP OR
      operational_parent <> NEW.program_authorization_id OR
