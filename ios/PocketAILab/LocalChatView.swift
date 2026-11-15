@@ -149,8 +149,13 @@ final class LocalChatModel: ObservableObject {
             }
             evaluationEvents = try await journal.events()
             let summary = currentEvaluationSummary
-            evaluationStatus = "\(summary.displayText) · \(summary.totalAttempts) retained attempts."
-            status = "Self-evaluation completed through the shared ModelPool lease and inference scheduler. Runtime trust remains unverified."
+            if Task.isCancelled {
+                evaluationStatus = "Self-evaluation stopped after cancellation. \(summary.displayText) · \(summary.totalAttempts) attempts retained."
+                status = "Self-evaluation stopped; completed and partial attempts remain in the local journal."
+            } else {
+                evaluationStatus = "\(summary.displayText) · \(summary.totalAttempts) retained attempts."
+                status = "Self-evaluation completed through the shared ModelPool lease and inference scheduler. Runtime trust remains unverified."
+            }
         } catch {
             if let journal = evaluationJournal, let events = try? await journal.events() {
                 evaluationEvents = events
