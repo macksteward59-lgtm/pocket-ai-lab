@@ -396,8 +396,13 @@ int pocket_llama_inspect_gguf(
         result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF metadata key count exceeds the supported bound.");
         goto cleanup;
     }
+    uint32_t version = gguf_get_version(ctx);
+    if (version < 2 || version > 3) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF version is outside the supported range.");
+        goto cleanup;
+    }
     out_metadata->metadata_key_count = (int32_t) key_count;
-    out_metadata->gguf_version = (int32_t) gguf_get_version(ctx);
+    out_metadata->gguf_version = (int32_t) version;
     out_metadata->file_size_bytes = (uint64_t) info.st_size;
 
     if (copy_metadata_string(ctx, "general.architecture", out_metadata->architecture,
