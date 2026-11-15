@@ -1219,3 +1219,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Non-goals:** No tool execution, no direct model side effects, no APEX/East bypass, no trust/RLS/schema/receipt changes, no target traffic, and no inference of production autonomy from a scheduler or task record.
 - **Integration rule:** Host adapters may connect this kernel to real inference and East only through explicit interfaces and existing authorization boundaries. Persisted task state is not authorization.
 - **Validation:** CI and test results will be reported only for the exact commit that ran them. Physical-device acceptance is separate.
+
+
+## 2026-11-15 — Autonomous task lifecycle kernel submitted for review (PR #94)
+
+- **PR:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/94 (draft, open, unmerged).
+- **Branch/head:** `codex/autonomous-task-lifecycle` at `fd150213d9289b5c91d284497a61449d276c9f87`, based on `main` `818799eced634577c8f1760fa2bdd1f657bd8427`; compare reports 13 commits ahead / 0 behind.
+- **Implementation:** Added provider-neutral task lifecycle coordinator, exported contracts, 11 focused tests, and implementation documentation. Supports validated DAG plans, bounded parallel leases, unique persisted attempt IDs, stale/expired attempt rejection, bounded retry, cancellation, restart recovery, and atomic snapshot-store semantics.
+- **Safety:** No model/tool execution, APEX/East trust or authorization changes, receipts, RLS/schema, target traffic, or native runtime changes. The included store is in-memory only; production transactional/cross-process persistence and host runner integration remain open.
+- **Review correction:** Diff inspection found and corrected escaped newline syntax defects before this head. Attempt-history cloning and duplicate attempt-ID checks were added to preserve rollback and replay invariants.
+- **Validation:** Focused Vitest tests are committed, but no local test runner was available through this repository session. GitHub Actions workflow query and combined status returned no runs/statuses for the current head. Do not claim CI or tests passed until checks are available.
