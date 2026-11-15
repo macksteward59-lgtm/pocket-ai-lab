@@ -1407,3 +1407,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Validation at submission:** Pocket AI Lab CI, Consumer prototype CI, Governance sidecar CI, and Cursor collaboration plugin CI succeeded on the PR head. iOS LlamaEngine CI run `43753174756` was queued; no iOS XCTest result yet. No local Xcode or physical-device test claimed.
 - **Review boundary:** no APEX/East, signed Evidence, runtime trust, or authorization behavior changed. PR explicitly documents that user-facing evaluation UI and catalog/ModelPool session acquisition are not yet wired; no physical iPhone execution is claimed.
 - **Review request:** inspect Swift compile/XCTest results, hash-chain correctness, append-only semantics, model-file binding, and native-provider evidence gate before any merge.
+
+## 2026-11-16 UTC — Native evaluation integration correction and stacked handoff
+
+- Review of PR #115's current native app code found that it already uses `NativeInferenceRuntime`, exact `ModelPoolLease` values, and the shared `InferenceScheduler`. The first PR #130 runner, based on older `main`, called `LlamaEngine.generate` directly and therefore bypassed those protections.
+- **Do not merge PR #130 as-is.** It remains a draft until a replacement stack is ready; its implementation is being carried forward, not discarded.
+- **New branch claim:** `codex/native-self-evaluation-runtime-integration`, based on PR #115's exact head `4c1feb860291cef39ce2ad5cc712520a62a5b953`.
+- **Updated scope:** additive `NativeInferenceRuntime` evaluation API that retains partial output and derives provider identity from its owned engine; runtime tests for lease/scheduler/cancellation behavior; update the app runner to require the exact active `ModelPoolLease` and verify its model file; connect a self-evaluation action in the native app UI; preserve the append-only journal and eight-dimension assessments.
+- **Exclusions:** no changes to `LlamaEngine` core contracts, ModelPool admission/release behavior, catalog/task-history schemas, APEX/East trust, signed Evidence, or authorization semantics.
+- **Reason:** evaluation must execute through the same guarded path as user chat and Agent Team. No raw engine access or bare runtime session may bypass the ModelPool lease and scheduler.
