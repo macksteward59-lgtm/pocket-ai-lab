@@ -289,6 +289,84 @@ describe("ProofHunt ScopeGuard", () => {
     expect((await guard.authorizeAssessment(config, "app.example.com", "static_analysis")).permitted).toBe(false);
   });
 
+  it("denies a bounty assessment before the published testing window starts", async () => {
+    const base = makeConfig();
+    const scopePolicy = {
+      ...base.programAuthorization.scopePolicy!,
+      testingWindow: {
+        startsAt: "2026-11-15T12:03:00Z",
+        endsAt: "2026-11-15T13:00:00Z",
+        timezone: "UTC"
+      }
+    };
+    const config = makeConfig({
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy)
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("testing window");
+  });
+
+  it("denies a bounty assessment after the published testing window ends", async () => {
+    const base = makeConfig();
+    const scopePolicy = {
+      ...base.programAuthorization.scopePolicy!,
+      testingWindow: {
+        startsAt: "2026-11-15T11:00:00Z",
+        endsAt: "2026-11-15T12:02:00Z",
+        timezone: "UTC"
+      }
+    };
+    const config = makeConfig({
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy)
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("testing window");
+  });
+
+  it("denies a bounty scope snapshot after its own expiry even when the authorization record remains valid", async () => {
+    const base = makeConfig();
+    const scopePolicy = { ...base.programAuthorization.scopePolicy!, expiresAt: "2026-11-15T12:01:00Z" };
+    const config = makeConfig({
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy)
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("snapshot has expired");
+  });
+
+  it("denies a bounty scope snapshot before its effective date", async () => {
+    const base = makeConfig();
+    const scopePolicy = { ...base.programAuthorization.scopePolicy!, effectiveAt: "2026-11-15T12:03:00Z" };
+    const config = makeConfig({
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy)
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("not yet effective");
+  });
+
   it("denies host-only assessment when a matching bounty rule is path-scoped", async () => {
     const base = makeConfig();
     const pathPolicy = normalizeProgramPolicy({
