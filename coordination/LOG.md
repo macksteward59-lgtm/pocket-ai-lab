@@ -1307,3 +1307,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Created draft integration-validation PR #123 against main at the exact PR #121 stack head. It includes #84/#85/#88/#121 and triggers the full CI matrix. At inspection, Pocket AI Lab CI, Consumer CI, Governance CI, and Cursor plugin CI succeeded; iOS LlamaEngine CI #171 remained in the pinned llama.cpp build step. No physical iPhone execution is implied.
 - Created draft integration-validation PR #124 against main for #86/#122. Added documentation to the integration branch explaining cumulative host-memory admission accounting; current head `b60e10bcebebcaf9f49e8522caa458fce19a123b`. No workflow run was returned at last check; this is not a CI pass.
 - PR #94 and #95 remain draft/open/unmerged despite green CI. No feature PR or integration-validation PR was merged. Main remains unchanged. APEX/East authorization, signing, credentials, and device access boundaries remain untouched.
+
+
+## 2026-11-15 — CI trigger/status follow-up for integration PRs
+
+- Followed the GitHub check-runs endpoint directly because the workflow-runs wrapper did not return PR #124's run in its first response. PR #124 current head `b60e10bcebebcaf9f49e8522caa458fce19a123b`: Pocket AI Lab, Consumer, Governance, and Cursor workflows are successful; iOS LlamaEngine CI run `43751145874` is in progress. This supersedes the earlier “no workflow run returned” note. No full CI pass yet.
+- PR #123 current head `c8b2f6fbc380759c6318c189bb1e32472617a16c`: Pocket AI Lab, Consumer, Governance, and Cursor workflows are successful; iOS LlamaEngine CI run `43751107892` is in progress.
+- PR #84 current head `92f39d7ee79cabe9028e7782cec40ca7a0f2c219`: four non-iOS checks successful; iOS LlamaEngine CI run `43750771905` in progress.
+- PR #86 current head `7319ea97d7b5bdfc4c1a3ec921b8b2eb65612dc5`: four non-iOS checks successful; iOS LlamaEngine CI run `43750794278` in progress.
+- The four iOS workflows were all still in the pinned llama.cpp build step at the last job inspection. No downstream app XCTest/simulator/macOS result can be inferred from that state.
