@@ -63,7 +63,7 @@ final class NativeEvaluationTests: XCTestCase {
         let manual = NativeEvaluationSuite.cases.filter { $0.scoringRule == .manualReview }
         XCTAssertEqual(objective.count, 5)
         XCTAssertEqual(manual.count, 3)
-        XCTAssertTrue(manual.allSatisfy { $0.expectedOutcome.isEmpty || !$0.expectedOutcome.isEmpty })
+        XCTAssertTrue(manual.allSatisfy { !$0.evaluationCriteria.isEmpty })
     }
 
     func testRunnerUsesExactModelPoolLeaseAndNeverPromotesTestDoubleToNativeEvidence() async throws {
