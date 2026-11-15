@@ -15,46 +15,48 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 
 ## Active work
 
-### Primary: shared native inference composition
+### Primary: native inference composition
 
-- Work record: `.project/WORK/WORK-20261115-native-inference-integration.md`
 - PR #107: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/107
 - Branch: `codex/ios-model-pool-composition-mainline`
-- Latest verified head: `104389c5e85b47d09954a230c01fd57714b5ea78`
-- Base: `main`; compare: 27 ahead / 0 behind; open draft, GitHub reports mergeable.
-- Latest iOS LlamaEngine CI run #132 / run ID `43731298841`: still building pinned llama.cpp at last check. Other four PR workflows on this head succeeded.
-- PR #106 remains open/draft, stacked on PR #99's branch. PR #99 remains open/draft against main.
+- Latest head: `ed32fecef579dfd53c0263c3e73f00d95cc1af32`
+- Base: `main`; compare: 31 ahead / 0 behind; open draft, mergeable.
+- Previous iOS run `43731298841` built the device framework and app, then failed two importer assertions because the expected fixture remained 14 bytes while the minimum valid GGUF header is 24 bytes.
+- Commit `ed32fecef579dfd53c0263c3e73f00d95cc1af32` fixes both stale expected values. Fresh iOS run `43740561987` is in progress; it was still building pinned llama.cpp at last check. Four companion workflows are either passed or still running; refresh before reporting final results.
+- No PR reviews or inline review threads were returned at last check.
 
-### Next: content-addressed artifact identity
+### Mainline aggregate: content-addressed artifact integrity + shared runtime
 
 - PR #109: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/109
 - Branch: `codex/ios-content-addressed-model-integrity-mainline`
-- Head: `b37d78fdec64062e738cd076ed994861d90331e6`
-- Base: PR #107 branch; compare: 8 ahead / 0 behind.
-- Streaming SHA-256, byte count, content-addressed model IDs, pre/post-load rehash, staged import, and mutation tests added.
-- Pocket AI Lab CI run `43731687148` succeeded. iOS LlamaEngine workflow is configured only for PRs targeting main, so this stacked PR has not yet received its own iOS/XCTest run. Do not mark native tests passed.
+- Latest head: `a6de5e5387a0f6745c61ba509678fae3811d0cf6`
+- Base: `main`; compare: 41 ahead / 0 behind; 15 files changed; open draft and mergeable.
+- Retargeted from #107's feature branch to `main` so the combined dependency chain receives iOS PR CI.
+- Includes streaming SHA-256, content-addressed model IDs, pre/post-load fingerprint verification, and exact lease/session cleanup when file mutation is detected.
+- Additional review found a lease-lifecycle bug: a failed file fingerprint read during reload could clear the only UI lease handle while ModelPool still retained the lease. Fixed by retaining the exact lease on preflight errors and when exact release unexpectedly fails. Added regression test `testUnreadableArtifactDoesNotOrphanExistingModelLease`.
+- Fix commit: `613a1c4426babfe335f0d8d699be6ecd2f466417`; regression-test commit: `a6de5e5387a0f6745c61ba509678fae3811d0cf6`.
+- Aggregate iOS LlamaEngine CI run `43740720673` was pending at last check; Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar workflows were in progress. Do not treat any as passed until refreshed.
+- No PR reviews were returned at last check.
 
-### Artifact predecessor
+### Validated predecessor
 
 - PR #104: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/104
 - Branch: `codex/ios-import-agent-team-integrity-mainline`
-- Latest head: `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4`; base main; compare 29 ahead / 10 behind.
-- Fixed two observed XCTest assertions: Agent Team status wording and bracketed IPv6 loopback handling.
-- Fresh iOS LlamaEngine CI is running on this latest head; prior head failed those two XCTest assertions.
-- PR #88 is a separate older stacked branch; avoid treating it as current-mainline.
+- Head: `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4`; base main; 29 ahead / 10 behind.
+- iOS LlamaEngine CI run `43731823992` completed successfully: app build, app XCTest, iOS Simulator XCTest, pinned smoke-model download, and macOS XCTest all passed.
+- Fixes resolved earlier Agent Team wording and bracketed IPv6 loopback assertions.
+- Retain as a validated predecessor; #107/#109 are the preferred shared-runtime path. PR #88 remains a separate older stacked branch.
 
 ## Runtime proof and skill governance
 
-- PR #100 is the cleaner current-mainline runtime proof verifier: 8 ahead / 0 behind; all five workflows succeeded on head `d5705a287fd126074e617644d77cc491bccda2a9`.
-- PR #83 is older: 21 ahead / 14 behind current main; all workflows succeeded on its historical head. Prefer #100 for follow-up.
-- Runtime verifier has host-provisioned immutable public-key inputs and Keychain-backed monotonic replay state, but no production key provisioning, signer, rotation/revocation service, app composition wiring, or cross-process atomic replay update. Runtime trust remains Unverified.
-- PR #101 is current-mainline skill lifecycle/rubric aggregate: 11 ahead / 0 behind; all four workflows succeeded on head `3799fe3118787f3187981166dd0cb7de506b6601`.
-- PR #91/#92 are stacked predecessors. Rubric digest is now compared to the artifact's exact rubric, but authenticated approver identity, durable approval/revocation ledger, restart-safe authorization, and transactional replay prevention remain host-service gaps. Candidate lifecycle is not wired to Director/operational SkillRegistry.
+- PR #100 runtime-proof verifier previously passed all five workflows on head `d5705a287fd126074e617644d77cc491bccda2a9`. Remaining production gaps: key provisioning, signer, rotation/revocation, app composition wiring, and cross-process atomic replay updates. Runtime trust remains Unverified.
+- PR #101's latest inspected description reports a newer head `88eb8294feab8cb3b01eaa16e8c1299cdd4a3c42`; prior four-workflow success was on an older head. Refresh CI before treating the new head as validated.
+- Skill lifecycle still lacks authenticated human approver identity, durable approval/revocation ledger, restart-safe authorization, transactional replay prevention, and operational Director/SkillRegistry wiring. Candidate lifecycle status is not a permission grant.
 
 ## Global status
 
 - Repository continuity system: PR #108 open/draft, branch `codex/project-continuity-system`; not merged.
-- PR #107 and #109 remain drafts. No merge to main is authorized.
+- PRs #104, #107, #109 remain open drafts. No merge to main is authorized.
 - Repository visibility and permissions remain unchanged.
-- No physical-device test is claimed.
+- No physical-device test is claimed. Hosted device-slice linking and simulator tests do not prove behavior on the user's iPhone.
 - Current active task selection must be re-evaluated against the requested task and live GitHub state on every resume.
