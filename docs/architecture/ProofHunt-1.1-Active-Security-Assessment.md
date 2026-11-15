@@ -16,7 +16,7 @@ The two environments share an operational policy engine, but their evidence type
 ## Two independent authorization records
 
 1. Program authorization record: evidence that the bounty program or asset owner permits assessment in principle. It is independently verified and versioned.
-2. Operational authorization record: a human-approved, signed configuration binding a project, program authorization ID, exact policy version, expiry, and approval provenance.
+2. Operational authorization record: a human-approved, signed configuration binding a project, program authorization ID, exact policy version, SHA-256 policy digest, expiry, and approval provenance. Changing allowed checks or rate/concurrency settings without re-approval invalidates the digest even if someone reuses the same version string.
 
 Both verifiers must succeed. The program/ownership record must also contain a human-reviewed list of permitted check types and the review provenance; ScopeGuard intersects this list with the separately signed operational policy. For bounty assessments, the program record must additionally carry the exact normalized policy snapshot and its SHA-256 digest; ScopeGuard recomputes the digest and invokes the existing deterministic bug-bounty ScopeEvaluator for the requested host. A broader operational allowlist cannot override a published-program exclusion or an unmatched program scope. Owned-asset assessments instead require an ownership verifier and do not infer bounty permission. Neither record is inferred from the other. An AI agent cannot create, modify, sign, renew, or verify either record. APEX/Director remains the approval authority; the operational signature verifier must be supplied by the trusted host.
 
@@ -91,7 +91,7 @@ A proposed PostgreSQL migration is provided at packages/intelligence/security/pr
 | audit_events | Append-only, hash-linked security decisions |
 | validation_results | Detected/corroborated/reproduced/confirmed/rejected outcomes |
 
-Every job must persist both authorization record IDs, the program-level permitted-check review reference, exact policy version, the allowlist row ID that matched (for an approved plan), target canonicalization, and the decision timestamp. Database composite foreign keys bind the job's authorization IDs and policy version to the exact immutable policy and bind its approved target to the relevant project's authorized-target row. A replay must reproduce why that job was permitted at that time. Authorization revocation/expiry and emergency stop must be checked again at job admission and before each adapter boundary.
+Every job must persist both authorization record IDs, the program-level permitted-check review reference, exact policy version and policy digest, the allowlist row ID that matched (for an approved plan), target canonicalization, and the decision timestamp. Database composite foreign keys bind the job's authorization IDs and policy version to the exact immutable policy and bind its approved target to the relevant project's authorized-target row. A replay must reproduce why that job was permitted at that time. Authorization revocation/expiry and emergency stop must be checked again at job admission and before each adapter boundary.
 
 ## Validation state model
 
