@@ -7,6 +7,7 @@ enum NativeEvaluationJournalError: Error, Equatable {
     case invalidChallenge(String)
     case missingAttempt(String)
     case assessmentMustUseSeparateRuntimeSession
+    case assessmentMustUseDifferentModel
     case corruptJournal(String)
 }
 
@@ -245,6 +246,9 @@ actor NativeEvaluationJournal {
         guard let target = attempts.first(where: { $0.id == assessment.attemptID }) else {
             throw NativeEvaluationJournalError.missingAttempt(assessment.attemptID)
         }
+        guard target.modelID != assessment.evaluatorModelID else {
+            throw NativeEvaluationJournalError.assessmentMustUseDifferentModel
+        }
         guard target.runtimeSessionID != assessment.evaluatorRuntimeSessionID else {
             throw NativeEvaluationJournalError.assessmentMustUseSeparateRuntimeSession
         }
@@ -347,6 +351,7 @@ actor NativeEvaluationJournal {
                       event.payload.attempt == nil, event.payload.challenge == nil,
                       !assessment.id.isEmpty, assessmentIDs.insert(assessment.id).inserted,
                       let target = attemptsByID[assessment.attemptID],
+                      target.modelID != assessment.evaluatorModelID,
                       target.runtimeSessionID != assessment.evaluatorRuntimeSessionID,
                       assessment.evaluatorAgentID.lowercased() == assessment.evaluatorRole.rawValue,
                       assessment.score.isFinite, (0...1).contains(assessment.score),
