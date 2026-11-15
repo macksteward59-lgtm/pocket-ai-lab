@@ -384,39 +384,6 @@ actor NativeEvaluationJournal {
         return validDeterministicScore(rule: attempt.scoringRule, passed: attempt.deterministicPassed, score: attempt.deterministicScore)
     }
 
-    private static func hasCompleteCategoryScores, attempt.latencyMilliseconds >= 0, attempt.estimatedMemoryMB > 0,
-                      attempt.promptUTF8Bytes == attempt.prompt.utf8.count,
-                      attempt.outputUTF8Bytes == attempt.output.utf8.count,
-                      Self.validDeterministicScore(rule: attempt.scoringRule, passed: attempt.deterministicPassed, score: attempt.deterministicScore),
-                      attemptsByID[attempt.id] == nil else {
-                    throw NativeEvaluationJournalError.corruptJournal("Attempt event has an invalid or duplicate payload.")
-                }
-                attemptsByID[attempt.id] = attempt
-            case .assessment:
-                guard let assessment = event.payload.assessment,
-                      event.payload.attempt == nil, event.payload.challenge == nil,
-                      !assessment.id.isEmpty, assessmentIDs.insert(assessment.id).inserted,
-                      let target = attemptsByID[assessment.attemptID],
-                      target.runtimeSessionID != assessment.evaluatorRuntimeSessionID,
-                      assessment.evaluatorAgentID.lowercased() == assessment.evaluatorRole.rawValue,
-                      assessment.score.isFinite, (0...1).contains(assessment.score),
-                      Self.hasCompleteCategoryScores(assessment.categoryScores) else {
-                    throw NativeEvaluationJournalError.corruptJournal("Assessment event is invalid or references no prior attempt.")
-                }
-            case .challenge:
-                guard let challenge = event.payload.challenge,
-                      event.payload.attempt == nil, event.payload.assessment == nil,
-                      !challenge.id.isEmpty, challengeIDs.insert(challenge.id).inserted,
-                      attemptsByID[challenge.attemptID] != nil else {
-                    throw NativeEvaluationJournalError.corruptJournal("Challenge event is invalid or references no prior attempt.")
-                }
-            }
-            previous = event.eventHash
-            verified.append(event)
-        }
-        return verified
-    }
-
     private static func validDeterministicScore(rule: NativeEvaluationScoringRule, passed: Bool?, score: Double?) -> Bool {
         switch rule {
         case .manualReview:
