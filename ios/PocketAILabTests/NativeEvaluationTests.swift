@@ -171,7 +171,7 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(summary.unscoredAttempts, 1)
         XCTAssertNil(summary.scorePercent)
         let events = try await journal.events()
-        XCTAssertEqual(events.compactMap(\\.payload.attempt).map(\\.id), [attempt.id])
+        XCTAssertEqual(events.compactMap(\.payload.attempt).map(\.id), [attempt.id])
         let released = await runtime.release(lease)
         XCTAssertTrue(released)
     }
