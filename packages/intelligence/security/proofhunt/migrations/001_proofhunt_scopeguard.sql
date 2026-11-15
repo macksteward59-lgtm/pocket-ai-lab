@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.authorization_records (
   parent_program_authorization_id UUID,
   evidence_reference TEXT NOT NULL,
   source_revision TEXT NOT NULL,
+  permitted_checks TEXT[],
+  permitted_checks_reviewed_by TEXT,
+  permitted_checks_review_reference TEXT,
   scope_policy_snapshot JSONB,
   scope_policy_hash CHAR(64),
   record_status TEXT NOT NULL CHECK (record_status IN ('pending', 'verified', 'approved', 'revoked', 'expired')),
@@ -31,7 +34,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.authorization_records (
     (record_kind = 'operational_approval' AND parent_program_authorization_id IS NOT NULL
       AND policy_version IS NOT NULL AND approved_by IS NOT NULL
       AND approval_reference IS NOT NULL AND signature_reference IS NOT NULL
-      AND approved_at IS NOT NULL AND scope_policy_snapshot IS NULL AND scope_policy_hash IS NULL)
+      AND approved_at IS NOT NULL AND permitted_checks IS NULL
+      AND permitted_checks_reviewed_by IS NULL AND permitted_checks_review_reference IS NULL
+      AND scope_policy_snapshot IS NULL AND scope_policy_hash IS NULL)
     OR
     (record_kind = 'bug_bounty_program' AND parent_program_authorization_id IS NULL
       AND scope_policy_snapshot IS NOT NULL AND scope_policy_hash ~ '^[a-f0-9]{64}
@@ -220,6 +225,8 @@ CREATE INDEX IF NOT EXISTS validation_results_job_state_idx
       AND scope_policy_snapshot -> 'authorized' = 'false'::JSONB)
     OR
     (record_kind = 'asset_ownership' AND parent_program_authorization_id IS NULL
+      AND permitted_checks IS NOT NULL AND cardinality(permitted_checks) > 0
+      AND permitted_checks_reviewed_by IS NOT NULL AND permitted_checks_review_reference IS NOT NULL
       AND scope_policy_snapshot IS NULL AND scope_policy_hash IS NULL)
   )
 );
