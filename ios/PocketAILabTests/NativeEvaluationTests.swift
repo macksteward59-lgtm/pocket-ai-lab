@@ -226,6 +226,18 @@ final class NativeEvaluationTests: XCTestCase {
         } catch NativeEvaluationJournalError.assessmentMustUseSeparateRuntimeSession {
         }
 
+        do {
+            try await journal.appendAssessment(NativeEvaluationAssessment(
+                id: "same-model-review", attemptID: attempt.id, evaluatorRole: .validator,
+                evaluatorAgentID: "validator", evaluatorModelID: attempt.modelID,
+                evaluatorRuntimeSessionID: "new-review-session", rubricVersion: "rubric-1",
+                score: 0.8, categoryScores: NativeEvaluationCategory.allCases.map { NativeEvaluationCategoryScore(category: $0, score: 0.8) },
+                passed: true, rationale: "A different session on the subject model is not an independent model review.", assessedAt: Date()
+            ))
+            XCTFail("same-model review must not count as independent")
+        } catch NativeEvaluationJournalError.assessmentMustUseDifferentModel {
+        }
+
         let events = try await journal.events()
         XCTAssertEqual(events.map(\.payload.kind), [.attempt, .assessment, .assessment, .challenge])
         XCTAssertEqual(events.compactMap(\.payload.assessment).map(\.evaluatorRole), [.critic, .validator])
