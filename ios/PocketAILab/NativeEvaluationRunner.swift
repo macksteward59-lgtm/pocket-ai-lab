@@ -100,8 +100,8 @@ struct NativeEvaluationRunner: Sendable {
             ? (hasOutput ? .completed : .failed)
             : (hasOutput ? .partial : .failed)
         let providerKind: NativeEvaluationAttempt.ProviderKind =
-            engine is LlamaCppMetalBackend ? .llamaCppMetal : .unverifiedProvider
-        let nativeObserved = providerKind == .llamaCppMetal && status == .completed
+            engine is LlamaCppMetalBackend ? .llamaCppBackend : .unverifiedProvider
+        let nativeObserved = providerKind == .llamaCppBackend && status == .completed
         let draft = NativeEvaluationAttemptDraft(
             id: UUID().uuidString,
             suiteID: evaluationCase.suiteID,
