@@ -1759,3 +1759,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Opened draft PR #139 directly against main: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/139. Initial mainline integration CI run 43770900401 passed; latest exact-head validation for 137a357af4de2154e238666a6da23a18d3a44452 is queued/running (43770922676 and 43770926911). PR #139 is mergeable=true and draft/open.
 - PR #138 remains open/draft as the validated stacked prototype; do not merge it. Once #139 exact-head CI passes, close #138 as superseded by the mainline port and retain #42 only for its separate, not-yet-ported interpretation/review-agent work.
 - The larger PR #42 LLM interpretation/review integration is intentionally not copied because its llama.cpp/Orchestrator patches target older contracts; it must be reimplemented against current main's newer provider/orchestrator interfaces.
+
+
+## 2026-11-15 22:46 UTC — ProofHunt mainline PR exact-head validation passed; stacked prototype retired
+
+- PR #139 current exact head 137a357af4de2154e238666a6da23a18d3a44452 is draft/open/mergeable against main. All exact-head workflows passed: Pocket AI Lab 43770922676 and 43770926911; Cursor collaboration 43770926903; Governance sidecar 43770926883; Consumer prototype 43770926871.
+- PR #139 validation logs: intelligence Vitest 72 files / 650 tests passed; workspace Vitest 28 files / 318 passed / 2 skipped; archive validation included 16 passing tests. Type-check/build and archive launcher checks passed.
+- Closed stacked PR #138 with a supersession comment pointing to #139. It was not merged. This avoids a duplicate PR based on stale PR #42.
+- PR #139 contains the current-mainline minimal bug-bounty policy normalizer/scope evaluator plus ProofHunt ScopeGuard and all related tests/docs/schema. The larger PR #42 interpretation/review-agent integration was intentionally excluded because its provider/orchestrator patches are stale; port it later against current interfaces.
+- SQL migration remains an artifact only: not executed on PostgreSQL, no live RLS role validation, no external signed audit anchor. ScopeGuard still emits plans only; no scanner or exploit adapter.
