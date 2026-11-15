@@ -67,12 +67,6 @@ export { createDirectorTaskRuntime, type DirectorTaskRuntime, type DirectorTaskR
 export { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskHistoryEntry, type DirectorTaskRunnerOptions } from "./director/DirectorTaskRunner";
 
 export {
-  TaskLifecycleCoordinator, InMemoryTaskLifecycleStore, TaskLifecycleError,
-  type TaskLifecycleStore, type TaskDefinition, type TaskStepDefinition,
-  type TaskRecord, type TaskStepRecord, type StepClaim, type StepAttempt,
-  type TaskStatus, type StepStatus
-} from "./autonomy/TaskLifecycleCoordinator";
-export {
   runEastTaskWithLifecycle,
   type EastLifecycleRunOptions, type EastLifecycleRunResult
 } from "./autonomy/EastTaskLifecycleAdapter";
