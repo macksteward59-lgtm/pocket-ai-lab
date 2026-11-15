@@ -48,9 +48,16 @@ jobs:
           uname -m
           echo "xcode_hash=$(xcodebuild -version | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
-      - name: Cache pinned llama.cpp build artifacts
+      - name: Install CMake and Ninja
+        id: build-tools
+        run: |
+          brew install cmake ninja xcodegen
+          tool_versions="$(brew list --versions cmake ninja)"
+          echo "build_tools_hash=$(printf '%s\n%s\n' "$(xcodebuild -version)" "$tool_versions" | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pinned llama.cpp build artifacts
         id: llama-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             runtime/ios/build/cache
@@ -58,12 +65,11 @@ jobs:
             runtime/ios/build/simulator
             runtime/ios/build/ios-device
             runtime/ios/build/macos
-          key: pocket-llama-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.xcode_hash }}-${{ hashFiles('runtime/ios/pin/llama-cpp.json', 'runtime/ios/scripts/build-llama-cpp.sh') }}
-
-      - name: Install CMake and Ninja
-        run: brew install cmake ninja xcodegen
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: pocket-llama-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-tools.outputs.build_tools_hash }}-${{ hashFiles('runtime/ios/pin/llama-cpp.json', 'runtime/ios/scripts/build-llama-cpp.sh') }}
 
       - name: Build pinned llama.cpp for the simulator and macOS
+        id: llama-build
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
           if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
@@ -83,6 +89,19 @@ jobs:
           find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
+
+      - name: Save verified pinned llama.cpp build cache
+        if: always() && steps.llama-cache.outputs.cache-hit != 'true' && steps.llama-build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: ${{ steps.llama-cache.outputs.cache-primary-key }}
 
       - name: Typecheck the unlinked fail-closed branch
         run: |
