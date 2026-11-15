@@ -22,7 +22,19 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         XCTAssertEqual(restored.count, 1)
         XCTAssertEqual(restored[0].id, "task-1")
         XCTAssertEqual(restored[0].status, .completed)
-        XCTAssertEqual(restored[0].roleResults, [role])
+        XCTAssertEqual(restored[0].roleResults.count, 1)
+        let restoredRole = try XCTUnwrap(restored[0].roleResults.first)
+        XCTAssertEqual(restoredRole.id, role.id)
+        XCTAssertEqual(restoredRole.role, role.role)
+        XCTAssertEqual(restoredRole.sequence, role.sequence)
+        XCTAssertEqual(restoredRole.text, role.text)
+        // JSONEncoder's ISO-8601 strategy persists whole seconds. Compare
+        // within that documented precision instead of Equatable Date equality.
+        XCTAssertEqual(
+            restoredRole.createdAt.timeIntervalSince1970,
+            role.createdAt.timeIntervalSince1970,
+            accuracy: 1.0
+        )
         XCTAssertEqual(restored[0].finalResponse, "Review complete")
         XCTAssertNil(restored[0].failureSummary)
     }
@@ -147,7 +159,17 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         let recovered = try store.load().first
 
         XCTAssertEqual(recovered?.status, .interrupted)
-        XCTAssertEqual(recovered?.roleResults, [role])
+        XCTAssertEqual(recovered?.roleResults.count, 1)
+        let recoveredRole = try XCTUnwrap(recovered?.roleResults.first)
+        XCTAssertEqual(recoveredRole.id, role.id)
+        XCTAssertEqual(recoveredRole.role, role.role)
+        XCTAssertEqual(recoveredRole.sequence, role.sequence)
+        XCTAssertEqual(recoveredRole.text, role.text)
+        XCTAssertEqual(
+            recoveredRole.createdAt.timeIntervalSince1970,
+            role.createdAt.timeIntervalSince1970,
+            accuracy: 1.0
+        )
         XCTAssertTrue(recovered?.failureSummary?.contains("not resumed") == true)
     }
 }
