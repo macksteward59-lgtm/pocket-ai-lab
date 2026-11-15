@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AuditLedger } from "../security/AuditLedger";
 import { normalizeProgramPolicy } from "../bug-bounty";
-import { hashNormalizedProgramPolicy } from "../security/proofhunt";
+import { hashAssessmentPolicy, hashNormalizedProgramPolicy } from "../security/proofhunt";
 import {
   ScopeGuard,
   normalizeTargetHostname,
@@ -31,6 +31,14 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     rateLimit: { requestsPerSecond: 1 },
     testingWindow: { startsAt: "2026-11-01T00:00:00Z", endsAt: "2027-01-01T00:00:00Z", timezone: "UTC" }
   }, new Date("2026-11-15T12:00:00Z"));
+  const assessmentPolicy = {
+    version: "policy-1",
+    preapproved: true,
+    allowedChecks: ["static_analysis", "api_spec_review", "configuration_review", "dependency_review", "security_metadata_review"],
+    maxRequestsPerSecond: 1,
+    maxConcurrentJobs: 1,
+    stopOnScopeViolation: true as const
+  };
   return {
     projectId: "proofhunt-demo",
     environment: "bounty",
@@ -53,6 +61,7 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
       recordId: "OPS-1",
       programAuthorizationId: "PROGRAM-1",
       policyVersion: "policy-1",
+      policyHash: hashAssessmentPolicy(assessmentPolicy),
       status: "approved",
       approvedBy: "human-reviewer",
       approvalReference: "approval://proofhunt-demo/1",
@@ -62,14 +71,7 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     },
     targets: [{ hostname: "app.example.com" }, { hostname: "api.example.com" }],
     excludedTargets: [{ hostname: "admin.example.com" }],
-    policy: {
-      version: "policy-1",
-      preapproved: true,
-      allowedChecks: ["static_analysis", "api_spec_review", "configuration_review", "dependency_review", "security_metadata_review"],
-      maxRequestsPerSecond: 1,
-      maxConcurrentJobs: 1,
-      stopOnScopeViolation: true
-    },
+    policy: assessmentPolicy,
     ...overrides
   };
 }
@@ -345,6 +347,17 @@ describe("ProofHunt ScopeGuard", () => {
     expect(globalResult.reason).toContain("Emergency stop");
     expect(projectResult.permitted).toBe(false);
     expect(projectResult.reason).toContain("Emergency stop");
+  });
+
+  it("denies policy mutation even when the policy version string is unchanged", async () => {
+    const base = makeConfig();
+    const config = makeConfig({
+      policy: { ...base.policy, allowedChecks: ["static_analysis"] }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("policy digest");
   });
 
 });
