@@ -158,6 +158,9 @@ export class ScopeGuard {
             hashNormalizedProgramPolicy(scopePolicy) !== program.scopePolicyHash) {
           throw new ScopeGuardError("Published bounty scope snapshot is missing, mismatched, incomplete, or has changed");
         }
+        if (hasMatchingPathScopedRule(scopePolicy, hostname)) {
+          throw new ScopeGuardError("Target has URL path-scoped program rules; this host-only ScopeGuard cannot safely resolve path scope");
+        }
         const programScope = evaluateTargetScope(scopePolicy, `https://${hostname}/`);
         if (programScope.disposition !== "in-scope") {
           throw new ScopeGuardError("Target is not explicitly in the verified published program scope: " + programScope.reason);
@@ -317,6 +320,16 @@ function matchesAny(hostname: string, entries: readonly ExplicitTarget[]): boole
   return entries.some(entry => {
     const candidate = normalizeTargetHostname(entry.hostname);
     return hostname === candidate || (entry.includeSubdomains === true && hostname.endsWith("." + candidate));
+  });
+}
+
+function hasMatchingPathScopedRule(policy: NormalizedProgramPolicy, hostname: string): boolean {
+  return [...policy.inScope, ...policy.outOfScope].some(rule => {
+    if (rule.kind !== "url") return false;
+    const url = new URL(rule.value);
+    if (url.pathname === "/") return false;
+    const scopedHost = url.hostname.toLowerCase().replace(/\\.$/, "");
+    return hostname === scopedHost || (rule.includeSubdomains && hostname.endsWith("." + scopedHost));
   });
 }
 
