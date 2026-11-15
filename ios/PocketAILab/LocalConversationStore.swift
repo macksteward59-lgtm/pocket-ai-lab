@@ -56,16 +56,28 @@ struct LocalConversationStore {
         guard data.count <= Self.maximumArchiveBytes else {
             throw CocoaError(.fileWriteOutOfSpace)
         }
-        try fileManager.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+        let directory = fileURL.deletingLastPathComponent()
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        #if os(iOS)
+        try fileManager.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            ofItemAtPath: directory.path
         )
+        var directoryValues = URLResourceValues()
+        directoryValues.isExcludedFromBackup = true
+        var protectedDirectory = directory
+        try protectedDirectory.setResourceValues(directoryValues)
+        #endif
         try data.write(to: fileURL, options: .atomic)
         #if os(iOS)
         try fileManager.setAttributes(
             [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
             ofItemAtPath: fileURL.path
         )
+        var fileValues = URLResourceValues()
+        fileValues.isExcludedFromBackup = true
+        var protectedFile = fileURL
+        try protectedFile.setResourceValues(fileValues)
         #endif
     }
 
