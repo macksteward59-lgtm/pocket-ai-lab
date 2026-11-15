@@ -190,6 +190,19 @@ INSERT INTO proofhunt.assessment_jobs (
   'approved_plan', 'Approved non-destructive plan', 'planned', CURRENT_TIMESTAMP
 );
 
+DO $$
+DECLARE event_count INTEGER; first_event_type TEXT; first_sequence BIGINT;
+BEGIN
+  SELECT count(*), min(event_type), min(event_sequence)
+    INTO event_count, first_event_type, first_sequence
+  FROM proofhunt.assessment_events
+  WHERE job_id = '00000000-0000-0000-0000-000000000005';
+  IF event_count <> 1 OR first_event_type <> 'job_planned' OR first_sequence <> 0 THEN
+    RAISE EXCEPTION 'assessment job creation event missing or malformed';
+  END IF;
+END;
+$$;
+
 -- The policy allows one concurrent job; a second otherwise-valid plan is denied.
 DO $$
 BEGIN
@@ -219,6 +232,19 @@ $$;
 -- Job lifecycle may advance, but its authorization basis cannot be rewritten.
 UPDATE proofhunt.assessment_jobs SET job_status = 'queued'
 WHERE job_id = '00000000-0000-0000-0000-000000000005';
+
+DO $$
+DECLARE event_count INTEGER; last_sequence BIGINT; has_status_event BOOLEAN;
+BEGIN
+  SELECT count(*), max(event_sequence), bool_or(event_type = 'job_status_changed')
+    INTO event_count, last_sequence, has_status_event
+  FROM proofhunt.assessment_events
+  WHERE job_id = '00000000-0000-0000-0000-000000000005';
+  IF event_count <> 2 OR last_sequence <> 1 OR NOT has_status_event THEN
+    RAISE EXCEPTION 'assessment job status event missing or malformed';
+  END IF;
+END;
+$$;
 
 DO $$
 BEGIN
