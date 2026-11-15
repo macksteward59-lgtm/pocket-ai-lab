@@ -405,7 +405,6 @@ final class LocalChatModel: ObservableObject {
                 return
             }
 
-            var roleResults: [AgentTaskRoleResult] = []
             for message in result.messages {
                 guard case .object(let payload) = message.payload,
                       case .string(let output)? = payload["text"] else { continue }
