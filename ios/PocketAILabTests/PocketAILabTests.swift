@@ -93,6 +93,31 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testUnreadableArtifactDoesNotOrphanExistingModelLease() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        try await model.importModel(from: source)
+
+        await model.loadModel()
+        XCTAssertTrue(model.isModelLoaded)
+
+        try FileManager.default.removeItem(at: try XCTUnwrap(model.modelURL))
+        await model.loadModel()
+
+        XCTAssertTrue(model.isModelLoaded, "A preflight read error must not discard the active ModelPool lease.")
+        XCTAssertTrue(model.status.contains("Model load failed closed"))
+
+        await model.unloadModel()
+        XCTAssertFalse(model.isModelLoaded, "The retained lease must remain releasable.")
+        let unloaded = await engine.unloadedSessionIDs()
+        XCTAssertEqual(unloaded, ["fingerprint-session"])
+    }
+
+    @MainActor
     func testNativeSessionUsesContentAddressedModelId() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
