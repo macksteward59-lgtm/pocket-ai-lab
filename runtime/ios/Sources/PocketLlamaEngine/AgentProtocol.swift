@@ -99,7 +99,6 @@ public struct AgentMessageEnvelope: Codable, Sendable, Equatable {
         self.createdAt = createdAt
         self.sequence = sequence
     }
-}
 
     /// Returns the human-readable text field defined by this message type's
     /// shared wire schema. The returned text remains untrusted proposal data.
