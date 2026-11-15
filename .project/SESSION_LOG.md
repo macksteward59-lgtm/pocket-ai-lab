@@ -105,3 +105,11 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - Added `testOutputLimitFailureKeepsUsePinUntilCancellationDrainCompletes` to verify response-size rejection waits for engine drain before releasing the scheduler permit and ModelPool pin.
 - Latest #110 head `b865b519084e0287f8680e7610bdc69b852fdaf1`; exact-head CI must be refreshed. Do not infer native XCTest success from companion workflows.
 - No physical iPhone validation; runtime trust remains Unverified. APEX/Director and East/e3 remain authorization authorities; model outputs remain untrusted.
+
+## 2026-11-15 17:40 UTC — Conservative chat budget and Agent Team isolation
+
+- Tightened LocalChatModel's rolling transcript cap to 1,500 UTF-8 bytes; updated app tests and architecture docs. This is a conservative byte ceiling, not a tokenizer-derived count or guarantee.
+- Added app XCTest ensuring Agent Team task text and role messages are excluded from ordinary chat context.
+- Updated PR #110 description to current head `50b5adcd306c1079b5df137e7801894aae796a61`, current lease-bound runtime contract, bounded chat design, test coverage, and explicit no-merge/no-device-test limitations.
+- Exact-head iOS run `43742353789` is in progress at Show Xcode. Cursor plugin CI `43742353765` succeeded; Pocket AI Lab `43742353758`, Governance sidecar `43742353764`, and Consumer prototype `43742353766` remain in progress.
+- No native XCTest result for latest #110 head yet; no physical iPhone validation.
