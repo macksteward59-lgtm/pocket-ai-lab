@@ -15,6 +15,12 @@ struct RuntimeStatusView: View {
                     LabeledContent("Pinned tag", value: probe.pinTag.isEmpty ? "Unavailable" : probe.pinTag)
                     LabeledContent("Device", value: probe.metalDeviceDescription.isEmpty ? "Not detected" : probe.metalDeviceDescription)
                 }
+                Section("Runtime trust") {
+                    Label(RuntimeTrustPresentation.stateLabel, systemImage: "exclamationmark.shield")
+                        .foregroundStyle(.orange)
+                    Text(RuntimeTrustPresentation.detail)
+                    Text("Inference availability and runtime trust are separate. Local inference may remain available while trust is unverified, especially during first use without a network connection.")
+                }
                 Section("APEX / East trust boundary") {
                     Text("Inference produces untrusted text only. It cannot authorize actions, alter approvals, mint receipts, or bypass Director/East governance.")
                 }

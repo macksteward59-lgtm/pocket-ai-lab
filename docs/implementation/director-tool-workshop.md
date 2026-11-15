@@ -127,3 +127,14 @@ Run each task with at least three seeds against (a) a human-only reference workf
 - Tool build specifications are copied before asynchronous builder/hash work. The digest and saved artifact use the same immutable snapshot.
 - Only one artifact version is marked active. Activating a newer version deactivates the previous version and clears the registry's installation-availability flag so the host must re-install or re-verify the new adapter. Retirement locates the actual active version even if a newer unactivated candidate exists.
 - Artifact status updates are persisted before registry changes. If a multi-record write fails, prior artifact records are restored; if registry mutation fails, persisted records are rolled back. Durable host stores should provide transactional writes where available and must surface rollback failures.
+
+### Filesystem adapter hardening
+
+The current adapter implementation also:
+- Shares per-root/per-tool write locks across store instances in the same process.
+- Rejects symlinked version-record files rather than silently treating a hidden version as absent.
+- Checks existing record permissions are owner-only on POSIX systems.
+- Bounds version count, specialist allowlists, source bytes, and test-summary findings.
+- Verifies the canonical SHA-256 digest when reading, not only when writing.
+
+These controls do not defend against a hostile process with write access to the private app-data root, nor do they provide cross-process locking or encryption at rest. The host must keep the root private and use a single process writer or a transactional database when multiple processes may write.
