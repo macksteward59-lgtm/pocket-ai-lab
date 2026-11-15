@@ -148,7 +148,8 @@ final class NativeEvaluationTests: XCTestCase {
                 id: "invalid-review", attemptID: attempt.id, evaluatorRole: .critic,
                 evaluatorAgentID: "critic", evaluatorModelID: "reviewer-model",
                 evaluatorRuntimeSessionID: attempt.runtimeSessionID, rubricVersion: "rubric-1",
-                score: 1, passed: true, rationale: "Same session must be rejected.", assessedAt: Date()
+                score: 1, categoryScores: NativeEvaluationCategory.allCases.map { NativeEvaluationCategoryScore(category: $0, score: 1) },
+                passed: true, rationale: "Same session must be rejected.", assessedAt: Date()
             ))
             XCTFail("same-session review must not count as independent")
         } catch NativeEvaluationJournalError.assessmentMustUseSeparateRuntimeSession {
