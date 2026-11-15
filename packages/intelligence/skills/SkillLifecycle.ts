@@ -124,6 +124,9 @@ const STATUS_TRANSITIONS: Record<SkillLifecycleStatus, readonly SkillLifecycleSt
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const VERSION = /^\d+\.\d+\.\d+$/;
+// Runtime-private capability: callers cannot mint an accepted promotion token
+// merely by constructing a structurally compatible TypeScript object.
+const verifiedPromotionTokens = new WeakSet<object>();
 
 function stableValue(value: unknown): unknown {
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
@@ -263,17 +266,19 @@ export async function authorizeSkillPromotion(
   if (!evaluationVerified) return denied("Independent evaluation evidence was not verified");
   if (!approvalVerified) return denied("Human approval was not verified");
 
+  const authorization: SkillPromotionAuthorization = {
+    skillId: artifact.skill.id,
+    version: artifact.version,
+    artifactDigest: artifact.digest,
+    evaluationDigest: evaluation.digest,
+    assignmentDigest,
+    verifiedAt: new Date().toISOString()
+  };
+  verifiedPromotionTokens.add(authorization);
   return {
     authorized: true,
     reason: "Exact skill artifact, evaluation, assignments, and human approval were verified",
-    authorization: {
-      skillId: artifact.skill.id,
-      version: artifact.version,
-      artifactDigest: artifact.digest,
-      evaluationDigest: evaluation.digest,
-      assignmentDigest,
-      verifiedAt: new Date().toISOString()
-    }
+    authorization
   };
 }
 
@@ -294,7 +299,7 @@ export function transitionSkillLifecycle(
     throw new Error("Invalid skill lifecycle transition: " + current + " -> " + next);
   }
   if (next === "approved" || next === "active") {
-    if (!promotion || !expected ||
+    if (!promotion || !verifiedPromotionTokens.has(promotion) || !expected ||
         promotion.skillId !== expected.skillId ||
         promotion.version !== expected.version ||
         promotion.artifactDigest !== expected.artifactDigest ||
