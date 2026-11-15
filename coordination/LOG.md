@@ -1489,3 +1489,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `00ab74432f8cec43e3e75740682effe3971ff88c`: Pocket AI Lab CI `43755355147`, Consumer `43755355073`, Cursor `43755355106`, and Governance `43755355124` passed. iOS LlamaEngine CI `43755355089` is queued.
 - PR #129 exact head `0aff85769120625d5ae0a5cd55354c49b897ee75`: iOS LlamaEngine CI `43753665375` is actively building pinned llama.cpp for simulator/macOS; cache restore completed but cache-hit/miss is not yet available.
 - PR #84 exact head has all five workflows passed. PRs #86, #123, and #124 remain in simulator XCTest. PR #132's TypeScript build and intelligence test suite passed.
+
+
+## 2026-11-15 — East persistence test-count evidence
+
+- Inspected the completed Pocket AI Lab CI job `132932632204` for PR #132 run `43753562797`.
+- `vitest run packages/intelligence/__tests__`: 74 test files passed, 616 tests passed. New `postgres-task-lifecycle-store.test.ts`: 7 tests passed.
+- Additional workspace Vitest suite: 28 test files passed, 318 tests passed, 2 skipped. Other Node test segments in the same workflow also reported zero failures.
+- This is CI against the injected fake transactional SQL adapter. It is not evidence of a live PostgreSQL server, migration execution, RLS, encryption, or production deployment.
