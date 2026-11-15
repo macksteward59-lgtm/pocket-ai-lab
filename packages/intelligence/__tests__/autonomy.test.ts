@@ -80,21 +80,30 @@ describe("TaskLifecycleCoordinator", () => {
   it("enforces bounded concurrency and serializes concurrent claims", async () => {
     const h = harness({ maxConcurrentSteps: 2 });
     await h.coordinator.init();
-    await h.create();
-    const claims = await Promise.all([
-      h.coordinator.claimNextStep("task-1"),
-      h.coordinator.claimNextStep("task-1")
-    ]);
-    expect(claims.filter(Boolean)).toHaveLength(1); // only one step is initially dependency-ready
-    const first = claims[0]!;
-    await h.coordinator.completeStep({
-      taskId: "task-1", stepId: first.stepId, attemptId: first.attemptId, result: "done"
+    await h.coordinator.createTask({
+      id: "parallel", objective: "Run independent checks",
+      maxConcurrentSteps: 2,
+      steps: [
+        { id: "lint", description: "Run lint" },
+        { id: "unit", description: "Run unit tests" },
+        { id: "report", description: "Combine results", dependsOn: ["lint", "unit"] }
+      ]
     });
-    const parallel = await Promise.all([
-      h.coordinator.claimNextStep("task-1"),
-      h.coordinator.claimNextStep("task-1")
+    const claims = await Promise.all([
+      h.coordinator.claimNextStep("parallel"),
+      h.coordinator.claimNextStep("parallel")
     ]);
-    expect(parallel.filter(Boolean)).toHaveLength(1);
+    expect(claims.filter(Boolean)).toHaveLength(2);
+    expect(new Set(claims.map(claim => claim?.stepId))).toEqual(new Set(["lint", "unit"]));
+    expect(await h.coordinator.claimNextStep("parallel")).toBeNull();
+    const [lint, unit] = claims as NonNullable<(typeof claims)[number]>[];
+    await h.coordinator.completeStep({
+      taskId: "parallel", stepId: lint.stepId, attemptId: lint.attemptId, result: "lint clean"
+    });
+    await h.coordinator.completeStep({
+      taskId: "parallel", stepId: unit.stepId, attemptId: unit.attemptId, result: "tests pass"
+    });
+    expect((await h.coordinator.claimNextStep("parallel"))?.stepId).toBe("report");
   });
 
   it("retries only retryable failures within the configured attempt budget", async () => {
