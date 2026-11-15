@@ -202,6 +202,9 @@ describe("ProofHunt ScopeGuard", () => {
   it("rejects malformed target identifiers and never matches suffix lookalikes", async () => {
     expect(() => normalizeTargetHostname("*.example.com")).toThrow();
     expect(() => normalizeTargetHostname("https://app.example.com:8443")).toThrow();
+    expect(() => normalizeTargetHostname("https://app.example.com:443")).toThrow();
+    expect(() => normalizeTargetHostname("app.example.com:443")).toThrow();
+    expect(() => normalizeTargetHostname("http://app.example.com:80")).toThrow();
     expect(() => normalizeTargetHostname("https://app.example.com/private")).toThrow();
     const { guard } = makeGuard();
     expect((await guard.authorizeAssessment(makeConfig(), "notexample.com", "static_analysis")).permitted).toBe(false);
