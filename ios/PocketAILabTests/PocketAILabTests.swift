@@ -284,7 +284,7 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(roleMessages.count, 6)
         XCTAssertTrue(roleMessages[0].role.contains("reasoner"))
         XCTAssertTrue(roleMessages[5].role.contains("validator"))
-        XCTAssertTrue(model.status.contains("six sequential logical roles"))
+        XCTAssertTrue(model.status.contains("6 sequential logical roles"))
         XCTAssertTrue(model.isModelLoaded, "Agent Team must retain the shared model lease.")
     }
 
