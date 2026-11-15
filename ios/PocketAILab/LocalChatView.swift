@@ -36,9 +36,10 @@ final class LocalChatModel: ObservableObject {
     ) {
         self.conversationStore = conversationStore
         self.agentTaskHistoryStore = agentTaskHistoryStore
-        self.modelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let resolvedModelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
-        self.modelCatalogStore = modelCatalogStore ?? LocalModelCatalogStore(modelDirectory: self.modelDirectory)
+        self.modelDirectory = resolvedModelDirectory
+        self.modelCatalogStore = modelCatalogStore ?? LocalModelCatalogStore(modelDirectory: resolvedModelDirectory)
         do {
             let configuration = try ModelPoolConfiguration(
                 maxResidentMemoryMB: 4_096,
