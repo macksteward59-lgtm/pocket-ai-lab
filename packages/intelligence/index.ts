@@ -73,7 +73,7 @@ export type {
 } from "./bug-bounty/interpretation";
 
 export {
-  ScopeGuard, ScopeGuardError, normalizeTargetHostname, hashNormalizedProgramPolicy,
+  ScopeGuard, ScopeGuardError, normalizeTargetHostname, hashNormalizedProgramPolicy, hashAssessmentPolicy,
   PROOFHUNT_SAFE_CHECKS
 } from "./security/proofhunt";
 export type {
