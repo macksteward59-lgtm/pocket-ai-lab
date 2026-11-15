@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress` — shared native inference composition and content-addressed artifact integrity are implemented on separate current-mainline drafts. #104 is now a validated predecessor. #107's corrected importer fixture is under fresh iOS CI. #109 is the mainline aggregate and is under its first complete native iOS CI run, including a newly added lease-retention regression test.
+`in_progress` — #110 is the current consolidated native runtime/UI integration candidate. #104 is a validated predecessor. #107 and #109 remain separate drafts with native iOS CI still running. #110 has new lease-boundary hardening committed and companion workflows pass; its fresh iOS CI is still building pinned llama.cpp.
 
 ## Objective
 
@@ -25,8 +25,12 @@ Complete the shared native inference composition root and bind every native mode
 - [x] Retarget #109 aggregate to main so the complete dependency chain can receive iOS CI.
 - [x] Preserve active ModelPool lease handles when artifact preflight reads fail; retain the exact acquired lease if release unexpectedly fails.
 - [x] Add regression test for an unreadable artifact after a successful load and verify the retained lease remains unloadable.
+- [x] Require exact active ModelPool leases for public native generation; reject stale and foreign leases.
+- [x] Pin in-flight generation use so lease release cannot permit premature native unload.
+- [x] Add regression tests for released/foreign leases and release-during-generation.
 - [ ] Complete fresh iOS LlamaEngine CI and inspect XCTest logs on #107 latest head.
-- [ ] Complete aggregate iOS LlamaEngine CI and all companion workflows on #109 latest head.
+- [ ] Complete aggregate iOS LlamaEngine CI and inspect XCTest logs on #109 latest head.
+- [ ] Complete new #110 iOS LlamaEngine CI on commit `5887883e40fe3298cec87653ab05ac235ba8b10f` and inspect app/simulator/macOS XCTest.
 - [ ] Review the final combined diff and resolve any concrete CI/review findings.
 - [ ] Physical iPhone validation of memory, thermal, battery, Metal, and inference behavior.
 - [ ] Keep PRs draft; do not merge.
@@ -39,7 +43,7 @@ Complete the shared native inference composition root and bind every native mode
 - #107 previous iOS run `43731298841` failed two expected-value assertions; corrected head run `43740561987` was in progress compiling pinned llama.cpp at last check.
 - PR #109: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/109
 - #109 head: `a6de5e5387a0f6745c61ba509678fae3811d0cf6`; branch `codex/ios-content-addressed-model-integrity-mainline`; base main; 41 ahead / 0 behind; 15 files changed.
-- #109 iOS run `43740720673` was pending at last check; Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar workflows were in progress.
+- #109 iOS run `43740720673` remains in progress building pinned llama.cpp.
 - PR #104: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/104
 - #104 head: `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4`; base main; 29 ahead / 10 behind. iOS LlamaEngine run `43731823992` succeeded, including app XCTest, simulator XCTest, pinned smoke GGUF, and macOS XCTest.
 - PR #106/#99 remain open drafts and are not the active top-level integration branch.
@@ -73,25 +77,27 @@ Complete the shared native inference composition root and bind every native mode
 - iOS run `43731823992` completed successfully through app XCTest, simulator XCTest, pinned smoke GGUF download, and macOS XCTest.
 - Keep #104 as a validated predecessor, not the preferred integration base.
 
-## PR #110 — full native UI integration
+## PR #110 — consolidated native runtime/UI integration
 
-- Branch: `codex/ios-agent-team-workspace-mainline`; base main; head `c2e15444395d4536081a0e52cdb83e6b4afb5710`; 49 ahead / 0 behind; 18 files changed.
+- Branch: `codex/ios-agent-team-workspace-mainline`; base main; current head `5887883e40fe3298cec87653ab05ac235ba8b10f`; 18 files changed; open draft.
 - Draft PR: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/110
-- This branch is based on the #109 mainline aggregate and carries forward:
-  - #84 Workspace restore/navigation improvements, URL allowlist, credential rejection, and explicit reload request identity.
-  - #85 native Chat/Agent Team mode and six logical roles, now routed through the shared ModelPool lease and InferenceScheduler.
-  - #85 bounded coordinator limits: objective 4,000 UTF-8 bytes; 16 capabilities; 1–8 unique roles; 64-byte role IDs; 1,000-byte instructions; 12,000-byte prompts; last four prior outputs truncated to 1,200 bytes; 8,000-byte output cap; 512 tokens per role.
-  - #107/#109 shared runtime, staged 24-byte GGUF guard, content-addressed SHA-256 identity, and lease-retention fix.
-- Added native XCTest coverage for workspace URL/restore/reload behavior, six-role shared-runtime flow, bounded tasks/plans/context/responses, and artifact lease retention.
-- Updated README and coordinator architecture docs.
-- CI on this exact head:
-  - Pocket AI Lab: `43741079416` — succeeded (syntax, type-check/build, test suite).
-  - Consumer prototype: `43741079393` — succeeded.
-  - Cursor collaboration plugin: `43741079479` — succeeded.
-  - Governance sidecar: `43741079363` — succeeded.
-  - iOS LlamaEngine: `43741079412` — still building pinned llama.cpp for simulator/macOS; app build and XCTest have not started.
-- No native XCTest result is available yet. Do not treat the branch as fully validated until iOS app, simulator, and macOS test steps complete.
-
+- Carries #107/#109 shared runtime and content identity, #84 Workspace navigation/URL policy, and #85 bounded six-role Agent Team UI through the shared runtime.
+- Coordinator limits: 4k-byte objective, up to 16 capabilities, 1–8 unique roles, 64-byte IDs, 1k-byte instructions, 12k-byte prompts, last four prior outputs truncated to 1.2k bytes, 8k-byte response cap, 512 tokens per role.
+- Lease-boundary hardening commit: `5887883e40fe3298cec87653ab05ac235ba8b10f`.
+  - Public `NativeInferenceRuntime.generate` now requires a `ModelPoolLease`, not a bare `RuntimeSession`.
+  - ModelPool creates an exact in-flight use pin before scheduler admission and holds it through stream completion or cancellation drain.
+  - Releasing a lease during generation cannot make its session unloadable until the use pin ends; unload and idle eviction reject/skip active uses.
+  - Stale and foreign leases are rejected. The raw engine is internal, and direct-engine coordinator construction is internal for package tests.
+  - App chat and Agent Team production paths pass the exact lease.
+  - Added regression tests for released leases, foreign leases, and release during an active generation.
+- Exact-head companion CI on commit `5887883e40fe3298cec87653ab05ac235ba8b10f`:
+  - Pocket AI Lab `43741621091` — success.
+  - Consumer prototype `43741621024` — success.
+  - Cursor collaboration plugin `43741621050` — success.
+  - Governance sidecar `43741621040` — success.
+  - iOS LlamaEngine `43741621034` — in progress building pinned llama.cpp for simulator/macOS; app build and XCTest are pending.
+- Previous iOS run `43741079412` was cancelled after the new commit moved the branch head. No XCTest result is yet available for the lease-boundary change.
+- No submitted reviews or inline review threads returned for #110 at last check.
 ### Older dependency-chain reconciliation
 
 - #84: 7 ahead / 10 behind current main, open non-draft; historical iOS run `43653686561` and four companion workflows succeeded. Workspace improvements are carried forward; older importer superseded.
@@ -111,4 +117,4 @@ Complete the shared native inference composition root and bind every native mode
 
 ## Next action
 
-Refresh runs `43740561987` (#107), `43740720673` (#109), and `43741079412` (#110), inspect XCTest logs and all workflow conclusions, and fix only concrete failures. Then inspect the combined #110 diff and review threads. Do not merge. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.
+Refresh runs `43740561987` (#107), `43740720673` (#109), and `43741621034` (#110), inspect XCTest logs and all workflow conclusions, and fix only concrete failures. Then inspect the combined #110 diff and review threads. Do not merge. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.

@@ -72,3 +72,23 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - PR #107 iOS run `43740561987` and PR #109 aggregate iOS run `43740720673` are also still on the pinned llama.cpp build step.
 - PR #110 has no submitted reviews or inline review threads at last check.
 - Refreshed the continuity state/work record to reflect companion CI successes and remaining native CI gate.
+
+## 2026-11-15 — Lease-bound native generation hardening
+
+- Refreshed live repository state: main remains `818799eced634577c8f1760fa2bdd1f657bd8427`; no merge or main-branch write.
+- Confirmed PR #104 iOS run `43731823992` completed successfully: native app XCTest, iOS Simulator XCTest, pinned smoke GGUF, and macOS XCTest all passed. This validates the predecessor branch only; it does not validate later #110 changes or physical iPhone behavior.
+- Refreshed PR #110 and inspected its changed-file list, native inference composition, ModelPool, coordinator, LocalChatModel, Workspace, tests, and iOS CI workflow.
+- Found a resource-ownership gap: public runtime generation accepted a bare `RuntimeSession`, the raw engine was publicly exposed, and direct-engine coordinator construction remained public. Callers could bypass exact active lease ownership and attempt generation after release.
+- Implemented commit `5887883e40fe3298cec87653ab05ac235ba8b10f` on PR #110 branch `codex/ios-agent-team-workspace-mainline`:
+  - public generation now requires an exact active `ModelPoolLease`;
+  - ModelPool tracks exact in-flight use pins and blocks unload/idle eviction until generation and cancellation drain finish;
+  - stale/foreign leases are rejected;
+  - raw engine exposure is internal and direct-engine coordinator initialization is internal;
+  - app chat and runtime-backed Agent Team use the lease API;
+  - regression tests cover released leases, foreign leases, and release while generation is active.
+- PR #110 remains open/draft and targets main. No review submissions or inline review threads returned at last check.
+- Exact-head companion workflows on #110 commit `5887883e40fe3298cec87653ab05ac235ba8b10f` passed: Pocket AI Lab `43741621091`, Consumer prototype `43741621024`, Cursor collaboration plugin `43741621050`, and Governance sidecar `43741621040`.
+- Exact-head iOS LlamaEngine run `43741621034` is in progress building pinned llama.cpp for simulator/macOS. Native app build and XCTest have not started. Previous #110 iOS run `43741079412` was cancelled after the branch head changed; this is expected branch concurrency behavior.
+- PR #107 iOS run `43740561987` advanced to native app XCTest; simulator/macOS XCTest remain pending. PR #109 iOS run `43740720673` remains in the pinned llama.cpp build step.
+- No physical iPhone validation. Hosted device-slice linking is compile/link validation only. Runtime trust remains Unverified; APEX/Director and East/e3 authorization boundaries remain unchanged.
+- Next: refresh #107/#109/#110 iOS runs; inspect app, simulator, and macOS XCTest outcomes; fix only concrete failures; update the #110 architecture doc to describe lease-use pins; then address multi-turn native chat context and persistence as separate gated work. Keep all PRs draft and do not merge.

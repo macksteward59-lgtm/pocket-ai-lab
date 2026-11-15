@@ -1,6 +1,6 @@
 # Pocket AI Lab — live project state
 
-> Last refreshed: 2026-11-15. This is a checkpoint, not a substitute for refreshing GitHub. Always verify live branch, PR, and CI state before acting.
+> Last refreshed: 2026-11-15 17:33 UTC. This is a checkpoint, not a substitute for refreshing GitHub. Always verify live branch, PR, and CI state before acting.
 
 ## Project identity
 
@@ -22,7 +22,7 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Latest head: `ed32fecef579dfd53c0263c3e73f00d95cc1af32`
 - Base: `main`; compare: 31 ahead / 0 behind; open draft, mergeable.
 - Previous iOS run `43731298841` built the device framework and app, then failed two importer assertions because the expected fixture remained 14 bytes while the minimum valid GGUF header is 24 bytes.
-- Commit `ed32fecef579dfd53c0263c3e73f00d95cc1af32` fixes both stale expected values. Fresh iOS run `43740561987` is in progress; it was still building pinned llama.cpp at last check. Four companion workflows are either passed or still running; refresh before reporting final results.
+- Commit `ed32fecef579dfd53c0263c3e73f00d95cc1af32` fixes both stale expected values. Fresh iOS run `43740561987` remains in progress and has advanced to native app XCTest; simulator/macOS XCTest are still pending. Four companion workflows are either passed or still running; refresh before reporting final results.
 - No PR reviews or inline review threads were returned at last check.
 
 ### Mainline aggregate: content-addressed artifact integrity + shared runtime
@@ -35,20 +35,25 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Includes streaming SHA-256, content-addressed model IDs, pre/post-load fingerprint verification, and exact lease/session cleanup when file mutation is detected.
 - Additional review found a lease-lifecycle bug: a failed file fingerprint read during reload could clear the only UI lease handle while ModelPool still retained the lease. Fixed by retaining the exact lease on preflight errors and when exact release unexpectedly fails. Added regression test `testUnreadableArtifactDoesNotOrphanExistingModelLease`.
 - Fix commit: `613a1c4426babfe335f0d8d699be6ecd2f466417`; regression-test commit: `a6de5e5387a0f6745c61ba509678fae3811d0cf6`.
-- Aggregate iOS LlamaEngine CI run `43740720673` was pending at last check; Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar workflows were in progress. Do not treat any as passed until refreshed.
+- Aggregate iOS LlamaEngine CI run `43740720673` remains in progress building pinned llama.cpp; do not treat it as passed until refreshed.
 - No PR reviews were returned at last check.
 
 #### Full mobile UI integration candidate
 
 - PR #110: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/110
 - Branch: `codex/ios-agent-team-workspace-mainline`
-- Head: `c2e15444395d4536081a0e52cdb83e6b4afb5710`; base main; 49 ahead / 0 behind; 18 files changed; open draft and mergeable.
-- Carries #107/#109 shared runtime + content-addressed artifact integrity, plus #84 Workspace navigation lifecycle and #85 bounded six-role Agent Team UI wired through the shared runtime.
-- Native Agent Team coordinator now enforces UTF-8 byte limits, 1–8 unique roles, 4k objective, 12k prompt, 1.2k prior-output truncation, 8k output cap, and 512 tokens/role.
-- Workspace allows HTTPS and HTTP loopback only, rejects embedded credentials and non-web schemes, restores once, and reloads only on explicit Open.
-- CI on this exact head: Pocket AI Lab `43741079416`, Consumer prototype `43741079393`, Cursor collaboration plugin `43741079479`, and Governance sidecar `43741079363` all succeeded. iOS LlamaEngine `43741079412` remains in progress building pinned llama.cpp for simulator/macOS; app build and XCTest have not started. No native XCTest pass is claimed.
-- No review submissions or threads checked for #110 yet.
-
+- Latest head: `5887883e40fe3298cec87653ab05ac235ba8b10f`; base `main`; open draft and mergeable.
+- Carries the shared runtime, ModelPool/Scheduler, content-addressed GGUF integrity, bounded six-role Agent Team, and secure Workspace navigation integration.
+- New hardening commit `5887883e40fe3298cec87653ab05ac235ba8b10f` requires an exact active ModelPool lease for public generation, adds an in-flight use pin that prevents unload through stream completion/cancellation drain, rejects stale/foreign leases, hides the raw engine from the public composition-root API, and makes the direct-engine coordinator initializer internal.
+- Added regression tests for released leases, cross-pool leases, and releasing a lease while generation remains in flight. Existing runtime/app paths now pass the lease instead of a bare RuntimeSession.
+- CI on the new exact head:
+  - Pocket AI Lab CI `43741621091` — success.
+  - Consumer prototype CI `43741621024` — success.
+  - Cursor collaboration plugin CI `43741621050` — success.
+  - Governance sidecar CI `43741621040` — success.
+  - iOS LlamaEngine CI `43741621034` — in progress, currently building pinned llama.cpp for simulator/macOS; app build and XCTest have not started.
+- Previous iOS run `43741079412` was cancelled by branch concurrency after the new commit superseded its head. No native XCTest pass is claimed for #110.
+- No submitted PR reviews or inline review threads were returned at last check.
 ### Older dependency-chain reconciliation
 
 - PR #84: 7 ahead / 10 behind current main, open non-draft; historical iOS run `43653686561` and all four companion workflows succeeded. Workspace lifecycle and URL-policy work carried to #110; importer superseded.
@@ -75,7 +80,7 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 ## Global status
 
 - Repository continuity system: PR #108 open/draft, branch `codex/project-continuity-system`; not merged.
-- PRs #104, #107, #109, and #110 remain open drafts; #84 is open non-draft and #85/#86/#88 remain open drafts. No merge to main is authorized.
+- PRs #104, #107, #109, and #110 remain open drafts; #84 is open non-draft and #85/#86/#88 remain open drafts. #110 is the current consolidated native UI/runtime integration candidate. No merge to main is authorized.
 - Repository visibility and permissions remain unchanged.
 - No physical-device test is claimed. Hosted device-slice linking and simulator tests do not prove behavior on the user's iPhone.
 - Current active task selection must be re-evaluated against the requested task and live GitHub state on every resume.
