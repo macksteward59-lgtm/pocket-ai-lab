@@ -1244,3 +1244,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Refreshed PR #94 head `fd150213d9289b5c91d284497a61449d276c9f87`: four workflows completed successfully (Pocket AI Lab CI #1241, Governance Sidecar CI #262, Consumer Prototype CI #367, Cursor Collaboration CI #302).
 - The earlier log entry stating no workflow runs were returned was accurate at its timestamp but is superseded by these later successful runs. The lifecycle kernel still lacks production persistence and host integration.
+
+
+## 2026-11-15 — User direction confirmed; East lifecycle bridge added
+
+- **User decisions:** completion priority is the complete ecosystem (no reduced-scope shortcut); local model selection is Automatic; user participation is testing/real-world feedback rather than routine coding.
+- **Roadmap:** PR #95 updated to encode Automatic model selection, runtime-proven readiness, explicit cloud fallback, user testing role, and the latest East lifecycle bridge status. PR #95 remains draft and unmerged; its latest CI result was not yet returned by the workflow query.
+- **Engineering:** PR #94 adds `packages/intelligence/autonomy/EastTaskLifecycleAdapter.ts`, exported from the intelligence package, plus `east-task-lifecycle-adapter.test.ts`. It sequences six permanent East agents, deliberation, and the read-only evidence-gate result through the task lifecycle. It deliberately returns `authorized: false` and uses one attempt for inference-bearing steps to avoid ambiguous replay.
+- **Limitations:** the adapter is an integration seam, not a production scheduler. East task state remains in-memory; lifecycle persistence is injected; no cross-process transactional store, cancellation propagation, or actual APEX authorization is added. No authorization contract was invented.
+- **CI:** latest PR #94 head `19e38bf10caa1fced102aa09aa91d558b195df67`: Governance Sidecar and Cursor collaboration workflows succeeded; Pocket AI Lab CI and Consumer prototype CI were still running. No full green status claimed.
+- **Safety:** feature branches/draft PRs only; no merge, main changes, permissions/settings changes, device installation, secrets, or live-target testing.
