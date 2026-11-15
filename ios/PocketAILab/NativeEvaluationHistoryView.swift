@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NativeEvaluationHistoryView: View {
     let events: [NativeEvaluationJournalEvent]
+    let selectedModelID: String?
     @Environment(\.dismiss) private var dismiss
 
     private var attempts: [NativeEvaluationAttempt] {
@@ -9,7 +10,12 @@ struct NativeEvaluationHistoryView: View {
     }
 
     private var summary: NativeEvaluationScoreSummary {
-        NativeEvaluationScoreSummary(attempts: attempts)
+        let current = attempts.filter {
+            $0.modelID == selectedModelID &&
+            $0.suiteID == NativeEvaluationSuite.id &&
+            $0.suiteVersion == NativeEvaluationSuite.version
+        }
+        return NativeEvaluationScoreSummary(attempts: current)
     }
 
     var body: some View {
