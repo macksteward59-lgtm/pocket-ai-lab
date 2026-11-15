@@ -10,7 +10,7 @@ import {
   type TaskLifecycleSqlTransaction
 } from "../autonomy/PostgresTaskLifecycleStore";
 
-interface FakeRow {
+interface FakeRow extends Record<string, unknown> {
   schema_version: number;
   record_version: number;
   payload: unknown;
