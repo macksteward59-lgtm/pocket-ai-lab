@@ -32,6 +32,7 @@ Preapproval means the workflow can run the exact checks listed in the signed pol
 - Both program and operational records expire independently.
 - A policy-version mismatch, revoked/pending record, failed verifier, unknown check, or failed audit write denies the plan.
 - stopOnScopeViolation is mandatory and cannot be disabled.
+- A required host-supplied emergency-stop provider is checked for both global and per-project stop state before a plan is emitted. A stop denies new plans; active-job cancellation, queued-job cancellation, and worker credential revocation remain mandatory responsibilities of a future scheduler/adapter control plane.
 
 ## Assessment types in this implementation
 
@@ -116,6 +117,6 @@ A scanner alert is not automatically a vulnerability. Confidence must be tied to
 
 ## Current implementation and limitations
 
-The ScopeGuard module checks independent program and operational authorization verifiers, the hash-bound normalized bounty scope snapshot (using the existing bug-bounty ScopeEvaluator), expiry, policy version, exact targets, exclusions, approved check names, rate/concurrency bounds, and mandatory stop-on-scope-violation. It emits an approved plan with executionPerformed=false. Audit persistence failure changes an otherwise approved result to denied.
+The ScopeGuard module checks global and per-project emergency stops, independent program and operational authorization verifiers, the hash-bound normalized bounty scope snapshot (using the existing bug-bounty ScopeEvaluator), expiry, policy version, exact targets, exclusions, the human-reviewed program check allowlist, approved check names, rate/concurrency bounds, and mandatory stop-on-scope-violation. It emits an approved plan with executionPerformed=false. Audit persistence failure changes an otherwise approved result to denied.
 
 This is an authorization foundation, not a scanner. It does not claim real-world authorization unless the trusted host supplies verifiers backed by authoritative evidence and APEX/Director. No live network assessment or exploit functionality is present.
