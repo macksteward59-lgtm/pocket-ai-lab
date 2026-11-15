@@ -36,7 +36,7 @@ struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let maxTokens: Int
 
     enum Status: String, Codable { case completed, partial, failed }
-    enum ProviderKind: String, Codable { case llamaCppMetal, unverifiedProvider }
+    enum ProviderKind: String, Codable { case llamaCppBackend, unverifiedProvider }
 }
 
 struct NativeEvaluationAttemptDraft {
@@ -213,7 +213,7 @@ actor NativeEvaluationJournal {
         try verifyDiskState()
         let nextSequence = lastSequence + 1
         let eventID = UUID().uuidString
-        let hash = try Self.hash(sequence: nextSequence, previousHash: lastHash, payload: payload)
+        let hash = try Self.hash(sequence: nextSequence, eventID: eventID, previousHash: lastHash, payload: payload)
         let event = NativeEvaluationJournalEvent(
             id: eventID, sequence: nextSequence, previousHash: lastHash,
             eventHash: hash, payload: payload
@@ -255,7 +255,7 @@ actor NativeEvaluationJournal {
             } catch {
                 throw NativeEvaluationJournalError.corruptJournal("Record \(offset + 1) cannot be decoded.")
             }
-            let expected = try hash(sequence: offset + 1, previousHash: previous, payload: event.payload)
+            let expected = try hash(sequence: offset + 1, eventID: event.id, previousHash: previous, payload: event.payload)
             guard event.sequence == offset + 1, event.previousHash == previous, event.eventHash == expected else {
                 throw NativeEvaluationJournalError.corruptJournal("Hash-chain verification failed at record \(offset + 1).")
             }
@@ -265,9 +265,9 @@ actor NativeEvaluationJournal {
         return verified
     }
 
-    private static func hash(sequence: Int, previousHash: String, payload: NativeEvaluationJournalPayload) throws -> String {
+    private static func hash(sequence: Int, eventID: String, previousHash: String, payload: NativeEvaluationJournalPayload) throws -> String {
         let payloadData = try encoder().encode(payload)
-        var material = Data("\(sequence)\n\(previousHash)\n".utf8)
+        var material = Data("\(sequence)\n\(eventID)\n\(previousHash)\n".utf8)
         material.append(payloadData)
         return SHA256.hash(data: material).map { String(format: "%02x", $0) }.joined()
     }
