@@ -260,6 +260,7 @@ public actor LlamaCppMetalBackend: LlamaEngine {
                 do {
                     let text = try await self.generateText(sessionId: session.id, request: request)
                     guard await self.isCurrent(session.id, token) else {
+                        await self.finishGeneration(sessionId: session.id, token: token)
                         continuation.finish(throwing: LlamaEngineError.cancelled)
                         return
                     }
