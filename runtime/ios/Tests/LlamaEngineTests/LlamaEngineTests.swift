@@ -1,4 +1,5 @@
 import XCTest
+import CryptoKit
 @testable import PocketLlamaEngine
 
 final class LlamaEngineTests: XCTestCase {
@@ -146,6 +147,83 @@ final class LlamaEngineTests: XCTestCase {
             XCTFail("generate used an unloaded session")
         } catch LlamaEngineError.sessionNotLoaded {
         }
+    }
+
+    func testPinnedGgufSmokeGenerationThroughNativeInferenceRuntime() async throws {
+        guard let path = SmokePath.path else {
+            throw XCTSkip("No smoke GGUF path is configured for this run.")
+        }
+        guard FileManager.default.isReadableFile(atPath: path) else {
+            if SmokePath.required {
+                XCTFail("Smoke GGUF is not readable at \(path)")
+            }
+            throw XCTSkip("Smoke GGUF is not readable in this process.")
+        }
+
+        let modelURL = URL(fileURLWithPath: path)
+        let digest = try Self.sha256(fileAt: modelURL)
+        let model = ModelDescriptor(
+            id: "sha256-\(digest)",
+            name: "Pinned smoke GGUF",
+            path: modelURL.path,
+            contextLength: 512,
+            quantization: "pinned-ci-smoke"
+        )
+        let probe = LlamaCppMetalBackend.probe()
+        let engine = LlamaCppMetalBackend(requireMetal: probe.metalDeviceUsable)
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 2_048,
+                maxLoadedModels: 1,
+                minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 4_096 },
+            maxConcurrentRequests: 1
+        )
+        let lease = try await runtime.acquire(model: model, estimatedMemoryMB: 512)
+
+        do {
+            let result = try await runtime.generateForEvaluation(
+                lease: lease,
+                request: GenerationRequest(
+                    prompt: "The capital of France is",
+                    maxTokens: 8,
+                    temperature: 0
+                )
+            )
+            XCTAssertEqual(runtime.providerKind, .llamaCpp)
+            XCTAssertEqual(result.status, .completed)
+            XCTAssertNil(result.errorMessage)
+            XCTAssertFalse(result.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertEqual(try Self.sha256(fileAt: modelURL), digest, "The pinned model bytes changed during evaluation.")
+
+            let afterGeneration = await runtime.snapshot()
+            XCTAssertEqual(afterGeneration.activeLeaseCount, 1)
+            XCTAssertEqual(afterGeneration.activeUseCount, 0)
+            let released = await runtime.release(lease)
+            XCTAssertTrue(released, "The exact evaluation lease must be releasable.")
+            try await runtime.unload(modelId: model.id)
+
+            let afterUnload = await runtime.snapshot()
+            XCTAssertTrue(afterUnload.loadedModelIDs.isEmpty)
+            XCTAssertEqual(afterUnload.reservedMemoryMB, 0)
+            print("POCKET_LLAMA_EVALUATION_SMOKE provider=\(runtime.providerKind.rawValue) chars=\(result.output.count) model_sha256=\(digest) lease_released=\(released) unloaded=true metalUsable=\(probe.metalDeviceUsable)")
+        } catch {
+            _ = await runtime.release(lease)
+            try? await runtime.unload(modelId: model.id)
+            throw error
+        }
+    }
+
+    private static func sha256(fileAt url: URL) throws -> String {
+        var hasher = SHA256()
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     func testLoopbackHostAndURLRules() throws {
