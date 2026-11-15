@@ -118,6 +118,51 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testChatCarriesBoundedPriorTurnsIntoNextGeneration() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        await model.send("What is a model lease?")
+        await model.send("Why does it matter during cancellation?")
+
+        let prompts = await engine.recordedPrompts()
+        XCTAssertEqual(prompts.count, 2)
+        XCTAssertTrue(prompts[0].contains("You: What is a model lease?"))
+        XCTAssertTrue(prompts[1].contains("You: What is a model lease?"))
+        XCTAssertTrue(prompts[1].contains("Pocket AI: test"))
+        XCTAssertTrue(prompts[1].contains("You: Why does it matter during cancellation?"))
+        XCTAssertLessThanOrEqual(prompts[1].utf8.count, 6_000)
+        XCTAssertTrue(model.isModelLoaded)
+        await model.unloadModel()
+    }
+
+    @MainActor
+    func testChatPromptIsBoundedForOversizedCurrentMessage() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        await model.send(String(repeating: "x", count: 9_000))
+
+        let prompts = await engine.recordedPrompts()
+        XCTAssertEqual(prompts.count, 1)
+        XCTAssertLessThanOrEqual(prompts[0].utf8.count, 6_000)
+        XCTAssertTrue(prompts[0].contains("Pocket AI:"))
+        await model.unloadModel()
+    }
+
+    @MainActor
     func testDefaultAgentTeamRunsSixLogicalRolesThroughSharedLease() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -236,6 +281,7 @@ private actor FingerprintTestEngine: LlamaEngine {
     private var identifiers: [String] = []
     private var unloaded: [String] = []
     private var loads = 0
+    private var prompts: [String] = []
     private var mutateOnLoad: Bool
 
     init(mutateOnLoad: Bool = false) {
@@ -254,7 +300,8 @@ private actor FingerprintTestEngine: LlamaEngine {
     }
 
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
-        AsyncThrowingStream { continuation in
+        prompts.append(request.prompt)
+        return AsyncThrowingStream { continuation in
             continuation.yield(Token(text: "test", isComplete: true))
             continuation.finish()
         }
@@ -266,4 +313,5 @@ private actor FingerprintTestEngine: LlamaEngine {
     func loadedModelIDs() -> [String] { identifiers }
     func unloadedSessionIDs() -> [String] { unloaded }
     func loadCount() -> Int { loads }
+    func recordedPrompts() -> [String] { prompts }
 }
