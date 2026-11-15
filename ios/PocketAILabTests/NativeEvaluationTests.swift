@@ -17,7 +17,8 @@ final class NativeEvaluationTests: XCTestCase {
         NativeEvaluationCase(
             suiteID: "core-capabilities", suiteVersion: "1.0.0",
             caseID: caseID, prompt: "What is 6 multiplied by 7?",
-            maxTokens: 64, temperature: 0
+            evaluationCriteria: "Compute accurately and return the numeric result.",
+            expectedOutcome: "42", maxTokens: 64, temperature: 0
         )
     }
 
@@ -125,13 +126,15 @@ final class NativeEvaluationTests: XCTestCase {
             id: "critic-1", attemptID: attempt.id, evaluatorRole: .critic,
             evaluatorAgentID: "critic", evaluatorModelID: "reviewer-model",
             evaluatorRuntimeSessionID: "critic-session", rubricVersion: "rubric-1",
-            score: 0.9, passed: true, rationale: "The result is correct.", assessedAt: Date()
+            score: 0.9, categoryScores: NativeEvaluationCategory.allCases.map { NativeEvaluationCategoryScore(category: $0, score: 0.9) },
+            passed: true, rationale: "The result is correct.", assessedAt: Date()
         )
         let validator = NativeEvaluationAssessment(
             id: "validator-1", attemptID: attempt.id, evaluatorRole: .validator,
             evaluatorAgentID: "validator", evaluatorModelID: "reviewer-model",
             evaluatorRuntimeSessionID: "validator-session", rubricVersion: "rubric-1",
-            score: 0.85, passed: true, rationale: "Independent verification agrees.", assessedAt: Date()
+            score: 0.85, categoryScores: NativeEvaluationCategory.allCases.map { NativeEvaluationCategoryScore(category: $0, score: 0.85) },
+            passed: true, rationale: "Independent verification agrees.", assessedAt: Date()
         )
         try await journal.appendAssessment(critic)
         try await journal.appendAssessment(validator)
