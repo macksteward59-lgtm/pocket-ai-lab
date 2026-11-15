@@ -872,7 +872,7 @@ struct LocalChatView: View {
                 } catch { importError = error.localizedDescription }
             }
             .sheet(isPresented: $showEvaluationHistory) {
-                NativeEvaluationHistoryView(events: model.evaluationEvents)
+                NativeEvaluationHistoryView(events: model.evaluationEvents, selectedModelID: model.selectedModelID)
             }
             .task { await model.loadEvaluationHistory() }
             .alert("Import failed", isPresented: Binding(get: { importError != nil },
