@@ -36,7 +36,11 @@ A runtime proof binds:
 - monotonically increasing generation counter;
 - key ID and Ed25519 signature.
 
-A proof is only a claim until a separately injected verifier authenticates it against the expected model ID and file hash. Missing verifier, invalid signature, mismatched model/hash, malformed fields, verifier errors, or expired proof all fail closed. This change defines the verifier interface only; it does not invent a device key, signing implementation, attestation service, or verified runtime state.
+A proof is only a claim until a separately injected verifier authenticates it against the expected model ID and file hash. The native `Ed25519RuntimeProofVerifier` verifies signatures using a host-provisioned public-key registry, requires the key's runtime-build allowlist to contain the claimed build, and rejects unknown or duplicate key IDs, malformed/expired proofs, model/hash substitution, invalid signatures, and non-increasing generation counters for a session. The proof cannot add or rotate trust keys.
+
+TypeScript and Swift share a canonical signing representation: ten UTF-8 fields in a fixed order, each prefixed by a 4-byte unsigned big-endian byte length. Paired tests pin the same Base64 fixture. Replay state is delegated to an injected `RuntimeProofReplayStore`; the iOS `KeychainRuntimeProofReplayStore` persists accepted key IDs and generation counters using device-only Keychain accessibility.
+
+This is a verifier and replay-store primitive, not a production trust deployment. The app does not yet provision trusted public keys, a production runtime signer or key-rotation service does not exist, and the verifier is not wired into the app composition root. The replay store requires one process-wide writer; its read/compare/update sequence is not a cross-process compare-and-swap. Until those integration gates are complete, runtime trust remains Unverified.
 
 ## Readiness states
 

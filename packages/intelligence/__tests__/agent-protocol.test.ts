@@ -3,6 +3,7 @@ import {
   AgentMessageEnvelopeSchema,
   AgentTaskRequestSchema,
   RuntimeSessionProofSchema,
+  canonicalRuntimeSessionProofPayload,
   evaluateRuntimeReadiness
 } from "../contracts/AgentProtocol";
 
@@ -15,7 +16,7 @@ const proof = {
   expiresAt: "2030-01-01T00:00:00.000Z",
   generationCounter: 1,
   keyId: "device-runtime-key-1",
-  signature: "base64-signature",
+  signature: Buffer.alloc(64).toString("base64"),
   algorithm: "Ed25519" as const
 };
 
@@ -47,9 +48,35 @@ describe("cross-runtime agent protocol", () => {
     }).success).toBe(true);
   });
 
+  it("encodes runtime proof fields into the stable Swift-compatible signing bytes", () => {
+    const encoded = Buffer.from(canonicalRuntimeSessionProofPayload(proof)).toString("base64");
+    expect(encoded).toBe("AAAAInBvY2tldC1haS1ydW50aW1lLXNlc3Npb24tcHJvb2YtdjEAAAABMQAAAAlzZXNzaW9uLTEAAAAKcXdlbi1sb2NhbAAAAEBhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhAAAAEWlvcy1sbGFtYS0yMDI2LjExAAAAGDIwMzAtMDEtMDFUMDA6MDA6MDAuMDAwWgAAAAExAAAAFGRldmljZS1ydW50aW1lLWtleS0xAAAAB0VkMjU1MTk=");
+    expect(canonicalRuntimeSessionProofPayload({ ...proof, generationCounter: 2 }))
+      .not.toEqual(canonicalRuntimeSessionProofPayload(proof));
+    expect(canonicalRuntimeSessionProofPayload({ ...proof, modelFileSHA256: proof.modelFileSHA256.toUpperCase() }))
+      .toEqual(canonicalRuntimeSessionProofPayload(proof));
+  });
+
   it("requires a complete Ed25519 runtime proof shape", () => {
     expect(RuntimeSessionProofSchema.safeParse(proof).success).toBe(true);
     expect(RuntimeSessionProofSchema.safeParse({ ...proof, modelFileSHA256: "not-a-hash" }).success).toBe(false);
+  });
+
+  it("bounds runtime proof identifiers and requires a canonical 64-byte signature", () => {
+    for (const candidate of [
+      { ...proof, sessionId: "s".repeat(257) },
+      { ...proof, modelId: "m".repeat(257) },
+      { ...proof, runtimeBuildId: "b".repeat(129) },
+      { ...proof, expiresAt: "2".repeat(65) },
+      { ...proof, keyId: "k".repeat(129) },
+      { ...proof, signature: "A".repeat(87) }
+    ]) {
+      expect(RuntimeSessionProofSchema.safeParse(candidate).success).toBe(false);
+    }
+    expect(RuntimeSessionProofSchema.safeParse(proof).success).toBe(true);
+    expect(() => canonicalRuntimeSessionProofPayload({
+      ...proof, sessionId: "s".repeat(257)
+    })).toThrow(/protocol limit/);
   });
 
   it("does not report ready without a successful independent verifier", async () => {
