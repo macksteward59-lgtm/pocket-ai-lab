@@ -475,7 +475,31 @@ function canonicalize(value: unknown): string {
 }
 
 function isValidTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value)) && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+  const match = typeof value === "string"
+    ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:?\d{2})$/i.exec(value)
+    : null;
+  if (!match || !Number.isFinite(Date.parse(value))) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const offset = match[8];
+  const offsetDigits = offset.toUpperCase() === "Z" ? null : offset.replace(/:/g, "").slice(1);
+  const offsetHour = offsetDigits ? Number(offsetDigits.slice(0, 2)) : 0;
+  const offsetMinute = offsetDigits ? Number(offsetDigits.slice(2, 4)) : 0;
+  const calendar = new Date(0);
+  calendar.setUTCHours(0, 0, 0, 0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  const validCalendar = month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
+    calendar.getUTCFullYear() === year &&
+    calendar.getUTCMonth() === month - 1 &&
+    calendar.getUTCDate() === day;
+  const validClock = hour <= 23 && minute <= 59 && second <= 59;
+  const validOffset = offsetHour <= 14 && offsetMinute <= 59 &&
+    (offsetHour !== 14 || offsetMinute === 0);
+  return validCalendar && validClock && validOffset;
 }
 
 function isExpired(value: string, now: number): boolean {
