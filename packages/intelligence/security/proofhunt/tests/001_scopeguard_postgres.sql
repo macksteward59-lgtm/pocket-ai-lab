@@ -253,7 +253,7 @@ BEGIN
       '00000000-0000-0000-0000-000000000001',
       '00000000-0000-0000-0000-000000000002',
       '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
-      '00000000-0000-0000-0000-000000000003', 'wrong.example.com', 'wrong.example.com', repeat('a',64),
+      '00000000-0000-0000-0000-000000000003', 'exact.example.net', 'exact.example.net', repeat('a',64),
       'approved_plan', 'Should be denied by composite FK', 'planned', CURRENT_TIMESTAMP
     );
     RAISE EXCEPTION 'expected composite allowlist FK to reject mismatched hostname';
