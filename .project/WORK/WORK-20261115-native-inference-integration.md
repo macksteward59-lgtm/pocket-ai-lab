@@ -129,3 +129,11 @@ Refresh runs `43740561987` (#107), `43740720673` (#109), and `43741621034` (#110
 - XCTest additions cover chat follow-up context, oversized prompt truncation, queued-generation cancellation, and output-limit drain lifetime.
 - Architecture documentation has been updated for lease pinning and bounded chat context.
 - Next: inspect latest-head iOS CI and companion workflows; fix only concrete failures; verify all native app, simulator, and macOS XCTest steps. After native validation, add persistence only with a separate bounded storage and privacy design. Keep PRs draft; do not merge.
+
+## Latest #110 continuation — 2026-11-15 17:40 UTC
+
+- Current #110 head is `50b5adcd306c1079b5df137e7801894aae796a61`; the PR description now reflects lease-bound inference, bounded chat context, tests, and explicit limitations.
+- Chat prompt cap tightened from 6,000 to 1,500 UTF-8 bytes to leave more headroom in the 2,048-token context with a 256-token output budget. It remains a byte heuristic, not exact tokenizer accounting.
+- New tests assert Agent Team task/role messages are not copied into ordinary chat context.
+- Latest exact-head iOS workflow `43742353789` is in progress; XCTest has not started. Companion CI: Cursor passed; other three companion workflows remain in progress.
+- Continue by inspecting the exact-head iOS workflow through native app, simulator, and macOS XCTest; fix concrete failures only. Keep PR draft and do not merge.
