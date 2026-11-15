@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AuditLedger } from "../security/AuditLedger";
 import { normalizeProgramPolicy } from "../bug-bounty";
-import { hashAssessmentPolicy, hashNormalizedProgramPolicy } from "../security/proofhunt";
+import { hashOperationalAuthorizationSnapshot, hashNormalizedProgramPolicy } from "../security/proofhunt";
 import {
   ScopeGuard,
   normalizeTargetHostname,
@@ -39,7 +39,7 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     maxConcurrentJobs: 1,
     stopOnScopeViolation: true as const
   };
-  return {
+  const config: ProofHuntAssessmentConfig = {
     projectId: "proofhunt-demo",
     environment: "bounty",
     programAuthorization: {
@@ -73,6 +73,17 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     excludedTargets: [{ hostname: "admin.example.com" }],
     policy: assessmentPolicy,
     ...overrides
+  };
+  return {
+    ...config,
+    operationalAuthorization: {
+      ...config.operationalAuthorization,
+      policyHash: hashOperationalAuthorizationSnapshot(
+        config.policy,
+        config.targets,
+        config.excludedTargets
+      )
+    }
   };
 }
 
@@ -335,6 +346,41 @@ describe("ProofHunt ScopeGuard", () => {
     expect(result.reason).toContain("testing window");
   });
 
+  it("binds the operational approval to the exact allowlist and exclusions", async () => {
+    const base = makeConfig({
+      environment: "owned",
+      programAuthorization: {
+        ...makeConfig().programAuthorization,
+        kind: "asset_ownership"
+      },
+      targets: [{ hostname: "example.com", includeSubdomains: true }],
+      excludedTargets: [{ hostname: "admin.example.com" }]
+    });
+    const broadenedAllowlist = {
+      ...base,
+      targets: [{ hostname: "attacker.example.net" }]
+    };
+    const removedExclusion = {
+      ...base,
+      excludedTargets: []
+    };
+    const { guard } = makeGuard();
+    const allowlistResult = await guard.authorizeAssessment(
+      broadenedAllowlist,
+      "attacker.example.net",
+      "static_analysis"
+    );
+    const exclusionResult = await guard.authorizeAssessment(
+      removedExclusion,
+      "admin.example.com",
+      "static_analysis"
+    );
+    expect(allowlistResult.permitted).toBe(false);
+    expect(allowlistResult.reason).toContain("complete policy and target-scope snapshot");
+    expect(exclusionResult.permitted).toBe(false);
+    expect(exclusionResult.reason).toContain("complete policy and target-scope snapshot");
+  });
+
   it("denies a bounty scope snapshot after its own expiry even when the authorization record remains valid", async () => {
     const base = makeConfig();
     const scopePolicy = { ...base.programAuthorization.scopePolicy!, expiresAt: "2026-11-15T12:01:00Z" };
@@ -432,10 +478,18 @@ describe("ProofHunt ScopeGuard", () => {
     const config = makeConfig({
       policy: { ...base.policy, allowedChecks: ["static_analysis"] }
     });
+    // Keep the original approval digest to model a policy edit after approval.
+    const tampered = {
+      ...config,
+      operationalAuthorization: {
+        ...config.operationalAuthorization,
+        policyHash: hashOperationalAuthorizationSnapshot(base.policy, base.targets, base.excludedTargets)
+      }
+    };
     const { guard } = makeGuard();
-    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    const result = await guard.authorizeAssessment(tampered, "app.example.com", "static_analysis");
     expect(result.permitted).toBe(false);
-    expect(result.reason).toContain("policy digest");
+    expect(result.reason).toContain("digest");
   });
 
   it("never preapproves a request rate above the published bounty limit", async () => {
