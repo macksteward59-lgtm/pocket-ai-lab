@@ -40,6 +40,8 @@ export interface ProgramAuthorizationRecord {
 
 export interface OperationalAuthorizationRecord {
   readonly recordId: string;
+  readonly projectId: string;
+  readonly environment: ProofHuntEnvironment;
   readonly programAuthorizationId: string;
   readonly policyVersion: string;
   /** SHA-256 of the exact immutable operational policy snapshot. */
@@ -219,6 +221,10 @@ export class ScopeGuard {
       if (operational.status !== "approved") {
         throw new ScopeGuardError("Operational authorization is not approved");
       }
+      if (operational.projectId !== assessmentConfig.projectId ||
+          operational.environment !== assessmentConfig.environment) {
+        throw new ScopeGuardError("Operational authorization is bound to a different project or assessment environment");
+      }
       if (operational.programAuthorizationId !== program.recordId) {
         throw new ScopeGuardError("Operational authorization references a different program authorization");
       }
@@ -226,6 +232,9 @@ export class ScopeGuard {
         throw new ScopeGuardError("Operational authorization policy version does not match the active policy");
       }
       if (operational.policyHash !== hashOperationalAuthorizationSnapshot(
+        assessmentConfig.projectId,
+        assessmentConfig.environment,
+        program.recordId,
         policy,
         assessmentConfig.targets,
         assessmentConfig.excludedTargets
@@ -344,6 +353,9 @@ export function hashNormalizedProgramPolicy(policy: NormalizedProgramPolicy): st
  * allowlist or remove an exclusion without invalidating the signed approval.
  */
 export function hashOperationalAuthorizationSnapshot(
+  projectId: string,
+  environment: ProofHuntEnvironment,
+  programAuthorizationId: string,
   policy: ProofHuntAssessmentPolicy,
   targets: readonly ExplicitTarget[],
   excludedTargets: readonly ExplicitTarget[]
@@ -356,6 +368,9 @@ export function hashOperationalAuthorizationSnapshot(
     .sort((a, b) => (a.hostname < b.hostname ? -1 : a.hostname > b.hostname ? 1 : 0) ||
       Number(a.includeSubdomains) - Number(b.includeSubdomains));
   return createHash("sha256").update(canonicalize({
+    projectId,
+    environment,
+    programAuthorizationId,
     policy,
     targets: normalizeEntries(targets),
     excludedTargets: normalizeEntries(excludedTargets)
