@@ -31,6 +31,7 @@ Test doubles may exercise the runner and journal, but their attempts are labelle
 
 - The journal stores the exact prompt, generated output (including partial output), failure detail, model ID and file hash, runtime session ID, suite/case version, timing, request ID, and retry relationship.
 - A retry appends a new attempt; the original result is never updated or deleted.
+- Five starter-suite cases use deterministic exact/contains checks. The app reports an objective score only for those checks, deduplicating to the latest attempt per case. Coding, collaboration, and security cases remain unscored pending independent Critic/Validator review; they are not silently counted as passes. The immediate recall case is not evidence of durable cross-session memory.
 - Critic and Validator assessments are separate events tied to an existing attempt. A review must use a different runtime session from the subject generation.
 - Challenges append a separate event; they do not rewrite or erase a score.
 - No application API for delete, truncate, overwrite, or automatic retention expiry is provided.
@@ -40,6 +41,6 @@ The hash chain is tamper-evident, not a hardware-backed signature. A privileged 
 
 ## Integration boundary and remaining work
 
-This is the native app's execution and persistence foundation. It is not yet wired to a user-facing evaluation screen or the final ModelPool/catalog session-acquisition path. The caller must supply the active session and the corresponding model file URL. The next integration step is to connect this runner to the catalog-verified, ModelPool-leased session without bypassing memory admission or changing APEX/East trust semantics.
+This is integrated into the native app through a self-test action and a read-only history screen. The runner requires the app's exact active ModelPool lease, calls the shared NativeInferenceRuntime evaluation path under its scheduler permit, and verifies that the lease model ID/path match the catalog content-addressed model file. It does not reach around the ModelPool or call LlamaEngine directly.
 
-Hosted iOS CI can validate compilation and deterministic journal tests. It cannot prove that a physical iPhone has loaded a real GGUF model and completed a native evaluation. That acceptance test must run on the owner's device with a selected local model and retain the resulting journal entry.
+Hosted iOS CI can validate compilation, lease/scheduler behavior, partial-output retention, and deterministic journal tests. It cannot prove that a physical iPhone has loaded a real GGUF model and completed a native evaluation. That acceptance test must run on the owner's device with a selected local model and retain the resulting journal entry.
