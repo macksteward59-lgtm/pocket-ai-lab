@@ -82,4 +82,4 @@ The native chat surface carries a small rolling transcript into each new generat
 - The assembled prompt is capped at 6,000 UTF-8 bytes, including framing. Oldest entries are dropped first; if the newest single entry is oversized, its text is truncated at a Unicode-scalar boundary.
 - The prompt labels the transcript as untrusted context and asks the model to answer the latest user message. This is prompt hygiene, not a security boundary or instruction hierarchy guarantee.
 - This first implementation is in-memory only. It does not persist conversations across app restarts, create long-term agent memory, or share context between different models.
-- The model's configured context length and actual tokenizer behavior may differ from byte counts. Physical-device/model-specific prompt-budget calibration remains future work.
+- The 1,500-byte ceiling is a conservative input bound intended to leave room for the configured 256-token response within the app's 2,048-token context, but byte count is not tokenizer output and cannot guarantee a token budget. Physical-device/model-specific tokenizer calibration remains future work.
