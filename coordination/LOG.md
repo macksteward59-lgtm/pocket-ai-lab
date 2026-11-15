@@ -1530,3 +1530,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Removed the unused substring-match scoring rule; only exact-match cases can be scored automatically. The current suite has four exact-match cases and four explicitly unscored review cases.
 - Current PR #133 head `cdf7db1605e1820e24c6c8ca68b5958953dc1c4c`; 26 commits ahead / 0 behind PR #115 head `4a79dd022a440639af0a3083ef9de3820ae20118`.
 - Current PR #135 head `c11761fe2fab002390178aca6753664dc4e840e1`; non-iOS workflows passed; iOS LlamaEngine run `43756039544` is pending/queued. PR #115 latest iOS run `43755647177` is also queued. The earlier PR #115 app-test compile failure is not counted as a pass; the latest branch has the `@MainActor` helper fix.
+
+## 2026-11-16 UTC — Real-model evaluation-path smoke test requested
+
+- Added review comment `5912649921` on PR #133 requesting a pinned-GGUF smoke test through `NativeInferenceRuntime.generateForEvaluation` with a real ModelPool lease. The existing macOS smoke stage already downloads/verifies the GGUF and writes `SmokePath.swift`; the current smoke test still exercises `LlamaCppMetalBackend.generate` directly, while the new evaluation-specific runtime tests use mocks.
+- Requested assertions: runtime-owned provider is `.llamaCpp`, generation completes with non-empty output, and the ModelPool lease is released/unloaded. This would validate the evaluation runtime path with a real model artifact in CI.
+- At this observation, PR #135 head `c11761fe2fab002390178aca6753664dc4e840e1` had four non-iOS workflows passed/in progress and iOS LlamaEngine CI `43756039544` pending. PR #129 cache warm/build run `43753665375` had restored artifacts, completed pinned llama.cpp simulator/macOS build, saved the cache, and was linking the generic iOS device slice. No cache-hit claim for PR #135 until its own restore step reports one.
