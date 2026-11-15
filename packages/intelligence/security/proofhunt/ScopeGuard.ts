@@ -221,8 +221,12 @@ export class ScopeGuard {
       if (operational.policyVersion !== policy.version) {
         throw new ScopeGuardError("Operational authorization policy version does not match the active policy");
       }
-      if (operational.policyHash !== hashAssessmentPolicy(policy)) {
-        throw new ScopeGuardError("Operational authorization policy digest does not match the active policy snapshot");
+      if (operational.policyHash !== hashOperationalAuthorizationSnapshot(
+        policy,
+        assessmentConfig.targets,
+        assessmentConfig.excludedTargets
+      )) {
+        throw new ScopeGuardError("Operational authorization digest does not match the complete policy and target-scope snapshot");
       }
       if (!operational.approvedBy.trim() || !operational.approvalReference.trim() || !operational.signatureReference.trim()) {
         throw new ScopeGuardError("Operational approval provenance is incomplete");
@@ -324,8 +328,28 @@ export function hashNormalizedProgramPolicy(policy: NormalizedProgramPolicy): st
   return createHash("sha256").update(canonicalize(policy)).digest("hex");
 }
 
-export function hashAssessmentPolicy(policy: ProofHuntAssessmentPolicy): string {
-  return createHash("sha256").update(canonicalize(policy)).digest("hex");
+/**
+ * Binds the approval to every operationally mutable scope control, not just
+ * the check/rate policy. Otherwise a caller could broaden an owned-asset
+ * allowlist or remove an exclusion without invalidating the signed approval.
+ */
+export function hashOperationalAuthorizationSnapshot(
+  policy: ProofHuntAssessmentPolicy,
+  targets: readonly ExplicitTarget[],
+  excludedTargets: readonly ExplicitTarget[]
+): string {
+  const normalizeEntries = (entries: readonly ExplicitTarget[]) => entries
+    .map(entry => ({
+      hostname: normalizeTargetHostname(entry.hostname),
+      includeSubdomains: entry.includeSubdomains === true
+    }))
+    .sort((a, b) => a.hostname.localeCompare(b.hostname) ||
+      Number(a.includeSubdomains) - Number(b.includeSubdomains));
+  return createHash("sha256").update(canonicalize({
+    policy,
+    targets: normalizeEntries(targets),
+    excludedTargets: normalizeEntries(excludedTargets)
+  })).digest("hex");
 }
 
 export function normalizeTargetHostname(value: string): string {
