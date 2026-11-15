@@ -240,6 +240,18 @@ final class NativeEvaluationTests: XCTestCase {
         } catch NativeEvaluationJournalError.assessmentMustUseSeparateRuntimeSession {
         }
 
+        do {
+            try await journal.appendAssessment(NativeEvaluationAssessment(
+                id: "self-review", attemptID: attempt.id, evaluatorRole: .critic,
+                evaluatorAgentID: "critic", evaluatorModelID: attempt.modelID,
+                evaluatorRuntimeSessionID: "different-session", rubricVersion: "rubric-1",
+                score: 1, categoryScores: NativeEvaluationCategory.allCases.map { NativeEvaluationCategoryScore(category: $0, score: 1) },
+                passed: true, rationale: "The subject model cannot independently grade itself.", assessedAt: Date()
+            ))
+            XCTFail("The subject model cannot be its own independent evaluator")
+        } catch NativeEvaluationJournalError.assessmentMustUseDifferentModel {
+        }
+
         let events = try await journal.events()
         XCTAssertEqual(events.map(\.payload.kind), [.attempt, .assessment, .assessment, .challenge])
         XCTAssertEqual(events.compactMap(\.payload.assessment).map(\.evaluatorRole), [.critic, .validator])
