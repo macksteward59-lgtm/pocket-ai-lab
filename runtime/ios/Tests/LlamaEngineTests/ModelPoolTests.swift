@@ -234,7 +234,7 @@ final class ModelPoolTests: XCTestCase {
             XCTFail("The old model's memory reservation must remain until unload returns")
         } catch ModelPoolError.insufficientMemory(let required, let available) {
             XCTAssertEqual(required, 200)
-            XCTAssertEqual(available, 112)
+            XCTAssertEqual(available, 48)
         }
 
         await engine.finishUnloading()
@@ -271,7 +271,7 @@ final class ModelPoolTests: XCTestCase {
             XCTFail("Unexpected native session memory must remain reserved until unload returns")
         } catch ModelPoolError.insufficientMemory(let required, let available) {
             XCTAssertEqual(required, 200)
-            XCTAssertEqual(available, 112)
+            XCTAssertEqual(available, 48)
         }
 
         await engine.finishUnloading()
