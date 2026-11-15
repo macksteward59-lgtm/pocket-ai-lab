@@ -176,6 +176,33 @@ describe("ProofHunt ScopeGuard", () => {
     expect((await operational.guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis")).permitted).toBe(false);
   });
 
+  it("denies reuse of an operational approval in a different project or environment", async () => {
+    const base = makeConfig();
+    const wrongProject = {
+      ...base,
+      projectId: "another-project"
+    };
+    const wrongEnvironment = {
+      ...base,
+      environment: "owned" as const
+    };
+    const { guard } = makeGuard();
+    const projectResult = await guard.authorizeAssessment(
+      wrongProject,
+      "app.example.com",
+      "static_analysis"
+    );
+    const environmentResult = await guard.authorizeAssessment(
+      wrongEnvironment,
+      "app.example.com",
+      "static_analysis"
+    );
+    expect(projectResult.permitted).toBe(false);
+    expect(projectResult.reason).toContain("different project or assessment environment");
+    expect(environmentResult.permitted).toBe(false);
+    expect(environmentResult.reason).toContain("different project or assessment environment");
+  });
+
   it("denies an operational record bound to a different program authorization", async () => {
     const base = makeConfig();
     const config = makeConfig({
