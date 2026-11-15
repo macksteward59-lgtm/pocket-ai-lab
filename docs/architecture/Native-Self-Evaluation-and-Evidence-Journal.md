@@ -9,6 +9,7 @@ The initial iOS implementation adds:
 - `NativeEvaluationRunner`: calls the injected `LlamaEngine.generate(session:request:)` for each case.
 - `NativeEvaluationJournal`: persists every attempt, including failed and partial generations, in the app's Application Support directory.
 - A SHA-256 fingerprint computed from the actual model file and checked immediately before and after generation.
+- Versioned case criteria and expected outcomes retained with each attempt, plus complete Critic/Validator scores across eight capability dimensions: reasoning, factual accuracy, coding, task completion, collaboration, memory retention, security/policy compliance, and runtime efficiency/reliability.
 - A newline-delimited, hash-chained journal. Reordering, editing, or removing an entry is detected during verification; writes fail closed if the on-disk chain changes.
 - Separate append-only records for Critic assessments, Validator assessments, and model/agent challenges.
 - Retry links and monotonically increasing attempt numbers per model fingerprint, suite, and case.
