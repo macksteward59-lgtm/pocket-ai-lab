@@ -496,6 +496,57 @@ CREATE TABLE proofhunt.assessment_events (
     REFERENCES proofhunt.assessment_jobs(project_id, job_id)
 );
 
+CREATE OR REPLACE FUNCTION proofhunt.append_assessment_job_event()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_sequence BIGINT;
+  previous_status TEXT;
+  new_event_type TEXT;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.job_status IS NOT DISTINCT FROM OLD.job_status THEN
+      RETURN NEW;
+    END IF;
+    previous_status := OLD.job_status;
+    new_event_type := 'job_status_changed';
+  ELSE
+    new_event_type := CASE WHEN NEW.decision = 'approved_plan' THEN 'job_planned' ELSE 'job_denied' END;
+  END IF;
+
+  SELECT COALESCE(MAX(event_sequence), -1) + 1
+    INTO next_sequence
+  FROM proofhunt.assessment_events
+  WHERE project_id = NEW.project_id AND job_id = NEW.job_id;
+
+  INSERT INTO proofhunt.assessment_events (
+    event_id, project_id, job_id, event_sequence, event_type, details
+  ) VALUES (
+    gen_random_uuid(), NEW.project_id, NEW.job_id, next_sequence, new_event_type,
+    jsonb_build_object(
+      'decision', NEW.decision,
+      'decisionReason', NEW.decision_reason,
+      'jobStatus', NEW.job_status,
+      'previousJobStatus', previous_status,
+      'targetHostname', NEW.target_hostname,
+      'checkType', NEW.check_type,
+      'programAuthorizationId', NEW.program_authorization_id,
+      'operationalAuthorizationId', NEW.operational_authorization_id,
+      'policyVersion', NEW.policy_version,
+      'policyHash', NEW.policy_hash,
+      'programScopeHash', NEW.program_scope_hash,
+      'executionPerformed', FALSE
+    )
+  );
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER proofhunt_assessment_job_event
+  AFTER INSERT OR UPDATE OF job_status ON proofhunt.assessment_jobs
+  FOR EACH ROW EXECUTE FUNCTION proofhunt.append_assessment_job_event();
+
 CREATE TABLE proofhunt.audit_events (
   event_id UUID PRIMARY KEY,
   project_id TEXT NOT NULL,
