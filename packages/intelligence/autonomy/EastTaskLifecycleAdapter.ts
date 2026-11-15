@@ -10,7 +10,8 @@ import type { EastPlatformRuntime } from "../../../src/east/platform";
 import { EAST_DELIBERATION_AGENTS } from "../../../src/east/platform";
 import {
   TaskLifecycleCoordinator,
-  type TaskRecord
+  type TaskRecord,
+  type TaskStepDefinition
 } from "./TaskLifecycleCoordinator";
 
 export interface EastLifecycleRunOptions {
@@ -35,29 +36,8 @@ export interface EastLifecycleRunResult {
   evidenceGate: ReturnType<EastPlatformRuntime["getTask"]>["evidenceGate"];
 }
 
-/**
- * Runs the six-agent East deliberation as a serial, leased lifecycle.
- * Each consequential provider call is single-attempt: a crash after an
- * inference side effect is not automatically replayed. A failed lease is
- * surfaced for operator review instead of risking duplicate generations.
- */
-export async function runEastTaskWithLifecycle(
-  options: EastLifecycleRunOptions
-): Promise<EastLifecycleRunResult> {
-  const { coordinator, east, eastTaskId, lifecycleTaskId, objective } = options;
-  if (!coordinator || !east || typeof eastTaskId !== "string" || !eastTaskId.trim() ||
-      typeof lifecycleTaskId !== "string" || !lifecycleTaskId.trim() ||
-      typeof objective !== "string" || !objective.trim()) {
-    throw new Error("Coordinator, East runtime, task identifiers, and objective are required");
-  }
-
-  await coordinator.init();
-  const existing = east.getTask(eastTaskId);
-  if (existing.objective !== objective.trim()) {
-    throw new Error("East task objective does not match the lifecycle objective");
-  }
-
-  const steps = [
+function buildSteps(): TaskStepDefinition[] {
+  return [
     { id: "assign-core-agents", description: "Assign the required permanent East deliberation agents" },
     ...EAST_DELIBERATION_AGENTS.map(agentId => ({
       id: "execute-" + agentId,
@@ -78,18 +58,85 @@ export async function runEastTaskWithLifecycle(
       maxAttempts: 1
     }
   ];
+}
 
-  await coordinator.createTask({
-    id: lifecycleTaskId,
-    objective: objective.trim(),
-    steps,
-    maxConcurrentSteps: 1,
-    leaseMs: 900_000,
-    metadata: { eastTaskId, workflow: "east-six-agent-deliberation-v1" }
-  });
+function assertCompatibleLifecycle(task: TaskRecord, objective: string, eastTaskId: string, steps: TaskStepDefinition[]): void {
+  if (task.objective !== objective ||
+      task.metadata.eastTaskId !== eastTaskId ||
+      task.metadata.workflow !== "east-six-agent-deliberation-v1" ||
+      task.steps.length !== steps.length ||
+      task.steps.some((step, index) => {
+        const expected = steps[index];
+        return step.id !== expected.id ||
+          step.description !== expected.description ||
+          step.maxAttempts !== (expected.maxAttempts ?? 2) ||
+          step.dependsOn.length !== (expected.dependsOn ?? []).length ||
+          step.dependsOn.some((dependency, dependencyIndex) => dependency !== expected.dependsOn?.[dependencyIndex]);
+      })) {
+    throw new Error("Existing lifecycle task does not match this East workflow definition");
+  }
+}
 
+/**
+ * Runs or resumes the six-agent East deliberation as a serial, leased lifecycle.
+ * Each inference-bearing provider call is single-attempt. Completed steps are
+ * never repeated on re-entry; the deliberation text is persisted in its step
+ * result so a later invocation can continue without generating it again.
+ */
+export async function runEastTaskWithLifecycle(
+  options: EastLifecycleRunOptions
+): Promise<EastLifecycleRunResult> {
+  const { coordinator, east, eastTaskId, lifecycleTaskId, objective } = options;
+  if (!coordinator || !east || typeof eastTaskId !== "string" || !eastTaskId.trim() ||
+      typeof lifecycleTaskId !== "string" || !lifecycleTaskId.trim() ||
+      typeof objective !== "string" || !objective.trim()) {
+    throw new Error("Coordinator, East runtime, task identifiers, and objective are required");
+  }
+
+  const normalizedObjective = objective.trim();
+  await coordinator.init();
+  const existingEastTask = east.getTask(eastTaskId);
+  if (existingEastTask.objective !== normalizedObjective) {
+    throw new Error("East task objective does not match the lifecycle objective");
+  }
+
+  const steps = buildSteps();
+  let lifecycle: TaskRecord;
+  try {
+    lifecycle = coordinator.getTask(lifecycleTaskId);
+    assertCompatibleLifecycle(lifecycle, normalizedObjective, eastTaskId, steps);
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || (error as { code?: string }).code !== "unknown_task") {
+      throw error;
+    }
+    lifecycle = await coordinator.createTask({
+      id: lifecycleTaskId,
+      objective: normalizedObjective,
+      steps,
+      maxConcurrentSteps: 1,
+      leaseMs: 900_000,
+      metadata: { eastTaskId, workflow: "east-six-agent-deliberation-v1" }
+    });
+  }
+
+  if (lifecycle.status === "failed" || lifecycle.status === "cancelled") {
+    throw new Error("Existing East lifecycle is terminal: " + lifecycle.status);
+  }
+
+  // Recovery only expires stale leases; it never replays an unexpired attempt.
+  await coordinator.recoverExpiredLeases();
+  lifecycle = coordinator.getTask(lifecycleTaskId);
   let synthesis = "";
   let evidenceRefs: string[] = [];
+  const completedDeliberation = lifecycle.steps.find(step => step.id === "deliberate");
+  if (completedDeliberation?.status === "succeeded") {
+    synthesis = completedDeliberation.result ?? "";
+    evidenceRefs = [...completedDeliberation.evidenceRefs];
+    if (!synthesis.trim()) {
+      throw new Error("Stored East deliberation is missing its synthesis; refusing to regenerate it");
+    }
+  }
+
   while (true) {
     const claim = await coordinator.claimNextStep(lifecycleTaskId);
     if (!claim) break;
@@ -106,12 +153,17 @@ export async function runEastTaskWithLifecycle(
         refs = ["east-message:" + messageId];
       } else if (claim.stepId === "deliberate") {
         const deliberation = await east.runDeliberation(eastTaskId);
+        if (typeof deliberation.synthesis !== "string" || !deliberation.synthesis.trim()) {
+          throw new Error("East deliberation returned an empty synthesis");
+        }
         synthesis = deliberation.synthesis;
         evidenceRefs = [...deliberation.evidence];
-        result = "Deliberation completed; synthesis retained as unverified proposal text";
+        // Persist the actual bounded proposal so a resumed adapter does not
+        // repeat an inference side effect merely to reconstruct local state.
+        result = synthesis;
         refs = evidenceRefs;
       } else if (claim.stepId === "record-unverified-proposal") {
-        if (!synthesis) throw new Error("East deliberation returned no synthesis");
+        if (!synthesis.trim()) throw new Error("East deliberation returned no synthesis");
         const accepted = await east.commitTaskEvidence(eastTaskId, synthesis);
         if (accepted !== false) throw new Error("East evidence gate violated its non-authorizing contract");
         const task = east.getTask(eastTaskId);
@@ -139,7 +191,7 @@ export async function runEastTaskWithLifecycle(
     }
   }
 
-  const lifecycle = coordinator.getTask(lifecycleTaskId);
+  lifecycle = coordinator.getTask(lifecycleTaskId);
   const eastResult = east.getTask(eastTaskId);
   if (lifecycle.status !== "completed") {
     throw new Error("East lifecycle did not complete: " + lifecycle.status);
