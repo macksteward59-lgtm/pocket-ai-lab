@@ -83,5 +83,6 @@ private actor RecordingInferenceEngine: LlamaEngine {
     }
 
     func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async {}
 }

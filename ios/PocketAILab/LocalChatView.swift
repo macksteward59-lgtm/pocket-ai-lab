@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketLlamaEngine
+import os
 
 @MainActor
 final class LocalChatModel: ObservableObject {
@@ -11,10 +12,28 @@ final class LocalChatModel: ObservableObject {
     @Published var metalStatus = "Checking Metal runtime…"
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
 
-    private let engine = LlamaCppMetalBackend(requireMetal: true)
-    private var session: RuntimeSession?
+    private let runtime: NativeInferenceRuntime?
+    private var lease: ModelPoolLease?
 
     init() {
+        let engine = LlamaCppMetalBackend(requireMetal: true)
+        do {
+            let configuration = try ModelPoolConfiguration(
+                maxResidentMemoryMB: 4_096,
+                maxLoadedModels: 1,
+                minimumFreeMemoryMB: 512
+            )
+            runtime = try NativeInferenceRuntime(
+                engine: engine,
+                poolConfiguration: configuration,
+                availableMemoryMB: { Int(os_proc_available_memory() / (1_024 * 1_024)) },
+                maxConcurrentRequests: 1
+            )
+        } catch {
+            runtime = nil
+            status = "Native inference runtime configuration failed: \(error.localizedDescription)"
+        }
+
         let probe = LlamaCppMetalBackend.probe()
         metalStatus = probe.linked && probe.metalDeviceUsable
             ? "llama.cpp linked · Metal available · \(probe.metalDeviceDescription)"
@@ -37,39 +56,110 @@ final class LocalChatModel: ObservableObject {
     }
 
     func loadModel() async {
+        guard !isBusy else { return }
         guard let modelURL else { status = "Import a .gguf model first."; return }
+        guard let runtime else { status = "The shared native inference runtime is unavailable. Loading failed closed."; return }
         isBusy = true
         defer { isBusy = false }
         do {
-            if let session { await engine.unload(sessionId: session.id) }
-            let descriptor = ModelDescriptor(id: UUID().uuidString, name: modelName,
-                path: modelURL.path, contextLength: 2048, quantization: "GGUF")
-            session = try await engine.load(model: descriptor)
-            status = RuntimeTrustPresentation.statusMessage(after: "A real llama.cpp model session is loaded.")
+            if let previous = lease {
+                guard await runtime.release(previous) else {
+                    status = "The previous model lease could not be released. The new model was not loaded."
+                    return
+                }
+                lease = nil
+                try await runtime.unload(modelId: previous.model.id)
+            }
+            let estimate = try Self.estimatedMemoryMB(for: modelURL)
+            let descriptor = ModelDescriptor(
+                id: UUID().uuidString,
+                name: modelName,
+                path: modelURL.path,
+                contextLength: 2048,
+                quantization: "GGUF"
+            )
+            lease = try await runtime.acquire(model: descriptor, estimatedMemoryMB: estimate)
+            status = RuntimeTrustPresentation.statusMessage(
+                after: "A real llama.cpp model session is loaded through the shared ModelPool."
+            )
         } catch {
-            session = nil
-            status = "Model load failed: \(error.localizedDescription)"
+            lease = nil
+            status = "Model load failed closed: \(error.localizedDescription)"
+        }
+    }
+
+    func unloadModel() async {
+        guard !isBusy else { return }
+        guard let runtime, let current = lease else { return }
+        isBusy = true
+        defer { isBusy = false }
+        guard await runtime.release(current) else {
+            status = "The model lease was not released; the native session remains protected."
+            return
+        }
+        do {
+            try await runtime.unload(modelId: current.model.id)
+            lease = nil
+            status = "Model unloaded after its lease was released."
+        } catch {
+            lease = nil
+            status = "Model lease released, but native unload did not complete: \(error.localizedDescription)"
         }
     }
 
     func send(_ prompt: String) async {
         let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let session else { status = "Load a model before prompting."; return }
+        guard !isBusy else { return }
+        guard !text.isEmpty, let runtime, let lease else {
+            status = "Load a model before prompting."
+            return
+        }
         isBusy = true
         messages.append(ChatLine(role: "You", text: text))
         defer { isBusy = false }
         do {
-            let stream = try await engine.generate(session: session,
-                request: GenerationRequest(prompt: text, maxTokens: 256, temperature: 0.7))
-            var output = ""
-            for try await token in stream { output += token.text }
+            let output = try await runtime.generate(
+                session: lease.session,
+                request: GenerationRequest(prompt: text, maxTokens: 256, temperature: 0.7),
+                maxOutputBytes: 64_000
+            )
             guard !output.isEmpty else { throw LocalChatError.emptyOutput }
             messages.append(ChatLine(role: "Pocket AI", text: output))
-            status = RuntimeTrustPresentation.statusMessage(after: "Local generation completed.")
+            status = RuntimeTrustPresentation.statusMessage(
+                after: "Local generation completed under the shared inference scheduler."
+            )
         } catch {
             messages.append(ChatLine(role: "Runtime", text: "Generation failed: \(error.localizedDescription)"))
-            status = "Generation failed; no synthetic response was substituted. Runtime trust remains unverified."
+            status = "Generation failed; cancellation was drained before scheduler capacity was released. Runtime trust remains unverified."
         }
+    }
+
+    /// Agent Team uses the same model lease and scheduler as native chat.
+    /// The returned messages remain untrusted proposals, never approvals or evidence.
+    func runAgentTeam(task: AgentTaskRequest, steps: [NativeAgentStep]) async throws -> NativeAgentRunResult {
+        guard !isBusy, let runtime, let lease else { throw LocalChatError.busy }
+        isBusy = true
+        defer { isBusy = false }
+        let coordinator = runtime.makeAgentCoordinator(for: lease)
+        return try await coordinator.run(task: task, steps: steps)
+    }
+
+    private static func estimatedMemoryMB(for url: URL) throws -> Int {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard let number = attributes[.size] as? NSNumber else {
+            throw LocalChatError.memoryEstimateUnavailable
+        }
+        let bytes = number.int64Value
+        guard bytes > 0 else { throw LocalChatError.memoryEstimateUnavailable }
+        let megabyte: Int64 = 1_048_576
+        let roundedMB = bytes / megabyte + (bytes % megabyte == 0 ? 0 : 1)
+        guard roundedMB <= Int64(Int.max - 256) else {
+            throw LocalChatError.memoryEstimateUnavailable
+        }
+        let fileMB = Int(roundedMB)
+        // Admission hint only: file size plus a 25%/256 MB working margin.
+        // It is not measured RSS and must be calibrated on physical devices.
+        return fileMB + max(256, fileMB / 4)
     }
 }
 
@@ -80,11 +170,13 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError {
-    case notGGUF, emptyOutput
+    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
         case .emptyOutput: return "The model returned no text."
+        case .busy: return "Another model operation is already in progress."
+        case .memoryEstimateUnavailable: return "The model file size could not be used for a safe memory admission estimate."
         }
     }
 }
@@ -109,6 +201,9 @@ struct LocalChatView: View {
                         Button("Load model") { Task { await model.loadModel() } }
                             .buttonStyle(.borderedProminent)
                             .disabled(model.modelURL == nil || model.isBusy)
+                        Button("Unload model") { Task { await model.unloadModel() } }
+                            .buttonStyle(.bordered)
+                            .disabled(model.isBusy)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding()
                 List(model.messages) { line in

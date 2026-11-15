@@ -397,6 +397,7 @@ private actor PoolTestEngine: LlamaEngine {
     }
 
     func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async { unloaded.append(sessionId) }
     func loadCallCount() -> Int { calls }
     func unloadedSessionIDs() -> [String] { unloaded }
@@ -421,6 +422,7 @@ private actor BlockingPoolTestEngine: LlamaEngine {
         AsyncThrowingStream { $0.finish() }
     }
     func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async {}
 }
 
@@ -434,6 +436,7 @@ private actor WrongModelPoolTestEngine: LlamaEngine {
         AsyncThrowingStream { $0.finish() }
     }
     func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async { unloaded.append(sessionId) }
     func unloadedSessionIDs() -> [String] { unloaded }
 }
@@ -447,6 +450,7 @@ private actor FixedSessionPoolTestEngine: LlamaEngine {
         AsyncThrowingStream { $0.finish() }
     }
     func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async { unloaded.append(sessionId) }
     func unloadedSessionIDs() -> [String] { unloaded }
 }
@@ -474,6 +478,7 @@ private actor BlockingUnloadPoolTestEngine: LlamaEngine {
     }
 
     func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
 
     func unload(sessionId: String) async {
         unloadingStarted = true
