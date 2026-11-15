@@ -68,6 +68,26 @@ struct LocalAgentTaskHistoryStore {
     }
 
     func load() throws -> [AgentTaskHistoryEntry] {
+        let cutoff = now().addingTimeInterval(-Self.retentionInterval)
+        var changed = false
+        let recovered = try readTasks()
+            .filter { $0.updatedAt >= cutoff }
+            .map { task in
+                var value = task
+                if value.status == .running {
+                    value.status = .interrupted
+                    value.updatedAt = now()
+                    value.failureSummary = "App ended before this task recorded a terminal result. It was not resumed."
+                    changed = true
+                }
+                return value
+            }
+            .sorted { $0.updatedAt > $1.updatedAt }
+        if changed { try write(recovered) }
+        return recovered
+    }
+
+    private func readTasks() throws -> [AgentTaskHistoryEntry] {
         guard fileManager.fileExists(atPath: fileURL.path) else { return [] }
         let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
         guard let size = attributes[.size] as? NSNumber,
@@ -79,19 +99,7 @@ struct LocalAgentTaskHistoryStore {
         decoder.dateDecodingStrategy = .iso8601
         let archive = try decoder.decode(Archive.self, from: Data(contentsOf: fileURL))
         guard archive.version == Self.currentVersion else { throw StoreError.unsupportedVersion }
-        let cutoff = now().addingTimeInterval(-Self.retentionInterval)
         return archive.tasks
-            .filter { $0.updatedAt >= cutoff }
-            .map { task in
-                var recovered = task
-                if recovered.status == .running {
-                    recovered.status = .interrupted
-                    recovered.updatedAt = now()
-                    recovered.failureSummary = "App ended before this task recorded a terminal result. It was not resumed."
-                }
-                return recovered
-            }
-            .sorted { $0.updatedAt > $1.updatedAt }
     }
 
     func begin(id: String, objective: String) throws {
@@ -100,7 +108,7 @@ struct LocalAgentTaskHistoryStore {
               !normalized.isEmpty, normalized.utf8.count <= Self.maximumObjectiveBytes else {
             throw StoreError.invalidTransition
         }
-        var tasks = try load()
+        var tasks = try readTasks()
         guard !tasks.contains(where: { $0.id == id }) else { throw StoreError.duplicateTask }
         let timestamp = now()
         tasks.insert(
@@ -142,7 +150,7 @@ struct LocalAgentTaskHistoryStore {
         finalResponse: String?,
         failureSummary: String?
     ) throws {
-        var tasks = try load()
+        var tasks = try readTasks()
         guard let index = tasks.firstIndex(where: { $0.id == id }) else {
             throw StoreError.taskNotFound
         }
