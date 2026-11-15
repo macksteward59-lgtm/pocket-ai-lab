@@ -1687,3 +1687,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `dbee3be4355b740e5d71deeeb258d9feca0899d2`: same native build/link gates passed; native app XCTest is running. Five companion workflows passed.
 - PR #133 exact head `8700bae3b27b8aad3ca64212770aa3245c137197`: intelligence workflow passed. Verified the added manual-review test aligns with `NativeEvaluationScoreSummary`: nil deterministic score is counted as unscored, not zero; latest attempt is grouped per model/suite/case.
 - Workflow job logs are not yet downloadable from the Actions log endpoint while these jobs are still active (temporary log blob returns 404); no hidden XCTest result is inferred. Simulator XCTest, pinned GGUF smoke, macOS XCTest, physical iPhone execution, and attestation remain unverified.
+
+
+## 2026-11-15 — Native app XCTest stage reached across three validation runs
+
+- A fresh poll confirms PR #115 run `43764211279` has now advanced from app build to native app XCTest. No failed steps are reported.
+- PR #129 run `43764214487` remains at native app XCTest, with all prior native build/link stages successful and no failed steps reported.
+- PR #135 run `43764653370` remains at native app XCTest, with all prior native build/link stages successful and no failed steps reported.
+- Updated the coordination board to reflect PR #115's stage transition. The three Actions runs have not yet reported a completed result; simulator XCTest, pinned GGUF smoke, and macOS XCTest remain downstream and unverified.
