@@ -236,10 +236,7 @@ export async function authorizeSkillPromotion(
     return denied("Skill assignment contains an unknown owner or invalid metadata");
   }
 
-  const assignmentDigest = digest({
-    specialists: [...artifact.skill.specialists].sort(),
-    coreAgents: [...artifact.skill.coreAgents].sort()
-  });
+  const assignmentDigest = skillAssignmentDigest(artifact.skill);
   if (approval.skillId !== artifact.skill.id ||
       approval.version !== artifact.version ||
       approval.artifactDigest !== artifact.digest ||
@@ -251,10 +248,16 @@ export async function authorizeSkillPromotion(
     return denied("Human approval does not bind to the exact artifact, evaluation, and assignments");
   }
 
-  const [evaluationVerified, approvalVerified] = await Promise.all([
-    verifiers.verifyEvaluation(evaluation),
-    verifiers.verifyApproval(approval)
-  ]);
+  let evaluationVerified = false;
+  let approvalVerified = false;
+  try {
+    [evaluationVerified, approvalVerified] = await Promise.all([
+      verifiers.verifyEvaluation(evaluation),
+      verifiers.verifyApproval(approval)
+    ]);
+  } catch {
+    return denied("A required promotion verifier failed");
+  }
   if (!evaluationVerified) return denied("Independent evaluation evidence was not verified");
   if (!approvalVerified) return denied("Human approval was not verified");
 
@@ -272,6 +275,13 @@ export async function authorizeSkillPromotion(
   };
 }
 
+export function skillAssignmentDigest(skill: Pick<Skill, "specialists" | "coreAgents">): string {
+  return digest({
+    specialists: [...skill.specialists].sort(),
+    coreAgents: [...skill.coreAgents].sort()
+  });
+}
+
 export function transitionSkillLifecycle(
   current: SkillLifecycleStatus,
   next: SkillLifecycleStatus,
@@ -280,8 +290,16 @@ export function transitionSkillLifecycle(
   if (!STATUS_TRANSITIONS[current].includes(next)) {
     throw new Error("Invalid skill lifecycle transition: " + current + " -> " + next);
   }
-  if ((next === "approved" || next === "active") && !promotion) {
-    throw new Error("Verified promotion authorization is required");
+  if (next === "approved" || next === "active") {
+    if (!promotion || !expected ||
+        promotion.skillId !== expected.skillId ||
+        promotion.version !== expected.version ||
+        promotion.artifactDigest !== expected.artifactDigest ||
+        !SHA256.test(promotion.evaluationDigest) ||
+        !SHA256.test(promotion.assignmentDigest) ||
+        !validTimestamp(promotion.verifiedAt)) {
+      throw new Error("Verified promotion authorization must match the exact skill version and digest");
+    }
   }
   return next;
 }
@@ -300,7 +318,8 @@ function validateArtifactInput(input: SkillArtifactInput): void {
   }
   const exerciseIds = new Set<string>();
   for (const exercise of input.exercises) {
-    if (!exercise.id.trim() || exerciseIds.has(exercise.id) || !exercise.objective.trim() ||
+    if (!["synthetic", "isolated-lab", "documentation-only"].includes(exercise.environment) ||
+        !exercise.id.trim() || exerciseIds.has(exercise.id) || !exercise.objective.trim() ||
         !exercise.safetyBoundary.trim() || exercise.successCriteria.length === 0 ||
         exercise.successCriteria.some(item => !item.trim()) ||
         exercise.evidenceRequired.some(item => !item.trim())) {
