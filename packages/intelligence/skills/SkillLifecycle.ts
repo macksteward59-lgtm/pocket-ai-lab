@@ -192,6 +192,15 @@ export async function verifySkillEvaluationIntegrity(evaluation: SkillEvaluation
   }
 }
 
+/** Digest the exact rubric stored in the immutable skill artifact. */
+export async function skillRubricDigest(rubric: readonly string[]): Promise<string> {
+  if (!Array.isArray(rubric) || rubric.length === 0 ||
+      rubric.some(item => typeof item !== "string" || !item.trim())) {
+    throw new Error("A non-empty, valid assessment rubric is required");
+  }
+  return digest([...rubric]);
+}
+
 /**
  * Authorizes promotion of a skill artifact only when independent evaluation
  * and authenticated human approval both bind to the exact artifact,
@@ -205,6 +214,9 @@ export async function authorizeSkillPromotion(
 ): Promise<SkillPromotionResult> {
   if (!await verifySkillArtifactIntegrity(artifact)) return denied("Skill artifact integrity check failed");
   if (!await verifySkillEvaluationIntegrity(evaluation)) return denied("Evaluation integrity check failed");
+  if (evaluation.rubricDigest !== await skillRubricDigest(artifact.assessment.rubric)) {
+    return denied("Evaluation rubric does not match the exact skill assessment rubric");
+  }
   if (artifact.sources.length === 0 || artifact.sources.some(source => source.reviewState !== "reviewed")) {
     return denied("Every source must be reviewed before promotion");
   }

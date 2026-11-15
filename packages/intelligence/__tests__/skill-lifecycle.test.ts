@@ -5,6 +5,7 @@ import {
   createSkillArtifact,
   createSkillEvaluation,
   skillAssignmentDigest,
+  skillRubricDigest,
   transitionSkillLifecycle,
   verifySkillArtifactIntegrity,
   verifySkillEvaluationIntegrity,
@@ -83,7 +84,7 @@ async function makeEvaluation(
     artifactDigest: artifact.digest,
     evaluatorId: "validator",
     evaluatedAt: "2026-11-14T13:00:00.000Z",
-    rubricDigest: sha("rubric-v1"),
+    rubricDigest: await skillRubricDigest(artifact.assessment.rubric),
     results: [
       { exerciseId: "actor-isolation", passed: true, evidenceRefs: ["evidence://actor-isolation"] },
       { exerciseId: "session-lifecycle", passed: true, evidenceRefs: ["evidence://session-lifecycle"] }
@@ -142,6 +143,17 @@ describe("Skill lifecycle integrity and promotion", () => {
       evaluationDigest: evaluation.digest,
       assignmentDigest: await skillAssignmentDigest(artifact.skill)
     });
+  });
+
+  it("rejects evaluations whose rubric digest differs from the artifact rubric", async () => {
+    const artifact = await makeArtifact();
+    const mismatched = await makeEvaluation(artifact, { rubricDigest: sha("a different rubric") });
+    const result = await authorizeSkillPromotion(
+      artifact, mismatched, await makeApproval(artifact, mismatched),
+      { verifyEvaluation: async () => true, verifyApproval: async () => true }
+    );
+    expect(result).toMatchObject({ authorized: false });
+    expect(result.reason).toMatch(/rubric does not match/);
   });
 
   it("rejects approval copied from another skill digest or assignment set", async () => {

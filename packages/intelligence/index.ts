@@ -23,7 +23,7 @@ export { SkillRegistry, type Skill, type SkillLayer } from "./skills/SkillRegist
 export { createDefaultSkillRegistry, SKILL_CATALOG } from "./skills/catalog";
 export {
   createSkillArtifact, verifySkillArtifactIntegrity, createSkillEvaluation,
-  verifySkillEvaluationIntegrity, skillAssignmentDigest, authorizeSkillPromotion,
+  verifySkillEvaluationIntegrity, skillAssignmentDigest, skillRubricDigest, authorizeSkillPromotion,
   transitionSkillLifecycle,
   type SkillLifecycleStatus, type SkillArtifact, type SkillArtifactInput,
   type SkillExercise, type SkillExerciseEnvironment, type SkillSourceReference,
