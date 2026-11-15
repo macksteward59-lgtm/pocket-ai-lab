@@ -38,7 +38,26 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Aggregate iOS LlamaEngine CI run `43740720673` was pending at last check; Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar workflows were in progress. Do not treat any as passed until refreshed.
 - No PR reviews were returned at last check.
 
-### Validated predecessor
+#### Full mobile UI integration candidate
+
+- PR #110: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/110
+- Branch: `codex/ios-agent-team-workspace-mainline`
+- Head: `c2e15444395d4536081a0e52cdb83e6b4afb5710`; base main; 49 ahead / 0 behind; 18 files changed; open draft and mergeable.
+- Carries #107/#109 shared runtime + content-addressed artifact integrity, plus #84 Workspace navigation lifecycle and #85 bounded six-role Agent Team UI wired through the shared runtime.
+- Native Agent Team coordinator now enforces UTF-8 byte limits, 1–8 unique roles, 4k objective, 12k prompt, 1.2k prior-output truncation, 8k output cap, and 512 tokens/role.
+- Workspace allows HTTPS and HTTP loopback only, rejects embedded credentials and non-web schemes, restores once, and reloads only on explicit Open.
+- CI started on this exact head: iOS LlamaEngine run `43741079412`; companion runs `43741079416` (Pocket AI Lab), `43741079393` (Consumer prototype), `43741079479` (Cursor collaboration plugin), and `43741079363` (Governance sidecar). At last check, iOS job was still in setup; no results yet.
+- No review submissions or threads checked for #110 yet.
+
+### Older dependency-chain reconciliation
+
+- PR #84: 7 ahead / 10 behind current main, open non-draft; historical iOS run `43653686561` and all four companion workflows succeeded. Workspace lifecycle and URL-policy work carried to #110; importer superseded.
+- PR #85: 19 ahead / 10 behind, open draft, stacked on #84; no independent workflow run found. Agent Team UI and bounds carried to #110, wired through shared runtime.
+- PR #86: 26 ahead / 14 behind, open draft, old standalone ModelPool/Scheduler; iOS run `43654228679` was cancelled. Superseded by #107 composition.
+- PR #88: 29 ahead / 10 behind, open draft, stacked on #85; iOS run `43728039752` failed. Superseded by #109 content-addressed integrity.
+- PR #104: validated older aggregate; iOS run `43731823992` passed app, simulator, smoke-model and macOS XCTest. Keep as predecessor, not primary integration branch.
+
+## Validated predecessor
 
 - PR #104: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/104
 - Branch: `codex/ios-import-agent-team-integrity-mainline`
@@ -56,7 +75,7 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 ## Global status
 
 - Repository continuity system: PR #108 open/draft, branch `codex/project-continuity-system`; not merged.
-- PRs #104, #107, #109 remain open drafts. No merge to main is authorized.
+- PRs #104, #107, #109, and #110 remain open drafts; #84 is open non-draft and #85/#86/#88 remain open drafts. No merge to main is authorized.
 - Repository visibility and permissions remain unchanged.
 - No physical-device test is claimed. Hosted device-slice linking and simulator tests do not prove behavior on the user's iPhone.
 - Current active task selection must be re-evaluated against the requested task and live GitHub state on every resume.
