@@ -52,3 +52,27 @@ const approvalRef = approvals.grant({
 ```
 
 A future UI must calculate the action digest from the same canonical action snapshot the host will execute, show the user the target and consequences, and issue a grant only after explicit confirmation. A production host also needs authenticated UI/session protection, a concrete OS-sandboxed device bridge, and an audit trail that never records the bearer approval reference.
+
+The current implementation additionally uses a process-wide per-root/per-tool write lock, rejects symlinked version records and over-broad POSIX record permissions, and validates allowed specialist IDs and the canonical digest on read. These controls do not provide cross-process locking or encryption at rest. Keep the root in private app data and use a single writer or transactional database if multiple processes can modify the same history.
+
+## Durable tool artifact history
+
+Use `FileToolArtifactStore` only with a private application-data directory:
+
+```ts
+import path from "node:path";
+import { FileToolArtifactStore } from "./FileToolArtifactStore";
+
+const artifactStore = new FileToolArtifactStore(
+  path.join(appPrivateDataDirectory, "director-tool-artifacts")
+);
+const toolDirector = new ToolDirector({
+  registry,
+  builder,
+  sandbox,
+  store: artifactStore,
+  approvalVerifier: approvals
+});
+```
+
+The adapter stores source as inert JSON. It does not install, import, or execute generated files. A missing builder, disposable sandbox, or independent approval verifier still fails closed.
