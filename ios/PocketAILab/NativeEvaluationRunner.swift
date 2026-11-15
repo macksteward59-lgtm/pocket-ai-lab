@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import PocketLlamaEngine
 
@@ -21,22 +22,21 @@ struct NativeEvaluationCase: Sendable {
 }
 
 /// Executes benchmark cases through the app's injected native inference boundary.
-/// Only a successful non-empty generation from LlamaCppMetalBackend is recorded
-/// as observed native execution. This is not a signed runtime attestation and
-/// never changes RuntimeTrustPresentation or grants APEX/East authority.
+/// The model fingerprint is calculated from the actual file and checked both
+/// before and after inference. Only a successful non-empty generation from
+/// LlamaCppMetalBackend is recorded as observed native execution. This is not
+/// signed runtime attestation and never grants APEX/East authority.
 struct NativeEvaluationRunner: Sendable {
     private let engine: any LlamaEngine
     private let journal: NativeEvaluationJournal
+    private let modelFileURL: URL
     private let modelArtifactSHA256: String
 
-    init(engine: any LlamaEngine, journal: NativeEvaluationJournal, modelArtifactSHA256: String) throws {
-        guard modelArtifactSHA256.count == 64,
-              modelArtifactSHA256.allSatisfy({ $0.isHexDigit }) else {
-            throw NativeEvaluationJournalError.invalidAttempt("Model artifact fingerprint must be a SHA-256 hex digest.")
-        }
+    init(engine: any LlamaEngine, journal: NativeEvaluationJournal, modelFileURL: URL) throws {
         self.engine = engine
         self.journal = journal
-        self.modelArtifactSHA256 = modelArtifactSHA256.lowercased()
+        self.modelFileURL = modelFileURL
+        self.modelArtifactSHA256 = try Self.sha256(fileURL: modelFileURL)
     }
 
     func run(_ evaluationCase: NativeEvaluationCase, session: RuntimeSession) async throws -> NativeEvaluationAttempt {
@@ -54,21 +54,44 @@ struct NativeEvaluationRunner: Sendable {
         let startedAt = Date()
         var output = ""
         var failure: String?
+
         do {
-            let stream = try await engine.generate(
-                session: session,
-                request: GenerationRequest(
-                    requestId: requestID,
-                    prompt: evaluationCase.prompt,
-                    maxTokens: evaluationCase.maxTokens,
-                    temperature: evaluationCase.temperature
-                )
-            )
-            for try await token in stream {
-                output += token.text
+            let currentHash = try Self.sha256(fileURL: modelFileURL)
+            guard currentHash == modelArtifactSHA256 else {
+                throw NativeEvaluationJournalError.invalidAttempt("Model file changed after the evaluation runner was initialized.")
             }
         } catch {
-            failure = String(describing: error)
+            failure = "Model preflight failed: \(error)"
+        }
+
+        if failure == nil {
+            do {
+                let stream = try await engine.generate(
+                    session: session,
+                    request: GenerationRequest(
+                        requestId: requestID,
+                        prompt: evaluationCase.prompt,
+                        maxTokens: evaluationCase.maxTokens,
+                        temperature: evaluationCase.temperature
+                    )
+                )
+                for try await token in stream {
+                    output += token.text
+                }
+            } catch {
+                failure = String(describing: error)
+            }
+        }
+
+        do {
+            let finalHash = try Self.sha256(fileURL: modelFileURL)
+            if finalHash != modelArtifactSHA256 {
+                let mutation = "Model file changed during evaluation; this attempt cannot count as a verified native run."
+                failure = [failure, mutation].compactMap { $0 }.joined(separator: " ")
+            }
+        } catch {
+            failure = [failure, "Model file could not be re-verified after inference: \(error)"]
+                .compactMap { $0 }.joined(separator: " ")
         }
 
         let completedAt = Date()
@@ -100,5 +123,19 @@ struct NativeEvaluationRunner: Sendable {
             maxTokens: evaluationCase.maxTokens
         )
         return try await journal.appendAttempt(draft)
+    }
+
+    private static func sha256(fileURL: URL) throws -> String {
+        let values = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
+        guard values.isRegularFile == true else {
+            throw NativeEvaluationJournalError.invalidAttempt("Model artifact must be an existing regular file.")
+        }
+        let handle = try FileHandle(forReadingFrom: fileURL)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }
