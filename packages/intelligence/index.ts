@@ -105,3 +105,14 @@ export type {
   PolicyCandidateValue,
   PolicyReviewAssignment
 } from "./bug-bounty/interpretation";
+
+export {
+  ScopeGuard, ScopeGuardError, normalizeTargetHostname, hashNormalizedProgramPolicy, hashOperationalAuthorizationSnapshot,
+  PROOFHUNT_SAFE_CHECKS
+} from "./security/proofhunt";
+export type {
+  AuthorizationRecordKind, EmergencyStopProvider, ExplicitTarget, OperationalApprovalVerifier,
+  OperationalAuthorizationRecord, ProgramAuthorizationRecord, ProgramEvidenceVerifier,
+  ProofHuntAssessmentConfig, ProofHuntAssessmentPolicy, ProofHuntEnvironment,
+  ProofHuntSafeCheck, ScopeGuardAuditWriter, ScopeGuardDecision, ScopeGuardOptions
+} from "./security/proofhunt";
