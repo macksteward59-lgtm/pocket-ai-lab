@@ -1768,3 +1768,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Closed stacked PR #138 with a supersession comment pointing to #139. It was not merged. This avoids a duplicate PR based on stale PR #42.
 - PR #139 contains the current-mainline minimal bug-bounty policy normalizer/scope evaluator plus ProofHunt ScopeGuard and all related tests/docs/schema. The larger PR #42 interpretation/review-agent integration was intentionally excluded because its provider/orchestrator patches are stale; port it later against current interfaces.
 - SQL migration remains an artifact only: not executed on PostgreSQL, no live RLS role validation, no external signed audit anchor. ScopeGuard still emits plans only; no scanner or exploit adapter.
+
+
+## 2026-11-15 22:48 UTC — Native XCTest failure isolated; self-evaluation stack ported to latest catalog base
+
+- Exact-head PR #135 iOS run 43769593354 completed with 1/51 app XCTest failures. All catalog, task-history, conversation-history, and native self-evaluation suites passed. The six-role Agent Team test also passed role count and shared-lease assertions; its only failure was a stale test string expecting “six sequential logical roles” while production status correctly says “6 sequential logical roles”.
+- Corrected that test assertion only across #115, #129, #133, and #135 branches: #115 commit 88a28dc6b67c50d38f13ec548d8ea1aded635b6e; #129 808136b6fd139f5c6bcc46822e68c3fa1bd5fa24; #133 8d0a5b158ba77577248fa0882c40ee4c2bafa465; #135 b8d9f71d863526dd3ed6aaa8cdfe178f952a08f8. No production code changed for this failure.
+- PR #133 was 39 commits ahead / 4 behind its latest catalog base and mergeable=false. Ported its ten-file native self-evaluation/evidence-journal diff onto current #115 head 88a28dc6b67c50d38f13ec548d8ea1aded635b6e in new draft PR #140: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/140. It carries the deterministic memory injection, isolated test archives, and corrected status assertion. PR #140 is mergeable=true and exact-head CI is running; #133 remains open pending replacement validation.
+- New exact-head CI is queued/running for #115, #129, #133, #135, and #140. The prior #115/#129/#135 runs are not treated as passes after the status assertion fix. No simulator XCTest, pinned GGUF smoke, macOS XCTest, or physical-device acceptance is claimed yet.
