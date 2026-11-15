@@ -1442,3 +1442,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #123 exact head `c8b2f6fbc380759c6318c189bb1e32472617a16c`: four non-iOS workflows passed; iOS run `43751107892` is in simulator XCTest.
 - PR #124 exact head `f791085ffb070d37594941cceb54afbe511902a8`: four non-iOS workflows passed; iOS run `43751335652` is in simulator XCTest.
 - PR #129 exact head `0aff85769120625d5ae0a5cd55354c49b897ee75`: four non-iOS workflows passed; iOS run `43753665375` remains queued behind active hosted iOS jobs.
+
+## 2026-11-16 UTC — Reconcile evaluation integration with latest PR #115 head
+
+- PR #115 advanced from `4c1feb860291cef39ce2ad5cc712520a62a5b953` to `784005df2e2c95de3423f8bff9ae1ebd1213732` with a one-line `AgentProtocol.swift` typed-payload accessor fix.
+- The in-progress evaluation branch was now one commit behind and diverged. To avoid force-pushing or accidentally reverting that fix, the next branch will be recreated from the refreshed PR #115 head and the evaluation-only files copied forward.
+- **Replacement branch:** `codex/native-self-evaluation-runtime-integrated` from `784005df2e2c95de3423f8bff9ae1ebd1213732`.
+- Previous branch `codex/native-self-evaluation-runtime-integration` is stale and superseded; no PR was opened from it.
