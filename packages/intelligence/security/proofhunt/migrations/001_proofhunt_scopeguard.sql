@@ -145,8 +145,6 @@ CREATE TABLE proofhunt.assessment_policies (
   UNIQUE (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id),
   FOREIGN KEY (project_id, program_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
-  FOREIGN KEY (project_id, program_authorization_id, program_scope_hash)
-    REFERENCES proofhunt.authorization_records(project_id, record_id, scope_policy_hash),
   FOREIGN KEY (project_id, operational_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, operational_authorization_id, policy_version, policy_hash)
@@ -175,6 +173,8 @@ CREATE TABLE proofhunt.assessment_jobs (
   UNIQUE (project_id, job_id),
   FOREIGN KEY (project_id, program_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, program_authorization_id, program_scope_hash)
+    REFERENCES proofhunt.authorization_records(project_id, record_id, scope_policy_hash),
   FOREIGN KEY (project_id, operational_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id)
