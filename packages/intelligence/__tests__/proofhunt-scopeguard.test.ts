@@ -190,7 +190,7 @@ describe("ProofHunt ScopeGuard", () => {
       environment: "owned" as const,
       programAuthorization: {
         ...base.programAuthorization,
-        projectId: "another-project",
+        projectId: base.projectId,
         kind: "asset_ownership" as const
       }
     };
@@ -199,6 +199,10 @@ describe("ProofHunt ScopeGuard", () => {
     const replayedApproval = {
       ...base,
       projectId: "another-project",
+      programAuthorization: {
+        ...base.programAuthorization,
+        projectId: "another-project"
+      },
       operationalAuthorization: {
         ...base.operationalAuthorization,
         projectId: "another-project"
