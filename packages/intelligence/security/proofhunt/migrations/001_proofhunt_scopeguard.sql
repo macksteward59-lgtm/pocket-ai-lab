@@ -103,14 +103,14 @@ CREATE TABLE proofhunt.authorization_revocations (
 CREATE OR REPLACE FUNCTION proofhunt.lock_authorization_revocation()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended(
     'proofhunt:' || NEW.project_id || ':' || NEW.authorization_record_id::TEXT, 0
   ));
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER proofhunt_authorization_revocation_lock
   BEFORE INSERT ON proofhunt.authorization_revocations
