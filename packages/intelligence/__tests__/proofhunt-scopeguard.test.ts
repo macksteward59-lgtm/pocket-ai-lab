@@ -59,6 +59,8 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     },
     operationalAuthorization: {
       recordId: "OPS-1",
+      projectId: "proofhunt-demo",
+      environment: "bounty",
       programAuthorizationId: "PROGRAM-1",
       policyVersion: "policy-1",
       policyHash: "0".repeat(64),
@@ -79,6 +81,9 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     operationalAuthorization: {
       ...config.operationalAuthorization,
       policyHash: hashOperationalAuthorizationSnapshot(
+        config.projectId,
+        config.environment,
+        config.programAuthorization.recordId,
         config.policy,
         config.targets,
         config.excludedTargets
@@ -122,6 +127,9 @@ describe("ProofHunt ScopeGuard", () => {
       operationalAuthorizationId: "OPS-1",
       policyVersion: "policy-1",
       operationalPolicyHash: hashOperationalAuthorizationSnapshot(
+        makeConfig().projectId,
+        makeConfig().environment,
+        makeConfig().programAuthorization.recordId,
         makeConfig().policy,
         makeConfig().targets,
         makeConfig().excludedTargets
@@ -360,12 +368,12 @@ describe("ProofHunt ScopeGuard", () => {
   it("computes a stable operational digest independent of target ordering and hostname case", () => {
     const policy = makeConfig().policy;
     const first = hashOperationalAuthorizationSnapshot(
-      policy,
+      "project-1", "owned", "ownership-1", policy,
       [{ hostname: "APP.EXAMPLE.COM." }, { hostname: "api.example.com" }],
       [{ hostname: "ADMIN.example.com" }]
     );
     const reordered = hashOperationalAuthorizationSnapshot(
-      policy,
+      "project-1", "owned", "ownership-1", policy,
       [{ hostname: "API.EXAMPLE.COM" }, { hostname: "app.example.com" }],
       [{ hostname: "admin.example.com." }]
     );
@@ -509,7 +517,14 @@ describe("ProofHunt ScopeGuard", () => {
       ...config,
       operationalAuthorization: {
         ...config.operationalAuthorization,
-        policyHash: hashOperationalAuthorizationSnapshot(base.policy, base.targets, base.excludedTargets)
+        policyHash: hashOperationalAuthorizationSnapshot(
+          base.projectId,
+          base.environment,
+          base.programAuthorization.recordId,
+          base.policy,
+          base.targets,
+          base.excludedTargets
+        )
       }
     };
     const { guard } = makeGuard();
