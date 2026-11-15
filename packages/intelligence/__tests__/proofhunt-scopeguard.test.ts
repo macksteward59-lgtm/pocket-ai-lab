@@ -61,7 +61,7 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
       recordId: "OPS-1",
       programAuthorizationId: "PROGRAM-1",
       policyVersion: "policy-1",
-      policyHash: hashAssessmentPolicy(assessmentPolicy),
+      policyHash: "0".repeat(64),
       status: "approved",
       approvedBy: "human-reviewer",
       approvalReference: "approval://proofhunt-demo/1",
