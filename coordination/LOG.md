@@ -1424,3 +1424,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Initial PR #132 typecheck caught one test-double typing error (`FakeRow[]` not assignable to `Record<string, unknown>[]`). Fixed on both feature and validation branches. The previous failing run is retained as historical evidence; it is not counted as a pass.
 - Exact current validation head `86a537bf726ebf63fe5dff36667123051bf92810` passed Pocket AI Lab CI run `43753562797`, including Type-check and build plus Run tests. Consumer `43753562789`, Governance `43753562788`, and Cursor plugin `43753562827` also passed.
 - Feature PR #131 current head `f1517eb15af3aa623694046b24ef8cc17b7cd1cd`; validation PR #132 remains draft/open and no production DB or migration was executed.
+
+
+## 2026-11-15 — Native iOS typed-payload compile repair and validation handoff
+
+- Exact-head iOS run `43752293359` on the first PR #127 aggregate failed at `Link PocketLlamaEngine for physical iOS device`; compiler error: `AgentProtocol.swift:123:1: extraneous '}' at top level`.
+- Root cause: `AgentMessageEnvelope.untrustedText` had been inserted after the struct's closing brace. Moved the accessor inside `AgentMessageEnvelope` on the catalog integration branch and both mainline validation branches.
+- New heads: catalog integration `784005df2e2c95de3423f8bff9ae1ebd1213732b`; PR #127 branch `482cee7f9896b176320f6087f7b846c341652b8`; PR #129 branch `0aff85769120625d5ae0a5cd55354c49b897ee75`.
+- Closed validation-only PR #127 as superseded by PR #129. Old PR #127 iOS run `43752334116` was cancelled; neither old iOS run counts as a pass.
+- Current PR #129 exact-head non-iOS checks all pass (Pocket AI Lab, Consumer, Cursor, Governance). iOS run `43753665375` is queued; no current iOS pass yet. Cache source/tag/tarball verification is included before cached archive reuse.
