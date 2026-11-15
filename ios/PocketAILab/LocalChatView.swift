@@ -534,17 +534,24 @@ private actor AgentTaskHistoryJournal {
 }
 
 enum LocalGGUFImporter {
-    static func copy(source: URL, into directory: URL) throws -> ImportedModelArtifact {
+    static func copy(
+        source: URL,
+        into directory: URL,
+        contentAddressed: Bool = false
+    ) throws -> ImportedModelArtifact {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = directory.appendingPathComponent(source.lastPathComponent)
+        let ordinaryDestination = directory.appendingPathComponent(source.lastPathComponent)
         let sourcePath = source.standardizedFileURL.resolvingSymlinksInPath().path
-        let destinationPath = destination.standardizedFileURL.resolvingSymlinksInPath().path
+        let ordinaryDestinationPath = ordinaryDestination.standardizedFileURL.resolvingSymlinksInPath().path
 
-        // A model already inside Documents/Models must never be copied onto or
-        // deleted beneath itself.
-        if sourcePath == destinationPath {
-            try validateHeader(at: destination)
-            return ImportedModelArtifact(url: destination, fingerprint: try ModelArtifactFingerprint.compute(at: destination))
+        // Preserve the legacy same-path behavior for callers that explicitly
+        // request the original filename. Catalog imports use content addressing.
+        if !contentAddressed && sourcePath == ordinaryDestinationPath {
+            try validateHeader(at: ordinaryDestination)
+            return ImportedModelArtifact(
+                url: ordinaryDestination,
+                fingerprint: try ModelArtifactFingerprint.compute(at: ordinaryDestination)
+            )
         }
 
         let staging = directory.appendingPathComponent(".\(source.lastPathComponent).\(UUID().uuidString).staging")
@@ -552,8 +559,26 @@ enum LocalGGUFImporter {
             try FileManager.default.copyItem(at: source, to: staging)
             try validateHeader(at: staging)
             let fingerprint = try ModelArtifactFingerprint.compute(at: staging)
+            let destination: URL
+            if contentAddressed {
+                let rawBase = source.deletingPathExtension().lastPathComponent
+                let safeBase = String(rawBase.unicodeScalars.filter {
+                    CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_")).contains($0)
+                }.prefix(64))
+                destination = directory.appendingPathComponent(
+                    "\(safeBase.isEmpty ? "model" : safeBase)-\(fingerprint.sha256.prefix(16)).gguf"
+                )
+            } else {
+                destination = ordinaryDestination
+            }
+
             if FileManager.default.fileExists(atPath: destination.path) {
-                _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
+                if contentAddressed,
+                   try ModelArtifactFingerprint.compute(at: destination) == fingerprint {
+                    try FileManager.default.removeItem(at: staging)
+                } else {
+                    _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
+                }
             } else {
                 try FileManager.default.moveItem(at: staging, to: destination)
             }
