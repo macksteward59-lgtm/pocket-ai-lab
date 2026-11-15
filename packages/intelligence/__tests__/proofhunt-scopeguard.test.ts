@@ -305,6 +305,27 @@ describe("ProofHunt ScopeGuard", () => {
     expect((await guard.authorizeAssessment(futureOperational, "app.example.com", "static_analysis")).permitted).toBe(false);
   });
 
+  it("rejects impossible calendar dates in authorization timestamps", async () => {
+    const base = makeConfig();
+    const invalidProgram = {
+      ...base,
+      programAuthorization: {
+        ...base.programAuthorization,
+        verifiedAt: "2026-02-30T12:00:00Z"
+      }
+    };
+    const invalidOperational = {
+      ...base,
+      operationalAuthorization: {
+        ...base.operationalAuthorization,
+        approvedAt: "2026-02-30T12:00:00Z"
+      }
+    };
+    const { guard } = makeGuard();
+    expect((await guard.authorizeAssessment(invalidProgram, "app.example.com", "static_analysis")).permitted).toBe(false);
+    expect((await guard.authorizeAssessment(invalidOperational, "app.example.com", "static_analysis")).permitted).toBe(false);
+  });
+
   it("uses an immutable request snapshot while asynchronous verifiers are pending", async () => {
     let release!: (value: boolean) => void;
     const pending = new Promise<boolean>(resolve => { release = resolve; });
