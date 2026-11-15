@@ -32,7 +32,8 @@ describe("runEastTaskWithLifecycle", () => {
       orchestrator: {} as EastPlatformRuntime["orchestrator"],
       memory: {} as EastPlatformRuntime["memory"]
     } as unknown as EastPlatformRuntime;
-    const coordinator = new TaskLifecycleCoordinator({ store: new InMemoryTaskLifecycleStore() });
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
 
     const result = await runEastTaskWithLifecycle({
       coordinator, east, eastTaskId: "east-1", lifecycleTaskId: "lifecycle-1",
@@ -48,6 +49,48 @@ describe("runEastTaskWithLifecycle", () => {
     expect(result.evidenceRefs).toEqual(["evidence:one"]);
     expect(result.authorized).toBe(false);
     expect(result.evidenceGate.status).toBe("not_submitted");
+
+    // A fresh coordinator instance models process-level re-entry against the
+    // same durable-store contract. Completed inference and evidence steps must
+    // be returned from lifecycle state, not executed a second time.
+    const resumedCoordinator = new TaskLifecycleCoordinator({ store });
+    const resumed = await runEastTaskWithLifecycle({
+      coordinator: resumedCoordinator, east, eastTaskId: "east-1",
+      lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
+    });
+    expect(resumed.lifecycle.status).toBe("completed");
+    expect(resumed.synthesis).toBe("Unverified synthesis");
+    expect(resumed.evidenceRefs).toEqual(["evidence:one"]);
+    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(committed).toBe(1);
+  });
+
+  it("rejects a reused lifecycle ID bound to a different objective without executing East", async () => {
+    let executions = 0;
+    const east = {
+      getTask: () => ({ id: "east-3", objective: "Current objective" }),
+      assignAgent: () => { executions += 1; return "east-3"; },
+      executeAgent: async () => { executions += 1; return "unexpected"; },
+      runDeliberation: async () => { executions += 1; return { synthesis: "unexpected", evidence: [] }; },
+      commitTaskEvidence: async () => { executions += 1; return false; }
+    } as unknown as EastPlatformRuntime;
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "lifecycle-3",
+      objective: "Different objective",
+      steps: [{ id: "placeholder", description: "Existing unrelated work" }],
+      metadata: { eastTaskId: "east-3", workflow: "east-six-agent-deliberation-v1" }
+    });
+
+    await expect(runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId: "east-3", lifecycleTaskId: "lifecycle-3",
+      objective: "Current objective"
+    })).rejects.toThrow("Existing lifecycle task does not match this East workflow definition");
+    expect(executions).toBe(0);
+    expect(coordinator.getTask("lifecycle-3").objective).toBe("Different objective");
   });
 
   it("fails closed and does not retry an agent generation after a provider failure", async () => {

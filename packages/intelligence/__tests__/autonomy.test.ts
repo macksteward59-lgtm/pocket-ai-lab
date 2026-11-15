@@ -144,6 +144,31 @@ describe("TaskLifecycleCoordinator", () => {
     })).rejects.toMatchObject({ code: "stale_attempt" });
   });
 
+  it("can recover expired leases for one task without mutating another task", async () => {
+    const h = harness({ leaseMs: 1_000 });
+    await h.coordinator.init();
+    await h.create();
+    await h.coordinator.createTask({
+      id: "unrelated-task",
+      objective: "Do not recover this task yet",
+      leaseMs: 1_000,
+      steps: [{ id: "unrelated", description: "Unrelated leased work" }]
+    });
+    const targetClaim = await h.coordinator.claimNextStep("task-1");
+    const unrelatedClaim = await h.coordinator.claimNextStep("unrelated-task");
+    expect(targetClaim).not.toBeNull();
+    expect(unrelatedClaim).not.toBeNull();
+
+    h.advance(1_001);
+    expect(await h.coordinator.recoverExpiredLeases("task-1")).toBe(1);
+    expect(h.coordinator.getTask("task-1").steps[0].status).toBe("pending");
+    expect(h.coordinator.getTask("unrelated-task").steps[0].status).toBe("running");
+    expect(await h.coordinator.recoverExpiredLeases("unrelated-task")).toBe(1);
+    expect(h.coordinator.getTask("unrelated-task").steps[0].status).toBe("pending");
+    await expect(h.coordinator.recoverExpiredLeases("missing-task"))
+      .rejects.toMatchObject({ code: "unknown_task" });
+  });
+
   it("persists state across coordinator recreation and recovers exhausted leases as failure", async () => {
     let milliseconds = Date.parse("2026-11-15T12:00:00.000Z");
     let id = 0;
