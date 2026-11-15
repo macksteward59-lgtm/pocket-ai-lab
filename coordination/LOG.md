@@ -1733,3 +1733,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exported ScopeGuard through packages/intelligence/index.ts. Updated PR #138 description and architecture document. Current PR #138 head c9068944d05e2412f6e9c3f82498ad351fbe197e, draft/open/mergeable, stacked on PR #42. Exact-head Pocket AI Lab CI run 43770150390 is running tests; prior exact-head run 43770107157 passed after package exports. No merge.
 - Native CI: #133 companion Pocket AI Lab run 43769589309 passed; #135 companion run 43769586271 passed. #135 iOS run 43769593354 is in native app XCTest after pinned llama.cpp, fail-closed typecheck, device linking, simulator selection, and app build all passed. #115 iOS run 43769580327 remains in pinned llama.cpp build; #129 iOS run 43769586790 is at simulator selection. Their companion workflows passed. Simulator XCTest, pinned GGUF smoke, and macOS XCTest remain unverified.
 - No live scanner, target traffic, exploit capability, production database migration, physical iPhone test, or runtime attestation is claimed. APEX/Director, East/e3, Evidence, trust, and authorization boundaries remain intact.
+
+
+## 2026-11-15 22:39 UTC — ProofHunt 1.1 ScopeGuard exact-head CI passed
+
+- PR #138 exact head c9068944d05e2412f6e9c3f82498ad351fbe197e completed Pocket AI Lab CI run 43770150390 successfully.
+- Type-check/build passed; intelligence Vitest suite: 50 files / 482 tests passed. Companion workspace suite: 18 files / 248 passed / 2 skipped. Desktop/archive checks also completed successfully. This validates the TypeScript implementation and test suite, not the proposed SQL migration or a live authorization environment.
+- PR #138 remains draft/open/mergeable and stacked on PR #42. No merge, live database migration, scanner adapter, target network traffic, or exploit capability.
+- Native iOS validation remains active: #135 iOS run 43769593354 is in native app XCTest; #115 run 43769580327 is building pinned llama.cpp; #129 run 43769586790 is building the native app after simulator selection. The #133 feature branch remains stale against its catalog base (mergeable=false) and requires a separate reconciliation before mainline integration.
