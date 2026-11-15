@@ -2,7 +2,7 @@ export {
   ScopeGuard,
   ScopeGuardError,
   normalizeTargetHostname,
-  hashNormalizedProgramPolicy,
+  hashNormalizedProgramPolicy, hashAssessmentPolicy,
   PROOFHUNT_SAFE_CHECKS
 } from "./ScopeGuard";
 export type {
