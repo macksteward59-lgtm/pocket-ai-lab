@@ -170,11 +170,13 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError {
-    case notGGUF, emptyOutput
+    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
         case .emptyOutput: return "The model returned no text."
+        case .busy: return "Another model operation is already in progress."
+        case .memoryEstimateUnavailable: return "The model file size could not be used for a safe memory admission estimate."
         }
     }
 }
@@ -199,6 +201,9 @@ struct LocalChatView: View {
                         Button("Load model") { Task { await model.loadModel() } }
                             .buttonStyle(.borderedProminent)
                             .disabled(model.modelURL == nil || model.isBusy)
+                        Button("Unload model") { Task { await model.unloadModel() } }
+                            .buttonStyle(.bordered)
+                            .disabled(model.isBusy)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding()
                 List(model.messages) { line in
