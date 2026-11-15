@@ -573,6 +573,24 @@ describe("ProofHunt ScopeGuard", () => {
     expect(result.reason).toContain("not permitted by the independently reviewed");
   });
 
+  it("rechecks emergency stop after asynchronous authorization verification", async () => {
+    let globalChecks = 0;
+    const guard = new ScopeGuard({
+      programVerifier: { verify: async () => true },
+      operationalVerifier: { verify: async () => true },
+      audit: { append: async () => undefined },
+      emergencyStop: {
+        isGlobalStopActive: () => ++globalChecks > 1,
+        isProjectStopActive: () => false
+      },
+      now: () => Date.parse("2026-11-15T12:02:00Z")
+    });
+    const result = await guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis");
+    expect(globalChecks).toBe(2);
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("Emergency stop became active");
+  });
+
   it("denies new assessment plans when the global or project emergency stop is active", async () => {
     const global = makeGuard({ globalStop: true });
     const project = makeGuard({ projectStop: true });
