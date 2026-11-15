@@ -277,10 +277,16 @@ struct NativeEvaluationScoreSummary: Sendable, Equatable {
     let scorePercent: Int?
 
     init(attempts: [NativeEvaluationAttempt]) {
-        totalAttempts = attempts.count
-        let scored = attempts.compactMap(\.deterministicScore)
+        let grouped = Dictionary(grouping: attempts) {
+            "\($0.modelID)|\($0.suiteID)|\($0.suiteVersion)|\($0.caseID)"
+        }
+        let latest = grouped.values.compactMap { values in
+            values.max { $0.attemptNumber < $1.attemptNumber }
+        }
+        totalAttempts = latest.count
+        let scored = latest.compactMap(\.deterministicScore)
         scoredAttempts = scored.count
-        passedAttempts = attempts.filter { $0.deterministicPassed == true }.count
+        passedAttempts = latest.filter { $0.deterministicPassed == true }.count
         unscoredAttempts = totalAttempts - scoredAttempts
         scorePercent = scored.isEmpty ? nil : Int((scored.reduce(0, +) / Double(scored.count) * 100).rounded())
     }
