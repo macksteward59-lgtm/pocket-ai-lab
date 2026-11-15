@@ -266,4 +266,39 @@ describe("ProofHunt ScopeGuard", () => {
     expect((await guard.authorizeAssessment(config, "app.example.com", "static_analysis")).permitted).toBe(false);
   });
 
+  it("denies host-only assessment when a matching bounty rule is path-scoped", async () => {
+    const base = makeConfig();
+    const pathPolicy = normalizeProgramPolicy({
+      programId: "program-demo",
+      programName: "ProofHunt demo program",
+      platform: "manual",
+      sourceUrl: "https://bounty.example/program/rules",
+      retrievedAt: "2026-11-15T12:00:00Z",
+      effectiveAt: "2026-11-01T00:00:00Z",
+      expiresAt: "2027-01-01T00:00:00Z",
+      scope: {
+        inScope: [{ kind: "domain", value: "*.example.com" }],
+        outOfScope: [{ kind: "url", value: "https://app.example.com/admin" }]
+      },
+      allowedActivities: ["static analysis"],
+      prohibitedActivities: ["intrusive testing"],
+      vulnerabilityExclusions: ["self-XSS without impact"],
+      rateLimit: { requestsPerSecond: 1 },
+      testingWindow: { startsAt: "2026-11-01T00:00:00Z", endsAt: "2027-01-01T00:00:00Z", timezone: "UTC" }
+    }, new Date("2026-11-15T12:00:00Z"));
+    const config = makeConfig({
+      targets: [{ hostname: "example.com", includeSubdomains: true }],
+      excludedTargets: [],
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy: pathPolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(pathPolicy)
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("path-scoped");
+  });
+
 });
