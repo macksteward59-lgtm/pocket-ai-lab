@@ -77,7 +77,7 @@ export {
   PROOFHUNT_SAFE_CHECKS
 } from "./security/proofhunt";
 export type {
-  AuthorizationRecordKind, ExplicitTarget, OperationalApprovalVerifier,
+  AuthorizationRecordKind, EmergencyStopProvider, ExplicitTarget, OperationalApprovalVerifier,
   OperationalAuthorizationRecord, ProgramAuthorizationRecord, ProgramEvidenceVerifier,
   ProofHuntAssessmentConfig, ProofHuntAssessmentPolicy, ProofHuntEnvironment,
   ProofHuntSafeCheck, ScopeGuardAuditWriter, ScopeGuardDecision, ScopeGuardOptions
