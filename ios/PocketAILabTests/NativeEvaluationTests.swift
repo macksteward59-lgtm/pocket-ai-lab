@@ -215,6 +215,20 @@ final class NativeEvaluationTests: XCTestCase {
         ))
 
         do {
+            try await journal.appendAssessment(critic)
+            XCTFail("Duplicate assessment IDs must be rejected")
+        } catch NativeEvaluationJournalError.invalidAssessment {
+        }
+        do {
+            try await journal.appendChallenge(NativeEvaluationChallenge(
+                id: "challenge-1", attemptID: attempt.id, authorAgentID: "reasoner",
+                reason: "Duplicate challenge ID.", submittedAt: Date()
+            ))
+            XCTFail("Duplicate challenge IDs must be rejected")
+        } catch NativeEvaluationJournalError.invalidChallenge {
+        }
+
+        do {
             try await journal.appendAssessment(NativeEvaluationAssessment(
                 id: "invalid-review", attemptID: attempt.id, evaluatorRole: .critic,
                 evaluatorAgentID: "critic", evaluatorModelID: "reviewer-model",
