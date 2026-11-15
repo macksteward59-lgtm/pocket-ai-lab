@@ -35,10 +35,12 @@ final class LocalChatModel: ObservableObject {
         modelDirectory: URL? = nil,
         conversationStore: LocalConversationStore = LocalConversationStore(),
         agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore(),
-        modelCatalogStore: LocalModelCatalogStore? = nil
+        modelCatalogStore: LocalModelCatalogStore? = nil,
+        evaluationJournal: NativeEvaluationJournal? = nil
     ) {
         self.conversationStore = conversationStore
         self.agentTaskHistoryStore = agentTaskHistoryStore
+        self.evaluationJournal = evaluationJournal
         let resolvedModelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
         self.modelDirectory = resolvedModelDirectory
@@ -752,6 +754,7 @@ struct LocalChatView: View {
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.historyStatus).font(.caption2).foregroundStyle(.secondary)
                     Text(model.agentTaskHistoryStatus).font(.caption2).foregroundStyle(.secondary)
+                    Text(model.evaluationStatus).font(.caption2).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
                         .font(.caption2).foregroundStyle(.orange)
@@ -763,6 +766,14 @@ struct LocalChatView: View {
                         Button("Unload model") { Task { await model.unloadModel() } }
                             .buttonStyle(.bordered)
                             .disabled(model.isBusy)
+                    }
+                    HStack {
+                        Button("Run self-evaluation") { Task { await model.runSelfEvaluation() } }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!model.isModelLoaded || model.isBusy)
+                        Button("Evaluation history") { showEvaluationHistory = true }
+                            .buttonStyle(.bordered)
+                            .disabled(model.evaluationEvents.isEmpty)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding()
                 List {
