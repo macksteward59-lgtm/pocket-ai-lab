@@ -171,7 +171,8 @@ final class ModelPoolTests: XCTestCase {
         let loadCalls = await engine.loadCallCount()
         XCTAssertEqual(loadCalls, 1)
 
-        XCTAssertTrue(await pool.release(survivingLease))
+        let released = await pool.release(survivingLease)
+        XCTAssertTrue(released)
         try await pool.unload(modelId: "shared")
     }
 
