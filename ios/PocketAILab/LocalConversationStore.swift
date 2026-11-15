@@ -38,7 +38,9 @@ struct LocalConversationStore {
     func load() throws -> [ChatLine] {
         guard fileManager.fileExists(atPath: fileURL.path) else { return [] }
         let data = try Data(contentsOf: fileURL)
-        let archive = try JSONDecoder().decode(Archive.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let archive = try decoder.decode(Archive.self, from: data)
         guard archive.version == Self.currentVersion else { throw StoreError.unsupportedVersion }
         let cutoff = now().addingTimeInterval(-Self.retentionInterval)
         let retained = archive.messages.filter { $0.timestamp >= cutoff }
