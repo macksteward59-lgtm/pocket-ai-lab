@@ -1576,3 +1576,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Self-evaluation validation PR #135 exact head `7446cac45bdcb4095d327a9759d942acc4267a62`: iOS run #205 (`43759496587`) is in progress. Pinned llama.cpp build and fail-closed typecheck passed; generic iOS device link is in progress; app compile/tests, simulator tests, and the new real-model evaluation smoke are not yet run.
 - Independent ModelPool memory-admission integration PR #124 exact head `f791085ffb070d37594941cceb54afbe511902a8`: iOS run #174 (`43751335652`) has passed app compilation, device linking, and native app XCTest; simulator XCTest is in progress. No merge or physical-device claim.
 - The newest run on the target branch is #45. The target branch's PR #38 is closed; the branch remains unchanged. Repository metadata still reports public visibility.
+
+
+## 2026-11-15 — Native catalog XCTest repair claimed
+
+- ChatGPT resumed the existing `codex/ios-native-model-catalog` integration work and moved its coordination row to `in-progress` before editing.
+- Scope: repair the two reproducible task-history persistence assertions caused by ISO-8601 sub-second Date precision, and investigate the app XCTest temporary-artifact cleanup failures from run #199. Keep production persistence semantics unchanged unless a genuine production defect is demonstrated.
+- PR #115 current recorded head at claim: `4a79dd022a440639af0a3083ef9de3820ae20118`; exact CI failure inspected: run #199 / job `132939028186`.
+- No APEX/East, runtime trust, model readiness, Evidence, signing, main, or repository visibility changes.
