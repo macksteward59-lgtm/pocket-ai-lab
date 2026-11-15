@@ -136,6 +136,45 @@ final class ModelPoolTests: XCTestCase {
         try await pool.unload(modelId: "shared")
     }
 
+    func testCancellingOneCoalescedAcquirerDoesNotCancelAnotherWaiter() async throws {
+        let engine = BlockingPoolTestEngine()
+        let pool = try makePool(engine: engine, maxMemory: 2_048, maxModels: 2)
+        let descriptor = model("shared")
+
+        let cancelledTask = Task {
+            try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
+        }
+        while await engine.loadCallCount() == 0 { await Task.yield() }
+
+        let survivingTask = Task {
+            try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
+        }
+        while (await pool.snapshot()).pendingAcquirerCount < 2 { await Task.yield() }
+
+        // Cancellation belongs to the waiting caller, not the shared native
+        // load. The second caller must still receive the completed session.
+        cancelledTask.cancel()
+        await engine.finishLoad()
+
+        do {
+            _ = try await cancelledTask.value
+            XCTFail("The cancelled caller must not retain a lease")
+        } catch is CancellationError {
+        }
+
+        let survivingLease = try await survivingTask.value
+        XCTAssertEqual(survivingLease.session.modelId, "shared")
+        let snapshot = await pool.snapshot()
+        XCTAssertEqual(snapshot.loadedModelIDs, ["shared"])
+        XCTAssertEqual(snapshot.activeLeaseCount, 1)
+        XCTAssertEqual(snapshot.reservedMemoryMB, 512)
+        let loadCalls = await engine.loadCallCount()
+        XCTAssertEqual(loadCalls, 1)
+
+        XCTAssertTrue(await pool.release(survivingLease))
+        try await pool.unload(modelId: "shared")
+    }
+
     func testUnloadIdleModelsLeavesActivelyLeasedSessionsAlone() async throws {
         let engine = PoolTestEngine()
         let pool = try makePool(engine: engine, maxMemory: 2_048, maxModels: 2)
