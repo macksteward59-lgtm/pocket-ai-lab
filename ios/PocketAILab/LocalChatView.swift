@@ -6,6 +6,7 @@ import os
 final class LocalChatModel: ObservableObject {
     @Published var modelURL: URL?
     @Published var modelName = "No model imported"
+    @Published var modelFingerprintSummary = "No model fingerprint"
     @Published var status = "Import a GGUF model to begin."
     @Published var messages: [ChatLine] = []
     @Published var isBusy = false
@@ -13,10 +14,16 @@ final class LocalChatModel: ObservableObject {
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
 
     private let runtime: NativeInferenceRuntime?
+    private let modelDirectory: URL
     private var lease: ModelPoolLease?
+    private var artifactFingerprint: ModelArtifactFingerprint?
 
-    init() {
-        let engine = LlamaCppMetalBackend(requireMetal: true)
+    init(
+        engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true),
+        modelDirectory: URL? = nil
+    ) {
+        self.modelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Models", isDirectory: true)
         do {
             let configuration = try ModelPoolConfiguration(
                 maxResidentMemoryMB: 4_096,
@@ -52,16 +59,16 @@ final class LocalChatModel: ObservableObject {
         let access = source.startAccessingSecurityScopedResource()
         defer { if access { source.stopAccessingSecurityScopedResource() } }
 
-        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Models", isDirectory: true)
-        let destination = try await Task.detached(priority: .utility) {
-            try LocalGGUFImporter.copy(source: source, into: directory)
+        let imported = try await Task.detached(priority: .utility) {
+            try LocalGGUFImporter.copy(source: source, into: self.modelDirectory)
         }.value
 
-        // Update selection only after the staged artifact has passed validation.
-        modelURL = destination
-        modelName = destination.lastPathComponent
-        status = "GGUF minimum header structure validated and copied safely to this app's private model folder. Model is not loaded yet."
+        // Update selection only after staged validation and hashing succeed.
+        modelURL = imported.url
+        modelName = imported.url.lastPathComponent
+        artifactFingerprint = imported.fingerprint
+        modelFingerprintSummary = "SHA-256 \(imported.fingerprint.sha256.prefix(16))… · \(imported.fingerprint.byteCount) bytes"
+        status = "GGUF header validated and fingerprinted in this app's private model folder. Fingerprint is integrity metadata, not attestation."
     }
 
     func loadModel() async {
@@ -70,7 +77,24 @@ final class LocalChatModel: ObservableObject {
         guard let runtime else { status = "The shared native inference runtime is unavailable. Loading failed closed."; return }
         isBusy = true
         defer { isBusy = false }
+        guard let expectedFingerprint = artifactFingerprint else {
+            status = "Import the model again to establish its content identity."
+            return
+        }
         do {
+            let currentFingerprint = try await fingerprintFile(at: modelURL)
+            guard currentFingerprint == expectedFingerprint else {
+                if let previous = lease {
+                    guard await runtime.release(previous) else {
+                        status = "Changed model file detected, but its active lease could not be released."
+                        return
+                    }
+                    lease = nil
+                    try await runtime.unload(modelId: previous.model.id)
+                }
+                status = "The selected model file changed after import. Re-import it before loading."
+                return
+            }
             if let previous = lease {
                 guard await runtime.release(previous) else {
                     status = "The previous model lease could not be released. The new model was not loaded."
@@ -81,13 +105,24 @@ final class LocalChatModel: ObservableObject {
             }
             let estimate = try Self.estimatedMemoryMB(for: modelURL)
             let descriptor = ModelDescriptor(
-                id: UUID().uuidString,
+                id: "sha256-\(expectedFingerprint.sha256)",
                 name: modelName,
                 path: modelURL.path,
                 contextLength: 2048,
                 quantization: "GGUF"
             )
-            lease = try await runtime.acquire(model: descriptor, estimatedMemoryMB: estimate)
+            let acquired = try await runtime.acquire(model: descriptor, estimatedMemoryMB: estimate)
+            do {
+                let afterLoadFingerprint = try await fingerprintFile(at: modelURL)
+                guard afterLoadFingerprint == expectedFingerprint else {
+                    throw LocalChatError.modelChanged
+                }
+            } catch {
+                _ = await runtime.release(acquired)
+                try? await runtime.unload(modelId: acquired.model.id)
+                throw error
+            }
+            lease = acquired
             status = RuntimeTrustPresentation.statusMessage(
                 after: "A real llama.cpp model session is loaded through the shared ModelPool."
             )
@@ -95,6 +130,12 @@ final class LocalChatModel: ObservableObject {
             lease = nil
             status = "Model load failed closed: \(error.localizedDescription)"
         }
+    }
+
+    private func fingerprintFile(at url: URL) async throws -> ModelArtifactFingerprint {
+        try await Task.detached(priority: .utility) {
+            try ModelArtifactFingerprint.compute(at: url)
+        }.value
     }
 
     func unloadModel() async {
@@ -173,7 +214,7 @@ final class LocalChatModel: ObservableObject {
 }
 
 enum LocalGGUFImporter {
-    static func copy(source: URL, into directory: URL) throws -> URL {
+    static func copy(source: URL, into directory: URL) throws -> ImportedModelArtifact {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let destination = directory.appendingPathComponent(source.lastPathComponent)
         let sourcePath = source.standardizedFileURL.resolvingSymlinksInPath().path
@@ -183,19 +224,20 @@ enum LocalGGUFImporter {
         // deleted beneath itself.
         if sourcePath == destinationPath {
             try validateHeader(at: destination)
-            return destination
+            return ImportedModelArtifact(url: destination, fingerprint: try ModelArtifactFingerprint.compute(at: destination))
         }
 
         let staging = directory.appendingPathComponent(".\(source.lastPathComponent).\(UUID().uuidString).staging")
         do {
             try FileManager.default.copyItem(at: source, to: staging)
             try validateHeader(at: staging)
+            let fingerprint = try ModelArtifactFingerprint.compute(at: staging)
             if FileManager.default.fileExists(atPath: destination.path) {
                 _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
             } else {
                 try FileManager.default.moveItem(at: staging, to: destination)
             }
-            return destination
+            return ImportedModelArtifact(url: destination, fingerprint: fingerprint)
         } catch {
             try? FileManager.default.removeItem(at: staging)
             throw error
@@ -230,7 +272,7 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError, Equatable {
-    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable, modelMustBeUnloaded, invalidGGUFHeader
+    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable, modelMustBeUnloaded, invalidGGUFHeader, modelChanged
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
@@ -239,6 +281,7 @@ enum LocalChatError: LocalizedError, Equatable {
         case .memoryEstimateUnavailable: return "The model file size could not be used for a safe memory admission estimate."
         case .modelMustBeUnloaded: return "Unload the current model before importing or replacing a model file."
         case .invalidGGUFHeader: return "The selected file does not contain a complete supported GGUF v1-v3 header. The previous model file was preserved."
+        case .modelChanged: return "The model file changed while the native runtime was loading it."
         }
     }
 }
