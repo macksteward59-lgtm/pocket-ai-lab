@@ -4,6 +4,9 @@
  * This module emits plans only; it never contacts targets or executes tools.
  */
 import { isIP } from "node:net";
+import { createHash } from "node:crypto";
+import { evaluateTargetScope } from "../../bug-bounty/ScopeEvaluator";
+import type { NormalizedProgramPolicy } from "../../bug-bounty/types";
 
 export const PROOFHUNT_SAFE_CHECKS = Object.freeze([
   "static_analysis",
@@ -23,6 +26,9 @@ export interface ProgramAuthorizationRecord {
   readonly subjectId: string;
   readonly evidenceReference: string;
   readonly sourceRevision: string;
+  /** Immutable normalized bounty scope snapshot; required for bounty assessments. */
+  readonly scopePolicy?: NormalizedProgramPolicy;
+  readonly scopePolicyHash?: string;
   readonly status: "verified" | "pending" | "revoked";
   readonly verifiedAt: string;
   readonly expiresAt: string;
@@ -142,6 +148,21 @@ export class ScopeGuard {
       if ((await this.options.programVerifier.verify(program)) !== true) {
         throw new ScopeGuardError("Program authorization evidence verification failed");
       }
+      if (assessmentConfig.environment === "bounty") {
+        const scopePolicy = program.scopePolicy;
+        if (!scopePolicy || !program.scopePolicyHash ||
+            scopePolicy.programId !== program.subjectId ||
+            scopePolicy.sourceUrl !== program.evidenceReference ||
+            scopePolicy.authorized !== false ||
+            scopePolicy.reviewState !== "ready-for-human-review" ||
+            hashNormalizedProgramPolicy(scopePolicy) !== program.scopePolicyHash) {
+          throw new ScopeGuardError("Published bounty scope snapshot is missing, mismatched, incomplete, or has changed");
+        }
+        const programScope = evaluateTargetScope(scopePolicy, `https://${hostname}/`);
+        if (programScope.disposition !== "in-scope") {
+          throw new ScopeGuardError("Target is not explicitly in the verified published program scope: " + programScope.reason);
+        }
+      }
 
       if (operational.status !== "approved") {
         throw new ScopeGuardError("Operational authorization is not approved");
@@ -230,6 +251,10 @@ export class ScopeGuard {
   }
 }
 
+export function hashNormalizedProgramPolicy(policy: NormalizedProgramPolicy): string {
+  return createHash("sha256").update(canonicalize(policy)).digest("hex");
+}
+
 export function normalizeTargetHostname(value: string): string {
   if (typeof value !== "string" || !value.trim()) throw new ScopeGuardError("Target is required");
   const raw = value.trim();
@@ -293,6 +318,16 @@ function matchesAny(hostname: string, entries: readonly ExplicitTarget[]): boole
     const candidate = normalizeTargetHostname(entry.hostname);
     return hostname === candidate || (entry.includeSubdomains === true && hostname.endsWith("." + candidate));
   });
+}
+
+function canonicalize(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).filter(key => record[key] !== undefined).sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalize(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function isValidTimestamp(value: string): boolean {
