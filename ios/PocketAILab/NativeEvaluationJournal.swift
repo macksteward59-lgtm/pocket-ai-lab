@@ -200,7 +200,11 @@ actor NativeEvaluationJournal {
             throw NativeEvaluationJournalError.invalidAttempt("Required metadata, SHA-256 fingerprint, or generation bounds are invalid.")
         }
         try verifyDiskState()
-        let prior = try Self.readAndVerify(fileURL: fileURL).compactMap(\.payload.attempt)
+        let existingAttempts = try Self.readAndVerify(fileURL: fileURL).compactMap(\.payload.attempt)
+        guard !existingAttempts.contains(where: { $0.id == draft.id }) else {
+            throw NativeEvaluationJournalError.invalidAttempt("Attempt ID already exists.")
+        }
+        let prior = existingAttempts
             .last { $0.suiteID == draft.suiteID && $0.suiteVersion == draft.suiteVersion && $0.caseID == draft.caseID &&
                     $0.modelID == draft.modelID && $0.modelArtifactSHA256 == draft.modelArtifactSHA256 }
         let attempt = NativeEvaluationAttempt(
@@ -233,7 +237,11 @@ actor NativeEvaluationJournal {
             throw NativeEvaluationJournalError.invalidAssessment("Assessment metadata, rationale, or score is invalid.")
         }
         try verifyDiskState()
-        let attempts = try Self.readAndVerify(fileURL: fileURL).compactMap(\.payload.attempt)
+        let existingEvents = try Self.readAndVerify(fileURL: fileURL)
+        guard !existingEvents.compactMap(\.payload.assessment).contains(where: { $0.id == assessment.id }) else {
+            throw NativeEvaluationJournalError.invalidAssessment("Assessment ID already exists.")
+        }
+        let attempts = existingEvents.compactMap(\.payload.attempt)
         guard let target = attempts.first(where: { $0.id == assessment.attemptID }) else {
             throw NativeEvaluationJournalError.missingAttempt(assessment.attemptID)
         }
@@ -249,7 +257,11 @@ actor NativeEvaluationJournal {
             throw NativeEvaluationJournalError.invalidChallenge("Challenge must identify its author and rationale.")
         }
         try verifyDiskState()
-        let attempts = try Self.readAndVerify(fileURL: fileURL).compactMap(\.payload.attempt)
+        let existingEvents = try Self.readAndVerify(fileURL: fileURL)
+        guard !existingEvents.compactMap(\.payload.challenge).contains(where: { $0.id == challenge.id }) else {
+            throw NativeEvaluationJournalError.invalidChallenge("Challenge ID already exists.")
+        }
+        let attempts = existingEvents.compactMap(\.payload.attempt)
         guard attempts.contains(where: { $0.id == challenge.attemptID }) else {
             throw NativeEvaluationJournalError.missingAttempt(challenge.attemptID)
         }
@@ -325,11 +337,7 @@ actor NativeEvaluationJournal {
             case .attempt:
                 guard let attempt = event.payload.attempt,
                       event.payload.assessment == nil, event.payload.challenge == nil,
-                      !attempt.id.isEmpty, !attempt.evaluationCriteria.isEmpty,
-                      attempt.maxTokens > 0, attempt.latencyMilliseconds >= 0, attempt.estimatedMemoryMB > 0,
-                      attempt.promptUTF8Bytes == attempt.prompt.utf8.count,
-                      attempt.outputUTF8Bytes == attempt.output.utf8.count,
-                      Self.validDeterministicScore(rule: attempt.scoringRule, passed: attempt.deterministicPassed, score: attempt.deterministicScore),
+                      Self.validAttempt(attempt),
                       attemptsByID[attempt.id] == nil else {
                     throw NativeEvaluationJournalError.corruptJournal("Attempt event has an invalid or duplicate payload.")
                 }
@@ -357,6 +365,23 @@ actor NativeEvaluationJournal {
             verified.append(event)
         }
         return verified
+    }
+
+    private static func validAttempt(_ attempt: NativeEvaluationAttempt) -> Bool {
+        guard !attempt.id.isEmpty, !attempt.suiteID.isEmpty, !attempt.suiteVersion.isEmpty,
+              !attempt.caseID.isEmpty, !attempt.evaluationCriteria.isEmpty,
+              !attempt.modelID.isEmpty, !attempt.runtimeSessionID.isEmpty, !attempt.requestID.isEmpty,
+              !attempt.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              attempt.modelArtifactSHA256.count == 64,
+              attempt.modelArtifactSHA256.allSatisfy({ $0.isHexDigit }),
+              attempt.maxTokens > 0, attempt.latencyMilliseconds >= 0, attempt.estimatedMemoryMB > 0,
+              attempt.promptUTF8Bytes == attempt.prompt.utf8.count,
+              attempt.outputUTF8Bytes == attempt.output.utf8.count,
+              !attempt.runtimeTrustVerified,
+              !attempt.nativeExecutionObserved || (attempt.providerKind == .llamaCppBackend && attempt.status == .completed) else {
+            return false
+        }
+        return validDeterministicScore(rule: attempt.scoringRule, passed: attempt.deterministicPassed, score: attempt.deterministicScore)
     }
 
     private static func validDeterministicScore(rule: NativeEvaluationScoringRule, passed: Bool?, score: Double?) -> Bool {
