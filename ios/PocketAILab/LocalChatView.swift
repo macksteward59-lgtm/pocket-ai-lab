@@ -102,7 +102,9 @@ final class LocalChatModel: ObservableObject {
 
     var currentEvaluationSummary: NativeEvaluationScoreSummary {
         let current = evaluationAttempts.filter {
-            $0.suiteID == NativeEvaluationSuite.id && $0.suiteVersion == NativeEvaluationSuite.version
+            $0.modelID == selectedModelID &&
+            $0.suiteID == NativeEvaluationSuite.id &&
+            $0.suiteVersion == NativeEvaluationSuite.version
         }
         return NativeEvaluationScoreSummary(attempts: current)
     }
