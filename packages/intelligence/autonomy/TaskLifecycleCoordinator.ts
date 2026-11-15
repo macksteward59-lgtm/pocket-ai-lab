@@ -138,6 +138,24 @@ export class TaskLifecycleCoordinator {
     });
   }
 
+  /**
+   * Refresh local state after a transactional store conflict. The caller must
+   * reconcile the returned task state before retrying any worker completion.
+   */
+  async reload(): Promise<void> {
+    await this.mutate(async () => {
+      const loaded = await this.store.load();
+      const next = new Map<string, TaskRecord>();
+      for (const raw of loaded) {
+        const task = validateStoredTask(raw);
+        if (next.has(task.id)) throw new TaskLifecycleError("duplicate_task", "Duplicate task id in store");
+        next.set(task.id, task);
+      }
+      this.records = next;
+      this.initialized = true;
+    });
+  }
+
   async createTask(definition: TaskDefinition): Promise<TaskRecord> {
     return this.mutate(async () => {
       this.requireInitialized();
