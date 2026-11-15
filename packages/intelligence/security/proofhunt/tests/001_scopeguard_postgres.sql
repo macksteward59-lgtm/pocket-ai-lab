@@ -270,6 +270,20 @@ BEGIN
 END;
 $$;
 
+DO $$
+DECLARE excluded_rows INTEGER;
+BEGIN
+  SELECT count(*) INTO excluded_rows
+  FROM proofhunt.excluded_targets
+  WHERE project_id = 'project-a'
+    AND authorization_record_id = '00000000-0000-0000-0000-000000000001'
+    AND hostname = 'billing.example.com';
+  IF excluded_rows <> 1 THEN
+    RAISE EXCEPTION 'RLS/test fixture expected one billing exclusion, saw %', excluded_rows;
+  END IF;
+END;
+$$;
+
 -- Operational exclusions are enforced independently of published program scope.
 DO $$
 BEGIN
