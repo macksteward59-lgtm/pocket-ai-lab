@@ -91,7 +91,7 @@ enum NativeEvaluationSuite {
             category: .runtimeEfficiencyReliability, suiteID: id, suiteVersion: version,
             caseID: "runtime-reliability-token",
             prompt: "Return exactly this token: PAL_RUNTIME_READY",
-            evaluationCriteria: "Complete a bounded generation successfully; latency, output completeness, and runtime errors are recorded separately.",
+            evaluationCriteria: "Return the exact readiness token. Successful completion is scored; latency is recorded as a metric, not compared against a hardware-independent threshold.",
             expectedOutcome: "PAL_RUNTIME_READY", scoringRule: .exactMatch,
             maxTokens: 32
         )
