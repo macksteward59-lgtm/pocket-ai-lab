@@ -1324,3 +1324,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Fix commit on PR #122 branch: `aebd406ae4419f29046f497496c40d9e2ab2b2bf`.
 - Propagated the corrected test file into PR #124 integration-validation branch via a two-parent merge commit `f791085ffb070d37594941cceb54afbe511902a8`. PR #124 now points at this head. CI check-runs show an intelligence job queued; confirm iOS LlamaEngine CI and all other required checks on this exact head before reporting a pass.
 - This correction prevents a known test mismatch from being carried into the integration validation. It does not change the memory-admission implementation or establish physical-device memory behavior.
+
+
+## 2026-11-15 — Final CI queue refresh after ModelPool test correction
+
+- PR #124 integration head `f791085ffb070d37594941cceb54afbe511902a8` has a fresh iOS LlamaEngine CI run `43751335652` in progress after the test correction. Earlier iOS run `43751145874` was cancelled by GitHub when the branch head advanced; do not count the cancelled run as a failure or pass.
+- PR #123 iOS LlamaEngine CI run `43751107892` remains in progress at pinned llama.cpp build.
+- PR #84 iOS LlamaEngine CI run `43750771905` and PR #86 run `43750794278` remain in progress at pinned llama.cpp build. No failures have been reported in these active jobs at this check.
+- No mainline merge or physical-device execution. Current exact heads and check states remain the source of truth; re-check after these hosted builds advance beyond the native dependency build step.
