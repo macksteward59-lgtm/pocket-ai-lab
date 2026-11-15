@@ -1677,3 +1677,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #115 exact head `373a0a0c2fcb6d123c52a19c3a542097b98b022a`: four companion workflows passed; iOS run `43764211279` is still building pinned llama.cpp.
 - Verified cache reuse on PR #135's earlier exact-head run: GitHub Actions reported a cache hit and restored ~86 MB; the pinned source/tag/tarball and archive/symbol checks ran, and XCFramework assembly/link stages were not skipped. No quantitative speedup is claimed.
 - PR #135's superseded pre-review-fix run `43764146558` was cancelled after the branch advanced; no result was counted from it. All four PRs remain draft/open/unmerged; no physical iPhone, runtime attestation, or production readiness is claimed.
+
+
+## 2026-11-15 — Continued native self-evaluation and catalog validation
+
+- Refreshed coordination board entries for PR #115, #129, #133, and #135 so their branch heads and exact CI stages match GitHub rather than the earlier stale checkpoint.
+- PR #115 exact head `373a0a0c2fcb6d123c52a19c3a542097b98b022a`: llama.cpp build, fail-closed typecheck, device link, and simulator selection passed; app build is running. Four companion workflows passed.
+- PR #129 exact head `e9251e9c09b2d8bdf67a296cfa0ac03e8dd6482`: llama.cpp build, typecheck, device link, simulator selection, and app build passed; native app XCTest is running. Four companion workflows passed.
+- PR #135 exact head `dbee3be4355b740e5d71deeeb258d9feca0899d2`: same native build/link gates passed; native app XCTest is running. Five companion workflows passed.
+- PR #133 exact head `8700bae3b27b8aad3ca64212770aa3245c137197`: intelligence workflow passed. Verified the added manual-review test aligns with `NativeEvaluationScoreSummary`: nil deterministic score is counted as unscored, not zero; latest attempt is grouped per model/suite/case.
+- Workflow job logs are not yet downloadable from the Actions log endpoint while these jobs are still active (temporary log blob returns 404); no hidden XCTest result is inferred. Simulator XCTest, pinned GGUF smoke, macOS XCTest, physical iPhone execution, and attestation remain unverified.
