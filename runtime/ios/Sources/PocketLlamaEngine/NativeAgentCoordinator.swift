@@ -97,7 +97,8 @@ public actor NativeAgentCoordinator {
               steps.allSatisfy({
                   !$0.agentId.isEmpty && $0.agentId.utf8.count <= Self.maxAgentIdBytes &&
                   !$0.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                  $0.instructions.utf8.count <= Self.maxInstructionBytes
+                  $0.instructions.utf8.count <= Self.maxInstructionBytes &&
+                  Self.supportsWirePayload($0.messageType)
               }),
               Set(steps.map(\.agentId)).count == steps.count,
               (1...Self.maxTokensPerStep).contains(maxTokens),
@@ -160,7 +161,7 @@ public actor NativeAgentCoordinator {
                 senderAgentId: step.agentId,
                 recipientAgentId: index + 1 < steps.count ? steps[index + 1].agentId : "user",
                 messageType: step.messageType,
-                payload: .object(["text": .string(output)]),
+                payload: Self.wirePayload(for: step.messageType, output: output, priorMessages: messages),
                 evidenceRefs: [],
                 parentMessageId: messages.last?.messageId,
                 createdAt: ISO8601DateFormatter().string(from: Date()),
@@ -187,6 +188,57 @@ public actor NativeAgentCoordinator {
     public func cancelCurrentTask() async {
         guard let requestId = activeRequestId else { return }
         await engine.cancelAndWait(sessionId: session.id, requestId: requestId)
+    }
+
+    private static func supportsWirePayload(_ type: AgentMessageType) -> Bool {
+        switch type {
+        case .analysis, .question, .counterargument, .revision, .validation, .completion:
+            return true
+        case .taskAssignment, .evidence, .securityBoundaryViolation:
+            return false
+        }
+    }
+
+    /// Maps model text to the exact payload schemas enforced by the TypeScript
+    /// MessageBus. Model output cannot manufacture sourced evidence or trusted
+    /// security-monitor events.
+    private static func wirePayload(
+        for type: AgentMessageType,
+        output: String,
+        priorMessages: [AgentMessageEnvelope]
+    ) -> AgentJSONValue {
+        switch type {
+        case .analysis:
+            return .object(["analysis": .string(output)])
+        case .question:
+            return .object(["question": .string(output)])
+        case .counterargument:
+            return .object([
+                "claim": .string("Prior agent proposal"),
+                "objection": .string(output),
+                "evidenceRefs": .array([])
+            ])
+        case .revision:
+            return .object([
+                "revision": .string(output),
+                "addressesMessageIds": .array(priorMessages.map {
+                    .string($0.messageId.uuidString.lowercased())
+                })
+            ])
+        case .validation:
+            return .object([
+                "claim": .string("Prior agent proposal"),
+                "verified": .boolean(false),
+                "reason": .string(output)
+            ])
+        case .completion:
+            return .object([
+                "synthesis": .string(output),
+                "evidenceRefs": .array([])
+            ])
+        case .taskAssignment, .evidence, .securityBoundaryViolation:
+            return .object([:])
+        }
     }
 
     private static func makePrompt(task: AgentTaskRequest, step: NativeAgentStep,
