@@ -36,7 +36,7 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(generatedSessions.count, 6)
         XCTAssertEqual(Set(generatedSessions).count, 1)
         XCTAssertEqual(model.trustStatus, "Unverified")
-        XCTAssertTrue(model.status.contains("six sequential logical roles shared one local model session"))
+        XCTAssertTrue(model.status.contains("6 sequential logical roles shared one local model session"))
         XCTAssertTrue(model.messages.contains(where: { $0.role.contains("reasoner") }))
         XCTAssertTrue(model.messages.contains(where: { $0.role.contains("researcher") }))
         XCTAssertTrue(model.messages.contains(where: { $0.role.contains("security-analyst") }))
