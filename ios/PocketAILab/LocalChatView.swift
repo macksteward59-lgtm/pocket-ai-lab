@@ -42,52 +42,26 @@ final class LocalChatModel: ObservableObject {
 
     var isModelLoaded: Bool { lease != nil }
 
-    func importModel(from source: URL) throws {
+    func importModel(from source: URL) async throws {
         guard !isBusy else { throw LocalChatError.busy }
         guard lease == nil else { throw LocalChatError.modelMustBeUnloaded }
         guard source.pathExtension.lowercased() == "gguf" else { throw LocalChatError.notGGUF }
+
+        isBusy = true
+        defer { isBusy = false }
         let access = source.startAccessingSecurityScopedResource()
         defer { if access { source.stopAccessingSecurityScopedResource() } }
 
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = directory.appendingPathComponent(source.lastPathComponent)
-        let sourcePath = source.standardizedFileURL.resolvingSymlinksInPath().path
-        let destinationPath = destination.standardizedFileURL.resolvingSymlinksInPath().path
-
-        // A model already inside Documents/Models must never be copied onto or
-        // deleted beneath itself.
-        if sourcePath == destinationPath {
-            try Self.validateGGUFHeader(at: destination)
-        } else {
-            let staging = directory.appendingPathComponent(".\(source.lastPathComponent).\(UUID().uuidString).staging")
-            do {
-                try FileManager.default.copyItem(at: source, to: staging)
-                try Self.validateGGUFHeader(at: staging)
-                if FileManager.default.fileExists(atPath: destination.path) {
-                    _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
-                } else {
-                    try FileManager.default.moveItem(at: staging, to: destination)
-                }
-            } catch {
-                try? FileManager.default.removeItem(at: staging)
-                throw error
-            }
-        }
+        let destination = try await Task.detached(priority: .utility) {
+            try LocalGGUFImporter.copy(source: source, into: directory)
+        }.value
 
         // Update selection only after the staged artifact has passed validation.
         modelURL = destination
         modelName = destination.lastPathComponent
         status = "GGUF header validated and copied safely to this app's private model folder. Model is not loaded yet."
-    }
-
-    private static func validateGGUFHeader(at url: URL) throws {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        guard try handle.read(upToCount: 4) == Data("GGUF".utf8) else {
-            throw LocalChatError.invalidGGUFHeader
-        }
     }
 
     func loadModel() async {
@@ -198,6 +172,45 @@ final class LocalChatModel: ObservableObject {
     }
 }
 
+private enum LocalGGUFImporter {
+    static func copy(source: URL, into directory: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appendingPathComponent(source.lastPathComponent)
+        let sourcePath = source.standardizedFileURL.resolvingSymlinksInPath().path
+        let destinationPath = destination.standardizedFileURL.resolvingSymlinksInPath().path
+
+        // A model already inside Documents/Models must never be copied onto or
+        // deleted beneath itself.
+        if sourcePath == destinationPath {
+            try validateHeader(at: destination)
+            return destination
+        }
+
+        let staging = directory.appendingPathComponent(".\(source.lastPathComponent).\(UUID().uuidString).staging")
+        do {
+            try FileManager.default.copyItem(at: source, to: staging)
+            try validateHeader(at: staging)
+            if FileManager.default.fileExists(atPath: destination.path) {
+                _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
+            } else {
+                try FileManager.default.moveItem(at: staging, to: destination)
+            }
+            return destination
+        } catch {
+            try? FileManager.default.removeItem(at: staging)
+            throw error
+        }
+    }
+
+    private static func validateHeader(at url: URL) throws {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        guard try handle.read(upToCount: 4) == Data("GGUF".utf8) else {
+            throw LocalChatError.invalidGGUFHeader
+        }
+    }
+}
+
 struct ChatLine: Identifiable {
     let id = UUID()
     let role: String
@@ -266,8 +279,14 @@ struct LocalChatView: View {
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 do {
                     guard let url = try result.get().first else { throw LocalChatError.notGGUF }
-                    try model.importModel(from: url)
-                    importError = nil
+                    Task {
+                        do {
+                            try await model.importModel(from: url)
+                            importError = nil
+                        } catch {
+                            importError = error.localizedDescription
+                        }
+                    }
                 } catch { importError = error.localizedDescription }
             }
             .alert("Import failed", isPresented: Binding(get: { importError != nil },
