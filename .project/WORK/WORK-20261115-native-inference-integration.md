@@ -85,12 +85,12 @@ Complete the shared native inference composition root and bind every native mode
 - Added native XCTest coverage for workspace URL/restore/reload behavior, six-role shared-runtime flow, bounded tasks/plans/context/responses, and artifact lease retention.
 - Updated README and coordinator architecture docs.
 - CI on this exact head:
-  - iOS LlamaEngine: `43741079412` (in progress; initial setup at last check).
-  - Pocket AI Lab: `43741079416` (in progress).
-  - Consumer prototype: `43741079393` (in progress).
-  - Cursor collaboration plugin: `43741079479` (in progress).
-  - Governance sidecar: `43741079363` (in progress).
-- No XCTest result is available yet. Do not treat the branch as validated until all relevant jobs complete.
+  - Pocket AI Lab: `43741079416` — succeeded (syntax, type-check/build, test suite).
+  - Consumer prototype: `43741079393` — succeeded.
+  - Cursor collaboration plugin: `43741079479` — succeeded.
+  - Governance sidecar: `43741079363` — succeeded.
+  - iOS LlamaEngine: `43741079412` — still building pinned llama.cpp for simulator/macOS; app build and XCTest have not started.
+- No native XCTest result is available yet. Do not treat the branch as fully validated until iOS app, simulator, and macOS test steps complete.
 
 ### Older dependency-chain reconciliation
 
