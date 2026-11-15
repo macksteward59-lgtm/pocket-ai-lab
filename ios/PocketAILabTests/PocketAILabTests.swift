@@ -176,6 +176,32 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(model.trustStatus, "Unverified")
     }
 
+    func testWorkspaceURLsRequireAHostAndSecureScheme() {
+        XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "https://workspace.example")!))
+        XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "http://localhost:8080")!))
+        XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "http://127.0.0.1:8080")!))
+        XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "http://[::1]:8080")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https:/workspace")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "http://workspace.example")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "https://user:password@workspace.example")!))
+        XCTAssertFalse(isAllowedWorkspaceURL(URL(string: "file:///tmp/workspace.html")!))
+    }
+
+    func testWorkspaceRestoresSavedAddressOnlyOnce() {
+        var gate = WorkspaceRestoreGate()
+        XCTAssertTrue(gate.beginRestore())
+        XCTAssertFalse(gate.beginRestore())
+        XCTAssertTrue(gate.hasRestoredSavedAddress)
+    }
+
+    func testWorkspaceWebViewReloadsOnlyForExplicitOpenRequests() {
+        let coordinator = PrivateWorkspaceWebView.Coordinator()
+        let firstRequest = UUID()
+        XCTAssertTrue(coordinator.shouldLoad(firstRequest))
+        XCTAssertFalse(coordinator.shouldLoad(firstRequest))
+        XCTAssertTrue(coordinator.shouldLoad(UUID()))
+    }
+
     func testRuntimeTrustRemainsUnverifiedUntilTrustedLeaseIntegrationExists() {
         XCTAssertEqual(RuntimeTrustPresentation.stateLabel, "Unverified")
         XCTAssertFalse(RuntimeTrustPresentation.isVerified)
