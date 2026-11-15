@@ -61,8 +61,8 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(Set(NativeEvaluationSuite.cases.map(\.category)), Set(NativeEvaluationCategory.allCases))
         let objective = NativeEvaluationSuite.cases.filter { $0.scoringRule != .manualReview }
         let manual = NativeEvaluationSuite.cases.filter { $0.scoringRule == .manualReview }
-        XCTAssertEqual(objective.count, 5)
-        XCTAssertEqual(manual.count, 3)
+        XCTAssertEqual(objective.count, 4)
+        XCTAssertEqual(manual.count, 4)
         XCTAssertTrue(manual.allSatisfy { !$0.evaluationCriteria.isEmpty })
     }
 
@@ -84,6 +84,9 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(attempt.deterministicPassed, true)
         XCTAssertEqual(attempt.deterministicScore, 1.0)
         XCTAssertEqual(attempt.runtimeSessionID, lease.session.id)
+        XCTAssertEqual(attempt.estimatedMemoryMB, lease.estimatedMemoryMB)
+        XCTAssertEqual(attempt.promptUTF8Bytes, attempt.prompt.utf8.count)
+        XCTAssertEqual(attempt.outputUTF8Bytes, attempt.output.utf8.count)
         let prompts = await engine.prompts()
         XCTAssertEqual(prompts, ["What is 6 multiplied by 7?"])
         let events = try await journal.events()
