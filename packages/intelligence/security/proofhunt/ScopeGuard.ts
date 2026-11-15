@@ -272,6 +272,13 @@ export class ScopeGuard {
         throw new ScopeGuardError("Target is not explicitly authorized");
       }
 
+      // Verifiers may be asynchronous. Re-read both stop controls immediately
+      // before emitting the plan so a stop activated during verification wins.
+      if ((await this.options.emergencyStop.isGlobalStopActive()) ||
+          (await this.options.emergencyStop.isProjectStopActive(assessmentConfig.projectId))) {
+        throw new ScopeGuardError("Emergency stop became active during authorization; assessment plan denied");
+      }
+
       permitted = true;
       reason = "Both authorization records, exact target scope, and preapproved check policy verified";
     } catch (error) {
