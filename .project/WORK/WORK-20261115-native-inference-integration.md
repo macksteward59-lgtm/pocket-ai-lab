@@ -118,3 +118,14 @@ Complete the shared native inference composition root and bind every native mode
 ## Next action
 
 Refresh runs `43740561987` (#107), `43740720673` (#109), and `43741621034` (#110), inspect XCTest logs and all workflow conclusions, and fix only concrete failures. Then inspect the combined #110 diff and review threads. Do not merge. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.
+
+
+## Current continuation status — 2026-11-15 17:39 UTC
+
+- Current integration candidate is PR #110 at `b865b519084e0287f8680e7610bdc69b852fdaf1`.
+- Lease-bound generation is hardened with exact active lease validation, pre-scheduler use pins, unload/idle eviction protection, and stale/foreign lease rejection.
+- Added regression coverage for queued-request cancellation and output-limit failure retaining the pin until cancellation drain completes.
+- Native chat now includes bounded in-memory prior turns (last 8 user/assistant messages, max 6,000 UTF-8 bytes), explicitly excluding Agent Team role output and runtime diagnostics. The prompt transcript is untrusted context; no persistent chat or long-term memory is implemented.
+- XCTest additions cover chat follow-up context, oversized prompt truncation, queued-generation cancellation, and output-limit drain lifetime.
+- Architecture documentation has been updated for lease pinning and bounded chat context.
+- Next: inspect latest-head iOS CI and companion workflows; fix only concrete failures; verify all native app, simulator, and macOS XCTest steps. After native validation, add persistence only with a separate bounded storage and privacy design. Keep PRs draft; do not merge.
