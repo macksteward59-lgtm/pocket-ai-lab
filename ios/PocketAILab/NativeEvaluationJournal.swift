@@ -7,6 +7,7 @@ enum NativeEvaluationJournalError: Error, Equatable {
     case invalidChallenge(String)
     case missingAttempt(String)
     case assessmentMustUseSeparateRuntimeSession
+    case assessmentMustUseDifferentModel
     case corruptJournal(String)
 }
 
@@ -248,6 +249,9 @@ actor NativeEvaluationJournal {
         guard target.runtimeSessionID != assessment.evaluatorRuntimeSessionID else {
             throw NativeEvaluationJournalError.assessmentMustUseSeparateRuntimeSession
         }
+        guard target.modelID != assessment.evaluatorModelID else {
+            throw NativeEvaluationJournalError.assessmentMustUseDifferentModel
+        }
         _ = try append(.init(kind: .assessment, attempt: nil, assessment: assessment, challenge: nil))
     }
 
@@ -348,6 +352,7 @@ actor NativeEvaluationJournal {
                       !assessment.id.isEmpty, assessmentIDs.insert(assessment.id).inserted,
                       let target = attemptsByID[assessment.attemptID],
                       target.runtimeSessionID != assessment.evaluatorRuntimeSessionID,
+                      target.modelID != assessment.evaluatorModelID,
                       assessment.evaluatorAgentID.lowercased() == assessment.evaluatorRole.rawValue,
                       assessment.score.isFinite, (0...1).contains(assessment.score),
                       Self.hasCompleteCategoryScores(assessment.categoryScores) else {
