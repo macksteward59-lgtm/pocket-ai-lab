@@ -1,11 +1,11 @@
 -- Run after 001_proofhunt_scopeguard.sql as a superuser in a disposable database.
 \set ON_ERROR_STOP on
+SET TIME ZONE 'UTC';
 
 CREATE ROLE proofhunt_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
 GRANT USAGE ON SCHEMA proofhunt TO proofhunt_runtime;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA proofhunt TO proofhunt_runtime;
 GRANT UPDATE, DELETE ON proofhunt.assessment_jobs TO proofhunt_runtime;
-GRANT UPDATE, DELETE ON proofhunt.authorization_records TO proofhunt_runtime;
 
 INSERT INTO proofhunt.authorization_records (
   record_id, project_id, record_kind, environment, subject_id,
@@ -16,23 +16,24 @@ INSERT INTO proofhunt.authorization_records (
   '00000000-0000-0000-0000-000000000001', 'project-a', 'bug_bounty_program', 'bounty', 'program-a',
   'captured-policy-a', 'revision-a', ARRAY['static_analysis'],
   'reviewer-a', 'review-a',
-  '{
-    "authorized": false,
-    "effectiveAt": "2026-11-01T00:00:00Z",
-    "expiresAt": "2026-12-01T00:00:00Z",
-    "inScope": [
-      {"kind":"domain","value":"example.com","includeApex":true,"includeSubdomains":true}
-    ],
-    "outOfScope": [
-      {"kind":"domain","value":"admin.example.com","includeApex":true,"includeSubdomains":true}
-    ],
-    "testingWindow": {
-      "startsAt":"2026-11-15T00:00:00Z",
-      "endsAt":"2026-11-16T00:00:00Z",
-      "timezone":"UTC"
-    }
-  }'::jsonb,
-  repeat('a',64), 'verified', '2026-11-15T12:00:00Z', '2026-12-01T00:00:00Z'
+  jsonb_build_object(
+    'authorized', FALSE,
+    'effectiveAt', to_char(CURRENT_TIMESTAMP - INTERVAL '1 day', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+    'expiresAt', to_char(CURRENT_TIMESTAMP + INTERVAL '30 days', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+    'inScope', jsonb_build_array(
+      jsonb_build_object('kind','domain','value','example.com','includeApex',TRUE,'includeSubdomains',TRUE),
+      jsonb_build_object('kind','domain','value','exact.example.net','includeApex',TRUE,'includeSubdomains',TRUE)
+    ),
+    'outOfScope', jsonb_build_array(
+      jsonb_build_object('kind','domain','value','admin.example.com','includeApex',TRUE,'includeSubdomains',TRUE)
+    ),
+    'testingWindow', jsonb_build_object(
+      'startsAt', to_char(CURRENT_TIMESTAMP - INTERVAL '1 day', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      'endsAt', to_char(CURRENT_TIMESTAMP + INTERVAL '30 days', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      'timezone','UTC'
+    )
+  ),
+  repeat('a',64), 'verified', CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_TIMESTAMP + INTERVAL '30 days'
 );
 
 INSERT INTO proofhunt.authorization_records (
@@ -44,10 +45,9 @@ INSERT INTO proofhunt.authorization_records (
   '00000000-0000-0000-0000-000000000002', 'project-a', 'operational_approval', 'bounty', 'ops-a',
   '00000000-0000-0000-0000-000000000001', 'operator-approval-a', 'policy-v1',
   'approved', 'policy-v1', repeat('b',64), 'human-a', 'approval-a',
-  'signature-a', '2026-11-15T12:00:00Z', '2026-12-01T00:00:00Z'
+  'signature-a', CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_TIMESTAMP + INTERVAL '30 days'
 );
 
--- A second project proves that RLS does not leak its authorization record.
 INSERT INTO proofhunt.authorization_records (
   record_id, project_id, record_kind, environment, subject_id,
   evidence_reference, source_revision, permitted_checks,
@@ -56,21 +56,32 @@ INSERT INTO proofhunt.authorization_records (
 ) VALUES (
   '00000000-0000-0000-0000-000000000101', 'project-b', 'asset_ownership', 'owned', 'owned-system-b',
   'ownership-proof-b', 'revision-b', ARRAY['static_analysis'],
-  'reviewer-b', 'review-b', 'verified', '2026-11-15T12:00:00Z', '2026-12-01T00:00:00Z'
+  'reviewer-b', 'review-b', 'verified', CURRENT_TIMESTAMP - INTERVAL '1 hour',
+  CURRENT_TIMESTAMP + INTERVAL '30 days'
 );
 
 INSERT INTO proofhunt.authorized_targets (
   target_id, project_id, authorization_record_id, hostname, include_subdomains
-) VALUES (
+) VALUES
+(
   '00000000-0000-0000-0000-000000000003', 'project-a',
-  '00000000-0000-0000-0000-000000000001', 'example.com', FALSE
+  '00000000-0000-0000-0000-000000000001', 'example.com', TRUE
+),
+(
+  '00000000-0000-0000-0000-000000000011', 'project-a',
+  '00000000-0000-0000-0000-000000000001', 'exact.example.net', FALSE
 );
 
 INSERT INTO proofhunt.excluded_targets (
   exclusion_id, project_id, authorization_record_id, hostname, include_subdomains, exclusion_reason
-) VALUES (
+) VALUES
+(
   '00000000-0000-0000-0000-000000000006', 'project-a',
   '00000000-0000-0000-0000-000000000001', 'admin.example.com', TRUE, 'Published program exclusion'
+),
+(
+  '00000000-0000-0000-0000-000000000012', 'project-a',
+  '00000000-0000-0000-0000-000000000001', 'billing.example.com', FALSE, 'Operational exclusion'
 );
 
 INSERT INTO proofhunt.assessment_policies (
@@ -83,7 +94,7 @@ INSERT INTO proofhunt.assessment_policies (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
   TRUE, ARRAY['static_analysis'], 1.0, 1, TRUE,
-  '2026-11-15T00:00:00Z', '2026-11-16T00:00:00Z'
+  CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_TIMESTAMP + INTERVAL '30 days'
 );
 
 SET ROLE proofhunt_runtime;
@@ -105,7 +116,7 @@ BEGIN
 END;
 $$;
 
--- Exact allowlist target is admitted.
+-- A child hostname explicitly covered by the approved subdomain flag is admitted.
 INSERT INTO proofhunt.assessment_jobs (
   job_id, project_id, program_authorization_id, operational_authorization_id,
   policy_id, policy_version, policy_hash, check_type,
@@ -116,8 +127,8 @@ INSERT INTO proofhunt.assessment_jobs (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
-  '00000000-0000-0000-0000-000000000003', 'example.com', 'example.com', repeat('a',64),
-  'approved_plan', 'Approved non-destructive local analysis plan', 'planned', CURRENT_TIMESTAMP
+  '00000000-0000-0000-0000-000000000003', 'example.com', 'app.example.com', repeat('a',64),
+  'approved_plan', 'Approved non-destructive plan', 'planned', CURRENT_TIMESTAMP
 );
 
 -- Job lifecycle may advance, but its authorization basis cannot be rewritten.
@@ -148,8 +159,8 @@ BEGIN
 END;
 $$;
 
--- A child host is in the published policy but not in this exact operational
--- allowlist; it must be rejected by the allowlist/subdomain control.
+-- The program includes this child, but the operational target row does not
+-- permit subdomains, so admission must fail at the operational allowlist.
 DO $$
 BEGIN
   BEGIN
@@ -163,10 +174,10 @@ BEGIN
       '00000000-0000-0000-0000-000000000001',
       '00000000-0000-0000-0000-000000000002',
       '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
-      '00000000-0000-0000-0000-000000000003', 'example.com', 'app.example.com', repeat('a',64),
+      '00000000-0000-0000-0000-000000000011', 'exact.example.net', 'child.exact.example.net', repeat('a',64),
       'approved_plan', 'Should be denied by exact allowlist', 'planned', CURRENT_TIMESTAMP
     );
-    RAISE EXCEPTION 'expected subdomain scope to be denied';
+    RAISE EXCEPTION 'expected exact allowlist to deny child host';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM <> 'ProofHunt job target is outside the matched allowlist hostname' THEN
       RAISE;
@@ -175,7 +186,7 @@ BEGIN
 END;
 $$;
 
--- Published out-of-scope exclusions override otherwise matching inclusion.
+-- Published exclusions override matching inclusions.
 DO $$
 BEGIN
   BEGIN
@@ -201,8 +212,59 @@ BEGIN
 END;
 $$;
 
--- A revocation and a concurrent admission are serialized by transaction locks;
--- subsequent approved jobs using the revoked record are rejected.
+-- Operational exclusions are enforced independently of published program scope.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO proofhunt.assessment_jobs (
+      job_id, project_id, program_authorization_id, operational_authorization_id,
+      policy_id, policy_version, policy_hash, check_type,
+      authorized_target_id, authorized_target_hostname, target_hostname, program_scope_hash,
+      decision, decision_reason, job_status, decision_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000013', 'project-a',
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
+      '00000000-0000-0000-0000-000000000003', 'example.com', 'billing.example.com', repeat('a',64),
+      'approved_plan', 'Should be denied by operational exclusion', 'planned', CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'expected operational exclusion to deny target';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ProofHunt job target is explicitly excluded' THEN
+      RAISE;
+    END IF;
+  END;
+END;
+$$;
+
+-- The composite foreign key prevents a job from pairing a valid row ID with a
+-- different claimed allowlist hostname.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO proofhunt.assessment_jobs (
+      job_id, project_id, program_authorization_id, operational_authorization_id,
+      policy_id, policy_version, policy_hash, check_type,
+      authorized_target_id, authorized_target_hostname, target_hostname, program_scope_hash,
+      decision, decision_reason, job_status, decision_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000014', 'project-a',
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
+      '00000000-0000-0000-0000-000000000003', 'wrong.example.com', 'wrong.example.com', repeat('a',64),
+      'approved_plan', 'Should be denied by composite FK', 'planned', CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'expected composite allowlist FK to reject mismatched hostname';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+END;
+$$;
+
+-- A revocation and job admission use the same transaction-scoped lock; once
+-- the revocation commits, later jobs using that authorization are denied.
 INSERT INTO proofhunt.authorization_revocations (
   revocation_id, project_id, authorization_record_id, revoked_at, revoked_by, reason, evidence_reference
 ) VALUES (
