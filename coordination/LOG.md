@@ -1398,3 +1398,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Gap:** the current lifecycle coordinator accepts an injected `TaskLifecycleStore`, but only an in-memory implementation is included. The readiness checklist requires atomic replacement, cross-process concurrency control, monotonic versions, schema validation, and fail-closed recovery.
 - **Design:** namespaced PostgreSQL JSONB snapshot with `SELECT ... FOR UPDATE`, compare-and-swap record versions, explicit schema version, and a caller-injected SQL transaction adapter. Stale writers fail rather than overwrite; callers can reload the coordinator and reconcile. No database driver, credentials, migration execution, or production deployment will be added.
 - **Security boundary:** persistence is workflow state only. It grants no APEX approval, East authorization, evidence verification, or signed receipt authority.
+
+## 2026-11-16 UTC — Native self-evaluation journal implementation submitted for review
+
+- **Branch / PR:** `codex/native-self-evaluation-journal`, draft PR #130 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/130.
+- **Exact head:** `2744c548d6c6010ac52e297049f58704864a09fa`; compare against `main` reports 16 commits ahead, 0 behind. Four files changed: native journal, native runner, focused XCTest file, and architecture note.
+- **Implementation:** native LlamaEngine execution seam; actual model-file SHA-256 pre/post checks; append-only hash-chained Application Support journal; retained prompts, expected outcomes, outputs, partial/failure records and retry links; independent Critic/Validator assessment events with all eight capability dimensions; append-only challenges.
+- **Validation at submission:** Pocket AI Lab CI, Consumer prototype CI, Governance sidecar CI, and Cursor collaboration plugin CI succeeded on the PR head. iOS LlamaEngine CI run `43753174756` was queued; no iOS XCTest result yet. No local Xcode or physical-device test claimed.
+- **Review boundary:** no APEX/East, signed Evidence, runtime trust, or authorization behavior changed. PR explicitly documents that user-facing evaluation UI and catalog/ModelPool session acquisition are not yet wired; no physical iPhone execution is claimed.
+- **Review request:** inspect Swift compile/XCTest results, hash-chain correctness, append-only semantics, model-file binding, and native-provider evidence gate before any merge.
