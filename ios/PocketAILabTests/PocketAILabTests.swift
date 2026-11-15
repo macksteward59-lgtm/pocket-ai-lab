@@ -3,7 +3,7 @@ import XCTest
 import PocketLlamaEngine
 
 final class PocketAILabTests: XCTestCase {
-    private func makeLocalChatModel(engine: any LlamaEngine, root: URL) -> LocalChatModel {
+    private func makeLocalChatModel(engine: any LlamaEngine, root: URL, evaluationJournal: NativeEvaluationJournal? = nil) -> LocalChatModel {
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
         let catalogStore = LocalModelCatalogStore(
             fileURL: root.appendingPathComponent("ModelCatalog.json"),
@@ -12,7 +12,8 @@ final class PocketAILabTests: XCTestCase {
         return LocalChatModel(
             engine: engine,
             modelDirectory: modelDirectory,
-            modelCatalogStore: catalogStore
+            modelCatalogStore: catalogStore,
+            evaluationJournal: evaluationJournal
         )
     }
 
@@ -328,6 +329,43 @@ final class PocketAILabTests: XCTestCase {
         let unloaded = await engine.unloadedSessionIDs()
         XCTAssertEqual(unloaded, ["fingerprint-session"])
         XCTAssertEqual(model.trustStatus, "Unverified")
+    }
+
+
+    @MainActor
+    func testNativeSelfEvaluationRunsInsideAppAndClearHistoryDoesNotEraseItsJournal() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let journal = try NativeEvaluationJournal(fileURL: root.appendingPathComponent("native-evaluation-history.ndjson"))
+        let engine = FingerprintTestEngine()
+        let model = makeLocalChatModel(engine: engine, root: root, evaluationJournal: journal)
+
+        try await model.importModel(from: source)
+        await model.loadModel()
+        XCTAssertTrue(model.isModelLoaded)
+
+        await model.runSelfEvaluation()
+
+        XCTAssertEqual(model.evaluationAttempts.count, NativeEvaluationSuite.cases.count)
+        XCTAssertEqual(model.currentEvaluationSummary.totalAttempts, 8)
+        XCTAssertEqual(model.currentEvaluationSummary.scoredAttempts, 5)
+        XCTAssertEqual(model.currentEvaluationSummary.unscoredAttempts, 3)
+        XCTAssertTrue(model.evaluationAttempts.allSatisfy { $0.providerKind == .unverifiedProvider })
+        XCTAssertTrue(model.evaluationAttempts.allSatisfy { !$0.nativeExecutionObserved })
+        XCTAssertTrue(model.evaluationStatus.contains("8 retained attempts"))
+        let beforeClear = try await journal.events()
+        XCTAssertEqual(beforeClear.count, 8)
+
+        model.clearHistory()
+
+        let afterClear = try await journal.events()
+        XCTAssertEqual(afterClear.count, 8, "Conversation-history clearing must not erase self-evaluation evidence.")
+
+        let restoredModel = makeLocalChatModel(engine: FingerprintTestEngine(), root: root, evaluationJournal: journal)
+        await restoredModel.loadEvaluationHistory()
+        XCTAssertEqual(restoredModel.evaluationAttempts.count, 8, "The app must restore the complete evaluation history after model recreation.")
     }
 
     func testWorkspaceURLsRequireAHostAndSecureScheme() {
