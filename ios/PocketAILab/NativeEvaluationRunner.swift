@@ -42,7 +42,7 @@ enum NativeEvaluationSuite {
             caseID: "reasoning-usable-units",
             prompt: "A delivery has 4 boxes with 6 units each. 5 units are damaged. How many usable units remain? Show the arithmetic.",
             evaluationCriteria: "Compute the total, subtract damaged units, and explain the arithmetic without contradiction.",
-            expectedOutcome: "19", scoringRule: .containsExpectedOutcome
+            expectedOutcome: "19"
         ),
         NativeEvaluationCase(
             category: .factualAccuracyEvidence, suiteID: id, suiteVersion: version,
@@ -222,9 +222,7 @@ struct NativeEvaluationRunner: Sendable {
             deterministicPassed = nil
         case .exactMatch:
             deterministicPassed = status == .completed && output.trimmingCharacters(in: .whitespacesAndNewlines) == evaluationCase.expectedOutcome
-        case .containsExpectedOutcome:
-            deterministicPassed = status == .completed && output.localizedCaseInsensitiveContains(evaluationCase.expectedOutcome)
-        }
+                }
         let deterministicScore = deterministicPassed.map { $0 ? 1.0 : 0.0 }
         let providerKind: NativeEvaluationAttempt.ProviderKind =
             runtime.providerKind == .llamaCpp ? .llamaCppBackend : .unverifiedProvider
@@ -253,7 +251,10 @@ struct NativeEvaluationRunner: Sendable {
             startedAt: startedAt,
             completedAt: completedAt,
             latencyMilliseconds: max(0, Int(completedAt.timeIntervalSince(startedAt) * 1000)),
-            maxTokens: evaluationCase.maxTokens
+            maxTokens: evaluationCase.maxTokens,
+            estimatedMemoryMB: lease.estimatedMemoryMB,
+            promptUTF8Bytes: evaluationCase.prompt.utf8.count,
+            outputUTF8Bytes: output.utf8.count
         )
         return try await journal.appendAttempt(draft)
     }
