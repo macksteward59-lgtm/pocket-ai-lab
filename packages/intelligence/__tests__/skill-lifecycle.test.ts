@@ -261,6 +261,29 @@ describe("Skill lifecycle integrity and promotion", () => {
     expect(() => transitionSkillLifecycle("quarantined", "researching")).toThrow(/Invalid skill lifecycle/);
   });
 
+  it("requires every evidence-mandated exercise even when the passing threshold is lower", async () => {
+    const artifact = await makeArtifact({
+      assessment: {
+        rubric: ["Technical correctness", "Evidence quality"],
+        minimumPassingExercises: 1,
+        requiredCompetencyLevel: 3,
+        humanReviewRequired: true
+      }
+    });
+    const evaluation = await makeEvaluation(artifact, {
+      results: [
+        { exerciseId: "actor-isolation", passed: true, evidenceRefs: ["evidence://actor-isolation"] },
+        { exerciseId: "session-lifecycle", passed: false, evidenceRefs: [] }
+      ]
+    });
+    const result = await authorizeSkillPromotion(
+      artifact, evaluation, await makeApproval(artifact, evaluation),
+      { verifyEvaluation: async () => true, verifyApproval: async () => true }
+    );
+    expect(result.authorized).toBe(false);
+    expect(result.reason).toMatch(/required evidence exercise has not passed/);
+  });
+
   it("keeps the artifact descriptive and does not add tool or permission grants", async () => {
     const artifact = await makeArtifact();
     expect(artifact.skill).not.toHaveProperty("tools");
