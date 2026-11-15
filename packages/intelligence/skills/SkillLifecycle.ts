@@ -295,7 +295,9 @@ export function transitionSkillLifecycle(
   promotion?: SkillPromotionAuthorization,
   expected?: { skillId: string; version: string; artifactDigest: string }
 ): SkillLifecycleStatus {
-  if (!STATUS_TRANSITIONS[current].includes(next)) {
+  if (!Object.prototype.hasOwnProperty.call(STATUS_TRANSITIONS, current) ||
+      !Object.prototype.hasOwnProperty.call(STATUS_TRANSITIONS, next) ||
+      !STATUS_TRANSITIONS[current].includes(next)) {
     throw new Error("Invalid skill lifecycle transition: " + current + " -> " + next);
   }
   if (next === "approved" || next === "active") {
@@ -317,8 +319,9 @@ function validateArtifactInput(input: SkillArtifactInput): void {
   if (!input.description?.trim() || !input.createdBy?.trim() || !validTimestamp(input.createdAt)) {
     throw new Error("Skill description, creator, and valid creation timestamp are required");
   }
-  if (!Array.isArray(input.prerequisites) || !Array.isArray(input.learningObjectives) ||
-      input.learningObjectives.length === 0 || input.learningObjectives.some(item => !item.trim())) {
+  if (!Array.isArray(input.prerequisites) || input.prerequisites.some(item => typeof item !== "string" || !item.trim()) ||
+      !Array.isArray(input.learningObjectives) ||
+      input.learningObjectives.length === 0 || input.learningObjectives.some(item => typeof item !== "string" || !item.trim())) {
     throw new Error("Skill learning objectives must be non-empty");
   }
   if (!Array.isArray(input.exercises) || input.exercises.length === 0) {
