@@ -44,6 +44,7 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     environment: "bounty",
     programAuthorization: {
       recordId: "PROGRAM-1",
+      projectId: "proofhunt-demo",
       kind: "bug_bounty_program",
       subjectId: "program-demo",
       evidenceReference: "https://bounty.example/program/rules",
@@ -189,6 +190,7 @@ describe("ProofHunt ScopeGuard", () => {
       environment: "owned" as const,
       programAuthorization: {
         ...base.programAuthorization,
+        projectId: "another-project",
         kind: "asset_ownership" as const
       }
     };
@@ -219,7 +221,7 @@ describe("ProofHunt ScopeGuard", () => {
       "static_analysis"
     );
     expect(projectResult.permitted).toBe(false);
-    expect(projectResult.reason).toContain("different project or assessment environment");
+    expect(projectResult.reason).toContain("Program authorization is bound to a different project");
     expect(environmentResult.permitted).toBe(false);
     expect(environmentResult.reason).toContain("different project or assessment environment");
     expect(replayResult.permitted).toBe(false);
