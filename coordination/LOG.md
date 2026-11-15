@@ -1316,3 +1316,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #84 current head `92f39d7ee79cabe9028e7782cec40ca7a0f2c219`: four non-iOS checks successful; iOS LlamaEngine CI run `43750771905` in progress.
 - PR #86 current head `7319ea97d7b5bdfc4c1a3ec921b8b2eb65612dc5`: four non-iOS checks successful; iOS LlamaEngine CI run `43750794278` in progress.
 - The four iOS workflows were all still in the pinned llama.cpp build step at the last job inspection. No downstream app XCTest/simulator/macOS result can be inferred from that state.
+
+
+## 2026-11-15 — ModelPool regression expectation corrected before CI completion
+
+- Reviewing PR #122's full test suite after adding cumulative reservation accounting revealed two pre-existing unload-path assertions still expected 112 MB available. Under the new conservative rule, a 400 MB reservation against a constant 512 MB host snapshot with a 64 MB free-memory margin leaves 48 MB (min of the pool budget and host snapshot after reservation). Updated both expectations from 112 to 48 in `ModelPoolTests.swift` on PR #122 branch.
+- Fix commit on PR #122 branch: `aebd406ae4419f29046f497496c40d9e2ab2b2bf`.
+- Propagated the corrected test file into PR #124 integration-validation branch via a two-parent merge commit `f791085ffb070d37594941cceb54afbe511902a8`. PR #124 now points at this head. CI check-runs show an intelligence job queued; confirm iOS LlamaEngine CI and all other required checks on this exact head before reporting a pass.
+- This correction prevents a known test mismatch from being carried into the integration validation. It does not change the memory-admission implementation or establish physical-device memory behavior.
