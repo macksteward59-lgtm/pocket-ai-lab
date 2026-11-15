@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   TaskLifecycleCoordinator,
-  TaskLifecycleError,
   type TaskRecord
 } from "../autonomy/TaskLifecycleCoordinator";
 import {
