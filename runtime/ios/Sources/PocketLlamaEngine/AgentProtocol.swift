@@ -101,6 +101,27 @@ public struct AgentMessageEnvelope: Codable, Sendable, Equatable {
     }
 }
 
+    /// Returns the human-readable text field defined by this message type's
+    /// shared wire schema. The returned text remains untrusted proposal data.
+    public var untrustedText: String? {
+        guard case .object(let fields) = payload else { return nil }
+        let key: String
+        switch messageType {
+        case .taskAssignment: key = "objective"
+        case .analysis: key = "analysis"
+        case .question: key = "question"
+        case .evidence: key = "claim"
+        case .counterargument: key = "objection"
+        case .revision: key = "revision"
+        case .validation: key = "reason"
+        case .completion: key = "synthesis"
+        case .securityBoundaryViolation: key = "reason"
+        }
+        guard case .string(let value)? = fields[key] else { return nil }
+        return value
+    }
+}
+
 public enum RuntimeReadinessState: String, Codable, Sendable {
     case unavailable
     case loading
