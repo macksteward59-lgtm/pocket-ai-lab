@@ -74,11 +74,11 @@ final class PocketAILabTests: XCTestCase {
 
         let imported = try LocalGGUFImporter.copy(source: source, into: modelDirectory)
         XCTAssertEqual(imported, destination)
-        XCTAssertEqual(try Data(contentsOf: destination), Data("GGUF-new-model".utf8))
+        XCTAssertEqual(try Data(contentsOf: destination), validGGUFHeader())
 
         let samePath = try LocalGGUFImporter.copy(source: destination, into: modelDirectory)
         XCTAssertEqual(samePath, destination)
-        XCTAssertEqual(try Data(contentsOf: destination), Data("GGUF-new-model".utf8))
+        XCTAssertEqual(try Data(contentsOf: destination), validGGUFHeader())
     }
 
     private func validGGUFHeader(version: UInt32 = 3) -> Data {
