@@ -14,10 +14,13 @@ final class LocalChatModel: ObservableObject {
     @Published var historyStatus = "Conversation history is stored only on this device."
     @Published private(set) var agentTaskHistory: [AgentTaskHistoryEntry] = []
     @Published var agentTaskHistoryStatus = "Agent Team task history is stored only on this device."
+    @Published private(set) var evaluationEvents: [NativeEvaluationJournalEvent] = []
+    @Published var evaluationStatus = "No self-evaluation run recorded."
 
     private let conversationStore: LocalConversationStore
     private let agentTaskHistoryStore: LocalAgentTaskHistoryStore
     private let modelCatalogStore: LocalModelCatalogStore
+    private var evaluationJournal: NativeEvaluationJournal?
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
@@ -33,10 +36,12 @@ final class LocalChatModel: ObservableObject {
         conversationStore: LocalConversationStore = LocalConversationStore(),
         agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore(),
         modelCatalogStore: LocalModelCatalogStore? = nil,
+        evaluationJournal: NativeEvaluationJournal? = nil,
         availableMemoryMB: @escaping @Sendable () -> Int = { Int(os_proc_available_memory() / (1_024 * 1_024)) }
     ) {
         self.conversationStore = conversationStore
         self.agentTaskHistoryStore = agentTaskHistoryStore
+        self.evaluationJournal = evaluationJournal
         let resolvedModelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
         self.modelDirectory = resolvedModelDirectory
@@ -92,6 +97,71 @@ final class LocalChatModel: ObservableObject {
     }
 
     var isModelLoaded: Bool { lease != nil }
+
+
+    var evaluationAttempts: [NativeEvaluationAttempt] {
+        evaluationEvents.compactMap(\.payload.attempt)
+    }
+
+    var currentEvaluationSummary: NativeEvaluationScoreSummary {
+        guard let selectedModelID else { return NativeEvaluationScoreSummary(attempts: []) }
+        let current = evaluationAttempts.filter {
+            $0.modelID == selectedModelID &&
+            $0.suiteID == NativeEvaluationSuite.id &&
+            $0.suiteVersion == NativeEvaluationSuite.version
+        }
+        return NativeEvaluationScoreSummary(attempts: current)
+    }
+
+    private func resolvedEvaluationJournal() throws -> NativeEvaluationJournal {
+        if let evaluationJournal { return evaluationJournal }
+        let journal = try NativeEvaluationJournal.applicationDefault()
+        evaluationJournal = journal
+        return journal
+    }
+
+    func loadEvaluationHistory() async {
+        do {
+            let journal = try resolvedEvaluationJournal()
+            evaluationEvents = try await journal.events()
+            evaluationStatus = currentEvaluationSummary.displayText
+        } catch {
+            evaluationStatus = "Self-evaluation history could not be verified: \(error.localizedDescription)"
+        }
+    }
+
+    func runSelfEvaluation() async {
+        guard !isBusy else { return }
+        guard let runtime, let lease, let modelURL else {
+            evaluationStatus = "Load a catalog-selected local model before running self-evaluation."
+            return
+        }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let journal = try resolvedEvaluationJournal()
+            let runner = try NativeEvaluationRunner(
+                runtime: runtime, lease: lease, journal: journal, modelFileURL: modelURL
+            )
+            for evaluationCase in NativeEvaluationSuite.cases {
+                _ = try await runner.run(evaluationCase)
+            }
+            evaluationEvents = try await journal.events()
+            let summary = currentEvaluationSummary
+            let retainedAttempts = evaluationAttempts.filter {
+                $0.modelID == selectedModelID &&
+                $0.suiteID == NativeEvaluationSuite.id &&
+                $0.suiteVersion == NativeEvaluationSuite.version
+            }.count
+            evaluationStatus = "\(summary.displayText) · \(retainedAttempts) retained attempts."
+            status = "Self-evaluation completed through the shared ModelPool lease and inference scheduler. Runtime trust remains unverified."
+        } catch {
+            if let journal = evaluationJournal, let events = try? await journal.events() {
+                evaluationEvents = events
+            }
+            evaluationStatus = "Evaluation stopped: \(error.localizedDescription). Earlier attempts remain in the journal."
+        }
+    }
 
     private func persistHistory() {
         do {
@@ -664,6 +734,7 @@ struct LocalChatView: View {
     @State private var prompt = ""
     @State private var importError: String?
     @State private var showClearHistoryConfirmation = false
+    @State private var showEvaluationHistory = false
 
     var body: some View {
         NavigationStack {
@@ -689,6 +760,7 @@ struct LocalChatView: View {
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.historyStatus).font(.caption2).foregroundStyle(.secondary)
                     Text(model.agentTaskHistoryStatus).font(.caption2).foregroundStyle(.secondary)
+                    Text(model.evaluationStatus).font(.caption2).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
                         .font(.caption2).foregroundStyle(.orange)
@@ -700,6 +772,14 @@ struct LocalChatView: View {
                         Button("Unload model") { Task { await model.unloadModel() } }
                             .buttonStyle(.bordered)
                             .disabled(model.isBusy)
+                    }
+                    HStack {
+                        Button("Run self-evaluation") { Task { await model.runSelfEvaluation() } }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!model.isModelLoaded || model.isBusy)
+                        Button("Evaluation history") { showEvaluationHistory = true }
+                            .buttonStyle(.bordered)
+                            .disabled(model.evaluationEvents.isEmpty)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding()
                 List {
@@ -794,7 +874,7 @@ struct LocalChatView: View {
                 Button("Clear conversation and Agent Team history", role: .destructive) { model.clearHistory() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes the saved message archive from this device. It does not delete imported model files.")
+                Text("This deletes conversation and Agent Team history only. Append-only self-evaluation records and imported model files are not deleted.")
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 do {
@@ -809,6 +889,10 @@ struct LocalChatView: View {
                     }
                 } catch { importError = error.localizedDescription }
             }
+            .sheet(isPresented: $showEvaluationHistory) {
+                NativeEvaluationHistoryView(events: model.evaluationEvents, selectedModelID: model.selectedModelID)
+            }
+            .task { await model.loadEvaluationHistory() }
             .alert("Import failed", isPresented: Binding(get: { importError != nil },
                 set: { if !$0 { importError = nil } })) {
                 Button("OK", role: .cancel) { importError = nil }
