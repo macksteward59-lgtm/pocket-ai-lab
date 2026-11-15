@@ -227,7 +227,8 @@ BEGIN
   INTO program_kind, program_status, program_expires_at, stored_program_scope_hash,
        program_scope_snapshot, program_checks, program_environment
   FROM proofhunt.authorization_records
-  WHERE project_id = NEW.project_id AND record_id = NEW.program_authorization_id;
+  WHERE project_id = NEW.project_id AND record_id = NEW.program_authorization_id
+  FOR UPDATE;
   IF NOT FOUND OR program_status <> 'verified' OR program_expires_at <= CURRENT_TIMESTAMP THEN
     RAISE EXCEPTION 'ProofHunt program/ownership authorization is missing, unverified, or expired';
   END IF;
@@ -240,7 +241,8 @@ BEGIN
   INTO operational_kind, operational_status, operational_expires_at, operational_parent,
        operational_environment, operational_policy_version, operational_policy_hash
   FROM proofhunt.authorization_records
-  WHERE project_id = NEW.project_id AND record_id = NEW.operational_authorization_id;
+  WHERE project_id = NEW.project_id AND record_id = NEW.operational_authorization_id
+  FOR UPDATE;
   IF NOT FOUND OR operational_kind <> 'operational_approval' OR
      operational_status <> 'approved' OR operational_expires_at <= CURRENT_TIMESTAMP OR
      operational_parent <> NEW.program_authorization_id OR
