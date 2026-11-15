@@ -20,7 +20,8 @@ final class PocketAILabTests: XCTestCase {
         return LocalChatModel(
             engine: engine,
             modelDirectory: modelDirectory,
-            modelCatalogStore: catalogStore
+            modelCatalogStore: catalogStore,
+            availableMemoryMB: { 4_096 }
         )
     }
 
