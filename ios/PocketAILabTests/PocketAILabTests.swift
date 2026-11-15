@@ -362,6 +362,10 @@ final class PocketAILabTests: XCTestCase {
 
         let afterClear = try await journal.events()
         XCTAssertEqual(afterClear.count, 8, "Conversation-history clearing must not erase self-evaluation evidence.")
+
+        let restoredModel = makeLocalChatModel(engine: FingerprintTestEngine(), root: root, evaluationJournal: journal)
+        await restoredModel.loadEvaluationHistory()
+        XCTAssertEqual(restoredModel.evaluationAttempts.count, 8, "The app must restore the complete evaluation history after model recreation.")
     }
 
     func testWorkspaceURLsRequireAHostAndSecureScheme() {
