@@ -88,12 +88,11 @@ final class NativeInferenceRuntimeTests: XCTestCase {
 
         let operation = Task {
             try await runtime.withLease(model: descriptor, estimatedMemoryMB: 128) { lease in
-                XCTAssertEqual(lease.session.modelId, descriptor.id)
-                return "completed"
+                return lease.session.modelId
             }
         }
         let operationResult = try await operation.value
-        XCTAssertEqual(operationResult, "completed")
+        XCTAssertEqual(operationResult, descriptor.id)
 
         let snapshot = await runtime.snapshot()
         XCTAssertEqual(snapshot.activeLeaseCount, 0)
