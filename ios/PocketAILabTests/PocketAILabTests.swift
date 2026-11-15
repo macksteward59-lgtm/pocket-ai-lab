@@ -81,6 +81,7 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: destination), validGGUFHeader())
     }
 
+    // Minimum 24-byte GGUF header: magic, version, tensor count, and metadata count.
     private func validGGUFHeader(version: UInt32 = 3) -> Data {
         var data = Data("GGUF".utf8)
         data.append(UInt8(truncatingIfNeeded: version))
