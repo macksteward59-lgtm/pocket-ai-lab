@@ -107,6 +107,7 @@ export class ScopeGuardError extends Error {}
 
 export class ScopeGuard {
   private readonly now: () => number;
+  private auditTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: ScopeGuardOptions) {
     if (!options.programVerifier || !options.operationalVerifier || !options.audit) {
@@ -223,7 +224,7 @@ export class ScopeGuard {
     });
 
     try {
-      await this.options.audit.append({
+      await this.appendAudit({
         event: "proofhunt.scope_decision",
         at: new Date(this.now()).toISOString(),
         projectId: decision.projectId,
@@ -251,6 +252,21 @@ export class ScopeGuard {
       });
     }
     return decision;
+  }
+
+  /** Serialize writes through this ScopeGuard instance; production multi-process
+   * deployments must use a transactional database writer, not the JSONL ledger.
+   */
+  private async appendAudit(payload: Record<string, unknown>): Promise<void> {
+    const previous = this.auditTail;
+    let release!: () => void;
+    this.auditTail = new Promise<void>(resolve => { release = resolve; });
+    await previous;
+    try {
+      await this.options.audit.append(payload);
+    } finally {
+      release();
+    }
   }
 }
 
