@@ -3,6 +3,13 @@ import XCTest
 import PocketLlamaEngine
 
 final class PocketAILabTests: XCTestCase {
+    private func makeTemporaryRoot() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+
     @MainActor
     private func makeLocalChatModel(engine: any LlamaEngine, root: URL) -> LocalChatModel {
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
@@ -31,7 +38,7 @@ final class PocketAILabTests: XCTestCase {
 
 
     func testStagedImporterPreservesLastKnownGoodModelOnInvalidHeader() throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         let sourceDirectory = root.appendingPathComponent("source", isDirectory: true)
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
         try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
@@ -53,7 +60,7 @@ final class PocketAILabTests: XCTestCase {
     }
 
     func testStagedImporterRejectsTruncatedAndUnsupportedVersionHeaders() throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
         try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -74,7 +81,7 @@ final class PocketAILabTests: XCTestCase {
     }
 
     func testStagedImporterAtomicallyReplacesValidModelAndHandlesSamePath() throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         let sourceDirectory = root.appendingPathComponent("source", isDirectory: true)
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
         try FileManager.default.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
@@ -98,7 +105,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testLocalModelCatalogPersistsMultipleSameNamedImportsAndSelection() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         let sourceA = root.appendingPathComponent("source-a", isDirectory: true)
         let sourceB = root.appendingPathComponent("source-b", isDirectory: true)
         let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
@@ -159,7 +166,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testUnreadableArtifactDoesNotOrphanExistingModelLease() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -184,7 +191,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testChatCarriesBoundedPriorTurnsIntoNextGeneration() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -209,7 +216,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testChatPromptIsBoundedForOversizedCurrentMessage() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -229,7 +236,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testChatContextExcludesAgentTeamTaskAndRoleMessages() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -252,7 +259,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testDefaultAgentTeamRunsSixLogicalRolesThroughSharedLease() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -274,7 +281,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testNativeSessionUsesContentAddressedModelId() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -295,7 +302,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testChangedArtifactIsRejectedBeforeNativeLoad() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
@@ -314,7 +321,7 @@ final class PocketAILabTests: XCTestCase {
 
     @MainActor
     func testArtifactMutationDuringNativeLoadUnloadsUnboundSession() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
