@@ -563,11 +563,11 @@ enum LocalGGUFImporter {
             let destination: URL
             if contentAddressed {
                 let rawBase = source.deletingPathExtension().lastPathComponent
-                let safeBase = String(rawBase.unicodeScalars.filter {
-                    CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_")).contains($0)
+                let safeBase = String(rawBase.filter {
+                    $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_"
                 }.prefix(64))
                 destination = directory.appendingPathComponent(
-                    "\(safeBase.isEmpty ? "model" : safeBase)-\(fingerprint.sha256.prefix(16)).gguf"
+                    "\(safeBase.isEmpty ? "model" : safeBase)-\(fingerprint.sha256).gguf"
                 )
             } else {
                 destination = ordinaryDestination
