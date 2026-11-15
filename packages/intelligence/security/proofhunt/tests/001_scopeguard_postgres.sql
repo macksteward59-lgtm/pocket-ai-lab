@@ -131,6 +131,32 @@ INSERT INTO proofhunt.assessment_jobs (
   'approved_plan', 'Approved non-destructive plan', 'planned', CURRENT_TIMESTAMP
 );
 
+-- The policy allows one concurrent job; a second otherwise-valid plan is denied.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO proofhunt.assessment_jobs (
+      job_id, project_id, program_authorization_id, operational_authorization_id,
+      policy_id, policy_version, policy_hash, check_type,
+      authorized_target_id, authorized_target_hostname, target_hostname, program_scope_hash,
+      decision, decision_reason, job_status, decision_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000015', 'project-a',
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
+      '00000000-0000-0000-0000-000000000003', 'example.com', 'app.example.com', repeat('a',64),
+      'approved_plan', 'Should be denied by concurrency limit', 'planned', CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'expected concurrency limit to deny second job';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ProofHunt policy maximum concurrent jobs reached' THEN
+      RAISE;
+    END IF;
+  END;
+END;
+$$;
+
 -- Job lifecycle may advance, but its authorization basis cannot be rewritten.
 UPDATE proofhunt.assessment_jobs SET job_status = 'queued'
 WHERE job_id = '00000000-0000-0000-0000-000000000005';
