@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { SkillRegistry, type Skill } from "./SkillRegistry";
 
 export type SkillLifecycleStatus =
@@ -142,8 +141,11 @@ function stableValue(value: unknown): unknown {
   throw new Error("Canonical data must contain only JSON-compatible values");
 }
 
-function digest(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(stableValue(value)), "utf8").digest("hex");
+async function digest(value: unknown): Promise<string> {
+  if (!globalThis.crypto?.subtle) throw new Error("Web Crypto SHA-256 is unavailable");
+  const bytes = new TextEncoder().encode(JSON.stringify(stableValue(value)));
+  const hash = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function artifactPayload(artifact: SkillArtifact | SkillArtifactInput): SkillArtifactInput {
@@ -156,32 +158,32 @@ function evaluationPayload(evaluation: SkillEvaluation | SkillEvaluationInput): 
   return payload;
 }
 
-export function createSkillArtifact(input: SkillArtifactInput): SkillArtifact {
+export async function createSkillArtifact(input: SkillArtifactInput): Promise<SkillArtifact> {
   validateArtifactInput(input);
   const payload = { schemaVersion: 1 as const, ...input };
-  return { ...payload, digest: digest(payload) };
+  return { ...payload, digest: await digest(payload) };
 }
 
-export function verifySkillArtifactIntegrity(artifact: SkillArtifact): boolean {
+export async function verifySkillArtifactIntegrity(artifact: SkillArtifact): Promise<boolean> {
   try {
     if (artifact.schemaVersion !== 1 || !SHA256.test(artifact.digest)) return false;
     validateArtifactInput(artifactPayload(artifact));
-    return digest({ schemaVersion: artifact.schemaVersion, ...artifactPayload(artifact) }) === artifact.digest;
+    return await digest({ schemaVersion: artifact.schemaVersion, ...artifactPayload(artifact) }) === artifact.digest;
   } catch {
     return false;
   }
 }
 
-export function createSkillEvaluation(input: SkillEvaluationInput): SkillEvaluation {
+export async function createSkillEvaluation(input: SkillEvaluationInput): Promise<SkillEvaluation> {
   validateEvaluationInput(input);
-  return { ...input, digest: digest(input) };
+  return { ...input, digest: await digest(input) };
 }
 
-export function verifySkillEvaluationIntegrity(evaluation: SkillEvaluation): boolean {
+export async function verifySkillEvaluationIntegrity(evaluation: SkillEvaluation): Promise<boolean> {
   try {
     if (!SHA256.test(evaluation.digest)) return false;
     validateEvaluationInput(evaluationPayload(evaluation));
-    return digest(evaluationPayload(evaluation)) === evaluation.digest;
+    return await digest(evaluationPayload(evaluation)) === evaluation.digest;
   } catch {
     return false;
   }
@@ -198,8 +200,8 @@ export async function authorizeSkillPromotion(
   approval: SkillApproval,
   verifiers: SkillPromotionVerifiers
 ): Promise<SkillPromotionResult> {
-  if (!verifySkillArtifactIntegrity(artifact)) return denied("Skill artifact integrity check failed");
-  if (!verifySkillEvaluationIntegrity(evaluation)) return denied("Evaluation integrity check failed");
+  if (!await verifySkillArtifactIntegrity(artifact)) return denied("Skill artifact integrity check failed");
+  if (!await verifySkillEvaluationIntegrity(evaluation)) return denied("Evaluation integrity check failed");
   if (artifact.sources.length === 0 || artifact.sources.some(source => source.reviewState !== "reviewed")) {
     return denied("Every source must be reviewed before promotion");
   }
@@ -236,7 +238,7 @@ export async function authorizeSkillPromotion(
     return denied("Skill assignment contains an unknown owner or invalid metadata");
   }
 
-  const assignmentDigest = skillAssignmentDigest(artifact.skill);
+  const assignmentDigest = await skillAssignmentDigest(artifact.skill);
   if (approval.skillId !== artifact.skill.id ||
       approval.version !== artifact.version ||
       approval.artifactDigest !== artifact.digest ||
@@ -275,7 +277,7 @@ export async function authorizeSkillPromotion(
   };
 }
 
-export function skillAssignmentDigest(skill: Pick<Skill, "specialists" | "coreAgents">): string {
+export async function skillAssignmentDigest(skill: Pick<Skill, "specialists" | "coreAgents">): Promise<string> {
   return digest({
     specialists: [...skill.specialists].sort(),
     coreAgents: [...skill.coreAgents].sort()
