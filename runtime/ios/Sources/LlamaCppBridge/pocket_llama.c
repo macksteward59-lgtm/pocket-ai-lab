@@ -6,9 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/stat.h>
 
 #if POCKET_LLAMA_LINKED
 #include "llama.h"
+#include "gguf.h"
 #endif
 
 /*
@@ -53,6 +55,17 @@ int pocket_llama_load(
     (void) n_ctx;
     (void) n_gpu_layers;
     if (out_engine) *out_engine = NULL;
+    if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
+    return POCKET_LLAMA_ERR_NOT_LINKED;
+}
+
+int pocket_llama_inspect_gguf(
+    const char * path,
+    pocket_llama_metadata * out_metadata,
+    char * err,
+    size_t err_len) {
+    (void) path;
+    if (out_metadata) memset(out_metadata, 0, sizeof(*out_metadata));
     if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
     return POCKET_LLAMA_ERR_NOT_LINKED;
 }
@@ -315,6 +328,133 @@ int pocket_llama_load(
     if (out_engine) *out_engine = engine;
     if (err && err_len) err[0] = '\0';
     return POCKET_LLAMA_OK;
+}
+
+static int copy_metadata_string(
+    const struct gguf_context * ctx,
+    const char * key,
+    char * output,
+    size_t output_size) {
+    int64_t id = gguf_find_key(ctx, key);
+    if (id < 0) return 0;
+    if (gguf_get_kv_type(ctx, id) != GGUF_TYPE_STRING) return -1;
+    const char * value = gguf_get_val_str(ctx, id);
+    if (!value) return -1;
+    size_t length = strlen(value);
+    if (length >= output_size) return -1;
+    memcpy(output, value, length + 1);
+    return 1;
+}
+
+static int read_metadata_integer(const struct gguf_context * ctx, const char * key, int64_t * value) {
+    int64_t id = gguf_find_key(ctx, key);
+    if (id < 0) return 0;
+    switch (gguf_get_kv_type(ctx, id)) {
+        case GGUF_TYPE_UINT8: *value = gguf_get_val_u8(ctx, id); return 1;
+        case GGUF_TYPE_INT8: *value = gguf_get_val_i8(ctx, id); return 1;
+        case GGUF_TYPE_UINT16: *value = gguf_get_val_u16(ctx, id); return 1;
+        case GGUF_TYPE_INT16: *value = gguf_get_val_i16(ctx, id); return 1;
+        case GGUF_TYPE_UINT32: *value = gguf_get_val_u32(ctx, id); return 1;
+        case GGUF_TYPE_INT32: *value = gguf_get_val_i32(ctx, id); return 1;
+        case GGUF_TYPE_UINT64: {
+            uint64_t number = gguf_get_val_u64(ctx, id);
+            if (number > INT64_MAX) return -1;
+            *value = (int64_t) number;
+            return 1;
+        }
+        case GGUF_TYPE_INT64: *value = gguf_get_val_i64(ctx, id); return 1;
+        default: return -1;
+    }
+}
+
+int pocket_llama_inspect_gguf(
+    const char * path,
+    pocket_llama_metadata * out_metadata,
+    char * err,
+    size_t err_len) {
+    if (!out_metadata) return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Metadata output is required.");
+    memset(out_metadata, 0, sizeof(*out_metadata));
+    if (!path || path[0] == '\\0') return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "A model path is required.");
+
+    struct stat info;
+    if (stat(path, &info) != 0 || !S_ISREG(info.st_mode) || info.st_size <= 0) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF path is not a readable regular file.");
+    }
+    /* Avoid feeding unbounded artifacts into metadata inspection. Large models remain supported up to this explicit ceiling. */
+    const uint64_t max_file_bytes = UINT64_C(128) * 1024 * 1024 * 1024;
+    if ((uint64_t) info.st_size > max_file_bytes) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "The GGUF file exceeds the metadata inspection size limit.");
+    }
+
+    struct gguf_init_params params = { .no_alloc = true, .ctx = NULL };
+    struct gguf_context * ctx = gguf_init_from_file(path, params);
+    if (!ctx) return fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The pinned GGUF parser rejected the model metadata.");
+
+    int result = POCKET_LLAMA_OK;
+    int64_t key_count = gguf_get_n_kv(ctx);
+    if (key_count < 0 || key_count > 65536) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF metadata key count exceeds the supported bound.");
+        goto cleanup;
+    }
+    out_metadata->metadata_key_count = (int32_t) key_count;
+    out_metadata->gguf_version = (int32_t) gguf_get_version(ctx);
+    out_metadata->file_size_bytes = (uint64_t) info.st_size;
+
+    if (copy_metadata_string(ctx, "general.architecture", out_metadata->architecture,
+                             sizeof(out_metadata->architecture)) != 1) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF architecture metadata is missing or invalid.");
+        goto cleanup;
+    }
+    (void) copy_metadata_string(ctx, "general.name", out_metadata->model_name,
+                                sizeof(out_metadata->model_name));
+    (void) copy_metadata_string(ctx, "tokenizer.ggml.model", out_metadata->tokenizer_model,
+                                sizeof(out_metadata->tokenizer_model));
+
+    char context_key[POCKET_LLAMA_METADATA_ARCH_MAX + 32];
+    int key_length = snprintf(context_key, sizeof(context_key), "%s.context_length", out_metadata->architecture);
+    if (key_length <= 0 || (size_t) key_length >= sizeof(context_key)) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF architecture metadata is invalid.");
+        goto cleanup;
+    }
+    int64_t number = 0;
+    int found = read_metadata_integer(ctx, context_key, &number);
+    if (found < 0 || (found == 1 && (number < 1 || number > 1048576))) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF training context metadata is invalid.");
+        goto cleanup;
+    }
+    if (found == 1) {
+        out_metadata->training_context_length = number;
+        out_metadata->has_training_context = 1;
+    }
+
+    found = read_metadata_integer(ctx, "general.file_type", &number);
+    if (found < 0) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF file type metadata is invalid.");
+        goto cleanup;
+    }
+    if (found == 1) {
+        if (number < 0 || number > INT32_MAX) {
+            result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF file type value is out of range.");
+            goto cleanup;
+        }
+        out_metadata->file_type = (int32_t) number;
+        out_metadata->has_file_type = 1;
+    }
+
+    found = read_metadata_integer(ctx, "general.parameter_count", &number);
+    if (found < 0 || (found == 1 && (number < 1 || number > INT64_C(1000000000000000)))) {
+        result = fail(err, err_len, POCKET_LLAMA_ERR_MODEL, "The GGUF parameter count metadata is invalid.");
+        goto cleanup;
+    }
+    if (found == 1) {
+        out_metadata->parameter_count = number;
+        out_metadata->has_parameter_count = 1;
+    }
+
+cleanup:
+    gguf_free(ctx);
+    if (result == POCKET_LLAMA_OK && err && err_len) err[0] = '\\0';
+    return result;
 }
 
 void pocket_llama_request_cancel(pocket_llama * engine) {
