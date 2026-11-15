@@ -52,3 +52,8 @@ Next integration gates:
 A pool lease means only that the local engine returned a session for a requested model descriptor. It is not a trusted runtime proof, a device attestation, an authorization grant, or an evidence receipt.
 
 llama.cpp still produces tokens only. APEX/Director retains approval authority; East/e3 retains durable workflow execution; BridgeGate and signed evidence boundaries remain unchanged. No model output can create, renew, or release authorization.
+
+
+## Host-memory admission accounting
+
+Before admitting a new model, `ModelPool` subtracts all existing resident, pending-load, and unloading reservations from the host's reported available-memory snapshot, then preserves the configured minimum-free-memory margin. This is conservative admission control based on estimates and a potentially stale OS snapshot; it is not measured RSS or a substitute for physical-device memory-pressure testing. A deterministic regression test holds the host snapshot constant while a first model reserves memory and verifies that a second model cannot over-admit the remaining budget.
