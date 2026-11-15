@@ -48,6 +48,8 @@ struct NativeEvaluationHistoryView: View {
                                 detail("Suite", "\(attempt.suiteID) · v\(attempt.suiteVersion)")
                                 detail("Execution", "\(attempt.providerKind.rawValue) · native observed: \(attempt.nativeExecutionObserved) · trust verified: \(attempt.runtimeTrustVerified)")
                                 detail("Timing", "\(attempt.latencyMilliseconds) ms · max tokens \(attempt.maxTokens)")
+                                detail("Resource estimate", "\(attempt.estimatedMemoryMB) MB ModelPool admission estimate · not measured resident memory")
+                                detail("Payload size", "Prompt \(attempt.promptUTF8Bytes) bytes · output \(attempt.outputUTF8Bytes) bytes")
                                 if let passed = attempt.deterministicPassed, let score = attempt.deterministicScore {
                                     detail("Objective check", "\(passed ? "PASS" : "FAIL") · \(Int(score * 100))%")
                                 } else {
