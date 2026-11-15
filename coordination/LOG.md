@@ -1471,3 +1471,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Persistence:** full prompt/output/expected outcome/criteria, model fingerprint, session, timings, partial/failure state, and retry history stored append-only. Chat history clear does not erase evaluation records.
 - **PR #130:** closed without merge because the initial direct-LlamaEngine runner bypassed the newer ModelPool/Scheduler path. The code was carried forward and corrected.
 - **CI at submission:** PR #137 exact-head runs `43755083838` Consumer (queued), `43755083895` iOS LlamaEngine (queued), `43755083933` Pocket AI Lab (queued), `43755083932` Cursor plugin (queued), `43755083961` Governance sidecar (in progress). No workflow conclusion yet. No physical iPhone execution claimed.
+
+
+## 2026-11-15 — Self-evaluation scoring and app-level integration test hardening
+
+- Added a deterministic memory-provider injection to `LocalChatModel` for reproducible app-level tests; production default still uses `os_proc_available_memory()`.
+- Added an app-level test that imports a minimal GGUF artifact into a temporary catalog, loads it through ModelPool, runs all eight self-evaluation cases, verifies all attempts use the selected model and one runtime session, and confirms test-provider attempts are never labelled native or trusted.
+- Corrected the exhaustive scoring-rule switch in `NativeEvaluationRunner` and `NativeEvaluationJournal` to handle `.containsExpectedOutcome`; both branches are now exhaustive.
+- Corrected evaluation status text to report retained attempt count rather than latest distinct case count.
+- Current feature PR #133 head `3bc648d96a3a14894b8978b089c7cf45221e000c`; 19 commits ahead / 0 behind base `784005df2e2c95de3423f8bff9ae1ebd1213732b`.
+- Current mainline validation PR #135 head `00ab74432f8cec43e3e75740682effe3971ff88c`; checks were queued at last observation after the latest source/test update.
+- PR #129 cache validation remains in iOS simulator/macOS dependency build (`43753665375`); cache restore step succeeded, but cache-hit/miss and full build result are not yet available.
