@@ -83,3 +83,18 @@ The native chat surface carries a small rolling transcript into each new generat
 - The prompt labels the transcript as untrusted context and asks the model to answer the latest user message. This is prompt hygiene, not a security boundary or instruction hierarchy guarantee.
 - This first implementation is in-memory only. It does not persist conversations across app restarts, create long-term agent memory, or share context between different models.
 - The 1,500-byte ceiling is a conservative input bound intended to leave room for the configured 256-token response within the app's 2,048-token context, but byte count is not tokenizer output and cannot guarantee a token budget. Physical-device/model-specific tokenizer calibration remains future work.
+
+
+## Device-local conversation archive v1
+
+The native chat UI now restores its message transcript from a versioned JSON archive in the app's Application Support directory.
+
+- The archive includes ordinary chat and Agent Team task/role messages for UI history. The existing prompt builder still includes only the eight most recent ordinary `You` / `Pocket AI` messages; Agent Team messages are not injected into ordinary chat prompts.
+- Retention is limited to 30 days, at most 200 messages, 32 KiB per message, and 256 KiB for the complete encoded archive. Oldest messages are removed first; oversized individual text is clipped at a Unicode-scalar boundary with an explicit marker.
+- Writes are atomic. On iOS, the containing directory and archive use `completeUntilFirstUserAuthentication` file protection and are excluded from device backup.
+- The UI exposes an explicit destructive confirmation to clear the saved conversation and Agent Team history. Imported model files are not removed.
+- Unknown archive versions and decode failures fail closed: the existing archive is preserved and the UI reports that history could not be read rather than silently replacing it.
+- The archive is device-local application data, not end-to-end encrypted storage. iOS Data Protection applies at rest according to the selected file-protection class; this does not protect data while the device is unlocked or from a compromised process.
+- This is UI transcript persistence, not semantic/episodic memory, trusted knowledge, cross-device sync, evidence, or authorization. Stored model output remains untrusted and grants no APEX/East capability.
+
+Regression coverage includes round-trip identity, retention expiry, per-message and total bounds, explicit deletion, and fail-closed handling of unknown archive versions.
