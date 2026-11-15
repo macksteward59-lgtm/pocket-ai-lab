@@ -37,6 +37,7 @@ export interface TaskLifecycleSqlDatabase {
  */
 export class PostgresTaskLifecycleStore implements TaskLifecycleStore {
   static readonly currentSchemaVersion = 1;
+  static readonly maximumSnapshotCharacters = 4 * 1_024 * 1_024;
 
   private expectedVersion: number | null = null;
 
@@ -117,6 +118,9 @@ export class PostgresTaskLifecycleStore implements TaskLifecycleStore {
     const payload = JSON.stringify(records);
     if (typeof payload !== "string") {
       throw new TaskLifecycleError("store_corrupt", "Lifecycle snapshot could not be serialized");
+    }
+    if (payload.length > PostgresTaskLifecycleStore.maximumSnapshotCharacters) {
+      throw new TaskLifecycleError("store_too_large", "Lifecycle snapshot exceeds the configured storage limit");
     }
 
     const nextVersion = await this.database.transaction(async transaction => {
