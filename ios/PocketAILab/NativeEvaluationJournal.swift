@@ -174,7 +174,8 @@ actor NativeEvaluationJournal {
               !draft.requestID.isEmpty, !draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               draft.modelArtifactSHA256.count == 64,
               draft.modelArtifactSHA256.allSatisfy({ $0.isHexDigit }),
-              draft.maxTokens > 0, draft.latencyMilliseconds >= 0 else {
+              draft.maxTokens > 0, draft.latencyMilliseconds >= 0,
+              !draft.nativeExecutionObserved || (draft.providerKind == .llamaCppBackend && draft.status == .completed) else {
             throw NativeEvaluationJournalError.invalidAttempt("Required metadata, SHA-256 fingerprint, or generation bounds are invalid.")
         }
         try verifyDiskState()
