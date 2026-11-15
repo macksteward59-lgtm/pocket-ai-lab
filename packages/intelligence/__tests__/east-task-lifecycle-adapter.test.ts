@@ -4,7 +4,7 @@ import {
   TaskLifecycleCoordinator
 } from "../autonomy/TaskLifecycleCoordinator";
 import { runEastTaskWithLifecycle } from "../autonomy/EastTaskLifecycleAdapter";
-import { EAST_DELIBERATION_AGENTS, type EastPlatformRuntime } from "../../../../src/east/platform";
+import { EAST_DELIBERATION_AGENTS, type EastPlatformRuntime } from "../../../src/east/platform";
 
 describe("runEastTaskWithLifecycle", () => {
   it("runs the six-agent East workflow through leased lifecycle steps without granting authority", async () => {
