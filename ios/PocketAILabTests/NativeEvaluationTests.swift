@@ -250,6 +250,54 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertTrue(released)
     }
 
+    @MainActor
+    func testLocalChatModelRunsSuiteThroughItsCatalogSelectedLease() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PocketAILab-LocalEvaluation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let modelDirectory = directory.appendingPathComponent("Models", isDirectory: true)
+        let sourceURL = directory.appendingPathComponent("suite-model.gguf")
+        var header = Data("GGUF".utf8)
+        for value: UInt32 in [3, 0, 0, 0, 0] {
+            var littleEndian = value.littleEndian
+            withUnsafeBytes(of: &littleEndian) { header.append(contentsOf: $0) }
+        }
+        try header.write(to: sourceURL)
+
+        let journal = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("evaluation.ndjson"))
+        let engine = MockEvaluationEngine(responses: ["42"])
+        let model = LocalChatModel(
+            engine: engine,
+            modelDirectory: modelDirectory,
+            conversationStore: LocalConversationStore(fileURL: directory.appendingPathComponent("conversation.json")),
+            agentTaskHistoryStore: LocalAgentTaskHistoryStore(fileURL: directory.appendingPathComponent("agent-tasks.json")),
+            modelCatalogStore: LocalModelCatalogStore(
+                fileURL: directory.appendingPathComponent("catalog.json"),
+                modelDirectory: modelDirectory
+            ),
+            evaluationJournal: journal,
+            availableMemoryMB: { 4_096 }
+        )
+
+        try await model.importModel(from: sourceURL)
+        await model.loadModel()
+        XCTAssertTrue(model.isModelLoaded, model.status)
+
+        await model.runSelfEvaluation()
+        await model.unloadModel()
+
+        let events = try await journal.events()
+        let attempts = events.compactMap(\.payload.attempt)
+        XCTAssertEqual(attempts.count, NativeEvaluationSuite.cases.count)
+        XCTAssertTrue(attempts.allSatisfy { $0.modelID == model.selectedModelID })
+        XCTAssertEqual(Set(attempts.map(\.runtimeSessionID)).count, 1)
+        XCTAssertTrue(attempts.allSatisfy { $0.providerKind == .unverifiedProvider })
+        XCTAssertTrue(attempts.allSatisfy { !$0.nativeExecutionObserved && !$0.runtimeTrustVerified })
+        XCTAssertTrue(model.evaluationStatus.contains("\(NativeEvaluationSuite.cases.count) retained attempts"))
+    }
+
     func testRuntimeOwnedProviderIdentityDistinguishesLlamaCppFromTestEngine() async throws {
         let nativeRuntime = try NativeInferenceRuntime(
             engine: LlamaCppMetalBackend(requireMetal: true),
