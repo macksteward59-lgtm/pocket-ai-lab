@@ -1332,3 +1332,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #123 iOS LlamaEngine CI run `43751107892` remains in progress at pinned llama.cpp build.
 - PR #84 iOS LlamaEngine CI run `43750771905` and PR #86 run `43750794278` remain in progress at pinned llama.cpp build. No failures have been reported in these active jobs at this check.
 - No mainline merge or physical-device execution. Current exact heads and check states remain the source of truth; re-check after these hosted builds advance beyond the native dependency build step.
+
+
+## 2026-11-15 — ChatGPT native model-catalog initializer fix
+
+- **Claim:** `codex/ios-catalog-init-shadow-fix` — `ios/PocketAILab/LocalChatView.swift` only, plus focused tests if required.
+- **Base:** draft integration PR #115 head `e13cd7acfda4898e65238848a54673df316b2788`.
+- **Evidence:** exact-head iOS CI run `43747613575` reached the native app build and failed because initializer references to `modelCatalogStore.load()` and `.resolve()` resolve to the optional initializer parameter rather than the non-optional stored property.
+- **Plan:** qualify those accesses through `self.modelCatalogStore`, preserve persistent catalog behavior, add/adjust tests only if needed, then validate on the integration stack. No APEX/East, runtime trust, readiness, or signed Evidence changes.
+- **Status:** in progress; no merge or main-branch write.
