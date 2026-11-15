@@ -172,7 +172,7 @@ final class LocalChatModel: ObservableObject {
     }
 }
 
-private enum LocalGGUFImporter {
+enum LocalGGUFImporter {
     static func copy(source: URL, into directory: URL) throws -> URL {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let destination = directory.appendingPathComponent(source.lastPathComponent)
