@@ -36,7 +36,8 @@ final class LocalChatModel: ObservableObject {
         conversationStore: LocalConversationStore = LocalConversationStore(),
         agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore(),
         modelCatalogStore: LocalModelCatalogStore? = nil,
-        evaluationJournal: NativeEvaluationJournal? = nil
+        evaluationJournal: NativeEvaluationJournal? = nil,
+        availableMemoryMB: @escaping @Sendable () -> Int = { Int(os_proc_available_memory() / (1_024 * 1_024)) }
     ) {
         self.conversationStore = conversationStore
         self.agentTaskHistoryStore = agentTaskHistoryStore
@@ -54,7 +55,7 @@ final class LocalChatModel: ObservableObject {
             runtime = try NativeInferenceRuntime(
                 engine: engine,
                 poolConfiguration: configuration,
-                availableMemoryMB: { Int(os_proc_available_memory() / (1_024 * 1_024)) },
+                availableMemoryMB: availableMemoryMB,
                 maxConcurrentRequests: 1
             )
         } catch {
