@@ -46,6 +46,9 @@ struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let completedAt: Date
     let latencyMilliseconds: Int
     let maxTokens: Int
+    let estimatedMemoryMB: Int
+    let promptUTF8Bytes: Int
+    let outputUTF8Bytes: Int
 
     enum Status: String, Codable { case completed, partial, failed }
     enum ProviderKind: String, Codable { case llamaCppBackend, unverifiedProvider }
@@ -76,6 +79,9 @@ struct NativeEvaluationAttemptDraft {
     let completedAt: Date
     let latencyMilliseconds: Int
     let maxTokens: Int
+    let estimatedMemoryMB: Int
+    let promptUTF8Bytes: Int
+    let outputUTF8Bytes: Int
 }
 
 enum NativeEvaluationCategory: String, Codable, CaseIterable {
@@ -188,7 +194,8 @@ actor NativeEvaluationJournal {
               !draft.requestID.isEmpty, !draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               draft.modelArtifactSHA256.count == 64,
               draft.modelArtifactSHA256.allSatisfy({ $0.isHexDigit }),
-              draft.maxTokens > 0, draft.latencyMilliseconds >= 0,
+              draft.maxTokens > 0, draft.latencyMilliseconds >= 0, draft.estimatedMemoryMB > 0,
+              draft.promptUTF8Bytes == draft.prompt.utf8.count, draft.outputUTF8Bytes == draft.output.utf8.count,
               !draft.nativeExecutionObserved || (draft.providerKind == .llamaCppBackend && draft.status == .completed),
               Self.validDeterministicScore(rule: draft.scoringRule, passed: draft.deterministicPassed, score: draft.deterministicScore) else {
             throw NativeEvaluationJournalError.invalidAttempt("Required metadata, SHA-256 fingerprint, or generation bounds are invalid.")
@@ -209,7 +216,9 @@ actor NativeEvaluationJournal {
             status: draft.status, providerKind: draft.providerKind,
             nativeExecutionObserved: draft.nativeExecutionObserved, runtimeTrustVerified: false,
             errorMessage: draft.errorMessage, startedAt: draft.startedAt, completedAt: draft.completedAt,
-            latencyMilliseconds: draft.latencyMilliseconds, maxTokens: draft.maxTokens
+            latencyMilliseconds: draft.latencyMilliseconds, maxTokens: draft.maxTokens,
+            estimatedMemoryMB: draft.estimatedMemoryMB, promptUTF8Bytes: draft.promptUTF8Bytes,
+            outputUTF8Bytes: draft.outputUTF8Bytes
         )
         _ = try append(.init(kind: .attempt, attempt: attempt, assessment: nil, challenge: nil))
         return attempt
@@ -318,6 +327,9 @@ actor NativeEvaluationJournal {
                 guard let attempt = event.payload.attempt,
                       event.payload.assessment == nil, event.payload.challenge == nil,
                       !attempt.id.isEmpty, !attempt.evaluationCriteria.isEmpty,
+                      attempt.maxTokens > 0, attempt.latencyMilliseconds >= 0, attempt.estimatedMemoryMB > 0,
+                      attempt.promptUTF8Bytes == attempt.prompt.utf8.count,
+                      attempt.outputUTF8Bytes == attempt.output.utf8.count,
                       Self.validDeterministicScore(rule: attempt.scoringRule, passed: attempt.deterministicPassed, score: attempt.deterministicScore),
                       attemptsByID[attempt.id] == nil else {
                     throw NativeEvaluationJournalError.corruptJournal("Attempt event has an invalid or duplicate payload.")
