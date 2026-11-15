@@ -17,9 +17,17 @@ final class PocketAILabTests: XCTestCase {
             fileURL: root.appendingPathComponent("ModelCatalog.json"),
             modelDirectory: modelDirectory
         )
+        let conversationStore = LocalConversationStore(
+            fileURL: root.appendingPathComponent("ConversationHistory.json")
+        )
+        let taskHistoryStore = LocalAgentTaskHistoryStore(
+            fileURL: root.appendingPathComponent("AgentTaskHistory.json")
+        )
         return LocalChatModel(
             engine: engine,
             modelDirectory: modelDirectory,
+            conversationStore: conversationStore,
+            agentTaskHistoryStore: taskHistoryStore,
             modelCatalogStore: catalogStore,
             availableMemoryMB: { 4_096 }
         )
