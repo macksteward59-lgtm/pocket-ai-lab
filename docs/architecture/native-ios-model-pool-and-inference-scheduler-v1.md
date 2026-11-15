@@ -10,6 +10,7 @@ Provide native resource-accounting primitives for future multi-model and multi-a
 
 - Acquisitions return unique `ModelPoolLease` values bound to one exact model descriptor and runtime session.
 - Concurrent acquisitions for the same model ID and exact descriptor coalesce into one engine load.
+- Cancellation is scoped to the acquiring caller: cancelling one waiter does not cancel the shared native load needed by other waiters; the cancelled caller releases any lease it would otherwise receive.
 - Reusing a model ID with a different path, context, quantization, or memory estimate is rejected.
 - The pool reserves caller-supplied estimated memory before awaiting a load and enforces both a pool memory budget and a host-supplied current-available-memory snapshot with a configurable safety margin.
 - A model cannot be unloaded while any lease is active or while its load is pending.
