@@ -106,6 +106,7 @@ CREATE TABLE proofhunt.authorized_targets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, authorization_record_id, hostname),
   UNIQUE (project_id, authorization_record_id, target_id),
+  UNIQUE (project_id, authorization_record_id, target_id, hostname),
   FOREIGN KEY (project_id, authorization_record_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
@@ -160,7 +161,140 @@ CREATE TABLE proofhunt.assessment_jobs (
   policy_version TEXT NOT NULL,
   policy_hash CHAR(64) NOT NULL CHECK (policy_hash ~ '^[a-f0-9]{64}$'),
   authorized_target_id UUID,
+  authorized_target_hostname TEXT,
   target_hostname TEXT NOT NULL,
+  program_scope_hash CHAR(64) CHECK (program_scope_hash IS NULL OR program_scope_hash ~ '^[a-f0-9]{64}
+  decision TEXT NOT NULL CHECK (decision IN ('approved_plan', 'denied')),
+  decision_reason TEXT NOT NULL,
+  job_status TEXT NOT NULL CHECK (job_status IN ('planned', 'queued', 'running', 'completed', 'cancelled', 'failed', 'stopped')),
+  decision_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, job_id),
+  FOREIGN KEY (project_id, program_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, operational_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id)
+    REFERENCES proofhunt.assessment_policies(project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id),
+  FOREIGN KEY (project_id, program_authorization_id, authorized_target_id, authorized_target_hostname)
+    REFERENCES proofhunt.authorized_targets(project_id, authorization_record_id, target_id, hostname),
+  CHECK (program_authorization_id <> operational_authorization_id),
+  CHECK (decision <> 'approved_plan' OR
+    (authorized_target_id IS NOT NULL AND authorized_target_hostname IS NOT NULL)),
+  CHECK (authorized_target_id IS NULL OR authorized_target_hostname IS NOT NULL)
+);
+
+CREATE TABLE proofhunt.assessment_events (
+  event_id UUID PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  job_id UUID NOT NULL,
+  event_sequence BIGINT NOT NULL CHECK (event_sequence >= 0),
+  event_type TEXT NOT NULL,
+  details JSONB NOT NULL DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, job_id, event_sequence),
+  FOREIGN KEY (project_id, job_id)
+    REFERENCES proofhunt.assessment_jobs(project_id, job_id)
+);
+
+CREATE TABLE proofhunt.audit_events (
+  event_id UUID PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  sequence BIGINT NOT NULL CHECK (sequence >= 0),
+  previous_hash CHAR(64) NOT NULL,
+  event_hash CHAR(64) NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, sequence),
+  UNIQUE (project_id, event_hash)
+);
+
+CREATE TABLE proofhunt.validation_results (
+  validation_id UUID PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  job_id UUID NOT NULL,
+  finding_reference TEXT NOT NULL,
+  validation_state TEXT NOT NULL CHECK (
+    validation_state IN ('detected', 'corroborated', 'reproduced', 'confirmed', 'rejected')
+  ),
+  confidence NUMERIC(4,3) CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+  evidence_references JSONB NOT NULL DEFAULT '[]'::JSONB,
+  counter_evidence JSONB NOT NULL DEFAULT '[]'::JSONB,
+  validator_reference TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id, job_id)
+    REFERENCES proofhunt.assessment_jobs(project_id, job_id)
+);
+
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'authorization_records',
+    'authorization_revocations',
+    'authorized_targets',
+    'excluded_targets',
+    'assessment_policies',
+    'assessment_jobs',
+    'assessment_events',
+    'audit_events',
+    'validation_results'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE proofhunt.%I ENABLE ROW LEVEL SECURITY', table_name);
+    EXECUTE format('ALTER TABLE proofhunt.%I FORCE ROW LEVEL SECURITY', table_name);
+    EXECUTE format(
+      'CREATE POLICY project_isolation ON proofhunt.%I USING (project_id = nullif(current_setting(''app.project_id'', true), '''')) WITH CHECK (project_id = nullif(current_setting(''app.project_id'', true), ''''))',
+      table_name
+    );
+  END LOOP;
+END $$;
+
+CREATE OR REPLACE FUNCTION proofhunt.reject_append_only_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'ProofHunt history records are append-only';
+END;
+$$;
+
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'authorization_records',
+    'authorization_revocations',
+    'authorized_targets',
+    'excluded_targets',
+    'assessment_policies',
+    'assessment_events',
+    'audit_events',
+    'validation_results'
+  ]
+  LOOP
+    EXECUTE format(
+      'CREATE TRIGGER proofhunt_append_only BEFORE UPDATE OR DELETE ON proofhunt.%I FOR EACH ROW EXECUTE FUNCTION proofhunt.reject_append_only_mutation()',
+      table_name
+    );
+  END LOOP;
+END $$;
+
+CREATE INDEX assessment_jobs_project_status_idx
+  ON proofhunt.assessment_jobs (project_id, job_status, created_at);
+CREATE INDEX assessment_jobs_authorization_idx
+  ON proofhunt.assessment_jobs (project_id, program_authorization_id, operational_authorization_id, policy_version, policy_hash);
+CREATE INDEX assessment_events_job_sequence_idx
+  ON proofhunt.assessment_events (project_id, job_id, event_sequence);
+CREATE INDEX validation_results_job_state_idx
+  ON proofhunt.validation_results (project_id, job_id, validation_state);
+
+
+COMMENT ON COLUMN proofhunt.authorization_records.policy_hash IS
+  'SHA-256 of project ID, environment, parent authorization ID, canonical operational policy, and exact authorized-target and excluded-target snapshots; any change requires a new approval.';
+),
   check_type TEXT NOT NULL,
   decision TEXT NOT NULL CHECK (decision IN ('approved_plan', 'denied')),
   decision_reason TEXT NOT NULL,
