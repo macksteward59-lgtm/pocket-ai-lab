@@ -1229,3 +1229,18 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Safety:** No model/tool execution, APEX/East trust or authorization changes, receipts, RLS/schema, target traffic, or native runtime changes. The included store is in-memory only; production transactional/cross-process persistence and host runner integration remain open.
 - **Review correction:** Diff inspection found and corrected escaped newline syntax defects before this head. Attempt-history cloning and duplicate attempt-ID checks were added to preserve rollback and replay invariants.
 - **Validation:** Focused Vitest tests are committed, but no local test runner was available through this repository session. GitHub Actions workflow query and combined status returned no runs/statuses for the current head. Do not claim CI or tests passed until checks are available.
+
+
+## 2026-11-15 — Whole-ecosystem roadmap submitted (PR #95)
+
+- **PR:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/95 (draft, open, unmerged).
+- **Branch/head:** `codex/whole-ecosystem-completion-roadmap` at `a85785beb538021b2483955b92a851a3a16f6a30`, based on main `818799eced634577c8f1760fa2bdd1f657bd8427`.
+- **Deliverable:** `docs/roadmap/whole-ecosystem-completion-roadmap.md`, 149 lines. Records current PR/CI evidence, six phases, critical path, product completion criteria, risks, and estimate confidence.
+- **Timeline:** 10–16 weeks focused engineering after branch reconciliation for an integrated release candidate; 16–24 weeks for broader production hardening; 4–8 months for intermittent single-person work. Medium-low confidence pending dependency inventory and physical-device vertical slice.
+- **CI:** At first check, four PR workflows were in progress (Pocket AI Lab, Consumer Prototype, Governance Sidecar, Cursor Collaboration). No pass is claimed yet.
+- **Scope:** Documentation only. No main changes, merges, settings, permissions, secrets, device installation, or live-target testing.
+
+## 2026-11-15 — CI evidence correction for PR #94
+
+- Refreshed PR #94 head `fd150213d9289b5c91d284497a61449d276c9f87`: four workflows completed successfully (Pocket AI Lab CI #1241, Governance Sidecar CI #262, Consumer Prototype CI #367, Cursor Collaboration CI #302).
+- The earlier log entry stating no workflow runs were returned was accurate at its timestamp but is superseded by these later successful runs. The lifecycle kernel still lacks production persistence and host integration.
