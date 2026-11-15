@@ -475,8 +475,7 @@ final class LocalChatModel: ObservableObject {
             }
 
             for message in result.messages {
-                guard case .object(let payload) = message.payload,
-                      case .string(let output)? = payload["text"] else { continue }
+                guard let output = message.untrustedText else { continue }
                 messages.append(ChatLine(
                     role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
                     text: output
@@ -527,8 +526,7 @@ private actor AgentTaskHistoryJournal {
     }
 
     func append(taskID: String, message: AgentMessageEnvelope) -> Bool {
-        guard case .object(let payload) = message.payload,
-              case .string(let text)? = payload["text"] else { return false }
+        guard let text = message.untrustedText else { return false }
         let result = AgentTaskRoleResult(
             id: message.messageId.uuidString,
             role: message.senderAgentId,
