@@ -132,8 +132,8 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         try store.appendRoleResult(taskID: "journal-task", result: second)
 
         let restored = try store.load().first
-        XCTAssertEqual(restored?.roleResults.map(\\.sequence), [0, 1])
-        XCTAssertEqual(restored?.roleResults.map(\\.id), ["message-0", "message-1"])
+        XCTAssertEqual(restored?.roleResults.map(\.sequence), [0, 1])
+        XCTAssertEqual(restored?.roleResults.map(\.id), ["message-0", "message-1"])
     }
 
     func testInterruptedRecoveryPreservesPreviouslyJournaledRoleOutputs() throws {
