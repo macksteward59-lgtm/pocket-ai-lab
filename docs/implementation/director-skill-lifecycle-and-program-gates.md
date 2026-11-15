@@ -15,6 +15,7 @@ This branch adds `packages/intelligence/skills/SkillLifecycle.ts` as a non-execu
 - Evaluation records are digest-bound to one exact skill version; author self-evaluation is rejected.
 - Promotion requires independent evaluation verification plus an injected authenticated human-approval verifier bound to the artifact, evaluation, and exact assignment-set digests.
 - Lifecycle transitions are explicit; activation requires a verified promotion authorization matching the exact skill ID, version, and artifact digest.
+- The verified promotion authorization is an immutable, process-local capability object. Freezing it prevents callers from mutating the evaluation or assignment digests after verification; it is not a durable approval record and must be re-verified after process restart.
 - The module does not persist artifacts, evaluate generated code, activate skills in the operational registry, grant tools, or grant permissions. Host integration and durable storage remain separate future gates.
 - Tests cover integrity tampering, stale approval, unreviewed sources, self-evaluation, missing evidence, verifier failure, and lifecycle transitions.
 
