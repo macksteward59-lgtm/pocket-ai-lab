@@ -5,19 +5,19 @@ final class NativeInferenceRuntimeTests: XCTestCase {
     func testSchedulerPermitCoversTheEntireGenerationStream() async throws {
         let engine = ControlledRuntimeTestEngine()
         let runtime = try makeRuntime(engine: engine)
-        let session = RuntimeSession(id: "session", modelId: "model")
+        let lease = try await runtime.acquire(model: model("model"), estimatedMemoryMB: 128)
         let firstRequest = GenerationRequest(prompt: "first", maxTokens: 16, temperature: 0)
         let secondRequest = GenerationRequest(prompt: "second", maxTokens: 16, temperature: 0)
 
         let first = Task {
-            try await runtime.generate(session: session, request: firstRequest)
+            try await runtime.generate(lease: lease, request: firstRequest)
         }
         while !(await engine.activeRequestIDs()).contains(firstRequest.requestId) {
             await Task.yield()
         }
 
         let second = Task {
-            try await runtime.generate(session: session, request: secondRequest)
+            try await runtime.generate(lease: lease, request: secondRequest)
         }
         while (await runtime.schedulerSnapshot()).waitingRequests == 0 {
             await Task.yield()
@@ -40,6 +40,11 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         let final = await runtime.schedulerSnapshot()
         XCTAssertEqual(final.activeRequests, 0)
         XCTAssertEqual(final.waitingRequests, 0)
+        let finalPool = await runtime.snapshot()
+        XCTAssertEqual(finalPool.activeUseCount, 0)
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+        try await runtime.unload(modelId: lease.model.id)
     }
 
     func testLeaseRemainsActiveUntilCancellationDrainReturns() async throws {
@@ -50,7 +55,7 @@ final class NativeInferenceRuntimeTests: XCTestCase {
 
         let operation = Task {
             try await runtime.withLease(model: descriptor, estimatedMemoryMB: 256) { lease in
-                try await runtime.generate(session: lease.session, request: request)
+                try await runtime.generate(lease: lease, request: request)
             }
         }
 
@@ -64,6 +69,7 @@ final class NativeInferenceRuntimeTests: XCTestCase {
 
         let whileDraining = await runtime.snapshot()
         XCTAssertEqual(whileDraining.activeLeaseCount, 1)
+        XCTAssertEqual(whileDraining.activeUseCount, 1)
         let schedulerWhileDraining = await runtime.schedulerSnapshot()
         XCTAssertEqual(schedulerWhileDraining.activeRequests, 1)
 
@@ -79,6 +85,69 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         XCTAssertEqual(afterDrain.reservedMemoryMB, 256)
         let finalScheduler = await runtime.schedulerSnapshot()
         XCTAssertEqual(finalScheduler.activeRequests, 0)
+    }
+
+
+    func testReleasedLeaseCannotStartGeneration() async throws {
+        let engine = ControlledRuntimeTestEngine()
+        let runtime = try makeRuntime(engine: engine)
+        let lease = try await runtime.acquire(model: model("released"), estimatedMemoryMB: 128)
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+        do {
+            _ = try await runtime.generate(lease: lease, request: GenerationRequest(prompt: "must not run", maxTokens: 16, temperature: 0))
+            XCTFail("A released lease must not authorize generation")
+        } catch ModelPoolError.invalidLease {
+        }
+        let activeIDs = await engine.activeRequestIDs()
+        XCTAssertTrue(activeIDs.isEmpty)
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+    }
+
+    func testActiveGenerationPinsSessionAfterLeaseReleaseUntilDrainCompletes() async throws {
+        let engine = ControlledRuntimeTestEngine()
+        let runtime = try makeRuntime(engine: engine)
+        let lease = try await runtime.acquire(model: model("pinned"), estimatedMemoryMB: 128)
+        let request = GenerationRequest(prompt: "pin session", maxTokens: 16, temperature: 0)
+        let generation = Task { try await runtime.generate(lease: lease, request: request) }
+        while !(await engine.activeRequestIDs()).contains(request.requestId) { await Task.yield() }
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+        let during = await runtime.snapshot()
+        XCTAssertEqual(during.activeUseCount, 1)
+        do {
+            try await runtime.unload(modelId: lease.model.id)
+            XCTFail("An in-flight generation must pin the session after lease release")
+        } catch ModelPoolError.activeUses(let modelId, let count) {
+            XCTAssertEqual(modelId, lease.model.id)
+            XCTAssertEqual(count, 1)
+        }
+        await engine.finish(request.requestId)
+        _ = try await generation.value
+        let after = await runtime.snapshot()
+        XCTAssertEqual(after.activeUseCount, 0)
+        try await runtime.unload(modelId: lease.model.id)
+        let unloaded = await runtime.snapshot()
+        XCTAssertEqual(unloaded.reservedMemoryMB, 0)
+    }
+
+    func testForeignRuntimeCannotUseAnotherPoolsLease() async throws {
+        let firstEngine = ControlledRuntimeTestEngine()
+        let secondEngine = ControlledRuntimeTestEngine()
+        let firstRuntime = try makeRuntime(engine: firstEngine)
+        let secondRuntime = try makeRuntime(engine: secondEngine)
+        let lease = try await firstRuntime.acquire(model: model("foreign"), estimatedMemoryMB: 128)
+        do {
+            _ = try await secondRuntime.generate(lease: lease, request: GenerationRequest(prompt: "must not run", maxTokens: 16, temperature: 0))
+            XCTFail("A lease from another pool must be rejected")
+        } catch ModelPoolError.invalidLease {
+        }
+        let activeIDs = await secondEngine.activeRequestIDs()
+        XCTAssertTrue(activeIDs.isEmpty)
+        let released = await firstRuntime.release(lease)
+        XCTAssertTrue(released)
+        try await firstRuntime.unload(modelId: lease.model.id)
     }
 
     func testWithLeaseReleasesAfterSuccessfulOperation() async throws {

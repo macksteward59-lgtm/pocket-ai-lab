@@ -11,7 +11,7 @@ public enum NativeInferenceRuntimeError: Error, Equatable, Sendable {
 /// the complete generation stream. Callers must keep the lease until every
 /// generation using its session has completed or has been cancelled and drained.
 public struct NativeInferenceRuntime: Sendable {
-    public let engine: any LlamaEngine
+    let engine: any LlamaEngine
     private let pool: ModelPool
     private let scheduler: InferenceScheduler
 
@@ -82,33 +82,42 @@ public struct NativeInferenceRuntime: Sendable {
     ///
     /// On stream failure, cancellation, or output-limit rejection, the engine's
     /// cancelAndWait contract is awaited before the permit is released.
+    /// Runs generation only through an exact active ModelPool lease.
+    /// An internal use pin prevents unload until stream completion or cancellation drain.
     public func generate(
-        session: RuntimeSession,
+        lease: ModelPoolLease,
         request: GenerationRequest,
         maxOutputBytes: Int = 64_000
     ) async throws -> String {
         guard maxOutputBytes > 0 else {
             throw NativeInferenceRuntimeError.invalidOutputLimit
         }
-
-        return try await scheduler.withPermit {
-            let stream = try await engine.generate(session: session, request: request)
-            var output = ""
-            do {
-                for try await token in stream {
-                    try Task.checkCancellation()
-                    let (nextCount, overflow) = output.utf8.count.addingReportingOverflow(token.text.utf8.count)
-                    guard !overflow, nextCount <= maxOutputBytes else {
-                        throw NativeInferenceRuntimeError.responseTooLarge
+        let use = try await pool.beginUse(lease)
+        do {
+            let result = try await scheduler.withPermit {
+                let stream = try await engine.generate(session: lease.session, request: request)
+                var output = ""
+                do {
+                    for try await token in stream {
+                        try Task.checkCancellation()
+                        let (nextCount, overflow) = output.utf8.count.addingReportingOverflow(token.text.utf8.count)
+                        guard !overflow, nextCount <= maxOutputBytes else {
+                            throw NativeInferenceRuntimeError.responseTooLarge
+                        }
+                        output += token.text
                     }
-                    output += token.text
+                    try Task.checkCancellation()
+                    return output
+                } catch {
+                    await engine.cancelAndWait(sessionId: lease.session.id, requestId: request.requestId)
+                    throw error
                 }
-                try Task.checkCancellation()
-                return output
-            } catch {
-                await engine.cancelAndWait(sessionId: session.id, requestId: request.requestId)
-                throw error
             }
+            await pool.endUse(use)
+            return result
+        } catch {
+            await pool.endUse(use)
+            throw error
         }
     }
 

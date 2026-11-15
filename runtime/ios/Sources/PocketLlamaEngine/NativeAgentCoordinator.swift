@@ -54,13 +54,17 @@ public actor NativeAgentCoordinator {
     private static let maxTokensPerStep = 512
     private let engine: any LlamaEngine
     private let session: RuntimeSession
+    private let lease: ModelPoolLease?
     private let runtime: NativeInferenceRuntime?
     private var activeTaskId: String?
     private var activeRequestId: String?
 
-    public init(engine: any LlamaEngine, session: RuntimeSession) {
+    /// Internal direct-engine initializer retained for package-level tests.
+    /// Production callers must use the shared runtime/lease initializer.
+    init(engine: any LlamaEngine, session: RuntimeSession) {
         self.engine = engine
         self.session = session
+        self.lease = nil
         self.runtime = nil
     }
 
@@ -69,6 +73,7 @@ public actor NativeAgentCoordinator {
     public init(runtime: NativeInferenceRuntime, lease: ModelPoolLease) {
         self.engine = runtime.engine
         self.session = lease.session
+        self.lease = lease
         self.runtime = runtime
     }
 
@@ -118,9 +123,9 @@ public actor NativeAgentCoordinator {
             )
             activeRequestId = request.requestId
             let output: String
-            if let runtime {
+            if let runtime, let lease {
                 output = try await runtime.generate(
-                    session: session,
+                    lease: lease,
                     request: request,
                     maxOutputBytes: Self.maxOutputBytes
                 )

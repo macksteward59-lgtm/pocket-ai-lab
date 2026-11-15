@@ -177,7 +177,7 @@ final class LocalChatModel: ObservableObject {
         defer { isBusy = false }
         do {
             let output = try await runtime.generate(
-                session: lease.session,
+                lease: lease,
                 request: GenerationRequest(prompt: text, maxTokens: 256, temperature: 0.7),
                 maxOutputBytes: 64_000
             )

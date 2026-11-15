@@ -10,6 +10,8 @@ public enum ModelPoolError: Error, Equatable, Sendable {
     case modelBusy(String)
     case modelLoading(String)
     case activeLeases(modelId: String, count: Int)
+    case invalidLease
+    case activeUses(modelId: String, count: Int)
     case unknownModel(String)
     case runtimeReturnedWrongModel(expected: String, actual: String)
     case runtimeSessionCollision(String)
@@ -48,12 +50,19 @@ public struct ModelPoolLease: Sendable, Equatable {
     public let estimatedMemoryMB: Int
 }
 
+struct ModelPoolUse: Sendable, Equatable {
+    let useId: String
+    let modelId: String
+    let session: RuntimeSession
+}
+
 public struct ModelPoolSnapshot: Sendable, Equatable {
     public let loadedModelIDs: [String]
     public let pendingModelIDs: [String]
     /// Models whose native unload call has not returned yet.
     public let unloadingModelIDs: [String]
     public let activeLeaseCount: Int
+    public let activeUseCount: Int
     public let pendingAcquirerCount: Int
     public let reservedMemoryMB: Int
 }
@@ -70,6 +79,7 @@ public actor ModelPool {
         let session: RuntimeSession
         let estimatedMemoryMB: Int
         var leaseIDs: Set<String>
+        var activeUseIDs: Set<String>
         var lastUsedSequence: UInt64
     }
 
@@ -180,7 +190,30 @@ public actor ModelPool {
         return true
     }
 
-    /// Unloads an idle model. Active leases and pending loads cannot be bypassed.
+    /// Pins one exact active lease for the duration of an inference operation.
+    /// The pin remains effective if the caller releases its lease while generation drains.
+    func beginUse(_ lease: ModelPoolLease) throws -> ModelPoolUse {
+        guard var entry = entries[lease.model.id],
+              entry.session == lease.session,
+              entry.descriptor == lease.model,
+              entry.leaseIDs.contains(lease.leaseId) else {
+            throw ModelPoolError.invalidLease
+        }
+        let use = ModelPoolUse(useId: UUID().uuidString, modelId: lease.model.id, session: lease.session)
+        entry.activeUseIDs.insert(use.useId)
+        entries[lease.model.id] = entry
+        return use
+    }
+
+    /// Ends one exact inference pin. Stale/double releases are harmless.
+    func endUse(_ use: ModelPoolUse) {
+        guard var entry = entries[use.modelId],
+              entry.session == use.session,
+              entry.activeUseIDs.remove(use.useId) != nil else { return }
+        entries[use.modelId] = entry
+    }
+
+    /// Unloads an idle model. Active leases, in-flight uses, and pending loads cannot be bypassed.
     public func unload(modelId: String) async throws {
         guard !pendingLoads.keys.contains(modelId) else {
             throw ModelPoolError.modelLoading(modelId)
@@ -190,6 +223,9 @@ public actor ModelPool {
         }
         guard entry.leaseIDs.isEmpty else {
             throw ModelPoolError.activeLeases(modelId: modelId, count: entry.leaseIDs.count)
+        }
+        guard entry.activeUseIDs.isEmpty else {
+            throw ModelPoolError.activeUses(modelId: modelId, count: entry.activeUseIDs.count)
         }
 
         unloading.insert(modelId)
@@ -207,7 +243,7 @@ public actor ModelPool {
     @discardableResult
     public func unloadIdleModels() async -> [String] {
         let idle = entries
-            .filter { $0.value.leaseIDs.isEmpty }
+            .filter { $0.value.leaseIDs.isEmpty && $0.value.activeUseIDs.isEmpty }
             .sorted { $0.value.lastUsedSequence < $1.value.lastUsedSequence }
             .map { $0.key }
         var unloaded: [String] = []
@@ -229,6 +265,7 @@ public actor ModelPool {
             pendingModelIDs: pendingLoads.keys.sorted(),
             unloadingModelIDs: unloading.sorted(),
             activeLeaseCount: entries.values.reduce(0) { $0 + $1.leaseIDs.count },
+            activeUseCount: entries.values.reduce(0) { $0 + $1.activeUseIDs.count },
             pendingAcquirerCount: pendingLoads.values.reduce(0) { $0 + $1.waitingAcquirers },
             reservedMemoryMB: reservedMemoryMB
         )
@@ -276,6 +313,7 @@ public actor ModelPool {
                 session: session,
                 estimatedMemoryMB: pending.estimatedMemoryMB,
                 leaseIDs: [],
+                activeUseIDs: [],
                 lastUsedSequence: useSequence
             )
         } else {
