@@ -3,6 +3,19 @@ import XCTest
 import PocketLlamaEngine
 
 final class PocketAILabTests: XCTestCase {
+    private func makeLocalChatModel(engine: any LlamaEngine, root: URL) -> LocalChatModel {
+        let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
+        let catalogStore = LocalModelCatalogStore(
+            fileURL: root.appendingPathComponent("ModelCatalog.json"),
+            modelDirectory: modelDirectory
+        )
+        return LocalChatModel(
+            engine: engine,
+            modelDirectory: modelDirectory,
+            modelCatalogStore: catalogStore
+        )
+    }
+
     func testUnavailableProbeNeverClaimsMetalReady() {
         let probe = LlamaCppMetalBackend.probe()
         if !probe.linked { XCTAssertFalse(probe.metalDeviceUsable) }
@@ -150,7 +163,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
 
         await model.loadModel()
@@ -175,7 +188,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
         await model.loadModel()
 
@@ -200,7 +213,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
         await model.loadModel()
 
@@ -220,7 +233,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
         await model.loadModel()
 
@@ -243,7 +256,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
         await model.loadModel()
         XCTAssertTrue(model.isModelLoaded)
@@ -265,7 +278,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
         let importedURL = try XCTUnwrap(model.modelURL)
         let fingerprint = try ModelArtifactFingerprint.compute(at: importedURL)
@@ -286,7 +299,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine()
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
         try Data("tampered artifact".utf8).write(to: try XCTUnwrap(model.modelURL))
 
@@ -305,7 +318,7 @@ final class PocketAILabTests: XCTestCase {
         let source = root.appendingPathComponent("model.gguf")
         try validGGUFHeader().write(to: source)
         let engine = FingerprintTestEngine(mutateOnLoad: true)
-        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
 
         await model.loadModel()
