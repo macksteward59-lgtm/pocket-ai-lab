@@ -61,7 +61,7 @@ final class LocalChatModel: ObservableObject {
         // Update selection only after the staged artifact has passed validation.
         modelURL = destination
         modelName = destination.lastPathComponent
-        status = "GGUF header validated and copied safely to this app's private model folder. Model is not loaded yet."
+        status = "GGUF minimum header structure validated and copied safely to this app's private model folder. Model is not loaded yet."
     }
 
     func loadModel() async {
@@ -205,7 +205,19 @@ enum LocalGGUFImporter {
     private static func validateHeader(at url: URL) throws {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
-        guard try handle.read(upToCount: 4) == Data("GGUF".utf8) else {
+        // GGUF starts with magic, a little-endian version, tensor count,
+        // and metadata-entry count. Reject magic-only/truncated files and
+        // versions outside the currently supported v1-v3 header formats.
+        guard let header = try handle.read(upToCount: 24),
+              header.count == 24,
+              header.prefix(4) == Data("GGUF".utf8) else {
+            throw LocalChatError.invalidGGUFHeader
+        }
+        let version = UInt32(header[4])
+            | (UInt32(header[5]) << 8)
+            | (UInt32(header[6]) << 16)
+            | (UInt32(header[7]) << 24)
+        guard (1...3).contains(version) else {
             throw LocalChatError.invalidGGUFHeader
         }
     }
@@ -226,7 +238,7 @@ enum LocalChatError: LocalizedError, Equatable {
         case .busy: return "Another model operation is already in progress."
         case .memoryEstimateUnavailable: return "The model file size could not be used for a safe memory admission estimate."
         case .modelMustBeUnloaded: return "Unload the current model before importing or replacing a model file."
-        case .invalidGGUFHeader: return "The selected file does not contain a valid GGUF magic header. The previous model file was preserved."
+        case .invalidGGUFHeader: return "The selected file does not contain a complete supported GGUF v1-v3 header. The previous model file was preserved."
         }
     }
 }
