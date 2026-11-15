@@ -12,6 +12,12 @@ enum NativeEvaluationJournalError: Error, Equatable {
 
 /// A complete output record is kept locally, including failures and partial output.
 /// No delete, truncate, replace, or retention-expiry operation is exposed.
+enum NativeEvaluationScoringRule: String, Codable {
+    case exactMatch
+    case containsExpectedOutcome
+    case manualReview
+}
+
 struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let id: String
     let category: NativeEvaluationCategory
@@ -20,6 +26,9 @@ struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let caseID: String
     let evaluationCriteria: String
     let expectedOutcome: String
+    let scoringRule: NativeEvaluationScoringRule
+    let deterministicPassed: Bool?
+    let deterministicScore: Double?
     let attemptNumber: Int
     let retryOfAttemptID: String?
     let modelID: String
@@ -50,6 +59,9 @@ struct NativeEvaluationAttemptDraft {
     let caseID: String
     let evaluationCriteria: String
     let expectedOutcome: String
+    let scoringRule: NativeEvaluationScoringRule
+    let deterministicPassed: Bool?
+    let deterministicScore: Double?
     let modelID: String
     let modelArtifactSHA256: String
     let runtimeSessionID: String
@@ -177,7 +189,8 @@ actor NativeEvaluationJournal {
               draft.modelArtifactSHA256.count == 64,
               draft.modelArtifactSHA256.allSatisfy({ $0.isHexDigit }),
               draft.maxTokens > 0, draft.latencyMilliseconds >= 0,
-              !draft.nativeExecutionObserved || (draft.providerKind == .llamaCppBackend && draft.status == .completed) else {
+              !draft.nativeExecutionObserved || (draft.providerKind == .llamaCppBackend && draft.status == .completed),
+              Self.validDeterministicScore(rule: draft.scoringRule, passed: draft.deterministicPassed, score: draft.deterministicScore) else {
             throw NativeEvaluationJournalError.invalidAttempt("Required metadata, SHA-256 fingerprint, or generation bounds are invalid.")
         }
         try verifyDiskState()
@@ -187,7 +200,9 @@ actor NativeEvaluationJournal {
         let attempt = NativeEvaluationAttempt(
             id: draft.id, category: draft.category, suiteID: draft.suiteID, suiteVersion: draft.suiteVersion,
             caseID: draft.caseID, evaluationCriteria: draft.evaluationCriteria,
-            expectedOutcome: draft.expectedOutcome, attemptNumber: (prior?.attemptNumber ?? 0) + 1,
+            expectedOutcome: draft.expectedOutcome, scoringRule: draft.scoringRule,
+            deterministicPassed: draft.deterministicPassed, deterministicScore: draft.deterministicScore,
+            attemptNumber: (prior?.attemptNumber ?? 0) + 1,
             retryOfAttemptID: prior?.id, modelID: draft.modelID,
             modelArtifactSHA256: draft.modelArtifactSHA256, runtimeSessionID: draft.runtimeSessionID,
             requestID: draft.requestID, prompt: draft.prompt, output: draft.output,
@@ -303,6 +318,7 @@ actor NativeEvaluationJournal {
                 guard let attempt = event.payload.attempt,
                       event.payload.assessment == nil, event.payload.challenge == nil,
                       !attempt.id.isEmpty, !attempt.evaluationCriteria.isEmpty,
+                      Self.validDeterministicScore(rule: attempt.scoringRule, passed: attempt.deterministicPassed, score: attempt.deterministicScore),
                       attemptsByID[attempt.id] == nil else {
                     throw NativeEvaluationJournalError.corruptJournal("Attempt event has an invalid or duplicate payload.")
                 }
@@ -330,6 +346,16 @@ actor NativeEvaluationJournal {
             verified.append(event)
         }
         return verified
+    }
+
+    private static func validDeterministicScore(rule: NativeEvaluationScoringRule, passed: Bool?, score: Double?) -> Bool {
+        switch rule {
+        case .manualReview:
+            return passed == nil && score == nil
+        case .exactMatch, .containsExpectedOutcome:
+            guard let passed, let score, score.isFinite else { return false }
+            return score == (passed ? 1.0 : 0.0)
+        }
     }
 
     private static func hasCompleteCategoryScores(_ scores: [NativeEvaluationCategoryScore]) -> Bool {
