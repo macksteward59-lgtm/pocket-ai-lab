@@ -30,6 +30,7 @@ Preapproval means the workflow can run the exact checks listed in the signed pol
 - Exclusions are evaluated before inclusions and always win.
 - Malformed target entries reject the entire configuration rather than being ignored.
 - Both program and operational records expire independently.
+- For bounty programs, the operational request-rate ceiling cannot exceed the strictest published requests-per-second or requests-per-minute limit. If the published limit cannot be reconciled, the plan is denied.
 - A policy-version mismatch, revoked/pending record, failed verifier, unknown check, or failed audit write denies the plan.
 - stopOnScopeViolation is mandatory and cannot be disabled.
 - A required host-supplied emergency-stop provider is checked for both global and per-project stop state before a plan is emitted. A stop denies new plans; active-job cancellation, queued-job cancellation, and worker credential revocation remain mandatory responsibilities of a future scheduler/adapter control plane.
