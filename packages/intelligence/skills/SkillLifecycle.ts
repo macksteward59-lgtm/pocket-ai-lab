@@ -285,7 +285,8 @@ export function skillAssignmentDigest(skill: Pick<Skill, "specialists" | "coreAg
 export function transitionSkillLifecycle(
   current: SkillLifecycleStatus,
   next: SkillLifecycleStatus,
-  promotion?: SkillPromotionAuthorization
+  promotion?: SkillPromotionAuthorization,
+  expected?: { skillId: string; version: string; artifactDigest: string }
 ): SkillLifecycleStatus {
   if (!STATUS_TRANSITIONS[current].includes(next)) {
     throw new Error("Invalid skill lifecycle transition: " + current + " -> " + next);
