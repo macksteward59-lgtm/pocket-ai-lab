@@ -197,6 +197,14 @@ describe("PostgresTaskLifecycleStore", () => {
     expect(await observer.load()).toEqual([]);
   });
 
+  it("rejects snapshots above the configured storage bound", async () => {
+    const store = new PostgresTaskLifecycleStore(new FakePostgresDatabase(), "workspace-large");
+    await store.load();
+    const oversized = task("oversized");
+    oversized.objective = "x".repeat(PostgresTaskLifecycleStore.maximumSnapshotCharacters);
+    await expect(store.save([oversized])).rejects.toMatchObject({ code: "store_too_large" });
+  });
+
   it("requires a load before the first save", async () => {
     const store = new PostgresTaskLifecycleStore(new FakePostgresDatabase(), "workspace-unloaded");
     await expect(store.save([])).rejects.toMatchObject({ code: "store_not_loaded" });
