@@ -81,6 +81,57 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: destination), validGGUFHeader())
     }
 
+
+    @MainActor
+    func testLocalModelCatalogPersistsMultipleSameNamedImportsAndSelection() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let sourceA = root.appendingPathComponent("source-a", isDirectory: true)
+        let sourceB = root.appendingPathComponent("source-b", isDirectory: true)
+        let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: sourceB, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let firstSource = sourceA.appendingPathComponent("model.gguf")
+        let secondSource = sourceB.appendingPathComponent("model.gguf")
+        try validGGUFHeader(version: 2).write(to: firstSource)
+        try validGGUFHeader(version: 3).write(to: secondSource)
+        let catalog = LocalModelCatalogStore(
+            fileURL: root.appendingPathComponent("catalog.json"),
+            modelDirectory: modelDirectory
+        )
+        let model = LocalChatModel(
+            engine: FingerprintTestEngine(),
+            modelDirectory: modelDirectory,
+            modelCatalogStore: catalog
+        )
+
+        try await model.importModel(from: firstSource)
+        let firstID = try XCTUnwrap(model.selectedModelID)
+        let firstURL = try XCTUnwrap(model.modelURL)
+        try await model.importModel(from: secondSource)
+
+        XCTAssertEqual(model.availableModels.count, 2)
+        XCTAssertNotEqual(firstURL, model.modelURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: firstURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(model.modelURL).path))
+
+        model.selectModel(firstID)
+        XCTAssertEqual(model.selectedModelID, firstID)
+        XCTAssertEqual(model.modelURL, firstURL)
+
+        let restored = LocalChatModel(
+            engine: FingerprintTestEngine(),
+            modelDirectory: modelDirectory,
+            modelCatalogStore: catalog
+        )
+        XCTAssertEqual(restored.availableModels.count, 2)
+        XCTAssertEqual(restored.selectedModelID, firstID)
+        XCTAssertEqual(restored.modelURL, firstURL)
+        XCTAssertFalse(restored.isModelLoaded, "Catalog selection must not fabricate a loaded runtime session.")
+    }
+
     // Minimum 24-byte GGUF header: magic, version, tensor count, and metadata count.
     private func validGGUFHeader(version: UInt32 = 3) -> Data {
         var data = Data("GGUF".utf8)
