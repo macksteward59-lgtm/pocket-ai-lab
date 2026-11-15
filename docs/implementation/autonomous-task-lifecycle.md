@@ -33,7 +33,7 @@ A plan is a directed acyclic graph. A step can be claimed only after all depende
 
 Hosts inject a `TaskLifecycleStore`. Its `save` operation must atomically replace the full snapshot or leave the prior snapshot intact. The included `InMemoryTaskLifecycleStore` is for tests and ephemeral use only; it is not durable across process restarts.
 
-On startup, call `init()`, then `recoverExpiredLeases()`. Expired attempts are requeued only while the step's bounded attempt budget remains; otherwise they fail and outstanding work is cancelled. The kernel does not start work merely because it was recovered. A host scheduler must explicitly claim the next ready step.
+On startup, call `init()`, then `recoverExpiredLeases()` to recover all tasks, or pass a task ID to recover only that task. Task-scoped recovery validates that the task exists and leaves unrelated task leases untouched. Expired attempts are requeued only while the step's bounded attempt budget remains; otherwise they fail and outstanding work is cancelled. The kernel does not start work merely because it was recovered. A host scheduler must explicitly claim the next ready step.
 
 The in-process mutation queue prevents races among callers using one coordinator instance. A production store shared by multiple processes needs its own transactional compare-and-swap, row locking, or equivalent cross-process claim mechanism. The in-memory queue is not a distributed lock.
 
