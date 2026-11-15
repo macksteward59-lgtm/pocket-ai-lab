@@ -78,14 +78,7 @@ func isAllowedWorkspaceURL(_ url: URL) -> Bool {
         return false
     }
 
-    // URLComponents.host may retain IPv6 brackets on some Foundation versions.
-    // Normalize the literal before applying the strict loopback allowlist.
-    let normalizedHost = host.hasPrefix("[") && host.hasSuffix("]")
-        ? String(host.dropFirst().dropLast())
-        : host
-    let isLoopback = normalizedHost == "localhost" ||
-        normalizedHost == "127.0.0.1" ||
-        normalizedHost == "::1"
+    let isLoopback = host == "localhost" || host == "127.0.0.1" || host == "::1"
     return scheme == "https" || (scheme == "http" && isLoopback)
 }
 
