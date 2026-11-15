@@ -238,10 +238,12 @@ export async function authorizeSkillPromotion(
   if (passed.length < artifact.assessment.minimumPassingExercises) {
     return denied("Insufficient passing exercises with evidence");
   }
-  if (artifact.exercises.some(exercise =>
-    exercise.evidenceRequired.length > 0 &&
-    !evaluation.results.some(result => result.exerciseId === exercise.id && result.passed && result.evidenceRefs.length > 0)
-  ) && artifact.exercises.filter(exercise => exercise.evidenceRequired.length > 0).length <= artifact.assessment.minimumPassingExercises) {
+  const requiredEvidenceExercises = artifact.exercises.filter(exercise => exercise.evidenceRequired.length > 0);
+  if (requiredEvidenceExercises.some(exercise =>
+    !evaluation.results.some(result =>
+      result.exerciseId === exercise.id && result.passed && result.evidenceRefs.length > 0
+    )
+  )) {
     return denied("A required evidence exercise has not passed");
   }
 
