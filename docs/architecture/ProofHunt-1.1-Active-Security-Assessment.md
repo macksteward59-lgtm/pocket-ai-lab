@@ -90,7 +90,7 @@ A proposed PostgreSQL migration is provided at packages/intelligence/security/pr
 | audit_events | Append-only, hash-linked security decisions |
 | validation_results | Detected/corroborated/reproduced/confirmed/rejected outcomes |
 
-Every job must persist both authorization record IDs, the program-level permitted-check review reference, exact policy version, target canonicalization, and the decision timestamp. A replay must reproduce why that job was permitted at that time. Authorization revocation/expiry and emergency stop must be checked again at job admission and before each adapter boundary.
+Every job must persist both authorization record IDs, the program-level permitted-check review reference, exact policy version, the allowlist row ID that matched (for an approved plan), target canonicalization, and the decision timestamp. Database composite foreign keys bind the job's authorization IDs and policy version to the exact immutable policy and bind its approved target to the relevant project's authorized-target row. A replay must reproduce why that job was permitted at that time. Authorization revocation/expiry and emergency stop must be checked again at job admission and before each adapter boundary.
 
 ## Validation state model
 

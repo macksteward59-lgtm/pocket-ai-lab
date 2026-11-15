@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS proofhunt.authorized_targets (
   include_subdomains BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, authorization_record_id, hostname),
+  UNIQUE (project_id, authorization_record_id, target_id),
   FOREIGN KEY (project_id, authorization_record_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS proofhunt.assessment_policies (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, policy_version),
   UNIQUE (project_id, policy_id),
+  UNIQUE (project_id, policy_id, policy_version, program_authorization_id, operational_authorization_id),
   FOREIGN KEY (project_id, program_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, operational_authorization_id)
@@ -98,6 +100,7 @@ CREATE TABLE IF NOT EXISTS proofhunt.assessment_jobs (
   operational_authorization_id UUID NOT NULL REFERENCES proofhunt.authorization_records(record_id),
   policy_id UUID NOT NULL REFERENCES proofhunt.assessment_policies(policy_id),
   policy_version TEXT NOT NULL,
+  authorized_target_id UUID,
   target_hostname TEXT NOT NULL,
   check_type TEXT NOT NULL,
   decision TEXT NOT NULL CHECK (decision IN ('approved_plan', 'denied')),
@@ -110,9 +113,12 @@ CREATE TABLE IF NOT EXISTS proofhunt.assessment_jobs (
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, operational_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
-  FOREIGN KEY (project_id, policy_id)
-    REFERENCES proofhunt.assessment_policies(project_id, policy_id),
-  CHECK (program_authorization_id <> operational_authorization_id)
+  FOREIGN KEY (project_id, policy_id, policy_version, program_authorization_id, operational_authorization_id)
+    REFERENCES proofhunt.assessment_policies(project_id, policy_id, policy_version, program_authorization_id, operational_authorization_id),
+  FOREIGN KEY (project_id, program_authorization_id, authorized_target_id)
+    REFERENCES proofhunt.authorized_targets(project_id, authorization_record_id, target_id),
+  CHECK (program_authorization_id <> operational_authorization_id),
+  CHECK (decision <> 'approved_plan' OR authorized_target_id IS NOT NULL)
 );
 
 CREATE TABLE IF NOT EXISTS proofhunt.assessment_events (
