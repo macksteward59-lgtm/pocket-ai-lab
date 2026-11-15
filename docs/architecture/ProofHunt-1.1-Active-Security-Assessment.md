@@ -77,7 +77,7 @@ The diagram describes the target integration. The current ScopeGuard code only v
 
 The current implementation accepts an injected audit writer. It can be connected to the existing JSONL AuditLedger, which hash-links events, but that ledger is tamper-evident rather than immutable and its current read-then-append implementation is not a multi-process transaction coordinator. Do not share it between concurrent worker processes as the sole production audit store.
 
-The production persistence layer should use transactional PostgreSQL with at least:
+A proposed PostgreSQL migration is provided at packages/intelligence/security/proofhunt/migrations/001_proofhunt_scopeguard.sql. It creates the project-scoped records below, forces row-level security using the transaction-local app.project_id setting, and makes authorization, target, policy, event, audit, and validation history append-only. It has not been applied to a live database. The application must set app.project_id with SET LOCAL inside every transaction; the runtime role must not have BYPASSRLS. Hash-chain sequence allocation and append must be serialized transactionally, and periodic signed checkpoints must be anchored outside the database. The production persistence layer should use transactional PostgreSQL with at least:
 
 | Table | Purpose |
 |---|---|
