@@ -84,6 +84,17 @@ export class PostgresTaskLifecycleStore implements TaskLifecycleStore {
       }
 
       let records: unknown = row.payload;
+      // Enforce the same bound on reads as writes. A corrupt or externally
+      // modified JSONB row must not cause an unbounded allocation during load.
+      let encodedPayload: string;
+      try {
+        encodedPayload = typeof records === "string" ? records : JSON.stringify(records) ?? "";
+      } catch {
+        throw new TaskLifecycleError("store_corrupt", "Lifecycle snapshot payload could not be serialized");
+      }
+      if (encodedPayload.length > PostgresTaskLifecycleStore.maximumSnapshotCharacters) {
+        throw new TaskLifecycleError("store_too_large", "Lifecycle snapshot exceeds the configured storage limit");
+      }
       if (typeof records === "string") {
         try {
           records = JSON.parse(records);
