@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress` — shared inference composition is implemented on a current-mainline branch; iOS CI is still running. Content-addressed integrity is implemented in a stacked draft PR but has not yet received iOS XCTest validation.
+`in_progress` — shared native inference composition and content-addressed artifact integrity are implemented on separate current-mainline drafts. #104 is now a validated predecessor. #107's corrected importer fixture is under fresh iOS CI. #109 is the mainline aggregate and is under its first complete native iOS CI run, including a newly added lease-retention regression test.
 
 ## Objective
 
@@ -18,11 +18,16 @@ Complete the shared native inference composition root and bind every native mode
 - [x] Add tests for stream-wide scheduling and lease retention during blocked cancellation drain.
 - [x] Stage GGUF import and preserve the previous file on invalid input.
 - [x] Reject magic-only/truncated GGUF files and unsupported v1-v3 version values; validate the minimum 24-byte header.
-- [ ] Complete iOS LlamaEngine CI and inspect XCTest logs on latest #107 head.
-- [x] Add streaming SHA-256 artifact identity on a branch stacked on #107.
+- [x] Fix the two stale 14-byte importer fixture expectations on #107; fresh iOS CI is running.
+- [x] Add streaming SHA-256 artifact identity.
 - [x] Bind ModelDescriptor.id to the artifact digest and recheck before/after native load.
 - [x] Add tests for mutation before/during load and exact session cleanup.
-- [ ] Obtain iOS/XCTest validation for #109 after it is rebased/retargeted onto a main-based integration branch.
+- [x] Retarget #109 aggregate to main so the complete dependency chain can receive iOS CI.
+- [x] Preserve active ModelPool lease handles when artifact preflight reads fail; retain the exact acquired lease if release unexpectedly fails.
+- [x] Add regression test for an unreadable artifact after a successful load and verify the retained lease remains unloadable.
+- [ ] Complete fresh iOS LlamaEngine CI and inspect XCTest logs on #107 latest head.
+- [ ] Complete aggregate iOS LlamaEngine CI and all companion workflows on #109 latest head.
+- [ ] Review the final combined diff and resolve any concrete CI/review findings.
 - [ ] Physical iPhone validation of memory, thermal, battery, Metal, and inference behavior.
 - [ ] Keep PRs draft; do not merge.
 
@@ -30,16 +35,18 @@ Complete the shared native inference composition root and bind every native mode
 
 - Main SHA: `818799eced634577c8f1760fa2bdd1f657bd8427`
 - PR #107: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/107
-- #107 head: `104389c5e85b47d09954a230c01fd57714b5ea78`; branch `codex/ios-model-pool-composition-mainline`; 27 ahead / 0 behind main.
+- #107 head: `ed32fecef579dfd53c0263c3e73f00d95cc1af32`; branch `codex/ios-model-pool-composition-mainline`; 31 ahead / 0 behind main.
+- #107 previous iOS run `43731298841` failed two expected-value assertions; corrected head run `43740561987` was in progress compiling pinned llama.cpp at last check.
 - PR #109: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/109
-- #109 head: `b37d78fdec64062e738cd076ed994861d90331e6`; branch `codex/ios-content-addressed-model-integrity-mainline`; base #107 branch; 8 ahead / 0 behind.
+- #109 head: `a6de5e5387a0f6745c61ba509678fae3811d0cf6`; branch `codex/ios-content-addressed-model-integrity-mainline`; base main; 41 ahead / 0 behind; 15 files changed.
+- #109 iOS run `43740720673` was pending at last check; Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar workflows were in progress.
 - PR #104: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/104
-- #104 head: `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4`; 29 ahead / 10 behind main.
+- #104 head: `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4`; base main; 29 ahead / 10 behind. iOS LlamaEngine run `43731823992` succeeded, including app XCTest, simulator XCTest, pinned smoke GGUF, and macOS XCTest.
 - PR #106/#99 remain open drafts and are not the active top-level integration branch.
 
 ## Completed implementation evidence
 
-### PR #107
+### PR #107 — shared runtime and importer guard
 
 - `NativeInferenceRuntime.swift`: shared engine, ModelPool, and scheduler composition.
 - `ModelPool.swift`: actor-isolated session ownership, coalesced loads, exact leases, memory admission, safe unload accounting.
@@ -47,43 +54,34 @@ Complete the shared native inference composition root and bind every native mode
 - `LocalChatView.swift`: native chat uses the shared runtime.
 - `NativeAgentCoordinator.swift`: runtime-backed coordinator path.
 - Tests cover scheduler stream duration, cancellation-drain lease retention, FIFO ordering, cancelled waiters, model pool accounting, and importer behavior.
-- Latest CI run IDs: #107 iOS `43731298841` (in progress); other four PR workflows on the latest head succeeded.
-- The iOS job had only completed setup/build preparation and was compiling pinned llama.cpp at last check. No XCTest result yet.
+- Commit `ed32fecef579dfd53c0263c3e73f00d95cc1af32` updates both stale expected fixture values to the exact valid 24-byte header.
 
-### PR #107 importer hardening commits
+### PR #109 — content identity and lease-lifecycle hardening
 
-- `bbc47302e20a33e814882932776cc51d5192d2db`: minimum 24-byte GGUF header validation.
-- `9c2bdcdfef2412cd654f4d01be18b6497d71a4b2`: truncated/unsupported-version regression tests.
-- `104389c5e85b47d09954a230c01fd57714b5ea78`: documentation boundary update and latest PR head.
+- `ModelArtifactFingerprint.swift`: streaming SHA-256 in 1 MiB chunks with byte count.
+- `LocalChatView.swift`: staged artifact fingerprinting, content-addressed descriptor ID, pre/post-load file identity checks, and exact lease/session cleanup.
+- `PocketAILabTests.swift`: tests for content IDs, mutation before/during load, unreadable artifact after load, truncated/unsupported headers, staged preservation, and same-path import.
+- `docs/architecture/native-ios-model-artifact-integrity-v1.md`: explicit import/load integrity contract and limitations.
+- Fix commit `613a1c4426babfe335f0d8d699be6ecd2f466417`: avoid clearing an existing lease on preflight errors and retain an acquired lease if exact release unexpectedly fails.
+- Regression test commit `a6de5e5387a0f6745c61ba509678fae3811d0cf6`: removes the artifact after successful load, verifies the lease remains reachable, then unloads it successfully.
+- The aggregate is now based directly on main and includes shared runtime + artifact integrity in one 41-commit, 15-file draft. No CI pass is claimed yet.
 
-### PR #109 artifact-integrity commits
+### Artifact predecessor PR #104
 
-- `38c3f89a67582321a5bc1ab60ea13db8dc4c2ea1`: streaming fingerprint primitive.
-- `712de6c326d86cdc92843b417fd967bea6f1df2e`: pooled session content identity and pre/post-load checks.
-- `98dc97cbadc0cc310beae75acaabe3d4140c11d2`: avoid capturing the main-actor model in detached import task.
-- `351e0c2d76fe8eb76ca54ffc3f78005d099a56cf`, `9607087be8e4f5dfd073f6601c13879c318488f7`, `73de23fec412e97fe7e1f5905915e1b6fa6f04eb`: fingerprint and mutation regression tests plus test corrections.
-- `273af18dc845f26e789b43aa41188ab88625d6d8`: integrity contract documentation.
-- `b37d78fdec64062e738cd076ed994861d90331e6`: display fingerprint summary in native UI.
-- Pocket AI Lab CI run `43731687148` succeeded (syntax, type-check/build, JS tests). This workflow does not execute Swift/XCTest.
-
-## Artifact predecessor PR #104
-
-- Prior iOS run `43728039752` failed in XCTest after app build/link succeeded.
-- Failure 1: assertion expected the word "six" while UI emitted "6".
-- Failure 2: bracketed IPv6 loopback `[::1]` was not accepted by host validation.
-- Fixed on latest #104 head `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4`.
-- Latest iOS run `43731823992` is in progress. No passing result yet.
+- Previous iOS run `43728039752` failed two assertions: Agent Team status wording and bracketed IPv6 loopback.
+- Latest head `bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4` contains both fixes.
+- iOS run `43731823992` completed successfully through app XCTest, simulator XCTest, pinned smoke GGUF download, and macOS XCTest.
+- Keep #104 as a validated predecessor, not the preferred integration base.
 
 ## Risks / limitations
 
 - The 24-byte GGUF check is a minimum header guard, not full metadata/tensor parsing; llama.cpp performs authoritative parsing.
-- SHA-256 binds bytes locally but does not prove publisher identity, provenance, safety, runtime attestation, or authorization.
+- SHA-256 binds local bytes but does not prove publisher identity, provenance, safety, runtime attestation, or authorization.
 - Memory admission uses a file-size heuristic and advisory app-allocatable memory; physical-device calibration is outstanding.
 - Runtime trust remains Unverified.
 - A lease, digest, session, scheduler permit, model output, or evaluation cannot authorize an action.
-- #109's base is #107's feature branch. The iOS workflow is configured only for pull requests targeting main, so #109 has no iOS CI result until it is integrated/rebased into a main-targeting branch.
-- No local Xcode tests were run in this session; no physical-device tests were run.
+- No local Xcode tests were run outside hosted GitHub Actions; no physical-device tests were run.
 
 ## Next action
 
-Refresh the latest #107 and #104 iOS workflow runs. When they complete, inspect job steps and full XCTest logs, repair only concrete failures, and record exact evidence. Then rebase/integrate #109 onto a main-targeting candidate so the native iOS workflow can validate the combined shared-runtime + content-integrity implementation. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.
+Refresh runs `43740561987` (#107) and `43740720673` (#109), inspect XCTest logs and all workflow conclusions, and fix only concrete failures. Then inspect the combined #109 diff and review threads. Do not merge. Continue with runtime-proof key lifecycle and durable skill-approval services only after preserving the above trust boundaries.
