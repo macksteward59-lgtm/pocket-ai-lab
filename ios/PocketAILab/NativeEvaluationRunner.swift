@@ -222,8 +222,6 @@ struct NativeEvaluationRunner: Sendable {
             deterministicPassed = nil
         case .exactMatch:
             deterministicPassed = status == .completed && output.trimmingCharacters(in: .whitespacesAndNewlines) == evaluationCase.expectedOutcome
-        case .containsExpectedOutcome:
-            deterministicPassed = status == .completed && output.localizedCaseInsensitiveContains(evaluationCase.expectedOutcome)
         }
         let deterministicScore = deterministicPassed.map { $0 ? 1.0 : 0.0 }
         let providerKind: NativeEvaluationAttempt.ProviderKind =
