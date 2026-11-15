@@ -14,6 +14,7 @@ enum NativeEvaluationJournalError: Error, Equatable {
 /// No delete, truncate, replace, or retention-expiry operation is exposed.
 struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let id: String
+    let category: NativeEvaluationCategory
     let suiteID: String
     let suiteVersion: String
     let caseID: String
@@ -43,6 +44,7 @@ struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
 
 struct NativeEvaluationAttemptDraft {
     let id: String
+    let category: NativeEvaluationCategory
     let suiteID: String
     let suiteVersion: String
     let caseID: String
@@ -180,10 +182,10 @@ actor NativeEvaluationJournal {
         }
         try verifyDiskState()
         let prior = try Self.readAndVerify(fileURL: fileURL).compactMap(\.payload.attempt)
-            .last { $0.suiteID == draft.suiteID && $0.caseID == draft.caseID &&
+            .last { $0.suiteID == draft.suiteID && $0.suiteVersion == draft.suiteVersion && $0.caseID == draft.caseID &&
                     $0.modelID == draft.modelID && $0.modelArtifactSHA256 == draft.modelArtifactSHA256 }
         let attempt = NativeEvaluationAttempt(
-            id: draft.id, suiteID: draft.suiteID, suiteVersion: draft.suiteVersion,
+            id: draft.id, category: draft.category, suiteID: draft.suiteID, suiteVersion: draft.suiteVersion,
             caseID: draft.caseID, evaluationCriteria: draft.evaluationCriteria,
             expectedOutcome: draft.expectedOutcome, attemptNumber: (prior?.attemptNumber ?? 0) + 1,
             retryOfAttemptID: prior?.id, modelID: draft.modelID,
