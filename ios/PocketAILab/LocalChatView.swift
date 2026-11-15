@@ -165,7 +165,7 @@ final class LocalChatModel: ObservableObject {
         }
     }
 
-    private static let maxConversationPromptBytes = 6_000
+    private static let maxConversationPromptBytes = 1_500
     private static let maxConversationHistoryMessages = 8
 
     /// Builds a bounded transcript from prior user/assistant turns only.
