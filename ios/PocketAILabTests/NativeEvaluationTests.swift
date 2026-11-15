@@ -55,6 +55,17 @@ final class NativeEvaluationTests: XCTestCase {
         try NativeEvaluationRunner(runtime: runtime, lease: lease, journal: journal, modelFileURL: modelURL)
     }
 
+
+    func testStarterSuiteCoversEightCategoriesAndMarksOnlyObjectiveCasesForScoring() {
+        XCTAssertEqual(NativeEvaluationSuite.cases.count, 8)
+        XCTAssertEqual(Set(NativeEvaluationSuite.cases.map(\.category)), Set(NativeEvaluationCategory.allCases))
+        let objective = NativeEvaluationSuite.cases.filter { $0.scoringRule != .manualReview }
+        let manual = NativeEvaluationSuite.cases.filter { $0.scoringRule == .manualReview }
+        XCTAssertEqual(objective.count, 5)
+        XCTAssertEqual(manual.count, 3)
+        XCTAssertTrue(manual.allSatisfy { $0.expectedOutcome.isEmpty || !$0.expectedOutcome.isEmpty })
+    }
+
     func testRunnerUsesExactModelPoolLeaseAndNeverPromotesTestDoubleToNativeEvidence() async throws {
         let (journal, directory, modelURL, runtime, lease, engine) = try await makeContext(responses: ["42"])
         defer { try? FileManager.default.removeItem(at: directory) }
