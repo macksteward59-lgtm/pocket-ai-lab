@@ -78,6 +78,8 @@ function makeGuard(options: {
   program?: () => boolean | Promise<boolean>;
   operational?: () => boolean | Promise<boolean>;
   audit?: ScopeGuardAuditWriter;
+  globalStop?: boolean;
+  projectStop?: boolean;
   now?: number;
 } = {}) {
   const audit = options.audit ?? { append: vi.fn(async () => undefined) };
@@ -85,6 +87,10 @@ function makeGuard(options: {
     programVerifier: { verify: options.program ?? (() => true) },
     operationalVerifier: { verify: options.operational ?? (() => true) },
     audit,
+    emergencyStop: {
+      isGlobalStopActive: () => options.globalStop ?? false,
+      isProjectStopActive: () => options.projectStop ?? false
+    },
     now: () => options.now ?? Date.parse("2026-11-15T12:02:00Z")
   });
   return { guard, audit };
@@ -320,6 +326,17 @@ describe("ProofHunt ScopeGuard", () => {
     const result = await guard.authorizeAssessment(config, "app.example.com", "dependency_review");
     expect(result.permitted).toBe(false);
     expect(result.reason).toContain("not permitted by the independently reviewed");
+  });
+
+  it("denies new assessment plans when the global or project emergency stop is active", async () => {
+    const global = makeGuard({ globalStop: true });
+    const project = makeGuard({ projectStop: true });
+    const globalResult = await global.guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis");
+    const projectResult = await project.guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis");
+    expect(globalResult.permitted).toBe(false);
+    expect(globalResult.reason).toContain("Emergency stop");
+    expect(projectResult.permitted).toBe(false);
+    expect(projectResult.reason).toContain("Emergency stop");
   });
 
 });
