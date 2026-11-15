@@ -1542,3 +1542,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #129 iOS run `43753665375` completed with **failure**. The pinned llama.cpp simulator/macOS archive build and cache save completed; the generic iOS device archive linked successfully; the later `Run Pocket AI Lab XCTest` step failed, so simulator/macOS tests were skipped. Job logs were not available through the connector, so no root cause is asserted here.
 - PR #129's cache build is therefore a successful cache-warm/build stage, not a successful end-to-end iOS validation. Do not report the overall run as green.
 - PR #135 contains the refreshed MainActor test-factory fix from PR #115. Its exact-head iOS run `43756039544` remains queued. The four non-iOS workflows on PR #135 have passed.
+
+
+## 2026-11-15 — Native evaluation real-model smoke validation claimed
+
+- ChatGPT resumed the existing native self-evaluation work claim and changed its board status to `in-progress` before touching application code.
+- Scope: add a pinned-GGUF smoke test that exercises `NativeEvaluationRunner` / `NativeInferenceRuntime.generateForEvaluation` through the exact catalog content-addressed `ModelPoolLease`, then verifies provider identity, non-empty completed output, and lease release/unload.
+- Implementation branch: `codex/native-self-evaluation-runtime-reconciled` (current PR #133 head `cdf7db1605e1820e24c6c8ca68b5958953dc1c4c`). Mainline validation remains PR #135; mirror the feature change there only after the feature patch is verified.
+- Existing direct llama.cpp smoke test and mock-backed evaluation tests are not sufficient to prove the evaluation runner uses the real native runtime path.
+- Exclusions: no changes to APEX/Director, East/e3, ExploitGym, BridgeGate, RuntimeController trust, signed Evidence, authorization, repository visibility, main, signing, or physical-device claims.
+- Validation must include the pinned model SHA/byte verification already performed by the CI downloader, successful native evaluation generation, accurate provider classification, and release/unload of the exact lease. Hosted macOS/simulator CI remains distinct from physical iPhone acceptance.
