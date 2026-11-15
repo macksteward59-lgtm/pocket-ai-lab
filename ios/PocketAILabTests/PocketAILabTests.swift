@@ -125,7 +125,8 @@ final class PocketAILabTests: XCTestCase {
 
         await model.loadModel()
 
-        XCTAssertEqual(await engine.loadCount(), 0)
+        let loadCount = await engine.loadCount()
+        XCTAssertEqual(loadCount, 0)
         XCTAssertTrue(model.status.contains("changed after import"))
         XCTAssertFalse(model.isModelLoaded)
     }
@@ -144,7 +145,8 @@ final class PocketAILabTests: XCTestCase {
 
         XCTAssertFalse(model.isModelLoaded)
         XCTAssertTrue(model.status.contains("changed while the native runtime was loading"))
-        XCTAssertEqual(await engine.unloadedSessionIDs(), ["fingerprint-session"])
+        let unloaded = await engine.unloadedSessionIDs()
+        XCTAssertEqual(unloaded, ["fingerprint-session"])
         XCTAssertEqual(model.trustStatus, "Unverified")
     }
 
