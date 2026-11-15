@@ -237,6 +237,7 @@ describe("ProofHunt ScopeGuard", () => {
         programVerifier: { verify: () => true },
         operationalVerifier: { verify: () => true },
         audit: ledger,
+        emergencyStop: { isGlobalStopActive: () => false, isProjectStopActive: () => false },
         now: () => Date.parse("2026-11-15T12:02:00Z")
       });
       const [first, second] = await Promise.all([
