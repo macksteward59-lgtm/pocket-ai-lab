@@ -358,6 +358,16 @@ export function normalizeTargetHostname(value: string): string {
   if (raw.includes("*") || (raw.includes("/") && !/^https?:\/\//i.test(raw))) {
     throw new ScopeGuardError("Wildcards, CIDRs, and path-like target values are not accepted");
   }
+  const authority = raw.match(/^(?:https?:\/\/)?([^/?#]+)/i)?.[1];
+  if (authority) {
+    const hostPort = authority.split("@").pop() ?? authority;
+    const hasExplicitPort = hostPort.startsWith("[")
+      ? hostPort.slice(hostPort.indexOf("]") + 1).startsWith(":")
+      : hostPort.includes(":");
+    if (hasExplicitPort) {
+      throw new ScopeGuardError("Scope authorization accepts host-only targets, not explicit ports");
+    }
+  }
   let url: URL;
   try {
     url = new URL(/^https?:\/\//i.test(raw) ? raw : "https://" + raw);
