@@ -233,12 +233,12 @@ export class ScopeGuard {
 export function normalizeTargetHostname(value: string): string {
   if (typeof value !== "string" || !value.trim()) throw new ScopeGuardError("Target is required");
   const raw = value.trim();
-  if (raw.includes("*") || (raw.includes("/") && !/^https?:\\/\\//i.test(raw))) {
+  if (raw.includes("*") || (raw.includes("/") && !/^https?:\/\//i.test(raw))) {
     throw new ScopeGuardError("Wildcards, CIDRs, and path-like target values are not accepted");
   }
   let url: URL;
   try {
-    url = new URL(/^https?:\\/\\//i.test(raw) ? raw : "https://" + raw);
+    url = new URL(/^https?:\/\//i.test(raw) ? raw : "https://" + raw);
   } catch {
     throw new ScopeGuardError("Target format is invalid");
   }
@@ -248,7 +248,7 @@ export function normalizeTargetHostname(value: string): string {
   if (url.port || (url.pathname !== "/" && url.pathname !== "") || url.search || url.hash) {
     throw new ScopeGuardError("Scope authorization accepts host-only targets, not ports, paths, queries, or fragments");
   }
-  const hostname = url.hostname.replace(/^\\[|\\]$/g, "").replace(/\\.$/, "").toLowerCase();
+  const hostname = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
   if (!hostname || hostname.includes("*")) throw new ScopeGuardError("Target hostname is invalid");
   if (isIP(hostname) === 0 && (!hostname.includes(".") || hostname.split(".").some(label =>
     !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
@@ -296,7 +296,7 @@ function matchesAny(hostname: string, entries: readonly ExplicitTarget[]): boole
 }
 
 function isValidTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value)) && /(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(value);
+  return Number.isFinite(Date.parse(value)) && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
 }
 
 function isExpired(value: string, now: number): boolean {
