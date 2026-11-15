@@ -97,3 +97,9 @@ export type {
   ProofHuntAssessmentConfig, ProofHuntAssessmentPolicy, ProofHuntEnvironment,
   ProofHuntSafeCheck, ScopeGuardAuditWriter, ScopeGuardDecision, ScopeGuardOptions
 } from "./security/proofhunt";
+
+export type {
+  ActionDecision, AssetKind, BountyPlatform, NormalizedProgramPolicy, NormalizedScopeRule,
+  PolicyReviewState, ProgramAction, ProgramPolicyCandidate, ScopeDisposition, ScopeEvaluation,
+  ScopeRuleInput, RateLimitInput, TestingWindowInput
+} from "./bug-bounty";
