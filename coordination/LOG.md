@@ -1449,3 +1449,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The in-progress evaluation branch was now one commit behind and diverged. To avoid force-pushing or accidentally reverting that fix, the next branch will be recreated from the refreshed PR #115 head and the evaluation-only files copied forward.
 - **Replacement branch:** `codex/native-self-evaluation-runtime-integrated` from `784005df2e2c95de3423f8bff9ae1ebd1213732`.
 - Previous branch `codex/native-self-evaluation-runtime-integration` is stale and superseded; no PR was opened from it.
+
+
+## 2026-11-15 — Native self-evaluation runtime/UI integration
+
+- Reconciled the native self-evaluation stack onto the latest catalog integration base `784005df2e2c95de3423f8bff9ae1ebd1213732b`; exact feature diff is 8 files and 9 commits ahead / 0 behind.
+- The runtime evaluation path calls `NativeInferenceRuntime.generateForEvaluation` through the exact active ModelPool lease, pins the session through scheduler/cancellation drain, bounds output, and retains partial/failure results.
+- The app exposes explicit Run self-evaluation and Evaluation history controls, uses the catalog-selected loaded lease, blocks other model operations while the suite runs, and preserves append-only history across Clear conversation/Agent Team history.
+- Draft feature PR #133: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/133.
+- Draft mainline validation PR #135: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/135. Validation branch also includes the verified llama.cpp cache workflow and build script so the cache can be populated/reused without skipping downstream checks.
+- Closed the stale direct-engine journal-only PR #130 as unmerged. It was superseded because it could bypass ModelPool/Scheduler; the new runner uses the shared runtime path.
+- No native runtime trust verification, signed Evidence, receipts, APEX approval, East authorization, or model promotion is claimed. Hosted CI and physical-device acceptance remain separate gates.
