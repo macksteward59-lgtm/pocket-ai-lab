@@ -191,9 +191,9 @@ export class ScopeGuard {
       reason,
       projectId: assessmentConfig?.projectId ?? "",
       ...(permitted ? {
-        programAuthorizationId: assessmentConfig.programAuthorization.recordId,
-        operationalAuthorizationId: assessmentConfig.operationalAuthorization.recordId,
-        policyVersion: assessmentConfig.policy.version
+        programAuthorizationId: assessmentConfig!.programAuthorization.recordId,
+        operationalAuthorizationId: assessmentConfig!.operationalAuthorization.recordId,
+        policyVersion: assessmentConfig!.policy.version
       } : {}),
       executionPerformed: false
     });
