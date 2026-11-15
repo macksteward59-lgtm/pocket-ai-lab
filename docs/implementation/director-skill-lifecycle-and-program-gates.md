@@ -6,6 +6,20 @@
 
 ## 1. Current verified state
 
+### Lifecycle primitive added on a feature branch
+
+This branch adds `packages/intelligence/skills/SkillLifecycle.ts` as a non-executable lifecycle/promotion primitive. It is not wired into Director commands, the operational SkillRegistry, ToolDirector, or any execution adapter.
+
+- Skill artifacts are schema-versioned and SHA-256 digest-bound using canonical JSON.
+- Artifact inputs require provenance, reviewed source state before promotion, bounded exercise definitions, safety boundaries, a rubric, and competency threshold.
+- Evaluation records are digest-bound to one exact skill version; author self-evaluation is rejected.
+- Promotion requires independent evaluation verification plus an injected authenticated human-approval verifier bound to the artifact, evaluation, and exact assignment-set digests.
+- Lifecycle transitions are explicit; activation requires a verified promotion authorization matching the exact skill ID, version, and artifact digest.
+- The module does not persist artifacts, evaluate generated code, activate skills in the operational registry, grant tools, or grant permissions. Host integration and durable storage remain separate future gates.
+- Tests cover integrity tampering, stale approval, unreviewed sources, self-evaluation, missing evidence, verifier failure, and lifecycle transitions.
+
+The existing operational skill catalog remains unchanged. A lifecycle status of `active` in this candidate manager is not yet consumed by Director or any agent runtime.
+
 ### Skills
 
 - `packages/intelligence/skills/SkillRegistry.ts` is an in-memory registry of static skill records. It validates IDs, topics, and assignments against existing specialist and core-agent identities.
