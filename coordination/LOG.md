@@ -1601,3 +1601,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #115 precision-fix commit `b61b1b64b44319c37f220413c83cd9a417c6cde4` triggered exact-head iOS run #206 (`43760034998`); it is building pinned llama.cpp. Four companion workflows also started. No results yet.
 - Requested branch `ios/private-iphone-test-hybrid` remains unchanged; its newest iOS run is #45 (`43245960654`), success. The repository still reports public visibility.
 - No signed archive, IPA, TestFlight/App Store publication, or physical iPhone installation was performed or demonstrated.
+
+
+## 2026-11-15 — iOS XCTest actor-isolation repair and reruns
+
+- Inspected PR #129 iOS run `43753665375` job `132933057529`: llama.cpp simulator/macOS build, cache save, fail-closed typecheck, physical-device library link, and app build all succeeded. XCTest compilation failed because `PocketAILabTests.makeLocalChatModel` constructed the `@MainActor` `LocalChatModel` from a nonisolated helper.
+- Added `@MainActor` to that test factory on `codex/ios-native-catalog-cache-validation`; new exact head `9b24b0b5028e22a979bce3fb760b4602446371d7`; PR #129 rerun `43760049350` is in progress at device linking after cache restore/build. Four companion workflows passed on the previous head.
+- PR #135 exact head `7446cac45bdcb4095d327a9759d942acc4267a62`: iOS run `43759496587` passed cached llama.cpp build, fail-closed typecheck, device link, and app build. Native app XCTest is still in progress; simulator, pinned-GGUF evaluation smoke, and macOS tests remain pending.
+- PR #115 current head `b61b1b64b44319c37f220413c83cd9a417c6cde4`: task-history ISO-8601 precision test repair is in progress through exact-head iOS run `43760034998`; four companion workflows passed.
+- No tests are marked passed until their workflow reports success. No merge, physical-device execution, runtime attestation, or cache speedup claim.
