@@ -178,6 +178,24 @@ export class ScopeGuard {
         if (hasMatchingPathScopedRule(scopePolicy, hostname)) {
           throw new ScopeGuardError("Target has URL path-scoped program rules; this host-only ScopeGuard cannot safely resolve path scope");
         }
+        // The normalized snapshot may have been reviewed before its effective
+        // date or before its testing window. Re-check all temporal constraints
+        // at decision time; reviewState is a historical parse result, not a clock.
+        if (scopePolicy.effectiveAt !== undefined &&
+            (!isValidTimestamp(scopePolicy.effectiveAt) || Date.parse(scopePolicy.effectiveAt) > this.now())) {
+          throw new ScopeGuardError("Published program scope is not yet effective or has an invalid effective timestamp");
+        }
+        if (scopePolicy.expiresAt !== undefined && isExpired(scopePolicy.expiresAt, this.now())) {
+          throw new ScopeGuardError("Published program scope snapshot has expired");
+        }
+        const testingWindow = scopePolicy.testingWindow;
+        if (!testingWindow?.startsAt || !testingWindow.endsAt ||
+            !isValidTimestamp(testingWindow.startsAt) || !isValidTimestamp(testingWindow.endsAt) ||
+            Date.parse(testingWindow.endsAt) <= Date.parse(testingWindow.startsAt) ||
+            this.now() < Date.parse(testingWindow.startsAt) ||
+            this.now() >= Date.parse(testingWindow.endsAt)) {
+          throw new ScopeGuardError("Published program testing window is not currently active or is invalid");
+        }
         const programScope = evaluateTargetScope(scopePolicy, `https://${hostname}/`);
         if (programScope.disposition !== "in-scope") {
           throw new ScopeGuardError("Target is not explicitly in the verified published program scope: " + programScope.reason);
