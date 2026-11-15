@@ -13,7 +13,7 @@ SRC="$BUILD/src"
 
 destination="${1:-}"
 if [[ -z "$destination" ]]; then
-  echo "usage: $0 verify|simulator|ios-device|macos|linux|xcframework|fetch-gguf|write-smoke-path [gguf-path]" >&2
+  echo "usage: $0 verify|verify-artifacts|simulator|ios-device|macos|linux|xcframework|fetch-gguf|write-smoke-path [gguf-path]" >&2
   exit 2
 fi
 
@@ -223,7 +223,24 @@ require_symbol() {
   rm -f "$listing"
 }
 
+verify_artifacts() {
+  local target name
+  for target in simulator ios-device macos; do
+    for name in libllama.a libggml.a libggml-base.a libggml-cpu.a libggml-metal.a libvendor-hash.a; do
+      if [[ ! -s "$BUILD/$target/$name" ]]; then
+        echo "missing cached archive $BUILD/$target/$name" >&2
+        return 1
+      fi
+    done
+    require_symbol "$BUILD/$target/libllama.a" llama_backend_init
+    require_symbol "$BUILD/$target/libggml-metal.a" ggml_backend_metal_reg
+  done
+}
+
 case "$destination" in
+  verify-artifacts)
+    verify_artifacts
+    ;;
   verify)
     verify_sources >/dev/null
     ;;
