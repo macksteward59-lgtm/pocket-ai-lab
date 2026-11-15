@@ -230,11 +230,15 @@ describe("ProofHunt ScopeGuard", () => {
         audit: ledger,
         now: () => Date.parse("2026-11-15T12:02:00Z")
       });
-      const result = await guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis");
-      expect(result.permitted).toBe(true);
+      const [first, second] = await Promise.all([
+        guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis"),
+        guard.authorizeAssessment(makeConfig(), "api.example.com", "dependency_review")
+      ]);
+      expect(first.permitted).toBe(true);
+      expect(second.permitted).toBe(true);
       expect(await ledger.verify()).toBe(true);
       const records = await ledger.read();
-      expect(records).toHaveLength(1);
+      expect(records).toHaveLength(2);
       expect(records[0].payload).toMatchObject({
         event: "proofhunt.scope_decision",
         permitted: true,
