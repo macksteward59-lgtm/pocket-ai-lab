@@ -50,6 +50,9 @@ let package = Package(
             path: "Sources/PocketLlamaEngine",
             swiftSettings: [
                 .define("POCKET_LLAMA_LINKED")
+            ],
+            linkerSettings: [
+                .linkedFramework("Security")
             ]
         ),
         .testTarget(

@@ -147,12 +147,40 @@ jobs:
             | tee build/simulator-xctest.log
 
       - name: Download the pinned smoke GGUF
+        shell: bash
         run: |
-          runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/gguf-path.txt
-          test -s /tmp/gguf-path.txt
+          set -euo pipefail
+          : > /tmp/gguf-path.txt
+          for attempt in 1 2 3; do
+            log="/tmp/gguf-fetch-${attempt}.log"
+            if runtime/ios/scripts/build-llama-cpp.sh fetch-gguf > "$log" 2>&1; then
+              cat "$log"
+              candidate="$(tail -n 1 "$log")"
+              if [[ -f "$candidate" && -r "$candidate" ]]; then
+                printf '%s\n' "$candidate" > /tmp/gguf-path.txt
+                exit 0
+              fi
+              echo "Attempt ${attempt} completed without a readable GGUF path." >&2
+            else
+              cat "$log" >&2
+              echo "Pinned GGUF download attempt ${attempt} failed." >&2
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              sleep $((attempt * 15))
+            fi
+          done
+          echo "Unable to fetch and verify the pinned smoke GGUF after three attempts." >&2
+          exit 1
 
       - name: Point the macOS smoke test at that GGUF
-        run: runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$(tail -n 1 /tmp/gguf-path.txt)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          gguf_path="$(cat /tmp/gguf-path.txt)"
+          test -n "$gguf_path"
+          test -f "$gguf_path"
+          test -r "$gguf_path"
+          runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$gguf_path"
 
       - name: XCTest on macOS
         run: |
