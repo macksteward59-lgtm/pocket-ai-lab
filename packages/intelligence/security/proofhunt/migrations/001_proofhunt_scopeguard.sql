@@ -184,7 +184,7 @@ CREATE TABLE proofhunt.assessment_jobs (
   CHECK (program_authorization_id <> operational_authorization_id),
   CHECK (decision <> 'approved_plan' OR
     (authorized_target_id IS NOT NULL AND authorized_target_hostname IS NOT NULL)),
-  CHECK (authorized_target_id IS NULL OR authorized_target_hostname IS NOT NULL)
+  CHECK ((authorized_target_id IS NULL) = (authorized_target_hostname IS NULL))
 );
 
 -- Enforce the operational allowlist/exclusion relation again at job admission.
