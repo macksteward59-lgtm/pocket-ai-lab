@@ -22,6 +22,7 @@ export type AuthorizationRecordKind = "bug_bounty_program" | "asset_ownership";
 
 export interface ProgramAuthorizationRecord {
   readonly recordId: string;
+  readonly projectId: string;
   readonly kind: AuthorizationRecordKind;
   readonly subjectId: string;
   readonly evidenceReference: string;
@@ -159,6 +160,9 @@ export class ScopeGuard {
       const operational = assessmentConfig.operationalAuthorization;
       const policy = assessmentConfig.policy;
 
+      if (program.projectId !== assessmentConfig.projectId) {
+        throw new ScopeGuardError("Program authorization is bound to a different project");
+      }
       if (program.kind !== (assessmentConfig.environment === "bounty" ? "bug_bounty_program" : "asset_ownership")) {
         throw new ScopeGuardError("Program authorization kind does not match the assessment environment");
       }
@@ -420,7 +424,7 @@ function validateConfig(config: ProofHuntAssessmentConfig): void {
   if (config.environment !== "bounty" && config.environment !== "owned") throw new ScopeGuardError("Assessment environment is unsupported");
   const program = config.programAuthorization;
   const operational = config.operationalAuthorization;
-  if (!program?.recordId?.trim() || !program.subjectId?.trim() || !program.evidenceReference?.trim() ||
+  if (!program?.recordId?.trim() || !program.projectId?.trim() || !program.subjectId?.trim() || !program.evidenceReference?.trim() ||
       !program.sourceRevision?.trim() || !program.verifiedAt?.trim() || !program.expiresAt?.trim() ||
       !Array.isArray(program.permittedChecks) || !program.permittedChecksReviewedBy?.trim() ||
       !program.permittedChecksReviewReference?.trim()) {
