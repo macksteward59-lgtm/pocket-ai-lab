@@ -32,7 +32,8 @@ describe("runEastTaskWithLifecycle", () => {
       orchestrator: {} as EastPlatformRuntime["orchestrator"],
       memory: {} as EastPlatformRuntime["memory"]
     } as unknown as EastPlatformRuntime;
-    const coordinator = new TaskLifecycleCoordinator({ store: new InMemoryTaskLifecycleStore() });
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
 
     const result = await runEastTaskWithLifecycle({
       coordinator, east, eastTaskId: "east-1", lifecycleTaskId: "lifecycle-1",
@@ -48,6 +49,21 @@ describe("runEastTaskWithLifecycle", () => {
     expect(result.evidenceRefs).toEqual(["evidence:one"]);
     expect(result.authorized).toBe(false);
     expect(result.evidenceGate.status).toBe("not_submitted");
+
+    // A fresh coordinator instance models process-level re-entry against the
+    // same durable-store contract. Completed inference and evidence steps must
+    // be returned from lifecycle state, not executed a second time.
+    const resumedCoordinator = new TaskLifecycleCoordinator({ store });
+    const resumed = await runEastTaskWithLifecycle({
+      coordinator: resumedCoordinator, east, eastTaskId: "east-1",
+      lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
+    });
+    expect(resumed.lifecycle.status).toBe("completed");
+    expect(resumed.synthesis).toBe("Unverified synthesis");
+    expect(resumed.evidenceRefs).toEqual(["evidence:one"]);
+    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(committed).toBe(1);
   });
 
   it("fails closed and does not retry an agent generation after a provider failure", async () => {
