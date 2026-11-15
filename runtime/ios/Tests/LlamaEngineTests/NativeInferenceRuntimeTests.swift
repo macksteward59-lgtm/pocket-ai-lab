@@ -139,6 +139,44 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         try await runtime.unload(modelId: lease.model.id)
     }
 
+    func testOutputLimitFailureKeepsUsePinUntilCancellationDrainCompletes() async throws {
+        let engine = ControlledRuntimeTestEngine()
+        let runtime = try makeRuntime(engine: engine)
+        let lease = try await runtime.acquire(model: model("output-limit"), estimatedMemoryMB: 128)
+        let request = GenerationRequest(prompt: "large output", maxTokens: 16, temperature: 0)
+        let generation = Task {
+            try await runtime.generate(lease: lease, request: request, maxOutputBytes: 1)
+        }
+
+        while !(await engine.activeRequestIDs()).contains(request.requestId) {
+            await Task.yield()
+        }
+        await engine.finish(request.requestId)
+        while !(await engine.isCancellationDrainBlocked()) {
+            await Task.yield()
+        }
+
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeUseCount, 1)
+        let schedulerWhileDraining = await runtime.schedulerSnapshot()
+        XCTAssertEqual(schedulerWhileDraining.activeRequests, 1)
+
+        await engine.completeCancellationDrain()
+        do {
+            _ = try await generation.value
+            XCTFail("An output-limit violation must fail generation")
+        } catch NativeInferenceRuntimeError.responseTooLarge {
+        }
+
+        let afterDrain = await runtime.snapshot()
+        XCTAssertEqual(afterDrain.activeUseCount, 0)
+        let schedulerAfterDrain = await runtime.schedulerSnapshot()
+        XCTAssertEqual(schedulerAfterDrain.activeRequests, 0)
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+        try await runtime.unload(modelId: lease.model.id)
+    }
+
     func testReleasedLeaseCannotStartGeneration() async throws {
         let engine = ControlledRuntimeTestEngine()
         let runtime = try makeRuntime(engine: engine)
