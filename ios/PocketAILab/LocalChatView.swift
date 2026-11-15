@@ -298,6 +298,7 @@ struct LocalChatView: View {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(model.modelName).font(.headline)
+                    Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
