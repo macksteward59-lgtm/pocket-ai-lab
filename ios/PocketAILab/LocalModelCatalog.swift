@@ -78,14 +78,23 @@ struct LocalModelCatalogStore {
         guard archive.version == Self.currentVersion else { throw StoreError.unsupportedVersion }
         guard archive.entries.count <= Self.maximumEntries else { throw StoreError.invalidEntry }
 
-        var seen = Set<String>()
+        var seenIDs = Set<String>()
+        var seenFileNames = Set<String>()
         for entry in archive.entries {
-            guard Self.isValid(entry), seen.insert(entry.id).inserted else {
+            guard Self.isValid(entry),
+                  seenIDs.insert(entry.id).inserted,
+                  seenFileNames.insert(entry.fileName).inserted else {
                 throw StoreError.invalidEntry
             }
         }
-        let selected = archive.selectedModelID.flatMap { id in
-            archive.entries.contains(where: { $0.id == id }) ? id : nil
+        let selected: String?
+        if let selectedID = archive.selectedModelID {
+            guard archive.entries.contains(where: { $0.id == selectedID }) else {
+                throw StoreError.invalidEntry
+            }
+            selected = selectedID
+        } else {
+            selected = nil
         }
         return LocalModelCatalogSnapshot(entries: archive.entries, selectedModelID: selected)
     }
@@ -223,6 +232,8 @@ struct LocalModelCatalogStore {
         !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         entry.name.utf8.count <= 480 &&
         entry.fileName == URL(fileURLWithPath: entry.fileName).lastPathComponent &&
+        !entry.fileName.contains("/") &&
+        !entry.fileName.contains("\\") &&
         entry.fileName.lowercased().hasSuffix(".gguf") &&
         entry.byteCount > 0 &&
         entry.contextLength > 0 &&
