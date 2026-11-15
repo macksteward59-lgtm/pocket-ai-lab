@@ -123,7 +123,7 @@ describe("ProofHunt ScopeGuard", () => {
     });
     const result = await guard.authorizeAssessment(config, "admin.example.com", "static_analysis");
     expect(result.permitted).toBe(false);
-    expect(result.reason).toContain("excluded");
+    expect(result.reason).toContain("out-of-scope rule takes precedence");
   });
 
   it("requires both independent authorization verifiers", async () => {
