@@ -78,7 +78,7 @@ func isAllowedWorkspaceURL(_ url: URL) -> Bool {
         return false
     }
 
-    let isLoopback = host == "localhost" || host == "127.0.0.1" || host == "::1"
+    let isLoopback = host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "[::1]"
     return scheme == "https" || (scheme == "http" && isLoopback)
 }
 
