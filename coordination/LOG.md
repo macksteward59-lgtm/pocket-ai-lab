@@ -1209,3 +1209,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Follow-up tests added for direct verifier rejection of expired proofs and forged signatures. Latest PR #56 head: `215579b1400b6bc3558afc800caf122d721d9ed5`.
 - No workflow runs are associated with PR #56 because its base is the feature branch for PR #51, while the current iOS and package CI workflows only trigger for pull requests targeting `main`. Do not report this branch as CI-passed. Once PR #51 is merged (or CI trigger policy is deliberately broadened), rerun the full matrix.
+
+
+## 2026-11-15 — ChatGPT autonomous task lifecycle foundation claim
+
+- **Claim:** Build a provider-neutral autonomy kernel for durable objectives, dependency-aware bounded plans, explicit task/step state transitions, checkpoint/recovery interfaces, idempotent step identities, cancellation/deadlines, and evidence-backed progress accounting.
+- **Branch:** `codex/autonomous-task-lifecycle` (to be created from current `main` after this coordination claim).
+- **Files:** `packages/intelligence/autonomy/`, focused tests, package export, and implementation documentation only.
+- **Non-goals:** No tool execution, no direct model side effects, no APEX/East bypass, no trust/RLS/schema/receipt changes, no target traffic, and no inference of production autonomy from a scheduler or task record.
+- **Integration rule:** Host adapters may connect this kernel to real inference and East only through explicit interfaces and existing authorization boundaries. Persisted task state is not authorization.
+- **Validation:** CI and test results will be reported only for the exact commit that ran them. Physical-device acceptance is separate.
