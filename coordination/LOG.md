@@ -1638,3 +1638,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Inspected job `132954686194`: eight app tests fail with `NSCocoaErrorDomain Code 4` / POSIX `ENOENT` against per-test UUID paths under the simulator app container's `tmp` directory. This is not yet attributed to production inference or model-pool behavior; the originating cleanup path remains to be isolated.
 - Identified an independent deterministic test-fixture defect in `NativeEvaluationTests.testPartialOutputAndRetriesArePersistedWithoutOverwritingHistory`: `MockEvaluationEngine` replays the same `[String]` chunks for every generation, while the test expects the second generation to return `42`. The fixture must model per-generation responses and fail only the first generation.
 - Scope for this repair: `ios/PocketAILabTests/NativeEvaluationTests.swift` and focused tests only. No production runtime, catalog schema, APEX/Director, East/e3, Evidence, trust, authorization, or main-branch changes. Keep all PRs draft/unmerged pending exact-head validation.
+
+
+## 2026-11-15 21:33 UTC — Native app XCTest temporary-root defect isolated
+
+- Inspected `ios/PocketAILabTests/PocketAILabTests.swift` on the self-evaluation validation branch and mapped the eight failing test methods to their fixture setup.
+- The affected tests append a UUID child to `FileManager.default.temporaryDirectory` and write `model.gguf` beneath it without first creating the UUID root. Earlier passing fixtures create child directories with `withIntermediateDirectories: true`, which implicitly creates the root. The eight failing tests do not.
+- Added a shared `makeTemporaryRoot()` helper that creates the UUID directory before returning it, and converted all 12 app-test root fixtures to use it. This is a test-only correction; no production cleanup behavior changed.
+- Separately fixed the evaluation retry mock to accept per-generation response chunks, so the first attempt can emit partial output/fail and the second can return `42` as the test expects.
+- Propagating the app-test fixture repair to PR #115 and #129, and the evaluation retry fixture to feature PR #133. New exact-head iOS CI is required before any pass is claimed.
