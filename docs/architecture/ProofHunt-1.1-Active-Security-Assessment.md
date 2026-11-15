@@ -18,7 +18,7 @@ The two environments share an operational policy engine, but their evidence type
 1. Program authorization record: evidence that the bounty program or asset owner permits assessment in principle. It is independently verified and versioned.
 2. Operational authorization record: a human-approved, signed configuration binding a project, program authorization ID, exact policy version, expiry, and approval provenance.
 
-Both verifiers must succeed. Neither record is inferred from the other. An AI agent cannot create, modify, sign, renew, or verify either record. APEX/Director remains the approval authority; the operational signature verifier must be supplied by the trusted host.
+Both verifiers must succeed. For bounty assessments, the program record must also carry the exact normalized policy snapshot and its SHA-256 digest; ScopeGuard recomputes the digest and invokes the existing deterministic bug-bounty ScopeEvaluator for the requested host. A broader operational allowlist cannot override a published-program exclusion or an unmatched program scope. Owned-asset assessments instead require an ownership verifier and do not infer bounty permission. Neither record is inferred from the other. An AI agent cannot create, modify, sign, renew, or verify either record. APEX/Director remains the approval authority; the operational signature verifier must be supplied by the trusted host.
 
 Preapproval means the workflow can run the exact checks listed in the signed policy without asking for a separate prompt for each check. It does not widen target scope, introduce new check types, or authorize exploit execution.
 
@@ -116,6 +116,6 @@ A scanner alert is not automatically a vulnerability. Confidence must be tied to
 
 ## Current implementation and limitations
 
-The ScopeGuard module checks independent program and operational authorization verifiers, expiry, policy version, exact targets, exclusions, approved check names, rate/concurrency bounds, and mandatory stop-on-scope-violation. It emits an approved plan with executionPerformed=false. Audit persistence failure changes an otherwise approved result to denied.
+The ScopeGuard module checks independent program and operational authorization verifiers, the hash-bound normalized bounty scope snapshot (using the existing bug-bounty ScopeEvaluator), expiry, policy version, exact targets, exclusions, approved check names, rate/concurrency bounds, and mandatory stop-on-scope-violation. It emits an approved plan with executionPerformed=false. Audit persistence failure changes an otherwise approved result to denied.
 
 This is an authorization foundation, not a scanner. It does not claim real-world authorization unless the trusted host supplies verifiers backed by authoritative evidence and APEX/Director. No live network assessment or exploit functionality is present.
