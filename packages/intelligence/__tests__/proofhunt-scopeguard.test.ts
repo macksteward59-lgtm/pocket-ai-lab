@@ -186,6 +186,16 @@ describe("ProofHunt ScopeGuard", () => {
       ...base,
       environment: "owned" as const
     };
+    // Even if both project identifiers are rewritten together, the original
+    // signed digest must not be reusable in the new project.
+    const replayedApproval = {
+      ...base,
+      projectId: "another-project",
+      operationalAuthorization: {
+        ...base.operationalAuthorization,
+        projectId: "another-project"
+      }
+    };
     const { guard } = makeGuard();
     const projectResult = await guard.authorizeAssessment(
       wrongProject,
@@ -197,10 +207,17 @@ describe("ProofHunt ScopeGuard", () => {
       "app.example.com",
       "static_analysis"
     );
+    const replayResult = await guard.authorizeAssessment(
+      replayedApproval,
+      "app.example.com",
+      "static_analysis"
+    );
     expect(projectResult.permitted).toBe(false);
     expect(projectResult.reason).toContain("different project or assessment environment");
     expect(environmentResult.permitted).toBe(false);
     expect(environmentResult.reason).toContain("different project or assessment environment");
+    expect(replayResult.permitted).toBe(false);
+    expect(replayResult.reason).toContain("complete policy and target-scope snapshot");
   });
 
   it("denies an operational record bound to a different program authorization", async () => {
