@@ -163,7 +163,7 @@ CREATE TABLE proofhunt.assessment_jobs (
   authorized_target_id UUID,
   authorized_target_hostname TEXT,
   target_hostname TEXT NOT NULL,
-  program_scope_hash CHAR(64) CHECK (program_scope_hash IS NULL OR program_scope_hash ~ '^[a-f0-9]{64}
+  program_scope_hash CHAR(64) CHECK (program_scope_hash IS NULL OR program_scope_hash ~ '^[a-f0-9]{64}$'),
   decision TEXT NOT NULL CHECK (decision IN ('approved_plan', 'denied')),
   decision_reason TEXT NOT NULL,
   job_status TEXT NOT NULL CHECK (job_status IN ('planned', 'queued', 'running', 'completed', 'cancelled', 'failed', 'stopped')),
@@ -190,7 +190,7 @@ CREATE TABLE proofhunt.assessment_jobs (
 CREATE OR REPLACE FUNCTION proofhunt.validate_assessment_job_target()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 DECLARE
   allowed_subdomains BOOLEAN;
   target_is_excluded BOOLEAN;
@@ -240,7 +240,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER proofhunt_job_target_guard
   BEFORE INSERT ON proofhunt.assessment_jobs
@@ -251,7 +251,7 @@ CREATE TRIGGER proofhunt_job_target_guard
 CREATE OR REPLACE FUNCTION proofhunt.protect_assessment_job_basis()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'ProofHunt assessment jobs cannot be deleted';
@@ -261,7 +261,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER proofhunt_job_basis_immutable
   BEFORE UPDATE OR DELETE ON proofhunt.assessment_jobs
