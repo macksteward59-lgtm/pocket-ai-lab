@@ -1359,3 +1359,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Goal:** run evaluation cases through the actual injected native `LlamaEngine` and loaded `RuntimeSession`; append every completed, partial, and failed attempt; preserve prompt/output and provenance; hash-chain journal entries; record Critic/Validator assessments and model challenges as separate immutable events.
 - **Exclusions:** no changes to `LocalChatView.swift`, `ios/project.yml`, `runtime/ios/` engine contracts, APEX/East authorization, signed Evidence, or existing catalog/task-history files. The app target already includes the `PocketAILab` source directory and test target includes `PocketAILabTests`.
 - **Validation plan:** focused Swift unit tests for native-runtime invocation, append-only persistence, chain verification/tamper detection, failed/partial attempt retention, assessment role separation, and no test-double native-proof promotion; hosted iOS CI on the exact PR head. No physical-device result will be claimed.
+
+
+## 2026-11-15 — Native model catalog and typed Agent Team integration checkpoint
+
+- Fixed the `LocalChatModel.init` optional-parameter shadowing by qualifying the stored property with `self.modelCatalogStore` (`9bad8e382ef35540916deabefb4adf22e2030cbb`).
+- Isolated the eight `LocalChatModel` XCTest construction sites with a per-test catalog archive under each temporary test root (`79c26383dd53ff21dd971307dea65b0c09715f7e`). This prevents parallel tests from sharing the default Application Support catalog. The diagnosis is based on repeated exact-head failures where concurrent tests attempted to resolve/delete files from other tests' temporary roots.
+- Reconciled PR #120's strict type-specific agent-message consumer changes onto the refreshed catalog base. Added `AgentMessageEnvelope.untrustedText`, updated the Swift coordinator/chat/journal consumers, and added payload extraction/prior-role-context assertions. Rebased diff is exactly five files, 5 commits ahead / 0 behind base.
+- PR #125 and PR #126 were incorporated into `codex/ios-native-model-catalog` using fast-forward ref updates with expected-head checks; both are now closed as merged into that feature integration branch. This did not merge to `main`.
+- Stale-base PR #120 was closed; its changes are represented by the rebased PR #126 and the integration branch.
+- Created draft main-targeted validation PR #127: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/127. Exact head `4c1feb860291cef39ce2ad5cc712520a62a5b953`; main base `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`; mergeable.
+- CI on exact head: Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar passed. iOS run `43752293359` remains in progress at pinned llama.cpp build; additional iOS run `43752334116` is queued. No native app XCTest result yet and no physical iPhone validation.
+- No main-branch merge, production deployment, signing, or device installation performed.
