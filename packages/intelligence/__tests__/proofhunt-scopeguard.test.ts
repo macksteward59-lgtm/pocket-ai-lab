@@ -360,4 +360,20 @@ describe("ProofHunt ScopeGuard", () => {
     expect(result.reason).toContain("policy digest");
   });
 
+  it("never preapproves a request rate above the published bounty limit", async () => {
+    const base = makeConfig();
+    const scopePolicy = { ...base.programAuthorization.scopePolicy!, rateLimit: { requestsPerSecond: 0.5 } };
+    const config = makeConfig({
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy)
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("exceeds");
+  });
+
 });
