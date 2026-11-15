@@ -178,36 +178,7 @@ CREATE TABLE proofhunt.assessment_jobs (
   operational_authorization_id UUID NOT NULL,
   policy_id UUID NOT NULL,
   policy_version TEXT NOT NULL,
-  policy_hash CHAR(64) NOT NULL CHECK (policy_hash ~ '^[a-f0-9]{64}
-  authorized_target_hostname TEXT,
-  target_hostname TEXT NOT NULL,
-  program_scope_hash CHAR(64) CHECK (program_scope_hash IS NULL OR program_scope_hash ~ '^[a-f0-9]{64}$'),
-  decision TEXT NOT NULL CHECK (decision IN ('approved_plan', 'denied')),
-  decision_reason TEXT NOT NULL,
-  job_status TEXT NOT NULL CHECK (job_status IN ('planned', 'queued', 'running', 'completed', 'cancelled', 'failed', 'stopped')),
-  decision_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (project_id, job_id),
-  FOREIGN KEY (project_id, program_authorization_id)
-    REFERENCES proofhunt.authorization_records(project_id, record_id),
-  FOREIGN KEY (project_id, program_authorization_id, program_scope_hash)
-    REFERENCES proofhunt.authorization_records(project_id, record_id, scope_policy_hash),
-  FOREIGN KEY (project_id, operational_authorization_id)
-    REFERENCES proofhunt.authorization_records(project_id, record_id),
-  FOREIGN KEY (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id)
-    REFERENCES proofhunt.assessment_policies(project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id),
-  FOREIGN KEY (project_id, program_authorization_id, authorized_target_id, authorized_target_hostname)
-    REFERENCES proofhunt.authorized_targets(project_id, authorization_record_id, target_id, hostname),
-  CHECK (program_authorization_id <> operational_authorization_id),
-  CHECK (decision <> 'approved_plan' OR
-    (authorized_target_id IS NOT NULL AND authorized_target_hostname IS NOT NULL)),
-  CHECK ((authorized_target_id IS NULL) = (authorized_target_hostname IS NULL))
-);
-
--- Enforce the operational allowlist/exclusion relation again at job admission.
--- Denied decision records may be stored without an allowlist match; approved
--- plans must reference the exact matched row and satisfy its subdomain flag.
-),
+  policy_hash CHAR(64) NOT NULL CHECK (policy_hash ~ '^[a-f0-9]{64}$'),
   check_type TEXT NOT NULL,
   authorized_target_id UUID,
   authorized_target_hostname TEXT,
@@ -235,9 +206,6 @@ CREATE TABLE proofhunt.assessment_jobs (
   CHECK ((authorized_target_id IS NULL) = (authorized_target_hostname IS NULL))
 );
 
--- Enforce the operational allowlist/exclusion relation again at job admission.
--- Denied decision records may be stored without an allowlist match; approved
--- plans must reference the exact matched row and satisfy its subdomain flag.
 CREATE OR REPLACE FUNCTION proofhunt.validate_assessment_job_target()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -528,6 +496,5 @@ CREATE INDEX assessment_events_job_sequence_idx
   ON proofhunt.assessment_events (project_id, job_id, event_sequence);
 CREATE INDEX validation_results_job_state_idx
   ON proofhunt.validation_results (project_id, job_id, validation_state);
-
 COMMENT ON COLUMN proofhunt.authorization_records.policy_hash IS
   'SHA-256 of project ID, environment, parent authorization ID, canonical operational policy, and exact authorized-target and excluded-target snapshots; any change requires a new approval.';
