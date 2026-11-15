@@ -323,7 +323,7 @@ BEGIN
     -- Host-only plans reject matching path-scoped URL rules rather than guessing.
     SELECT EXISTS (
       SELECT 1
-      FROM jsonb_array_elements(program_scope_snapshot->'inScope' || program_scope_snapshot->'outOfScope') AS rule
+      FROM jsonb_array_elements(program_scope_snapshot->'inScope' || program_scope_snapshot->'outOfScope') AS rules(rule)
       WHERE rule->>'kind' = 'url'
         AND (regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[2] <> '/'
         AND (
@@ -341,7 +341,7 @@ BEGIN
 
     SELECT EXISTS (
       SELECT 1
-      FROM jsonb_array_elements(program_scope_snapshot->'outOfScope') AS rule
+      FROM jsonb_array_elements(program_scope_snapshot->'outOfScope') AS rules(rule)
       WHERE (
         rule->>'kind' = 'domain'
         AND (
@@ -367,7 +367,7 @@ BEGIN
 
     SELECT EXISTS (
       SELECT 1
-      FROM jsonb_array_elements(program_scope_snapshot->'inScope') AS rule
+      FROM jsonb_array_elements(program_scope_snapshot->'inScope') AS rules(rule)
       WHERE (
         rule->>'kind' = 'domain'
         AND (
