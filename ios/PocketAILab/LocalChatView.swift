@@ -659,6 +659,21 @@ struct LocalChatView: View {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(model.modelName).font(.headline)
+                    if !model.availableModels.isEmpty {
+                        Picker("Model library", selection: Binding(
+                            get: { model.selectedModelID ?? "" },
+                            set: { model.selectModel($0.isEmpty ? nil : $0) }
+                        )) {
+                            Text("Choose model").tag("")
+                            ForEach(model.availableModels) { entry in
+                                Text("\(entry.name) · \(entry.estimatedMemoryMB) MB est.")
+                                    .tag(entry.id)
+                            }
+                        }
+                        .disabled(model.isBusy || model.isModelLoaded)
+                        Text("\(model.availableModels.count) imported models · one native model loaded at a time")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                     Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.historyStatus).font(.caption2).foregroundStyle(.secondary)
