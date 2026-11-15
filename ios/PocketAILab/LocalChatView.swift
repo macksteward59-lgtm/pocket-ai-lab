@@ -291,7 +291,8 @@ final class LocalChatModel: ObservableObject {
         task: AgentTaskRequest,
         steps: [NativeAgentStep],
         maxTokens: Int = 512,
-        temperature: Double = 0.2
+        temperature: Double = 0.2,
+        onMessage: (@Sendable (AgentMessageEnvelope) async -> Bool)? = nil
     ) async throws -> NativeAgentRunResult {
         guard !isBusy, let runtime, let lease else { throw LocalChatError.busy }
         isBusy = true
@@ -301,7 +302,8 @@ final class LocalChatModel: ObservableObject {
             task: task,
             steps: steps,
             maxTokens: maxTokens,
-            temperature: temperature
+            temperature: temperature,
+            onMessage: onMessage
         )
     }
 
@@ -370,13 +372,25 @@ final class LocalChatModel: ObservableObject {
             )
             messages.append(ChatLine(role: "You · Agent Team task", text: text))
             let result: NativeAgentRunResult
+            let journal = AgentTaskHistoryJournal(store: agentTaskHistoryStore)
             do {
-                result = try await runAgentTeam(task: task, steps: steps, maxTokens: 192, temperature: 0.2)
+                result = try await runAgentTeam(
+                    task: task,
+                    steps: steps,
+                    maxTokens: 192,
+                    temperature: 0.2,
+                    onMessage: { message in
+                        await journal.append(taskID: task.id, message: message)
+                    }
+                )
             } catch {
                 let interrupted = error is CancellationError || Task.isCancelled
+                let persistenceFailure = (error as? NativeAgentCoordinatorError) == .messageSinkRejected
                 try? agentTaskHistoryStore.fail(
                     id: task.id,
-                    summary: error.localizedDescription,
+                    summary: persistenceFailure
+                        ? "A completed role could not be saved. The run stopped before the next role."
+                        : error.localizedDescription,
                     interrupted: interrupted
                 )
                 if let restored = try? agentTaskHistoryStore.load() {
@@ -385,7 +399,9 @@ final class LocalChatModel: ObservableObject {
                     agentTaskHistoryStatus = "Task result could not be saved or reloaded."
                 }
                 messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
-                status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
+                status = persistenceFailure
+                    ? "Agent Team stopped because a completed role could not be durably saved. Earlier role records were preserved."
+                    : "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
                 return
             }
 
@@ -397,18 +413,10 @@ final class LocalChatModel: ObservableObject {
                     role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
                     text: output
                 ))
-                roleResults.append(AgentTaskRoleResult(
-                    id: message.messageId.uuidString,
-                    role: message.senderAgentId,
-                    sequence: message.sequence,
-                    text: output,
-                    createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date()
-                ))
             }
             do {
                 try agentTaskHistoryStore.complete(
                     id: task.id,
-                    roleResults: roleResults,
                     finalResponse: result.finalResponse
                 )
                 agentTaskHistory = try agentTaskHistoryStore.load()
@@ -440,6 +448,32 @@ final class LocalChatModel: ObservableObject {
         // Admission hint only: file size plus a 25%/256 MB working margin.
         // It is not measured RSS and must be calibrated on physical devices.
         return fileMB + max(256, fileMB / 4)
+    }
+}
+
+private actor AgentTaskHistoryJournal {
+    private let store: LocalAgentTaskHistoryStore
+
+    init(store: LocalAgentTaskHistoryStore) {
+        self.store = store
+    }
+
+    func append(taskID: String, message: AgentMessageEnvelope) -> Bool {
+        guard case .object(let payload) = message.payload,
+              case .string(let text)? = payload["text"] else { return false }
+        let result = AgentTaskRoleResult(
+            id: message.messageId.uuidString,
+            role: message.senderAgentId,
+            sequence: message.sequence,
+            text: text,
+            createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date()
+        )
+        do {
+            try store.appendRoleResult(taskID: taskID, result: result)
+            return true
+        } catch {
+            return false
+        }
     }
 }
 
