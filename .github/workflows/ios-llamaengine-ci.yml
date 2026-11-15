@@ -72,7 +72,7 @@ jobs:
         id: llama-build
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
-          if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
+          if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && runtime/ios/scripts/build-llama-cpp.sh verify && runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
             echo "Reusing checksum-keyed llama.cpp archives for this pinned source and Xcode toolchain."
           else
             runtime/ios/scripts/build-llama-cpp.sh simulator
