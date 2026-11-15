@@ -212,29 +212,40 @@ describe("Skill lifecycle integrity and promotion", () => {
     expect(rejected.authorized).toBe(false);
   });
 
-  it("requires digest-bound promotion before approval and activation transitions", async () => {
+  it("requires an unforgeable, digest-bound promotion before approval and activation", async () => {
     const artifact = await makeArtifact();
     expect(() => transitionSkillLifecycle("proposed", "active")).toThrow(/Invalid skill lifecycle/);
     expect(() => transitionSkillLifecycle("evaluating", "approved")).toThrow(/promotion authorization/);
 
-    const authorization: SkillPromotionAuthorization = {
-      skillId: artifact.skill.id,
-      version: artifact.version,
-      artifactDigest: artifact.digest,
-      evaluationDigest: sha("evaluation"),
-      assignmentDigest: await skillAssignmentDigest(artifact.skill),
-      verifiedAt: "2026-11-14T14:00:00.000Z"
-    };
+    const evaluation = await makeEvaluation(artifact);
+    const approval = await makeApproval(artifact, evaluation);
+    const verified = await authorizeSkillPromotion(artifact, evaluation, approval, {
+      verifyEvaluation: async () => true,
+      verifyApproval: async () => true
+    });
+    const authorization = verified.authorization!;
     const expected = {
       skillId: artifact.skill.id,
       version: artifact.version,
       artifactDigest: artifact.digest
     };
+
     expect(transitionSkillLifecycle("evaluating", "approved", authorization, expected)).toBe("approved");
     expect(transitionSkillLifecycle("approved", "active", authorization, expected)).toBe("active");
     expect(() => transitionSkillLifecycle("approved", "active", {
       ...authorization, artifactDigest: sha("wrong")
-    }, expected)).toThrow(/exact skill version and digest/);
+    }, expected)).toThrow(/promotion authorization/);
+
+    const fabricated = {
+      skillId: artifact.skill.id,
+      version: artifact.version,
+      artifactDigest: artifact.digest,
+      evaluationDigest: evaluation.digest,
+      assignmentDigest: await skillAssignmentDigest(artifact.skill),
+      verifiedAt: "2026-11-14T14:00:00.000Z"
+    };
+    expect(() => transitionSkillLifecycle("evaluating", "approved", fabricated, expected))
+      .toThrow(/promotion authorization/);
     expect(() => transitionSkillLifecycle("quarantined", "researching")).toThrow(/Invalid skill lifecycle/);
   });
 
