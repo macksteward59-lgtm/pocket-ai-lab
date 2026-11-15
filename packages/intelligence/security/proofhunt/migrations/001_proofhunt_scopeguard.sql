@@ -408,8 +408,7 @@ BEGIN
   FROM proofhunt.authorized_targets
   WHERE project_id = NEW.project_id
     AND authorization_record_id = NEW.program_authorization_id
-    AND target_id = NEW.authorized_target_id
-    AND hostname = NEW.authorized_target_hostname;
+    AND target_id = NEW.authorized_target_id;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'ProofHunt approved job has no matching authorized target record';
