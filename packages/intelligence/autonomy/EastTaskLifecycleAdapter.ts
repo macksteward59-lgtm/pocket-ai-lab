@@ -124,7 +124,7 @@ export async function runEastTaskWithLifecycle(
   }
 
   // Recovery only expires stale leases; it never replays an unexpired attempt.
-  await coordinator.recoverExpiredLeases();
+  await coordinator.recoverExpiredLeases(lifecycleTaskId);
   lifecycle = coordinator.getTask(lifecycleTaskId);
   let synthesis = "";
   let evidenceRefs: string[] = [];
