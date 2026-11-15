@@ -189,7 +189,10 @@ export class TaskLifecycleCoordinator {
       if (typeof attemptId !== "string" || !attemptId.trim() || attemptId.length > 256) {
         throw new TaskLifecycleError("invalid_attempt_id", "Attempt id generator returned an invalid id");
       }
-      if ([...this.records.values()].some(record => record.steps.some(item => item.attemptIds.includes(attemptId)))) {\n        throw new TaskLifecycleError("duplicate_attempt_id", "Attempt id has already been issued");\n      }\n      const expires = new Date(now.getTime() + task.leaseMs);
+      if ([...this.records.values()].some(record => record.steps.some(item => item.attemptIds.includes(attemptId)))) {
+        throw new TaskLifecycleError("duplicate_attempt_id", "Attempt id has already been issued");
+      }
+      const expires = new Date(now.getTime() + task.leaseMs);
       const updated = cloneTask(task);
       const target = updated.steps.find(item => item.id === step.id)!;
       target.status = "running";
@@ -484,7 +487,9 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     typeof step.description !== "string" || !step.description.trim() ||
     !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
     !Array.isArray(step.dependsOn) || step.dependsOn.some(id => !ids.has(id)) ||
-    !Number.isInteger(step.attempts) || step.attempts < 0 ||\n    !Array.isArray(step.attemptIds) || step.attemptIds.length !== step.attempts ||\n    step.attemptIds.some(id => typeof id !== "string" || !id.trim()) || new Set(step.attemptIds).size !== step.attemptIds.length ||
+    !Number.isInteger(step.attempts) || step.attempts < 0 ||
+    !Array.isArray(step.attemptIds) || step.attemptIds.length !== step.attempts ||
+    step.attemptIds.some(id => typeof id !== "string" || !id.trim()) || new Set(step.attemptIds).size !== step.attemptIds.length ||
     !Number.isInteger(step.maxAttempts) || step.maxAttempts < 1 || step.maxAttempts > 5 ||
     !Array.isArray(step.evidenceRefs) ||
     (step.status === "running") !== (step.currentAttempt !== null) ||
