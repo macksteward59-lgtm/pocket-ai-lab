@@ -57,8 +57,8 @@ The native Agent Team UI is a bounded sequential local-model workflow, not produ
 The iOS Agent Team UI now records a separate task lifecycle archive at `Application Support/PocketAILab/AgentTaskHistory.json`. It is distinct from the chat transcript archive.
 
 - Before local inference starts, the UI must durably create a `running` task record. If that write fails, the Agent Team run does not start.
-- Successful runs record the task objective, terminal status, final response, and bounded per-role output records (up to eight roles).
-- Inference errors are recorded as `failed`; cancellation is recorded as `interrupted`.
+- Each completed role output is atomically appended to the task record before the coordinator starts the next role. The final response and terminal status are committed after the coordinator returns. The archive enforces monotonic role sequence numbers and unique message IDs.
+- Inference errors are recorded as `failed`; cancellation is recorded as `interrupted`. If a role output cannot be persisted, the coordinator stops before starting the next role and preserves earlier journaled outputs.
 - On app startup, any task still marked `running` is atomically changed to `interrupted` with an explanation. It is never automatically replayed or resumed. Recovery restores the record for user inspection only.
 - Terminal task states cannot be changed back to `running` or overwritten by a late completion.
 - Retention is 30 days, at most 50 tasks, 4,000 bytes per objective, 8,000 bytes per role result/final response, and 512 KiB for the archive. Oldest tasks are evicted first when the encoded archive reaches its limit.
@@ -68,6 +68,6 @@ The iOS Agent Team UI now records a separate task lifecycle archive at `Applicat
 
 ### Recovery limitation
 
-Role outputs are committed to the task archive when the coordinator returns its completed run. If the app terminates mid-run, the task is marked interrupted on next launch, but intermediate role output that existed only in memory may not be present in the task record. This phase intentionally does not replay work. Incremental, authenticated message journaling and explicit user-authorized resume remain separate future work.
+Each completed role output is journaled before the next role begins. If the app terminates while a role is still generating, that incomplete output is not committed; completed earlier roles remain available when the task is marked interrupted on next launch. The journal is a bounded local record with sequence checks, not a cryptographically authenticated or tamper-proof log. This phase intentionally does not replay work. Explicit user-authorized resume and cryptographic evidence remain separate future work.
 
-Regression tests cover lifecycle persistence, interrupted recovery, terminal-state immutability, duplicate IDs, retention expiry, explicit deletion, and unknown-version fail-closed handling.
+Regression tests cover lifecycle persistence, incremental role append ordering, rejected journal writes stopping subsequent roles, interrupted recovery with partial outputs, terminal-state immutability, duplicate IDs, retention expiry, explicit deletion, and unknown-version fail-closed handling.
