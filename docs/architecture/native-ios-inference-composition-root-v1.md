@@ -71,3 +71,15 @@ Every public generation call must present the exact active `ModelPoolLease` retu
 The use pin is a resource-lifetime guard only. It is not an authorization token for tools, workflow execution, or evidence creation. A caller must still obey the established APEX/Director, BridgeGate, East/e3, and signed-evidence controls.
 
 Regression tests cover: generation rejected after lease release; cross-runtime/foreign-pool lease rejection; a session remaining non-unloadable after its lease is released during active generation; pin release after successful stream completion; and cancellation drain retaining both the pin and scheduler permit until the engine acknowledges drain.
+
+
+## Bounded multi-turn chat context
+
+The native chat surface carries a small rolling transcript into each new generation instead of sending only the latest message.
+
+- Only prior `You` and `Pocket AI` chat turns are included. Agent Team role output and runtime diagnostics are not silently promoted into the chat transcript.
+- At most the eight most recent chat messages are considered before the current user message.
+- The assembled prompt is capped at 6,000 UTF-8 bytes, including framing. Oldest entries are dropped first; if the newest single entry is oversized, its text is truncated at a Unicode-scalar boundary.
+- The prompt labels the transcript as untrusted context and asks the model to answer the latest user message. This is prompt hygiene, not a security boundary or instruction hierarchy guarantee.
+- This first implementation is in-memory only. It does not persist conversations across app restarts, create long-term agent memory, or share context between different models.
+- The model's configured context length and actual tokenizer behavior may differ from byte counts. Physical-device/model-specific prompt-budget calibration remains future work.
