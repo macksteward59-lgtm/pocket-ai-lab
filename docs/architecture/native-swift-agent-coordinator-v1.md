@@ -50,3 +50,24 @@ The native Web Workspace restores its saved address only once, does not reload o
 5. Validate on a physical iPhone and record exact device/build/model/hash/generation evidence, including memory, thermal, battery, and Metal behavior.
 
 The native Agent Team UI is a bounded sequential local-model workflow, not production multi-agent independence, verified runtime readiness, durable memory, tool execution, or full device acceptance.
+
+
+## Device-local Agent Team task history v1
+
+The iOS Agent Team UI now records a separate task lifecycle archive at `Application Support/PocketAILab/AgentTaskHistory.json`. It is distinct from the chat transcript archive.
+
+- Before local inference starts, the UI must durably create a `running` task record. If that write fails, the Agent Team run does not start.
+- Successful runs record the task objective, terminal status, final response, and bounded per-role output records (up to eight roles).
+- Inference errors are recorded as `failed`; cancellation is recorded as `interrupted`.
+- On app startup, any task still marked `running` is atomically changed to `interrupted` with an explanation. It is never automatically replayed or resumed. Recovery restores the record for user inspection only.
+- Terminal task states cannot be changed back to `running` or overwritten by a late completion.
+- Retention is 30 days, at most 50 tasks, 4,000 bytes per objective, 8,000 bytes per role result/final response, and 512 KiB for the archive. Oldest tasks are evicted first when the encoded archive reaches its limit.
+- Writes are atomic. On iOS, the directory and archive use `completeUntilFirstUserAuthentication` file protection and are excluded from device backup. This is not end-to-end encryption.
+- The existing Clear history action deletes both local chat transcript and Agent Team task history; it does not remove imported models.
+- Task records are an operational UI history only. They are not an East/e3 durable execution journal, a resumable work queue, semantic memory, signed Evidence, verified output, or permission state. Role outputs remain untrusted proposals and do not grant APEX/Director authority.
+
+### Recovery limitation
+
+Role outputs are committed to the task archive when the coordinator returns its completed run. If the app terminates mid-run, the task is marked interrupted on next launch, but intermediate role output that existed only in memory may not be present in the task record. This phase intentionally does not replay work. Incremental, authenticated message journaling and explicit user-authorized resume remain separate future work.
+
+Regression tests cover lifecycle persistence, interrupted recovery, terminal-state immutability, duplicate IDs, retention expiry, explicit deletion, and unknown-version fail-closed handling.
