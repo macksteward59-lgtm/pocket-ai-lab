@@ -74,12 +74,12 @@ final class LocalChatModel: ObservableObject {
             agentTaskHistoryStatus = "Agent Team history could not be read. The existing archive was preserved."
         }
         do {
-            let catalog = try modelCatalogStore.load()
+            let catalog = try self.modelCatalogStore.load()
             availableModels = catalog.entries
             if let selectedID = catalog.selectedModelID,
                let selected = catalog.entries.first(where: { $0.id == selectedID }) {
                 selectedModelID = selected.id
-                modelURL = try modelCatalogStore.resolve(selected)
+                modelURL = try self.modelCatalogStore.resolve(selected)
                 modelName = selected.name
                 artifactFingerprint = ModelArtifactFingerprint(sha256: selected.sha256, byteCount: selected.byteCount)
                 modelFingerprintSummary = "SHA-256 \(selected.sha256.prefix(16))… · \(selected.byteCount) bytes"
