@@ -163,6 +163,29 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testChatContextExcludesAgentTeamTaskAndRoleMessages() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(engine: engine, modelDirectory: root.appendingPathComponent("models", isDirectory: true))
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        await model.runDefaultAgentTeam("Sensitive Agent Team-only objective")
+        await model.send("Continue ordinary chat")
+
+        let prompts = await engine.recordedPrompts()
+        XCTAssertEqual(prompts.count, 7)
+        let chatPrompt = try XCTUnwrap(prompts.last)
+        XCTAssertTrue(chatPrompt.contains("You: Continue ordinary chat"))
+        XCTAssertFalse(chatPrompt.contains("Sensitive Agent Team-only objective"))
+        XCTAssertFalse(chatPrompt.contains("Agent Team ·"))
+        await model.unloadModel()
+    }
+
+    @MainActor
     func testDefaultAgentTeamRunsSixLogicalRolesThroughSharedLease() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
