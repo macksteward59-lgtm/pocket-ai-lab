@@ -46,8 +46,8 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
 }
 
 function makeGuard(options: {
-  program?: () => boolean;
-  operational?: () => boolean;
+  program?: () => boolean | Promise<boolean>;
+  operational?: () => boolean | Promise<boolean>;
   audit?: ScopeGuardAuditWriter;
   now?: number;
 } = {}) {
