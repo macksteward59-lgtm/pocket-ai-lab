@@ -15,6 +15,7 @@
 import { CORE_AGENTS } from "../../packages/intelligence/agents/AgentManager";
 import { MemoryManager } from "../../packages/intelligence/memory/MemoryManager";
 import type { AgentMessage } from "../../packages/intelligence/message-bus/MessageBus";
+import type { ModelDescriptor } from "../../packages/intelligence/model-registry/ModelRegistry";
 import type { InferenceProvider, InferenceResult } from "../../packages/intelligence/orchestrator/Orchestrator";
 import { Orchestrator } from "../../packages/intelligence/orchestrator/Orchestrator";
 import {
@@ -284,7 +285,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       const agent = orchestrator.agents.getAgent(agentId);
       if (!agent) throw new EastPlatformError("unknown_agent", "Unknown permanent agent " + agentId);
       const before = orchestrator.bus.getThread(task.id).length;
-      let selectedId: string | undefined;
+      let selectedDescriptor: ModelDescriptor | undefined;
       let sessionId: string | undefined;
       try {
         const selected = await orchestrator.router.route(
@@ -292,7 +293,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           orchestrator.models.getPreferredModel(agentId),
           []
         );
-        selectedId = selected.id;
+        selectedDescriptor = selected;
         sessionId = orchestrator.agents.startSession(agentId, task.id, selected.id);
         orchestrator.agents.updateStatus(sessionId, "running");
         const prior = orchestrator.bus.getThread(task.id);
@@ -309,6 +310,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           ].join("\n"),
           contextMessages: [...prior]
         });
+        orchestrator.router.confirmLoaded(selected);
         const published = publishAnalysis(orchestrator, task.id, agentId, prior.length, result);
         orchestrator.agents.updateStatus(sessionId, "complete");
         return published.messageId;
@@ -324,7 +326,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
         );
       } finally {
         if (sessionId) orchestrator.agents.releaseSession(sessionId);
-        if (selectedId) orchestrator.router.release(selectedId);
+        if (selectedDescriptor) orchestrator.router.release(selectedDescriptor);
       }
     },
     async runDeliberation(taskId) {
