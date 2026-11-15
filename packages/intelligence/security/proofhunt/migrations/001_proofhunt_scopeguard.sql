@@ -124,6 +124,7 @@ CREATE TABLE proofhunt.authorized_targets (
   include_subdomains BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, authorization_record_id, hostname),
+  CHECK (hostname <> '' AND hostname = lower(rtrim(hostname, '.'))),
   UNIQUE (project_id, authorization_record_id, target_id),
   UNIQUE (project_id, authorization_record_id, target_id, hostname),
   FOREIGN KEY (project_id, authorization_record_id)
@@ -139,6 +140,7 @@ CREATE TABLE proofhunt.excluded_targets (
   exclusion_reason TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, authorization_record_id, hostname),
+  CHECK (hostname <> '' AND hostname = lower(rtrim(hostname, '.'))),
   FOREIGN KEY (project_id, authorization_record_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
