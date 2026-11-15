@@ -42,6 +42,8 @@ export interface OperationalAuthorizationRecord {
   readonly recordId: string;
   readonly programAuthorizationId: string;
   readonly policyVersion: string;
+  /** SHA-256 of the exact immutable operational policy snapshot. */
+  readonly policyHash: string;
   readonly status: "approved" | "pending" | "revoked";
   readonly approvedBy: string;
   readonly approvalReference: string;
@@ -191,6 +193,9 @@ export class ScopeGuard {
       if (operational.policyVersion !== policy.version) {
         throw new ScopeGuardError("Operational authorization policy version does not match the active policy");
       }
+      if (operational.policyHash !== hashAssessmentPolicy(policy)) {
+        throw new ScopeGuardError("Operational authorization policy digest does not match the active policy snapshot");
+      }
       if (!operational.approvedBy.trim() || !operational.approvalReference.trim() || !operational.signatureReference.trim()) {
         throw new ScopeGuardError("Operational approval provenance is incomplete");
       }
@@ -291,6 +296,10 @@ export function hashNormalizedProgramPolicy(policy: NormalizedProgramPolicy): st
   return createHash("sha256").update(canonicalize(policy)).digest("hex");
 }
 
+export function hashAssessmentPolicy(policy: ProofHuntAssessmentPolicy): string {
+  return createHash("sha256").update(canonicalize(policy)).digest("hex");
+}
+
 export function normalizeTargetHostname(value: string): string {
   if (typeof value !== "string" || !value.trim()) throw new ScopeGuardError("Target is required");
   const raw = value.trim();
@@ -330,7 +339,7 @@ function validateConfig(config: ProofHuntAssessmentConfig): void {
       !program.permittedChecksReviewReference?.trim()) {
     throw new ScopeGuardError("Program authorization record is incomplete");
   }
-  if (!operational?.recordId?.trim() || !operational.policyVersion?.trim() ||
+  if (!operational?.recordId?.trim() || !operational.policyVersion?.trim() || !operational.policyHash?.trim() ||
       !operational.approvedBy?.trim() || !operational.approvalReference?.trim() ||
       !operational.signatureReference?.trim() || !operational.approvedAt?.trim() || !operational.expiresAt?.trim()) {
     throw new ScopeGuardError("Operational authorization record is incomplete");
