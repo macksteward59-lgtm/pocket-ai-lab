@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { AuditLedger } from "../security/AuditLedger";
 import {
   ScopeGuard,
   normalizeTargetHostname,
@@ -192,6 +196,31 @@ describe("ProofHunt ScopeGuard", () => {
     (config.targets as unknown as { hostname: string }[])[0].hostname = "attacker.example.net";
     release(true);
     expect((await request).permitted).toBe(true);
+  });
+
+  it("writes ScopeGuard decisions to the existing hash-linked AuditLedger", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "proofhunt-scopeguard-"));
+    try {
+      const ledger = new AuditLedger(join(directory, "audit.jsonl"));
+      const guard = new ScopeGuard({
+        programVerifier: { verify: () => true },
+        operationalVerifier: { verify: () => true },
+        audit: ledger,
+        now: () => Date.parse("2026-11-15T12:02:00Z")
+      });
+      const result = await guard.authorizeAssessment(makeConfig(), "app.example.com", "static_analysis");
+      expect(result.permitted).toBe(true);
+      expect(await ledger.verify()).toBe(true);
+      const records = await ledger.read();
+      expect(records).toHaveLength(1);
+      expect(records[0].payload).toMatchObject({
+        event: "proofhunt.scope_decision",
+        permitted: true,
+        executionPerformed: false
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
 });
