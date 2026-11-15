@@ -113,3 +113,11 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - Updated PR #110 description to current head `50b5adcd306c1079b5df137e7801894aae796a61`, current lease-bound runtime contract, bounded chat design, test coverage, and explicit no-merge/no-device-test limitations.
 - Exact-head iOS run `43742353789` is in progress at Show Xcode. Cursor plugin CI `43742353765` succeeded; Pocket AI Lab `43742353758`, Governance sidecar `43742353764`, and Consumer prototype `43742353766` remain in progress.
 - No native XCTest result for latest #110 head yet; no physical iPhone validation.
+
+## 2026-11-15 17:41 UTC — Latest #110 validation checkpoint
+
+- Tightened chat prompt cap to 1,500 UTF-8 bytes and documented that it is not tokenizer-exact.
+- Added Agent Team context-isolation regression test; ordinary chat history excludes Agent Team objectives/role output and runtime diagnostics.
+- Refreshed PR #110 description. Latest head `50b5adcd306c1079b5df137e7801894aae796a61`.
+- Exact-head iOS LlamaEngine CI `43742353789` is building pinned llama.cpp; no XCTest result yet. Cursor `43742353765`, Governance `43742353764`, and Consumer `43742353766` passed; Pocket AI Lab `43742353758` remains in progress.
+- No physical iPhone validation; runtime trust remains Unverified.
