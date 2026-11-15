@@ -81,15 +81,22 @@ final class LocalConversationStoreTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let store = LocalConversationStore(fileURL: root.appendingPathComponent("history.json"))
+        let taskStore = LocalAgentTaskHistoryStore(fileURL: root.appendingPathComponent("tasks.json"))
         let saved = ChatLine(role: "You", text: "Restore this transcript")
         try store.save([saved])
+        try taskStore.begin(id: "saved-task", objective: "Restore this Agent Team task")
+        try taskStore.fail(id: "saved-task", summary: "Previously failed")
 
-        let model = LocalChatModel(conversationStore: store)
+        let model = LocalChatModel(conversationStore: store, agentTaskHistoryStore: taskStore)
 
         XCTAssertEqual(model.messages.map(\.id), [saved.id])
         XCTAssertEqual(model.messages.map(\.text), [saved.text])
+        XCTAssertEqual(model.agentTaskHistory.map(\.id), ["saved-task"])
+        XCTAssertEqual(model.agentTaskHistory.first?.status, .failed)
         model.clearHistory()
         XCTAssertTrue(model.messages.isEmpty)
+        XCTAssertTrue(model.agentTaskHistory.isEmpty)
         XCTAssertTrue(try store.load().isEmpty)
+        XCTAssertTrue(try taskStore.load().isEmpty)
     }
 }
