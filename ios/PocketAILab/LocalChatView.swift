@@ -40,19 +40,54 @@ final class LocalChatModel: ObservableObject {
             : "Metal is not verified in this build. Loading will fail closed if unavailable."
     }
 
+    var isModelLoaded: Bool { lease != nil }
+
     func importModel(from source: URL) throws {
+        guard !isBusy else { throw LocalChatError.busy }
+        guard lease == nil else { throw LocalChatError.modelMustBeUnloaded }
         guard source.pathExtension.lowercased() == "gguf" else { throw LocalChatError.notGGUF }
         let access = source.startAccessingSecurityScopedResource()
         defer { if access { source.stopAccessingSecurityScopedResource() } }
+
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let destination = directory.appendingPathComponent(source.lastPathComponent)
-        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
-        try FileManager.default.copyItem(at: source, to: destination)
+        let sourcePath = source.standardizedFileURL.resolvingSymlinksInPath().path
+        let destinationPath = destination.standardizedFileURL.resolvingSymlinksInPath().path
+
+        // A model already inside Documents/Models must never be copied onto or
+        // deleted beneath itself.
+        if sourcePath == destinationPath {
+            try Self.validateGGUFHeader(at: destination)
+        } else {
+            let staging = directory.appendingPathComponent(".\(source.lastPathComponent).\(UUID().uuidString).staging")
+            do {
+                try FileManager.default.copyItem(at: source, to: staging)
+                try Self.validateGGUFHeader(at: staging)
+                if FileManager.default.fileExists(atPath: destination.path) {
+                    _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
+                } else {
+                    try FileManager.default.moveItem(at: staging, to: destination)
+                }
+            } catch {
+                try? FileManager.default.removeItem(at: staging)
+                throw error
+            }
+        }
+
+        // Update selection only after the staged artifact has passed validation.
         modelURL = destination
         modelName = destination.lastPathComponent
-        status = "Copied to this app's private model folder. Model is not loaded yet."
+        status = "GGUF header validated and copied safely to this app's private model folder. Model is not loaded yet."
+    }
+
+    private static func validateGGUFHeader(at url: URL) throws {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        guard try handle.read(upToCount: 4) == Data("GGUF".utf8) else {
+            throw LocalChatError.invalidGGUFHeader
+        }
     }
 
     func loadModel() async {
@@ -170,13 +205,15 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError {
-    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable
+    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable, modelMustBeUnloaded, invalidGGUFHeader
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
         case .emptyOutput: return "The model returned no text."
         case .busy: return "Another model operation is already in progress."
         case .memoryEstimateUnavailable: return "The model file size could not be used for a safe memory admission estimate."
+        case .modelMustBeUnloaded: return "Unload the current model before importing or replacing a model file."
+        case .invalidGGUFHeader: return "The selected file does not contain a valid GGUF magic header. The previous model file was preserved."
         }
     }
 }
@@ -197,7 +234,7 @@ struct LocalChatView: View {
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
                         .font(.caption2).foregroundStyle(.orange)
                     HStack {
-                        Button("Import GGUF") { showImporter = true }.buttonStyle(.bordered)
+                        Button("Import GGUF") { showImporter = true }.buttonStyle(.bordered).disabled(model.isBusy || model.isModelLoaded)
                         Button("Load model") { Task { await model.loadModel() } }
                             .buttonStyle(.borderedProminent)
                             .disabled(model.modelURL == nil || model.isBusy)
