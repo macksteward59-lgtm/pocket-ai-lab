@@ -1552,3 +1552,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Existing direct llama.cpp smoke test and mock-backed evaluation tests are not sufficient to prove the evaluation runner uses the real native runtime path.
 - Exclusions: no changes to APEX/Director, East/e3, ExploitGym, BridgeGate, RuntimeController trust, signed Evidence, authorization, repository visibility, main, signing, or physical-device claims.
 - Validation must include the pinned model SHA/byte verification already performed by the CI downloader, successful native evaluation generation, accurate provider classification, and release/unload of the exact lease. Hosted macOS/simulator CI remains distinct from physical iPhone acceptance.
+
+
+## 2026-11-15 — Native evaluation real-model smoke implementation pushed
+
+- Added `testPinnedGgufSmokeGenerationThroughNativeInferenceRuntime` to `runtime/ios/Tests/LlamaEngineTests/LlamaEngineTests.swift`. It uses the CI-injected, checksum-verified pinned GGUF; computes its SHA-256 content ID; acquires an exact `ModelPoolLease`; runs `NativeInferenceRuntime.generateForEvaluation`; asserts runtime-owned provider identity is `.llamaCpp`, output is completed/non-empty, model bytes remain unchanged, lease release succeeds, and unload leaves no loaded model or memory reservation.
+- Mirrored the test to mainline validation PR #135 and documented the hosted macOS smoke boundary. No physical iPhone execution is implied.
+- Feature PR #133 head: `f06fa1c4248ad96e79d4a84f84d7584bc90a1dd5`. Validation PR #135 head: `7446cac45bdcb4095d327a9759d942acc4267a62`.
+- Exact-head iOS LlamaEngine run #205 (`43759496587`) is in progress. The prior iOS run #204 (`43759463928`) was cancelled after the validation branch advanced; it is not a pass. Pocket AI Lab, Consumer, Cursor, and Governance checks passed on the new validation head.
+- Existing PR #115 run #199 (`43755647177`) failed native app XCTest after app compilation. Logs show two role-history equality assertions fail because ISO-8601 persistence truncates sub-second Date precision, plus multiple temporary-file cleanup errors during app-level tests. These are inherited catalog-stack test failures and remain a validation risk; no root cause for the cleanup errors is asserted yet.
+- No APEX/Director, East/e3, ExploitGym, BridgeGate, RuntimeController, signed Evidence, authorization, main, repository visibility, signing, or release changes were made.
