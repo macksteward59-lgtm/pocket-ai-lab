@@ -1263,3 +1263,16 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Coordination updates:** Added `coordination/LEADERSHIP.md` and updated `coordination/PROTOCOL.md` to record this direction. The coordination branch remains documentation-only; implementation remains on feature branches.
 - **Operating limits:** Existing branches and PRs are preserved pending inspection. Owner-controlled decisions remain with the repository owner. No background execution, test success, merge, deployment, or device validation will be claimed without actual evidence. All APEX/East authorization and trust boundaries remain unchanged.
 - **Commits on `agent-coordination`:** Leadership note `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`; protocol update `7f73c6e966258668b8f8a5a046d71a15fe7fdb25`.
+
+
+## 2026-11-15 — Aggressive sprint: native iOS dependency reconciliation and targeted repairs
+
+- Reconciled PR #84, #85, #88, and #86 metadata, dependency bases, changed-file scopes, review threads, and workflow evidence. PR #84 targets main; #85 is stacked on #84; #88 is stacked on #85; #86 independently targets main. All four remain open and unmerged. No existing PR was merged or retargeted.
+- PR #84 head `7bfa902dee1fbd09e5ec37c66e85a68297779fb4`: all five associated workflows succeeded, including iOS LlamaEngine CI. This is CI evidence, not physical iPhone validation.
+- PR #85 head `3ff641ad76ff14f3cfdd7ee11f4d7602a0417bad`: no workflow runs were returned for the inspected head. Its stacked base explains why it cannot be treated as independently validated from this snapshot.
+- PR #88 head `266883b45da8da77141fce7c90984b8144edba6d`: Pocket AI Lab, Consumer, Governance, and Cursor workflows succeeded; iOS LlamaEngine CI #122 failed app XCTest. Exact failures: Agent Team status expected the words “six sequential” while UI emitted numeric “6”; IPv6 loopback URL host comparison did not normalize URLComponents' bracketed IPv6 host. Model fingerprint/import tests passed in that run.
+- Created `codex/ios-native-ci-hardening` from PR #88 head and opened draft PR #121 against PR #88's branch. Changes: normalize bracketed IPv6 host strings before loopback comparison; align Agent Team completion status with the existing six-role acceptance assertion. Commits: `cdb487fdafb9ba213475b0d7fe794996b186dbb5`, `7b146d69b9053f14d6ccd0eb54cbdc5ce7391a59`. PR #121 has no workflow runs returned yet because it is stacked; no test pass is claimed.
+- PR #86 head `205f357930ebf5048e24bd59061041b7ea1b7397`: Pocket AI Lab, Consumer, Governance, and Cursor workflows succeeded. Its iOS job had been cancelled after native app XCTest passed; requested a rerun of that cancelled job (job ID `132825066327`). Latest workflow query showed iOS LlamaEngine CI #110 in progress. Do not claim completion until it finishes.
+- PR #94 head `19e38bf10caa1fced102aa09aa91d558b195df67`: all four associated workflows succeeded. Production transactional persistence, cross-process scheduler, and governed host integration remain open.
+- PR #95 head `a21dec1525d8281e88fc3790c99191075d5bdce7`: all four associated workflows succeeded. Documentation-only roadmap; not implementation evidence.
+- No PRs merged; main unchanged. No physical iPhone test, signing, install, APEX authorization, or East/e3 durable execution claimed.
