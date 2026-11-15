@@ -11,7 +11,7 @@ final class LocalChatModel: ObservableObject {
     @Published var messages: [ChatLine] = [] { didSet { persistHistory() } }
     @Published var historyStatus = "Conversation history is stored only on this device."
 
-    private let conversationStore = LocalConversationStore()
+    private let conversationStore: LocalConversationStore
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
@@ -23,8 +23,10 @@ final class LocalChatModel: ObservableObject {
 
     init(
         engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true),
-        modelDirectory: URL? = nil
+        modelDirectory: URL? = nil,
+        conversationStore: LocalConversationStore = LocalConversationStore()
     ) {
+        self.conversationStore = conversationStore
         self.modelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
         do {
