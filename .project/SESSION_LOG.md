@@ -43,3 +43,23 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - Updated `.project/STATE.md` and the native-inference work record to preserve current heads, run IDs, known failure, fixes, and next actions.
 - No local Xcode execution or physical iPhone testing. No merge, main-branch write, permission change, or visibility change.
 - Next: refresh #107 run `43740561987` and #109 run `43740720673`; inspect all jobs and XCTest logs; fix concrete failures only; inspect combined diff and review threads; keep all PRs draft.
+
+
+## 2026-11-15 — Older native dependency-chain reconciliation and full UI aggregate
+
+- Audited PRs #84, #85, #86, and #88 against current main `818799eced634577c8f1760fa2bdd1f657bd8427`, fetched exact PR metadata/diffs, and checked reviews, inline threads, ancestry, and CI.
+- #84 is 7 ahead / 10 behind, open non-draft; historical iOS run `43653686561` and companion workflows passed. Its Workspace restore/navigation and URL policy were worth carrying forward; its older magic-only importer is superseded by the newer staged 24-byte GGUF + SHA-256 path.
+- #85 is 19 ahead / 10 behind, open draft stacked on #84, with no independent CI run found. Its six-role native Agent Team UI and coordinator bounds were missing from #109's app view; these have now been ported to the shared runtime.
+- #86 is 26 ahead / 14 behind, open draft; iOS run `43654228679` was cancelled. Its ModelPool/Scheduler primitives are superseded by #107's app-wired NativeInferenceRuntime composition.
+- #88 is 29 ahead / 10 behind, open draft stacked on #85; historical iOS run `43728039752` failed. Its content hash path is superseded by #109's stronger content-addressed implementation.
+- PR #104's iOS run `43731823992` is now confirmed successful through app XCTest, iOS Simulator XCTest, smoke GGUF download, and macOS XCTest.
+- Created draft PR #110: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/110. Branch `codex/ios-agent-team-workspace-mainline`, head `c2e15444395d4536081a0e52cdb83e6b4afb5710`, 49 ahead / 0 behind main, 18 files changed.
+- #110 carries #107/#109 shared runtime and content identity, adds #85's bounded six-role Agent Team UI using the shared lease/scheduler, and ports #84's Workspace navigation/URL policy.
+- Coordinator limits added: 4k-byte objective, up to 16 capabilities, 1–8 unique roles, 64-byte IDs, 1k-byte instructions, 12k-byte prompts, last four prior outputs truncated to 1.2k bytes, 8k-byte response cap, and 512 tokens per role.
+- Added tests for workspace URL policy/restore/reload, Agent Team six-role flow, oversized tasks/plans/responses, prior-context truncation, and retained lease on unreadable artifact.
+- Updated native coordinator architecture documentation and README status.
+- #110 CI started: iOS run `43741079412`; Pocket AI Lab `43741079416`; Consumer prototype `43741079393`; Cursor collaboration plugin `43741079479`; Governance sidecar `43741079363`. All were in progress at checkpoint; no pass claimed.
+- #107 corrected-importer iOS run `43740561987` and #109 aggregate iOS run `43740720673` remained in progress, each compiling pinned llama.cpp. Their companion workflows were successful.
+- Updated continuity state and work record on `codex/project-continuity-system`.
+- No merges, main changes, visibility changes, permission changes, or physical-device tests.
+
