@@ -42,7 +42,7 @@ final class NativeEvaluationTests: XCTestCase {
             category: category, suiteID: "core-capabilities", suiteVersion: "1.0.0",
             caseID: caseID, prompt: "What is 6 multiplied by 7?",
             evaluationCriteria: "Compute accurately and return the numeric result.",
-            expectedOutcome: "42", maxTokens: 64, temperature: 0
+            expectedOutcome: "42", scoringRule: .exactMatch, maxTokens: 64, temperature: 0
         )
     }
 
@@ -70,6 +70,8 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertFalse(attempt.runtimeTrustVerified)
         XCTAssertEqual(attempt.modelArtifactSHA256.count, 64)
         XCTAssertEqual(attempt.modelID, lease.model.id)
+        XCTAssertEqual(attempt.deterministicPassed, true)
+        XCTAssertEqual(attempt.deterministicScore, 1.0)
         XCTAssertEqual(attempt.runtimeSessionID, lease.session.id)
         let prompts = await engine.prompts()
         XCTAssertEqual(prompts, ["What is 6 multiplied by 7?"])
@@ -98,6 +100,10 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(second.status, .completed)
         XCTAssertEqual(second.attemptNumber, 2)
         XCTAssertEqual(second.retryOfAttemptID, first.id)
+        XCTAssertEqual(second.deterministicPassed, true)
+        let summary = NativeEvaluationScoreSummary(attempts: [first, second])
+        XCTAssertEqual(summary.totalAttempts, 1)
+        XCTAssertEqual(summary.scorePercent, 100)
 
         let reopened = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("history.ndjson"))
         let events = try await reopened.events()
@@ -118,6 +124,8 @@ final class NativeEvaluationTests: XCTestCase {
         let attempt = try await runner.run(evaluationCase())
 
         XCTAssertEqual(attempt.status, .failed)
+        XCTAssertEqual(attempt.deterministicPassed, false)
+        XCTAssertEqual(attempt.deterministicScore, 0.0)
         XCTAssertEqual(attempt.output, "")
         XCTAssertNotNil(attempt.errorMessage)
         let events = try await journal.events()
@@ -155,6 +163,8 @@ final class NativeEvaluationTests: XCTestCase {
 
         XCTAssertEqual(attempt.output, "42")
         XCTAssertEqual(attempt.status, .partial)
+        XCTAssertEqual(attempt.deterministicPassed, false)
+        XCTAssertEqual(attempt.deterministicScore, 0.0)
         XCTAssertFalse(attempt.nativeExecutionObserved)
         XCTAssertTrue(attempt.errorMessage?.contains("Model file changed") == true)
         let events = try await journal.events()
@@ -250,6 +260,7 @@ private actor MockEvaluationEngine: LlamaEngine {
     private let failAfterOutput: Bool
     private let mutationURL: URL?
     private var recordedPrompts: [String] = []
+    private var generations = 0
 
     init(responses: [String], failAfterOutput: Bool = false, mutationURL: URL? = nil) {
         self.responses = responses
@@ -266,7 +277,8 @@ private actor MockEvaluationEngine: LlamaEngine {
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
         recordedPrompts.append(request.prompt)
         let chunks = responses
-        let shouldFail = failAfterOutput
+        generations += 1
+        let shouldFail = failAfterOutput && generations == 1
         if let mutationURL {
             try Data("mutated model artifact".utf8).write(to: mutationURL)
         }
