@@ -1460,3 +1460,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Draft mainline validation PR #135: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/135. Validation branch also includes the verified llama.cpp cache workflow and build script so the cache can be populated/reused without skipping downstream checks.
 - Closed the stale direct-engine journal-only PR #130 as unmerged. It was superseded because it could bypass ModelPool/Scheduler; the new runner uses the shared runtime path.
 - No native runtime trust verification, signed Evidence, receipts, APEX approval, East authorization, or model promotion is claimed. Hosted CI and physical-device acceptance remain separate gates.
+
+## 2026-11-16 UTC — Lease-bound native self-evaluation submitted
+
+- **Implementation PR #136:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/136, draft, stacked on PR #115.
+- **Validation PR #137:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/137, draft, targets `main` to run the complete CI matrix.
+- **Exact branch head:** `1d3cb539564fbc00e74809eb246540c9e9cef6fc`; implementation branch is 11 commits ahead / 0 behind PR #115 refreshed head `784005df2e2c95de3423f8bff9ae1ebd1213732b`.
+- **Integration:** runner calls `NativeInferenceRuntime.generateForEvaluation` with the active `ModelPoolLease`; runtime preserves partial output and holds the use pin/scheduler permit through cancellation drain. Provider kind is derived from the runtime-owned engine. App exposes Run self-evaluation and a read-only append-only history view.
+- **Scoring:** eight starter categories; five deterministic checks produce an objective score, three manual-review categories remain explicitly unscored. No overall competence score is claimed. Immediate recall is not durable memory.
+- **Persistence:** full prompt/output/expected outcome/criteria, model fingerprint, session, timings, partial/failure state, and retry history stored append-only. Chat history clear does not erase evaluation records.
+- **PR #130:** closed without merge because the initial direct-LlamaEngine runner bypassed the newer ModelPool/Scheduler path. The code was carried forward and corrected.
+- **CI at submission:** PR #137 exact-head runs `43755083838` Consumer (queued), `43755083895` iOS LlamaEngine (queued), `43755083933` Pocket AI Lab (queued), `43755083932` Cursor plugin (queued), `43755083961` Governance sidecar (in progress). No workflow conclusion yet. No physical iPhone execution claimed.
