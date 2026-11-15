@@ -80,6 +80,23 @@ CREATE TABLE proofhunt.authorization_records (
   )
 );
 
+-- Revocation is an append-only event so authorization records remain immutable.
+-- Trusted program/ownership and operational verifiers must deny any record with
+-- a matching revocation row; a replacement authorization receives a new ID.
+CREATE TABLE proofhunt.authorization_revocations (
+  revocation_id UUID PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  authorization_record_id UUID NOT NULL,
+  revoked_at TIMESTAMPTZ NOT NULL,
+  revoked_by TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  evidence_reference TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, authorization_record_id),
+  FOREIGN KEY (project_id, authorization_record_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id)
+);
+
 CREATE TABLE proofhunt.authorized_targets (
   target_id UUID PRIMARY KEY,
   project_id TEXT NOT NULL,
@@ -211,6 +228,7 @@ DECLARE
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'authorization_records',
+    'authorization_revocations',
     'authorized_targets',
     'excluded_targets',
     'assessment_policies',
