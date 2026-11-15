@@ -1497,3 +1497,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - `vitest run packages/intelligence/__tests__`: 74 test files passed, 616 tests passed. New `postgres-task-lifecycle-store.test.ts`: 7 tests passed.
 - Additional workspace Vitest suite: 28 test files passed, 318 tests passed, 2 skipped. Other Node test segments in the same workflow also reported zero failures.
 - This is CI against the injected fake transactional SQL adapter. It is not evidence of a live PostgreSQL server, migration execution, RLS, encryption, or production deployment.
+
+
+## 2026-11-15 — Native stack integration validation completed
+
+- PR #123 exact head `c8b2f6fbc380759c6318c189bb1e32472617a16c` passed all five workflows, including iOS LlamaEngine CI `43751107892`. This validates the hosted GGUF import → Agent Team → content-addressed model session stack on CI; no physical iPhone validation.
+- PR #124 exact head `f791085ffb070d37594941cceb54afbe511902a8` remains in simulator XCTest (`43751335652`). PR #86 exact head `7319ea97d7b5bdfc4c1a3ec921b8b2eb65612dc5` remains in simulator XCTest (`43750794278`).
+- PR #135 validation head advanced from `00ab74432f8cec43e3e75740682effe3971ff88c` to `1207381e539bdfa9020c8c8b39c18e0a432372a3` by a repository-owner commit `fix(ios): isolate test model factory to main actor`; the previous iOS run was cancelled and a new run `43755654426` is queued. Four non-iOS workflows passed on the new exact head.
