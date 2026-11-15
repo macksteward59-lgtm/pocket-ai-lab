@@ -101,3 +101,20 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Earlier #110 iOS run `43741621034` and the interim run `43742194939` were cancelled as newer commits superseded them. Cancellation is concurrency behavior, not a test failure.
 - #107 iOS run `43740561987` and #109 iOS run `43740720673` remained in progress on their respective older heads at last check; do not claim they validate #110.
 - No native XCTest result yet for latest #110 changes. No physical iPhone validation. Runtime trust remains Unverified.
+
+## 2026-11-15 17:40 UTC — Latest #110 checkpoint
+
+- Main remains `818799eced634577c8f1760fa2bdd1f657bd8427`.
+- PR #110 current head: `50b5adcd306c1079b5df137e7801894aae796a61`; open draft, base main, mergeable true at last metadata read; no submitted reviews or inline comments.
+- Added bounded chat context and tests:
+  - up to eight previous `You` / `Pocket AI` messages;
+  - 1,500 UTF-8 byte maximum, newest-first retention and Unicode-scalar-safe truncation;
+  - Agent Team task/role messages and runtime diagnostics excluded;
+  - context is in-memory only, not persistent memory; byte count is not tokenizer output and is not a hard token guarantee.
+- Added regression tests for multi-turn follow-up context, oversized message truncation, and Agent Team context isolation.
+- Added lease-lifetime tests for scheduler-queued cancellation and output-limit rejection retaining the in-flight use pin and scheduler permit until cancellation drain.
+- Latest #110 exact-head iOS LlamaEngine run `43742353789` is in progress at Show Xcode; pinned llama.cpp build, physical-device framework link, native app XCTest, simulator XCTest, and macOS XCTest are pending.
+- Exact-head companion runs: Cursor plugin `43742353765` passed; Pocket AI Lab `43742353758`, Governance sidecar `43742353764`, and Consumer prototype `43742353766` are in progress.
+- Earlier iOS runs on superseded heads were cancelled by branch concurrency; this is not a test failure. No latest-head XCTest result yet.
+- PR #110 description has been refreshed with current architecture, safety limits, and test scope.
+- No physical iPhone validation. Runtime trust remains Unverified; APEX/Director and East/e3 remain authorization authorities.
