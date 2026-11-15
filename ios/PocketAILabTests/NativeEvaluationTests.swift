@@ -103,7 +103,7 @@ final class NativeEvaluationTests: XCTestCase {
             evaluationCase(), session: RuntimeSession(id: "not-loaded", modelId: "model-a")
         )
 
-        XCTAssertEqual(attempt.providerKind, .llamaCppMetal)
+        XCTAssertEqual(attempt.providerKind, .llamaCppBackend)
         XCTAssertEqual(attempt.status, .failed)
         XCTAssertFalse(attempt.nativeExecutionObserved)
         XCTAssertFalse(attempt.runtimeTrustVerified)
