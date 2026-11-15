@@ -15,7 +15,8 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         )
 
         try store.begin(id: "task-1", objective: "Review architecture")
-        try store.complete(id: "task-1", roleResults: [role], finalResponse: "Review complete")
+        try store.appendRoleResult(taskID: "task-1", result: role)
+        try store.complete(id: "task-1", finalResponse: "Review complete")
 
         let restored = try store.load()
         XCTAssertEqual(restored.count, 1)
@@ -37,7 +38,7 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
 
         XCTAssertEqual(recovered.first?.status, .interrupted)
         XCTAssertTrue(recovered.first?.failureSummary?.contains("not resumed") == true)
-        XCTAssertThrowsError(try store.complete(id: "task-2", roleResults: [], finalResponse: "unexpected")) { error in
+        XCTAssertThrowsError(try store.complete(id: "task-2", finalResponse: "unexpected")) { error in
             XCTAssertEqual(error as? LocalAgentTaskHistoryStore.StoreError, .invalidTransition)
         }
         XCTAssertEqual(try store.load().first?.status, .interrupted)
@@ -52,7 +53,7 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         try store.fail(id: "task-3", summary: "Inference failed")
 
         XCTAssertEqual(try store.load().first?.status, .failed)
-        XCTAssertThrowsError(try store.complete(id: "task-3", roleResults: [], finalResponse: "late result")) { error in
+        XCTAssertThrowsError(try store.complete(id: "task-3", finalResponse: "late result")) { error in
             XCTAssertEqual(error as? LocalAgentTaskHistoryStore.StoreError, .invalidTransition)
         }
     }
@@ -111,5 +112,42 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
             XCTAssertEqual(error as? LocalAgentTaskHistoryStore.StoreError, .unsupportedVersion)
         }
         XCTAssertEqual(try Data(contentsOf: file), original)
+    }
+
+    func testRoleJournalRequiresMonotonicSequenceAndUniqueMessageIDs() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = LocalAgentTaskHistoryStore(fileURL: root.appendingPathComponent("tasks.json"))
+        try store.begin(id: "journal-task", objective: "Journal role outputs")
+        let first = AgentTaskRoleResult(id: "message-0", role: "reasoner", sequence: 0, text: "first", createdAt: Date())
+        let second = AgentTaskRoleResult(id: "message-1", role: "critic", sequence: 1, text: "second", createdAt: Date())
+
+        try store.appendRoleResult(taskID: "journal-task", result: first)
+        XCTAssertThrowsError(try store.appendRoleResult(taskID: "journal-task", result: AgentTaskRoleResult(id: second.id, role: second.role, sequence: 2, text: second.text, createdAt: second.createdAt))) { error in
+            XCTAssertEqual(error as? LocalAgentTaskHistoryStore.StoreError, .invalidTransition)
+        }
+        XCTAssertThrowsError(try store.appendRoleResult(taskID: "journal-task", result: first)) { error in
+            XCTAssertEqual(error as? LocalAgentTaskHistoryStore.StoreError, .invalidTransition)
+        }
+        try store.appendRoleResult(taskID: "journal-task", result: second)
+
+        let restored = try store.load().first
+        XCTAssertEqual(restored?.roleResults.map(\\.sequence), [0, 1])
+        XCTAssertEqual(restored?.roleResults.map(\\.id), ["message-0", "message-1"])
+    }
+
+    func testInterruptedRecoveryPreservesPreviouslyJournaledRoleOutputs() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = LocalAgentTaskHistoryStore(fileURL: root.appendingPathComponent("tasks.json"))
+        try store.begin(id: "partial-task", objective: "Stop after first role")
+        let role = AgentTaskRoleResult(id: "partial-message", role: "reasoner", sequence: 0, text: "partial result", createdAt: Date())
+        try store.appendRoleResult(taskID: "partial-task", result: role)
+
+        let recovered = try store.load().first
+
+        XCTAssertEqual(recovered?.status, .interrupted)
+        XCTAssertEqual(recovered?.roleResults, [role])
+        XCTAssertTrue(recovered?.failureSummary?.contains("not resumed") == true)
     }
 }
