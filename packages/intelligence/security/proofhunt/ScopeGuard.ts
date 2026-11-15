@@ -130,7 +130,7 @@ export class ScopeGuard {
       const operational = assessmentConfig.operationalAuthorization;
       const policy = assessmentConfig.policy;
 
-      if (program.kind !== (config.environment === "bounty" ? "bug_bounty_program" : "asset_ownership")) {
+      if (program.kind !== (assessmentConfig.environment === "bounty" ? "bug_bounty_program" : "asset_ownership")) {
         throw new ScopeGuardError("Program authorization kind does not match the assessment environment");
       }
       if (program.status !== "verified" || !program.evidenceReference.trim() || !program.sourceRevision.trim()) {
