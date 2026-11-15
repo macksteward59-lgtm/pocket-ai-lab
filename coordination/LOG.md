@@ -1371,3 +1371,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Created draft main-targeted validation PR #127: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/127. Exact head `4c1feb860291cef39ce2ad5cc712520a62a5b953`; main base `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`; mergeable.
 - CI on exact head: Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar passed. iOS run `43752293359` remains in progress at pinned llama.cpp build; additional iOS run `43752334116` is queued. No native app XCTest result yet and no physical iPhone validation.
 - No main-branch merge, production deployment, signing, or device installation performed.
+
+
+## 2026-11-15 — ChatGPT native llama.cpp CI cache reconciliation
+
+- **Claim:** `codex/ios-llama-ci-cache-reconciled` — `.github/workflows/ios-llamaengine-ci.yml` and `runtime/ios/scripts/build-llama-cpp.sh` only.
+- **Source:** draft PR #119 head `b9abd441854b229340f50500a6ce85889fe8c3de`, previously stacked on the old catalog branch head `e13cd7acfda4898e65238848a54673df316b2788`.
+- **New base:** `codex/ios-native-model-catalog` head `4c1feb860291cef39ce2ad5cc712520a62a5b953`.
+- **Goal:** rebase the toolchain-keyed cache and explicit archive/symbol verification onto the refreshed native integration; keep XCFramework assembly, link, app build, XCTest, simulator, and smoke-model validation on every run. No speedup claim until a subsequent run demonstrates a cache hit.
