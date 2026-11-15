@@ -170,4 +170,28 @@ describe("ProofHunt ScopeGuard", () => {
     const { guard } = makeGuard();
     expect((await guard.authorizeAssessment(config, "app.example.com", "static_analysis")).permitted).toBe(false);
   });
+  it("rejects authorization records whose verification or approval time is in the future", async () => {
+    const base = makeConfig();
+    const futureProgram = makeConfig({
+      programAuthorization: { ...base.programAuthorization, verifiedAt: "2026-11-15T12:03:00Z" }
+    });
+    const futureOperational = makeConfig({
+      operationalAuthorization: { ...base.operationalAuthorization, approvedAt: "2026-11-15T12:03:00Z" }
+    });
+    const { guard } = makeGuard();
+    expect((await guard.authorizeAssessment(futureProgram, "app.example.com", "static_analysis")).permitted).toBe(false);
+    expect((await guard.authorizeAssessment(futureOperational, "app.example.com", "static_analysis")).permitted).toBe(false);
+  });
+
+  it("uses an immutable request snapshot while asynchronous verifiers are pending", async () => {
+    let release!: (value: boolean) => void;
+    const pending = new Promise<boolean>(resolve => { release = resolve; });
+    const { guard } = makeGuard({ program: () => pending });
+    const config = makeConfig();
+    const request = guard.authorizeAssessment(config, "app.example.com", "static_analysis");
+    (config.targets as { hostname: string }[])[0].hostname = "attacker.example.net";
+    release(true);
+    expect((await request).permitted).toBe(true);
+  });
+
 });
