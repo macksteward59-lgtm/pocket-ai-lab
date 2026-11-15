@@ -1629,3 +1629,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 now head `520b3fea98affd5bd533a5030698e8e4ff25e1e9`; four companion workflows passed; iOS run `43760492451` in progress at app build after device link.
 - PR #133 feature head `3355e89505482e868b4be8f3a573deabb69d7865` explicitly includes current PR #115 base as second parent; PR reports mergeable.
 - PR #115 exact-head iOS run `43760034998` remains in pinned llama.cpp build. Its earlier app XCTest run also exposed eight unexpected temporary-directory removal errors in tests including artifact-mutation, chat, and Agent Team cases; these remain open and must be examined against the current rerun. No production cleanup behavior has been changed without a proven defect.
+
+
+## 2026-11-15 21:24 UTC — Native self-evaluation CI repair resumed
+
+- ChatGPT resumed ownership of `codex/native-self-evaluation-validation` and moved PR #135's coordination status to `in-progress` before implementation changes.
+- Exact-head iOS run `43760492451` failed in app XCTest after llama.cpp build, fail-closed typecheck, device linking, and app compilation all succeeded. Companion web/plugin/intelligence/sidecar checks passed.
+- Inspected job `132954686194`: eight app tests fail with `NSCocoaErrorDomain Code 4` / POSIX `ENOENT` against per-test UUID paths under the simulator app container's `tmp` directory. This is not yet attributed to production inference or model-pool behavior; the originating cleanup path remains to be isolated.
+- Identified an independent deterministic test-fixture defect in `NativeEvaluationTests.testPartialOutputAndRetriesArePersistedWithoutOverwritingHistory`: `MockEvaluationEngine` replays the same `[String]` chunks for every generation, while the test expects the second generation to return `42`. The fixture must model per-generation responses and fail only the first generation.
+- Scope for this repair: `ios/PocketAILabTests/NativeEvaluationTests.swift` and focused tests only. No production runtime, catalog schema, APEX/Director, East/e3, Evidence, trust, authorization, or main-branch changes. Keep all PRs draft/unmerged pending exact-head validation.
