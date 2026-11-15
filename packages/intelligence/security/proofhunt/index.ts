@@ -7,6 +7,7 @@ export {
 } from "./ScopeGuard";
 export type {
   AuthorizationRecordKind,
+  EmergencyStopProvider,
   ExplicitTarget,
   OperationalApprovalVerifier,
   OperationalAuthorizationRecord,
