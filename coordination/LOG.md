@@ -1341,3 +1341,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Evidence:** exact-head iOS CI run `43747613575` reached the native app build and failed because initializer references to `modelCatalogStore.load()` and `.resolve()` resolve to the optional initializer parameter rather than the non-optional stored property.
 - **Plan:** qualify those accesses through `self.modelCatalogStore`, preserve persistent catalog behavior, add/adjust tests only if needed, then validate on the integration stack. No APEX/East, runtime trust, readiness, or signed Evidence changes.
 - **Status:** in progress; no merge or main-branch write.
+
+
+## 2026-11-15 — ChatGPT native typed agent-message reconciliation
+
+- **Claim:** `codex/ios-agent-message-payload-reconciled` — native Swift message protocol accessor, coordinator consumers, chat transcript/task journal consumers, and focused tests.
+- **Base:** refreshed model-catalog integration branch head `79c26383dd53ff21dd971307dea65b0c09715f7e`.
+- **Superseded source:** PR #120 head `814f3a5120f5f91f9a35533dab01036e2c456b80` diverged from the refreshed base after the catalog initializer/test-isolation fix.
+- **Plan:** replay the five-file PR #120 change set onto the refreshed base, retain the `self.modelCatalogStore` initializer fix, validate diff and open a replacement draft PR.
+- **Boundary:** typed payload extraction returns untrusted display/context text only; it does not verify evidence or grant authority. No APEX/East or signed Evidence changes.
