@@ -1667,3 +1667,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Verified the pinned GGUF runtime smoke exists as `testPinnedGgufSmokeGenerationThroughNativeInferenceRuntime` in `LlamaEngineTests.swift`; it uses `SmokePath.path`, the runtime-owned llama.cpp provider, exact ModelPool lease, `generateForEvaluation`, unchanged digest, release, and unload.
 - Mirrored the manual-review test and durability note into PR #133 feature branch (head `8700bae3b27b8aad3ca64212770aa3245c137197`) and PR #135 mainline validation branch (head `dbee3be4355b740e5d71deeeb258d9feca0899d2`). Posted a consolidated review follow-up comment on PR #133.
 - New exact-head CI is running: PR #135 iOS `43764653370`; PR #133 intelligence `43764643572`. Earlier fixture-repair runs remain in progress on PR #115 iOS `43764211279` and PR #129 iOS `43764214487`. All PRs remain draft/unmerged pending exact-head checks.
+
+
+## 2026-11-15 22:05 UTC — Parallel validation checkpoint
+
+- PR #133 feature branch head `8700bae3b27b8aad3ca64212770aa3245c137197`: intelligence workflow `43764643572` passed. PR remains stacked on current catalog head `373a0a0c2fcb6d123c52a19c3a542097b98b022a` and mergeable.
+- PR #135 mainline validation head `dbee3be4355b740e5d71deeeb258d9feca0899d2`: all five companion workflows passed; exact-head iOS run `43764653370` has passed pinned llama.cpp cache restore/verification, XCFramework source build/cache verification, fail-closed typecheck, and is linking the device framework. App XCTest and downstream smoke/simulator/macOS stages remain pending.
+- PR #129 exact head `e9251e9c09b2d8bdf67a296cfa0ac03e8dd6482`: four companion workflows passed; iOS run `43764214487` passed native build, device link, simulator selection, and app build; app XCTest is in progress.
+- PR #115 exact head `373a0a0c2fcb6d123c52a19c3a542097b98b022a`: four companion workflows passed; iOS run `43764211279` is still building pinned llama.cpp.
+- Verified cache reuse on PR #135's earlier exact-head run: GitHub Actions reported a cache hit and restored ~86 MB; the pinned source/tag/tarball and archive/symbol checks ran, and XCFramework assembly/link stages were not skipped. No quantitative speedup is claimed.
+- PR #135's superseded pre-review-fix run `43764146558` was cancelled after the branch advanced; no result was counted from it. All four PRs remain draft/open/unmerged; no physical iPhone, runtime attestation, or production readiness is claimed.
