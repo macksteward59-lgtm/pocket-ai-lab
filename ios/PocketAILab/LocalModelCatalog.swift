@@ -96,7 +96,7 @@ struct LocalModelCatalogStore {
         let resolved = try resolveFile(named: fileName)
         guard resolved == artifact.url.standardizedFileURL,
               artifact.fingerprint.sha256.count == 64,
-              artifact.fingerprint.sha256.allSatisfy({ $0.isHexDigit }),
+              Self.isHexDigest(artifact.fingerprint.sha256),
               artifact.fingerprint.byteCount > 0 else {
             throw StoreError.invalidEntry
         }
@@ -214,7 +214,7 @@ struct LocalModelCatalogStore {
         !entry.id.isEmpty &&
         entry.id == "sha256-\(entry.sha256.lowercased())" &&
         entry.sha256.count == 64 &&
-        entry.sha256.allSatisfy({ $0.isHexDigit }) &&
+        isHexDigest(entry.sha256) &&
         !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         entry.name.utf8.count <= 480 &&
         entry.fileName == URL(fileURLWithPath: entry.fileName).lastPathComponent &&
@@ -224,6 +224,12 @@ struct LocalModelCatalogStore {
         entry.estimatedMemoryMB > 0 &&
         !entry.capabilities.isEmpty &&
         entry.capabilities.count <= 16
+    }
+
+    private static func isHexDigest(_ value: String) -> Bool {
+        value.utf8.allSatisfy {
+            (48...57).contains($0) || (97...102).contains($0) || (65...70).contains($0)
+        }
     }
 
     private static func estimateMemoryMB(byteCount: UInt64) -> Int {
