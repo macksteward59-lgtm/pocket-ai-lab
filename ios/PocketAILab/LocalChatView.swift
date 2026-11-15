@@ -7,6 +7,8 @@ final class LocalChatModel: ObservableObject {
     @Published var modelURL: URL?
     @Published var modelName = "No model imported"
     @Published var modelFingerprintSummary = "No model fingerprint"
+    @Published private(set) var availableModels: [LocalModelCatalogEntry] = []
+    @Published private(set) var selectedModelID: String?
     @Published var status = "Import a GGUF model to begin."
     @Published var messages: [ChatLine] = [] { didSet { persistHistory() } }
     @Published var historyStatus = "Conversation history is stored only on this device."
@@ -15,6 +17,7 @@ final class LocalChatModel: ObservableObject {
 
     private let conversationStore: LocalConversationStore
     private let agentTaskHistoryStore: LocalAgentTaskHistoryStore
+    private let modelCatalogStore: LocalModelCatalogStore
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
@@ -34,6 +37,7 @@ final class LocalChatModel: ObservableObject {
         self.agentTaskHistoryStore = agentTaskHistoryStore
         self.modelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
+        self.modelCatalogStore = LocalModelCatalogStore(modelDirectory: self.modelDirectory)
         do {
             let configuration = try ModelPoolConfiguration(
                 maxResidentMemoryMB: 4_096,
@@ -66,6 +70,21 @@ final class LocalChatModel: ObservableObject {
             agentTaskHistoryStatus = "Agent Team history · 30-day retention · interrupted tasks are never auto-resumed."
         } catch {
             agentTaskHistoryStatus = "Agent Team history could not be read. The existing archive was preserved."
+        }
+        do {
+            let catalog = try modelCatalogStore.load()
+            availableModels = catalog.entries
+            if let selectedID = catalog.selectedModelID,
+               let selected = catalog.entries.first(where: { $0.id == selectedID }) {
+                selectedModelID = selected.id
+                modelURL = try modelCatalogStore.resolve(selected)
+                modelName = selected.name
+                artifactFingerprint = ModelArtifactFingerprint(sha256: selected.sha256, byteCount: selected.byteCount)
+                modelFingerprintSummary = "SHA-256 \(selected.sha256.prefix(16))… · \(selected.byteCount) bytes"
+                status = "Restored selected model from the private catalog. Load it to create a new runtime session."
+            }
+        } catch {
+            status = "Local model catalog could not be read. Existing catalog data was preserved."
         }
     }
 
@@ -106,15 +125,49 @@ final class LocalChatModel: ObservableObject {
 
         let directory = modelDirectory
         let imported = try await Task.detached(priority: .utility) {
-            try LocalGGUFImporter.copy(source: source, into: directory)
+            try LocalGGUFImporter.copy(source: source, into: directory, contentAddressed: true)
         }.value
 
-        // Update selection only after staged validation and hashing succeed.
+        // Register and select only after staged validation and hashing succeed.
+        let catalog = try modelCatalogStore.register(
+            imported,
+            displayName: source.deletingPathExtension().lastPathComponent
+        )
+        availableModels = catalog.entries
+        selectedModelID = catalog.selectedModelID
         modelURL = imported.url
-        modelName = imported.url.lastPathComponent
+        modelName = source.deletingPathExtension().lastPathComponent
         artifactFingerprint = imported.fingerprint
         modelFingerprintSummary = "SHA-256 \(imported.fingerprint.sha256.prefix(16))… · \(imported.fingerprint.byteCount) bytes"
-        status = "GGUF header validated and fingerprinted in this app's private model folder. Fingerprint is integrity metadata, not attestation."
+        status = "GGUF header validated, fingerprinted, and registered in the private model catalog. Fingerprint is integrity metadata, not attestation."
+    }
+
+    func selectModel(_ modelID: String?) {
+        guard !isBusy, lease == nil else {
+            status = "Unload the current model before changing model selection."
+            return
+        }
+        do {
+            let catalog = try modelCatalogStore.select(modelID)
+            availableModels = catalog.entries
+            selectedModelID = catalog.selectedModelID
+            guard let selectedID = catalog.selectedModelID,
+                  let selected = catalog.entries.first(where: { $0.id == selectedID }) else {
+                modelURL = nil
+                modelName = "No model selected"
+                artifactFingerprint = nil
+                modelFingerprintSummary = "No model fingerprint"
+                status = "Choose an imported model or import a GGUF file."
+                return
+            }
+            modelURL = try modelCatalogStore.resolve(selected)
+            modelName = selected.name
+            artifactFingerprint = ModelArtifactFingerprint(sha256: selected.sha256, byteCount: selected.byteCount)
+            modelFingerprintSummary = "SHA-256 \(selected.sha256.prefix(16))… · \(selected.byteCount) bytes"
+            status = "Selected catalog model. Loading remains a separate runtime operation."
+        } catch {
+            status = "Model selection failed closed: \(error.localizedDescription)"
+        }
     }
 
     func loadModel() async {
@@ -149,13 +202,17 @@ final class LocalChatModel: ObservableObject {
                 lease = nil
                 try await runtime.unload(modelId: previous.model.id)
             }
-            let estimate = try Self.estimatedMemoryMB(for: modelURL)
+            guard let catalogEntry = availableModels.first(where: { $0.id == selectedModelID }) else {
+                status = "The selected model is no longer registered in the local catalog."
+                return
+            }
+            let estimate = catalogEntry.estimatedMemoryMB
             let descriptor = ModelDescriptor(
-                id: "sha256-\(expectedFingerprint.sha256)",
-                name: modelName,
+                id: catalogEntry.id,
+                name: catalogEntry.name,
                 path: modelURL.path,
-                contextLength: 2048,
-                quantization: "GGUF"
+                contextLength: catalogEntry.contextLength,
+                quantization: catalogEntry.quantization
             )
             let acquired = try await runtime.acquire(model: descriptor, estimatedMemoryMB: estimate)
             do {
