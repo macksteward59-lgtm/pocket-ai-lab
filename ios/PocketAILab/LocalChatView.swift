@@ -70,8 +70,8 @@ final class LocalChatModel: ObservableObject {
     func clearHistory() {
         guard !isBusy else { return }
         do {
-            try conversationStore.clear()
             messages = []
+            try conversationStore.clear()
             historyStatus = "Local conversation and Agent Team history cleared."
         } catch {
             historyStatus = "History could not be cleared. The archive may still exist on this device."
