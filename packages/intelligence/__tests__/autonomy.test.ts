@@ -191,6 +191,49 @@ describe("TaskLifecycleCoordinator", () => {
     expect(records).toHaveLength(0);
   });
 
+  it("rejects reuse of an attempt identifier across steps", async () => {
+    const coordinator = new TaskLifecycleCoordinator({
+      store: new InMemoryTaskLifecycleStore(),
+      createId: () => "same-attempt"
+    });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "unique-attempts", objective: "Attempt IDs must never repeat",
+      maxConcurrentSteps: 2,
+      steps: [
+        { id: "first", description: "First independent step" },
+        { id: "second", description: "Second independent step" }
+      ]
+    });
+    await coordinator.claimNextStep("unique-attempts");
+    await expect(coordinator.claimNextStep("unique-attempts"))
+      .rejects.toMatchObject({ code: "duplicate_attempt_id" });
+  });
+
+  it("does not mutate live state when a claim cannot be durably saved", async () => {
+    let fail = false;
+    const backing = new InMemoryTaskLifecycleStore();
+    const store: TaskLifecycleStore = {
+      load: () => backing.load(),
+      save: records => {
+        if (fail) throw new Error("write failed");
+        backing.save(records);
+      }
+    };
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "attempt-atomic" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "atomic-claim", objective: "Claim must be atomic",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    fail = true;
+    await expect(coordinator.claimNextStep("atomic-claim")).rejects.toThrow("write failed");
+    fail = false;
+    expect(coordinator.getTask("atomic-claim").steps[0]).toMatchObject({
+      status: "pending", attempts: 0, attemptIds: [], currentAttempt: null
+    });
+  });
+
   it("rejects unknown and duplicate dependencies and out-of-range controls", async () => {
     const h = harness();
     await h.coordinator.init();
