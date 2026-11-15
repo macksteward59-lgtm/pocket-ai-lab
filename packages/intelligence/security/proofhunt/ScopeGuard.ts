@@ -328,7 +328,7 @@ function hasMatchingPathScopedRule(policy: NormalizedProgramPolicy, hostname: st
     if (rule.kind !== "url") return false;
     const url = new URL(rule.value);
     if (url.pathname === "/") return false;
-    const scopedHost = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const scopedHost = url.hostname.toLowerCase().replace(/\.$/, "");
     return hostname === scopedHost || (rule.includeSubdomains && hostname.endsWith("." + scopedHost));
   });
 }
