@@ -36,13 +36,14 @@ final class NativeEvaluationTests: XCTestCase {
 
     private func evaluationCase(
         category: NativeEvaluationCategory = .reasoningProblemSolving,
-        caseID: String = "basic-math"
+        caseID: String = "basic-math",
+        scoringRule: NativeEvaluationScoringRule = .exactMatch
     ) -> NativeEvaluationCase {
         NativeEvaluationCase(
             category: category, suiteID: "core-capabilities", suiteVersion: "1.0.0",
             caseID: caseID, prompt: "What is 6 multiplied by 7?",
             evaluationCriteria: "Compute accurately and return the numeric result.",
-            expectedOutcome: "42", scoringRule: .exactMatch, maxTokens: 64, temperature: 0
+            expectedOutcome: "42", scoringRule: scoringRule, maxTokens: 64, temperature: 0
         )
     }
 
@@ -144,6 +145,33 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertNotNil(attempt.errorMessage)
         let events = try await journal.events()
         XCTAssertEqual(events.count, 1)
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+    }
+
+    func testManualReviewAttemptIsPersistedAsUnscored() async throws {
+        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(
+            responses: [["A reviewer should assess this response."]]
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
+
+        let attempt = try await runner.run(evaluationCase(
+            category: .codingEngineering,
+            caseID: "manual-review-only",
+            scoringRule: .manualReview
+        ))
+
+        XCTAssertEqual(attempt.status, .completed)
+        XCTAssertNil(attempt.deterministicPassed)
+        XCTAssertNil(attempt.deterministicScore)
+        let summary = NativeEvaluationScoreSummary(attempts: [attempt])
+        XCTAssertEqual(summary.totalAttempts, 1)
+        XCTAssertEqual(summary.scoredAttempts, 0)
+        XCTAssertEqual(summary.unscoredAttempts, 1)
+        XCTAssertNil(summary.scorePercent)
+        let events = try await journal.events()
+        XCTAssertEqual(events.compactMap(\\.payload.attempt).map(\\.id), [attempt.id])
         let released = await runtime.release(lease)
         XCTAssertTrue(released)
     }
