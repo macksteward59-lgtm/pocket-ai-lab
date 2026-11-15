@@ -166,7 +166,7 @@ describe("ProofHunt ScopeGuard", () => {
 
   it("requires stop-on-scope-violation to remain enabled", async () => {
     const base = makeConfig();
-    const config = makeConfig({ policy: { ...base.policy, stopOnScopeViolation: false as true } });
+    const config = makeConfig({ policy: { ...base.policy, stopOnScopeViolation: false as unknown as true } });
     const { guard } = makeGuard();
     expect((await guard.authorizeAssessment(config, "app.example.com", "static_analysis")).permitted).toBe(false);
   });
@@ -189,7 +189,7 @@ describe("ProofHunt ScopeGuard", () => {
     const { guard } = makeGuard({ program: () => pending });
     const config = makeConfig();
     const request = guard.authorizeAssessment(config, "app.example.com", "static_analysis");
-    (config.targets as { hostname: string }[])[0].hostname = "attacker.example.net";
+    (config.targets as unknown as { hostname: string }[])[0].hostname = "attacker.example.net";
     release(true);
     expect((await request).permitted).toBe(true);
   });
