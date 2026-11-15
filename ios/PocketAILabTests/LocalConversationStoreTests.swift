@@ -75,4 +75,21 @@ final class LocalConversationStoreTests: XCTestCase {
         }
         XCTAssertEqual(try Data(contentsOf: file), original)
     }
+
+    @MainActor
+    func testLocalChatModelRestoresAndClearsItsInjectedArchive() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = LocalConversationStore(fileURL: root.appendingPathComponent("history.json"))
+        let saved = ChatLine(role: "You", text: "Restore this transcript")
+        try store.save([saved])
+
+        let model = LocalChatModel(conversationStore: store)
+
+        XCTAssertEqual(model.messages.map(\\.id), [saved.id])
+        XCTAssertEqual(model.messages.map(\\.text), [saved.text])
+        model.clearHistory()
+        XCTAssertTrue(model.messages.isEmpty)
+        XCTAssertTrue(try store.load().isEmpty)
+    }
 }
