@@ -22,7 +22,9 @@ INSERT INTO proofhunt.authorization_records (
     'expiresAt', to_char(CURRENT_TIMESTAMP + INTERVAL '30 days', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
     'inScope', jsonb_build_array(
       jsonb_build_object('kind','domain','value','example.com','includeApex',TRUE,'includeSubdomains',TRUE),
-      jsonb_build_object('kind','domain','value','exact.example.net','includeApex',TRUE,'includeSubdomains',TRUE)
+      jsonb_build_object('kind','domain','value','exact.example.net','includeApex',TRUE,'includeSubdomains',TRUE),
+      jsonb_build_object('kind','domain','value','restricted.example.org','includeApex',TRUE,'includeSubdomains',TRUE),
+      jsonb_build_object('kind','url','value','https://restricted.example.org/admin','includeSubdomains',FALSE)
     ),
     'outOfScope', jsonb_build_array(
       jsonb_build_object('kind','domain','value','admin.example.com','includeApex',TRUE,'includeSubdomains',TRUE)
@@ -70,6 +72,10 @@ INSERT INTO proofhunt.authorized_targets (
 (
   '00000000-0000-0000-0000-000000000011', 'project-a',
   '00000000-0000-0000-0000-000000000001', 'exact.example.net', FALSE
+),
+(
+  '00000000-0000-0000-0000-000000000016', 'project-a',
+  '00000000-0000-0000-0000-000000000001', 'restricted.example.org', TRUE
 );
 
 INSERT INTO proofhunt.excluded_targets (
@@ -206,6 +212,32 @@ BEGIN
     RAISE EXCEPTION 'expected exact allowlist to deny child host';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM <> 'ProofHunt job target is outside the matched allowlist hostname' THEN
+      RAISE;
+    END IF;
+  END;
+END;
+$$;
+
+-- A matching path-scoped URL rule cannot be flattened into a host-only plan.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO proofhunt.assessment_jobs (
+      job_id, project_id, program_authorization_id, operational_authorization_id,
+      policy_id, policy_version, policy_hash, check_type,
+      authorized_target_id, authorized_target_hostname, target_hostname, program_scope_hash,
+      decision, decision_reason, job_status, decision_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000017', 'project-a',
+      '00000000-0000-0000-0000-000000000001',
+      '00000000-0000-0000-0000-000000000002',
+      '00000000-0000-0000-0000-000000000004', 'policy-v1', repeat('b',64), 'static_analysis',
+      '00000000-0000-0000-0000-000000000016', 'restricted.example.org', 'restricted.example.org', repeat('a',64),
+      'approved_plan', 'Should be denied by path-scoped URL rule', 'planned', CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'expected path-scoped URL rule to deny host-only plan';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'ProofHunt target has unresolved path-scoped program rules' THEN
       RAISE;
     END IF;
   END;
