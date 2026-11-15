@@ -10,8 +10,11 @@ final class LocalChatModel: ObservableObject {
     @Published var status = "Import a GGUF model to begin."
     @Published var messages: [ChatLine] = [] { didSet { persistHistory() } }
     @Published var historyStatus = "Conversation history is stored only on this device."
+    @Published private(set) var agentTaskHistory: [AgentTaskHistoryEntry] = []
+    @Published var agentTaskHistoryStatus = "Agent Team task history is stored only on this device."
 
     private let conversationStore: LocalConversationStore
+    private let agentTaskHistoryStore: LocalAgentTaskHistoryStore
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
@@ -24,9 +27,11 @@ final class LocalChatModel: ObservableObject {
     init(
         engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true),
         modelDirectory: URL? = nil,
-        conversationStore: LocalConversationStore = LocalConversationStore()
+        conversationStore: LocalConversationStore = LocalConversationStore(),
+        agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore()
     ) {
         self.conversationStore = conversationStore
+        self.agentTaskHistoryStore = agentTaskHistoryStore
         self.modelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
         do {
@@ -56,6 +61,12 @@ final class LocalChatModel: ObservableObject {
         } catch {
             historyStatus = "Saved history could not be read. The existing archive was preserved."
         }
+        do {
+            agentTaskHistory = try agentTaskHistoryStore.load()
+            agentTaskHistoryStatus = "Agent Team history · 30-day retention · interrupted tasks are never auto-resumed."
+        } catch {
+            agentTaskHistoryStatus = "Agent Team history could not be read. The existing archive was preserved."
+        }
     }
 
     var isModelLoaded: Bool { lease != nil }
@@ -74,7 +85,10 @@ final class LocalChatModel: ObservableObject {
         do {
             messages = []
             try conversationStore.clear()
+            try agentTaskHistoryStore.clear()
+            agentTaskHistory = []
             historyStatus = "Local conversation and Agent Team history cleared."
+            agentTaskHistoryStatus = "Agent Team task history cleared from this device."
         } catch {
             historyStatus = "History could not be cleared. The archive may still exist on this device."
         }
@@ -336,21 +350,69 @@ final class LocalChatModel: ObservableObject {
             requiredCapabilities: ["reasoning", "analysis", "engineering", "security-review", "critique", "validation"]
         )
 
-        messages.append(ChatLine(role: "You · Agent Team task", text: text))
         do {
-            let result = try await runAgentTeam(task: task, steps: steps, maxTokens: 192, temperature: 0.2)
-            for message in result.messages {
-                guard case .object(let payload) = message.payload,
-                      case .string(let output)? = payload["text"] else { continue }
-                messages.append(ChatLine(
-                    role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
-                    text: output
-                ))
+            // Persist the task before starting inference. If the history archive
+            // cannot be written, do not launch an untracked Agent Team run.
+            try agentTaskHistoryStore.begin(id: task.id, objective: text)
+            let createdAt = Date()
+            agentTaskHistory.insert(
+                AgentTaskHistoryEntry(
+                    id: task.id,
+                    objective: text,
+                    createdAt: createdAt,
+                    updatedAt: createdAt,
+                    status: .running,
+                    roleResults: [],
+                    finalResponse: nil,
+                    failureSummary: nil
+                ),
+                at: 0
+            )
+            messages.append(ChatLine(role: "You · Agent Team task", text: text))
+            do {
+                let result = try await runAgentTeam(task: task, steps: steps, maxTokens: 192, temperature: 0.2)
+                var roleResults: [AgentTaskRoleResult] = []
+                for message in result.messages {
+                    guard case .object(let payload) = message.payload,
+                          case .string(let output)? = payload["text"] else { continue }
+                    messages.append(ChatLine(
+                        role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
+                        text: output
+                    ))
+                    roleResults.append(AgentTaskRoleResult(
+                        id: message.messageId.uuidString,
+                        role: message.senderAgentId,
+                        sequence: message.sequence,
+                        text: output,
+                        createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date()
+                    ))
+                }
+                try agentTaskHistoryStore.complete(
+                    id: task.id,
+                    roleResults: roleResults,
+                    finalResponse: result.finalResponse
+                )
+                agentTaskHistory = try agentTaskHistoryStore.load()
+                agentTaskHistoryStatus = "Agent Team history · saved locally · interrupted tasks are never auto-resumed."
+                status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+            } catch {
+                let interrupted = error is CancellationError || Task.isCancelled
+                try? agentTaskHistoryStore.fail(
+                    id: task.id,
+                    summary: error.localizedDescription,
+                    interrupted: interrupted
+                )
+                if let restored = try? agentTaskHistoryStore.load() {
+                    agentTaskHistory = restored
+                } else {
+                    agentTaskHistoryStatus = "Task result could not be saved or reloaded."
+                }
+                messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
+                status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
             }
-            status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
         } catch {
-            messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
-            status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
+            agentTaskHistoryStatus = "Task history could not be saved. Agent Team was not started."
+            status = "Agent Team was not started because its task record could not be persisted."
         }
     }
 
