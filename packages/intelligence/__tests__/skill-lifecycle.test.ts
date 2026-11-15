@@ -236,6 +236,9 @@ describe("Skill lifecycle integrity and promotion", () => {
       verifyApproval: async () => true
     });
     const authorization = verified.authorization!;
+    expect(Object.isFrozen(authorization)).toBe(true);
+    expect(Reflect.set(authorization, "evaluationDigest", sha("tampered evaluation"))).toBe(false);
+    expect(Reflect.set(authorization, "assignmentDigest", sha("tampered assignments"))).toBe(false);
     const expected = {
       skillId: artifact.skill.id,
       version: artifact.version,
