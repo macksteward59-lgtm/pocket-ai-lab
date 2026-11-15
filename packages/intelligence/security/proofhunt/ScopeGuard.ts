@@ -353,7 +353,7 @@ export function hashOperationalAuthorizationSnapshot(
       hostname: normalizeTargetHostname(entry.hostname),
       includeSubdomains: entry.includeSubdomains === true
     }))
-    .sort((a, b) => a.hostname.localeCompare(b.hostname) ||
+    .sort((a, b) => (a.hostname < b.hostname ? -1 : a.hostname > b.hostname ? 1 : 0) ||
       Number(a.includeSubdomains) - Number(b.includeSubdomains));
   return createHash("sha256").update(canonicalize({
     policy,
