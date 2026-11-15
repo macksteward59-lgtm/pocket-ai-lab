@@ -262,6 +262,7 @@ DECLARE
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'authorization_records',
+    'authorization_revocations',
     'authorized_targets',
     'excluded_targets',
     'assessment_policies',
