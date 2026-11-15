@@ -60,9 +60,10 @@ public struct ModelPoolSnapshot: Sendable, Equatable {
 
 /// Actor-isolated native model pool with coalesced loads and exact lease release.
 ///
-/// The injected memory provider reports current system-available memory. The
-/// pool separately enforces its own estimate budget. Estimates do not prove
-/// actual resident memory and must be calibrated with physical-device tests.
+/// The injected memory provider reports current app-allocatable memory headroom,
+/// not total system free memory. The pool separately enforces its own estimate
+/// budget. Estimates do not prove actual resident memory and must be calibrated
+/// with physical-device tests.
 public actor ModelPool {
     private struct Entry {
         let descriptor: ModelDescriptor
@@ -82,6 +83,7 @@ public actor ModelPool {
 
     private let engine: any LlamaEngine
     private let configuration: ModelPoolConfiguration
+    /// Advisory app-allocatable headroom in MB; sampled at each new model admission.
     private let availableMemoryMB: @Sendable () -> Int
 
     private var entries: [String: Entry] = [:]
