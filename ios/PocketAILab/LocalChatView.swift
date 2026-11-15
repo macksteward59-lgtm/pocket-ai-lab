@@ -369,32 +369,9 @@ final class LocalChatModel: ObservableObject {
                 at: 0
             )
             messages.append(ChatLine(role: "You · Agent Team task", text: text))
+            let result: NativeAgentRunResult
             do {
-                let result = try await runAgentTeam(task: task, steps: steps, maxTokens: 192, temperature: 0.2)
-                var roleResults: [AgentTaskRoleResult] = []
-                for message in result.messages {
-                    guard case .object(let payload) = message.payload,
-                          case .string(let output)? = payload["text"] else { continue }
-                    messages.append(ChatLine(
-                        role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
-                        text: output
-                    ))
-                    roleResults.append(AgentTaskRoleResult(
-                        id: message.messageId.uuidString,
-                        role: message.senderAgentId,
-                        sequence: message.sequence,
-                        text: output,
-                        createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date()
-                    ))
-                }
-                try agentTaskHistoryStore.complete(
-                    id: task.id,
-                    roleResults: roleResults,
-                    finalResponse: result.finalResponse
-                )
-                agentTaskHistory = try agentTaskHistoryStore.load()
-                agentTaskHistoryStatus = "Agent Team history · saved locally · interrupted tasks are never auto-resumed."
-                status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+                result = try await runAgentTeam(task: task, steps: steps, maxTokens: 192, temperature: 0.2)
             } catch {
                 let interrupted = error is CancellationError || Task.isCancelled
                 try? agentTaskHistoryStore.fail(
@@ -409,6 +386,37 @@ final class LocalChatModel: ObservableObject {
                 }
                 messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
                 status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
+                return
+            }
+
+            var roleResults: [AgentTaskRoleResult] = []
+            for message in result.messages {
+                guard case .object(let payload) = message.payload,
+                      case .string(let output)? = payload["text"] else { continue }
+                messages.append(ChatLine(
+                    role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
+                    text: output
+                ))
+                roleResults.append(AgentTaskRoleResult(
+                    id: message.messageId.uuidString,
+                    role: message.senderAgentId,
+                    sequence: message.sequence,
+                    text: output,
+                    createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date()
+                ))
+            }
+            do {
+                try agentTaskHistoryStore.complete(
+                    id: task.id,
+                    roleResults: roleResults,
+                    finalResponse: result.finalResponse
+                )
+                agentTaskHistory = try agentTaskHistoryStore.load()
+                agentTaskHistoryStatus = "Agent Team history · saved locally · interrupted tasks are never auto-resumed."
+                status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+            } catch {
+                agentTaskHistoryStatus = "The model run completed, but its task record could not be finalized. It will be marked interrupted on next recovery."
+                status = "Agent Team inference completed, but durable task-history finalization failed. Review the transcript; no external actions were run."
             }
         } catch {
             agentTaskHistoryStatus = "Task history could not be saved. Agent Team was not started."
