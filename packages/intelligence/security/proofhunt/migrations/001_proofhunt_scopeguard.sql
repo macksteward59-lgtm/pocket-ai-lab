@@ -233,6 +233,9 @@ DECLARE
   policy_expires_at TIMESTAMPTZ;
   policy_stop_on_scope_violation BOOLEAN;
   authorization_revoked BOOLEAN;
+  program_scope_included BOOLEAN;
+  program_scope_excluded BOOLEAN;
+  program_path_scoped BOOLEAN;
 BEGIN
   IF NEW.decision <> 'approved_plan' THEN
     RETURN NEW;
@@ -314,6 +317,78 @@ BEGIN
        (program_scope_snapshot->'testingWindow'->>'startsAt')::TIMESTAMPTZ > CURRENT_TIMESTAMP OR
        (program_scope_snapshot->'testingWindow'->>'endsAt')::TIMESTAMPTZ <= CURRENT_TIMESTAMP THEN
       RAISE EXCEPTION 'ProofHunt published program testing window is not currently active';
+    END IF;
+
+    -- Re-evaluate published scope in the database as a second admission gate.
+    -- Host-only plans reject matching path-scoped URL rules rather than guessing.
+    SELECT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(program_scope_snapshot->'inScope' || program_scope_snapshot->'outOfScope') AS rule
+      WHERE rule->>'kind' = 'url'
+        AND (regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[2] <> '/'
+        AND (
+          lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
+          OR (
+            coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.'))) + 1)
+              = '.' || lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.'))
+          )
+        )
+    ) INTO program_path_scoped;
+    IF program_path_scoped THEN
+      RAISE EXCEPTION 'ProofHunt target has unresolved path-scoped program rules';
+    END IF;
+
+    SELECT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(program_scope_snapshot->'outOfScope') AS rule
+      WHERE (
+        rule->>'kind' = 'domain'
+        AND (
+          (coalesce((rule->>'includeApex')::BOOLEAN, TRUE) AND lower(rtrim(rule->>'value', '.')) = NEW.target_hostname)
+          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim(rule->>'value', '.'))) + 1)
+              = '.' || lower(rtrim(rule->>'value', '.')))
+        )
+      ) OR (
+        rule->>'kind' = 'url'
+        AND (regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[2] = '/'
+        AND (
+          lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
+          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.'))) + 1)
+              = '.' || lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')))
+        )
+      )
+    ) INTO program_scope_excluded;
+    IF program_scope_excluded THEN
+      RAISE EXCEPTION 'ProofHunt target is excluded by the published program policy';
+    END IF;
+
+    SELECT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(program_scope_snapshot->'inScope') AS rule
+      WHERE (
+        rule->>'kind' = 'domain'
+        AND (
+          (coalesce((rule->>'includeApex')::BOOLEAN, TRUE) AND lower(rtrim(rule->>'value', '.')) = NEW.target_hostname)
+          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim(rule->>'value', '.'))) + 1)
+              = '.' || lower(rtrim(rule->>'value', '.')))
+        )
+      ) OR (
+        rule->>'kind' = 'url'
+        AND (regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[2] = '/'
+        AND (
+          lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
+          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.'))) + 1)
+              = '.' || lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')))
+        )
+      )
+    ) INTO program_scope_included;
+    IF NOT program_scope_included THEN
+      RAISE EXCEPTION 'ProofHunt target is not explicitly included by the published program policy';
     END IF;
   ELSIF program_kind = 'asset_ownership' THEN
     IF NEW.program_scope_hash IS NOT NULL THEN
