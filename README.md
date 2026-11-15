@@ -87,10 +87,10 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 | Consumer web/PWA shell | On main. Chat returns the provider's `analysis` text. "Local model ready" requires a successful loopback health check. |
 | Portable desktop launcher | `scripts/desktop/` starts the loopback app and can build an archive. Node and llama-server remain prerequisites. No model is bundled. Windows and macOS scripts are untested. See `docs/implementation/desktop-launcher.md`. |
 | Governance-as-Review | Non-executing sidecar and watcher. Scanner exports are parsed and scoped. `authorized` stays false. See `docs/implementation/governance-as-review.md`. |
-| Agent collaboration UI and live multi-agent execution | Consumer Agent Team view streams real local agent stages; production orchestration hardening remains |
+| Agent collaboration UI and live multi-agent execution | Web Agent Team streams local agent stages. Native iOS Agent Team runs six bounded sequential logical roles on one loaded local model session; it is not six independent models, has no tool execution or durable message persistence, and remains unverified |
 | Consumer memory controls | Explicit local save/list/delete connected to `MemoryManager` + `FileMemoryStore`; user opt-in only, unverified by default, plaintext at rest |
 | East/APEX runtime integration | Not yet complete |
-| Native iOS local inference | Gate 2 links pinned llama.cpp `b12233` (`5f490d7bfe78844e6390c869454c149fd7e003a8`) with Metal. The placeholder still throws `backendUnavailable`. CI cross-builds physical iOS arm64, simulator, and macOS slices, asserts the device slice is present, and runs `build-for-testing` for the `PocketLlamaEngine` package at `generic/platform=iOS`. That is compile/link validation only, not a physical iPhone install or run. Simulator XCTest and host smoke generation remain separate checks; hosted Intel CI is not an Apple Silicon Mac. See `docs/implementation/ios-llamaengine-gate2.md`. |
+| Native iOS local inference | Gate 2 links pinned llama.cpp `b12233` (`5f490d7bfe78844e6390c869454c149fd7e003a8`) with Metal. The app uses `LlamaCppMetalBackend`; `PlaceholderLlamaEngine` remains fail-closed when no backend is selected. CI cross-builds physical iOS arm64, simulator, and macOS slices, asserts the device slice is present, and builds/tests the native app and engine. That is compile/link and simulator/host validation only, not a physical iPhone install or run. Hosted Intel CI is not an Apple Silicon Mac. See `docs/implementation/ios-llamaengine-gate2.md`. |
 | Production deployment, auth, telemetry, release pipeline | Not yet complete |
 
 ## Trust invariants (must never break)
@@ -102,4 +102,4 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 - Unauthorized actions are denied by APEX.
 - Repair operations require independent authorization.
 
-See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` and `docs/implementation/consumer-prototype-acceptance.md` for the architecture and measurable product acceptance criteria.
+See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md`, `docs/architecture/mobile-intelligence-competitive-gap-analysis-2026-11.md`, and `docs/implementation/consumer-prototype-acceptance.md` for the architecture, competitive capability gaps, and measurable product acceptance criteria.
