@@ -10,6 +10,7 @@ struct NativeEvaluationHistoryView: View {
     }
 
     private var summary: NativeEvaluationScoreSummary {
+        guard let selectedModelID else { return NativeEvaluationScoreSummary(attempts: []) }
         let current = attempts.filter {
             $0.modelID == selectedModelID &&
             $0.suiteID == NativeEvaluationSuite.id &&
