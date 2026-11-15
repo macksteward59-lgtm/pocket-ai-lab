@@ -1522,3 +1522,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `c11761fe2fab002390178aca6753664dc4e840e1`; compare to main reports `151 ahead / 1 behind`.
 - Latest PR #135 checks: Cursor collaboration plugin CI `43756039557` passed; Pocket AI Lab CI `43756039558` is running tests; Consumer prototype CI `43756039551` is running tests/build; Governance sidecar CI `43756039569` is replaying fabricated exports; iOS LlamaEngine CI `43756039544` is queued. Previous iOS jobs were cancelled when the validation branch advanced; no iOS pass is claimed yet.
 - No physical iPhone execution, runtime attestation, independent reviewer score, or overall model competence score is claimed. Four deterministic cases are scored; four other dimensions remain unscored until separate evaluator models are integrated.
+
+## 2026-11-16 UTC — Independent evaluator identity hardening
+
+- Added a journal invariant that Critic/Validator assessments must identify both a different model ID and a different runtime session from the model under test. A model cannot submit its own output as an independent grade. The same invariant is enforced when replaying historical journal records.
+- Added regression coverage for self-assessment rejection and retained the existing separate-session, duplicate-event-ID, hash-chain, and retry tests.
+- Removed the unused substring-match scoring rule; only exact-match cases can be scored automatically. The current suite has four exact-match cases and four explicitly unscored review cases.
+- Current PR #133 head `cdf7db1605e1820e24c6c8ca68b5958953dc1c4c`; 26 commits ahead / 0 behind PR #115 head `4a79dd022a440639af0a3083ef9de3820ae20118`.
+- Current PR #135 head `c11761fe2fab002390178aca6753664dc4e840e1`; non-iOS workflows passed; iOS LlamaEngine run `43756039544` is pending/queued. PR #115 latest iOS run `43755647177` is also queued. The earlier PR #115 app-test compile failure is not counted as a pass; the latest branch has the `@MainActor` helper fix.
