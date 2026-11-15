@@ -37,7 +37,7 @@ Test doubles may exercise the runner and journal, but their attempts are labelle
 - No application API for delete, truncate, overwrite, or automatic retention expiry is provided.
 - The app stores the journal under Application Support and applies iOS file protection until the first device unlock. Normal device backup behavior is not disabled.
 
-The app exposes a self-test action and a read-only history screen. Clearing conversation/Agent Team history does not clear the evaluation journal. The journal has no application delete/truncate API and no automatic retention expiry. This is device-local persistence; uninstalling the app or losing the device can still remove it. No automatic cloud backup or export is currently implemented.
+The app exposes a self-test action and a read-only history screen. Clearing conversation/Agent Team history does not clear the evaluation journal. The journal has no application delete/truncate API and no automatic retention expiry. This is device-local persistence; uninstalling the app or losing the device can still remove it. Application Support follows normal iOS device-backup behavior; the app does not currently provide a separate export or cross-device sync workflow.
 
 The hash chain is tamper-evident, not a hardware-backed signature. A privileged actor able to rewrite the entire file and recompute every hash could forge a new chain. Production-grade authenticity still requires the separately governed runtime proof/signature pipeline.
 
