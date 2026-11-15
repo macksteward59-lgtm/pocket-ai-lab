@@ -157,7 +157,7 @@ jobs:
               cat "$log"
               candidate="$(tail -n 1 "$log")"
               if [[ -f "$candidate" && -r "$candidate" ]]; then
-                printf '%s\\n' "$candidate" > /tmp/gguf-path.txt
+                printf '%s\n' "$candidate" > /tmp/gguf-path.txt
                 exit 0
               fi
               echo "Attempt ${attempt} completed without a readable GGUF path." >&2
