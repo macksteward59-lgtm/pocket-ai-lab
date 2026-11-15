@@ -1416,3 +1416,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Updated scope:** additive `NativeInferenceRuntime` evaluation API that retains partial output and derives provider identity from its owned engine; runtime tests for lease/scheduler/cancellation behavior; update the app runner to require the exact active `ModelPoolLease` and verify its model file; connect a self-evaluation action in the native app UI; preserve the append-only journal and eight-dimension assessments.
 - **Exclusions:** no changes to `LlamaEngine` core contracts, ModelPool admission/release behavior, catalog/task-history schemas, APEX/East trust, signed Evidence, or authorization semantics.
 - **Reason:** evaluation must execute through the same guarded path as user chat and Agent Team. No raw engine access or bare runtime session may bypass the ModelPool lease and scheduler.
+
+
+## 2026-11-15 — PostgreSQL lifecycle persistence CI checkpoint
+
+- Added a 4 Mi-character snapshot size bound to `PostgresTaskLifecycleStore` and a regression test; updated the fake SQL row type to satisfy the strict query-result contract.
+- Initial PR #132 typecheck caught one test-double typing error (`FakeRow[]` not assignable to `Record<string, unknown>[]`). Fixed on both feature and validation branches. The previous failing run is retained as historical evidence; it is not counted as a pass.
+- Exact current validation head `86a537bf726ebf63fe5dff36667123051bf92810` passed Pocket AI Lab CI run `43753562797`, including Type-check and build plus Run tests. Consumer `43753562789`, Governance `43753562788`, and Cursor plugin `43753562827` also passed.
+- Feature PR #131 current head `f1517eb15af3aa623694046b24ef8cc17b7cd1cd`; validation PR #132 remains draft/open and no production DB or migration was executed.
