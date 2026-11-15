@@ -118,3 +118,12 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Earlier iOS runs on superseded heads were cancelled by branch concurrency; this is not a test failure. No latest-head XCTest result yet.
 - PR #110 description has been refreshed with current architecture, safety limits, and test scope.
 - No physical iPhone validation. Runtime trust remains Unverified; APEX/Director and East/e3 remain authorization authorities.
+
+## 2026-11-15 17:41 UTC — Exact latest PR #110 state
+
+- PR #110 head remains `50b5adcd306c1079b5df137e7801894aae796a61`, open draft, base main. Main remains `818799eced634577c8f1760fa2bdd1f657bd8427`.
+- Chat prompt byte cap was tightened to 1,500 UTF-8 bytes; app and tests updated. Documentation explicitly says this is not tokenizer output or a hard token-count guarantee and requires future model-specific calibration.
+- Added test that Agent Team objective and role messages do not enter ordinary chat context.
+- PR #110 description refreshed to match the current implementation and limitations.
+- Latest exact-head CI on `50b5adcd...`: iOS LlamaEngine run `43742353789` in progress; job reached pinned llama.cpp simulator/macOS build, with typecheck, device link, native app build, and app/simulator/macOS XCTest pending. Cursor plugin `43742353765` succeeded; Governance sidecar `43742353764` succeeded; Consumer prototype `43742353766` succeeded; Pocket AI Lab `43742353758` remained in progress.
+- No latest-head native XCTest result. No physical iPhone validation. Runtime trust remains Unverified.
