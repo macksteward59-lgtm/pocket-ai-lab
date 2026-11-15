@@ -157,6 +157,67 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         let cancellations = await engine.cancelledRequestIDs
         XCTAssertEqual(cancellations.count, 1)
     }
+    func testNativeMessagesUseTheExactTypeSpecificWirePayloads() async throws {
+        let engine = RecordingInferenceEngine(responses: ["analysis", "question", "objection", "revision", "validation", "synthesis"])
+        let coordinator = NativeAgentCoordinator(engine: engine,
+            session: RuntimeSession(id: "s", modelId: "m"))
+        let result = try await coordinator.run(
+            task: AgentTaskRequest(id: "wire-task", objective: "Check wire compatibility", requiredCapabilities: []),
+            steps: [
+                NativeAgentStep(agentId: "a", instructions: "Analyze", messageType: .analysis),
+                NativeAgentStep(agentId: "b", instructions: "Ask", messageType: .question),
+                NativeAgentStep(agentId: "c", instructions: "Challenge", messageType: .counterargument),
+                NativeAgentStep(agentId: "d", instructions: "Revise", messageType: .revision),
+                NativeAgentStep(agentId: "e", instructions: "Validate", messageType: .validation),
+                NativeAgentStep(agentId: "f", instructions: "Synthesize", messageType: .completion)
+            ]
+        )
+
+        XCTAssertEqual(result.messages.count, 6)
+        XCTAssertEqual(result.messages[0].payload, .object(["analysis": .string("analysis")]))
+        XCTAssertEqual(result.messages[1].payload, .object(["question": .string("question")]))
+        XCTAssertEqual(result.messages[2].payload, .object([
+            "claim": .string("Prior agent proposal"),
+            "objection": .string("objection"),
+            "evidenceRefs": .array([])
+        ]))
+        XCTAssertEqual(result.messages[3].payload, .object([
+            "revision": .string("revision"),
+            "addressesMessageIds": .array(result.messages.prefix(3).map {
+                .string($0.messageId.uuidString.lowercased())
+            })
+        ]))
+        XCTAssertEqual(result.messages[4].payload, .object([
+            "claim": .string("Prior agent proposal"),
+            "verified": .boolean(false),
+            "reason": .string("validation")
+        ]))
+        XCTAssertEqual(result.messages[5].payload, .object([
+            "synthesis": .string("synthesis"),
+            "evidenceRefs": .array([])
+        ]))
+    }
+
+    func testModelCannotEmitEvidenceOrTrustedSecurityBoundaryEvents() async {
+        for forbidden: AgentMessageType in [.taskAssignment, .evidence, .securityBoundaryViolation] {
+            let engine = RecordingInferenceEngine(responses: [])
+            let coordinator = NativeAgentCoordinator(engine: engine,
+                session: RuntimeSession(id: "s", modelId: "m"))
+            do {
+                _ = try await coordinator.run(
+                    task: AgentTaskRequest(id: "task", objective: "Do work", requiredCapabilities: []),
+                    steps: [NativeAgentStep(agentId: "model", instructions: "Respond", messageType: forbidden)]
+                )
+                XCTFail("model-generated \\(forbidden) must be rejected before inference")
+            } catch NativeAgentCoordinatorError.invalidPlan {
+            } catch {
+                XCTFail("unexpected error: \\(error)")
+            }
+            let prompts = await engine.recordedPrompts
+            XCTAssertTrue(prompts.isEmpty)
+        }
+    }
+
     func testMessageSinkReceivesEachCompletedRoleInSequence() async throws {
         let engine = RecordingInferenceEngine(responses: ["reasoned", "criticized"])
         let coordinator = NativeAgentCoordinator(
