@@ -2,6 +2,16 @@
 \set ON_ERROR_STOP on
 SET TIME ZONE 'UTC';
 
+DO $$
+DECLARE url_parts TEXT[];
+BEGIN
+  url_parts := regexp_match('https://restricted.example.org/admin', '^https?://([^/]+)(/.*)$');
+  IF url_parts[1] <> 'restricted.example.org' OR url_parts[2] <> '/admin' THEN
+    RAISE EXCEPTION 'PostgreSQL URL regex capture groups are not as expected: %', url_parts;
+  END IF;
+END;
+$$;
+
 CREATE ROLE proofhunt_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS;
 GRANT USAGE ON SCHEMA proofhunt TO proofhunt_runtime;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA proofhunt TO proofhunt_runtime;
