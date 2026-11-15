@@ -1433,3 +1433,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - New heads: catalog integration `784005df2e2c95de3423f8bff9ae1ebd1213732b`; PR #127 branch `482cee7f9896b176320f6087f7b846c341652b8`; PR #129 branch `0aff85769120625d5ae0a5cd55354c49b897ee75`.
 - Closed validation-only PR #127 as superseded by PR #129. Old PR #127 iOS run `43752334116` was cancelled; neither old iOS run counts as a pass.
 - Current PR #129 exact-head non-iOS checks all pass (Pocket AI Lab, Consumer, Cursor, Governance). iOS run `43753665375` is queued; no current iOS pass yet. Cache source/tag/tarball verification is included before cached archive reuse.
+
+
+## 2026-11-15 — Native iOS CI progress update
+
+- PR #84 exact head `92f39d7ee79cabe9028e7782cec40ca7a0f2c219`: all five workflows passed, including iOS LlamaEngine CI `43750771905`. This is hosted CI only, not physical-device acceptance.
+- PR #86 exact head `7319ea97d7b5bdfc4c1a3ec921b8b2eb65612dc5`: four non-iOS workflows passed; iOS run `43750794278` is in simulator XCTest.
+- PR #123 exact head `c8b2f6fbc380759c6318c189bb1e32472617a16c`: four non-iOS workflows passed; iOS run `43751107892` is in simulator XCTest.
+- PR #124 exact head `f791085ffb070d37594941cceb54afbe511902a8`: four non-iOS workflows passed; iOS run `43751335652` is in simulator XCTest.
+- PR #129 exact head `0aff85769120625d5ae0a5cd55354c49b897ee75`: four non-iOS workflows passed; iOS run `43753665375` remains queued behind active hosted iOS jobs.
