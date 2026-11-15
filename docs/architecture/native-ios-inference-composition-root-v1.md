@@ -54,3 +54,20 @@ The runtime composition root is resource management only. A model lease, schedul
 ## Import validation boundary
 
 The staged importer checks the 24-byte minimum GGUF header: magic, little-endian version (currently v1-v3), tensor count field, and metadata-entry count field. It rejects truncated headers and unsupported versions before replacing the last known-good file. This is a structural header check only; it is not a full GGUF metadata/tensor parser, checksum, provenance check, or model authenticity guarantee.
+
+
+## Lease-bound generation and in-flight use pins
+
+Every public generation call must present the exact active `ModelPoolLease` returned by the same runtime's pool. A `RuntimeSession` identifier by itself is not authority to begin generation.
+
+- `NativeInferenceRuntime.generate(lease:request:maxOutputBytes:)` first asks ModelPool to create a unique in-flight use pin for that exact lease, session, and model descriptor.
+- The pin is acquired before scheduler admission. This protects the session even while a request is waiting for a FIFO scheduler permit.
+- The pin remains active through stream completion, stream failure, output-limit rejection, and the engine's awaited cancellation drain. It is released on every success/error exit.
+- Releasing a caller's lease does not invalidate an already-pinned operation, but it prevents any new operation from starting with that lease.
+- Explicit unload fails while either active leases or active use pins exist. Idle-model eviction skips entries with either kind of ownership.
+- A lease from another ModelPool/runtime, a stale lease, or a lease released before generation begins is rejected before the engine is called.
+- The raw engine reference is internal to the package composition boundary. Production Agent Team and chat call sites use the same runtime and exact lease.
+
+The use pin is a resource-lifetime guard only. It is not an authorization token for tools, workflow execution, or evidence creation. A caller must still obey the established APEX/Director, BridgeGate, East/e3, and signed-evidence controls.
+
+Regression tests cover: generation rejected after lease release; cross-runtime/foreign-pool lease rejection; a session remaining non-unloadable after its lease is released during active generation; pin release after successful stream completion; and cancellation drain retaining both the pin and scheduler permit until the engine acknowledges drain.
