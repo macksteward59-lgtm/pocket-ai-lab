@@ -1379,3 +1379,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Source:** draft PR #119 head `b9abd441854b229340f50500a6ce85889fe8c3de`, previously stacked on the old catalog branch head `e13cd7acfda4898e65238848a54673df316b2788`.
 - **New base:** `codex/ios-native-model-catalog` head `4c1feb860291cef39ce2ad5cc712520a62a5b953`.
 - **Goal:** rebase the toolchain-keyed cache and explicit archive/symbol verification onto the refreshed native integration; keep XCFramework assembly, link, app build, XCTest, simulator, and smoke-model validation on every run. No speedup claim until a subsequent run demonstrates a cache hit.
+
+
+## 2026-11-15 — Llama.cpp CI cache validation checkpoint
+
+- Reconciled the two-file CI cache change from PR #119 onto current catalog integration head `4c1feb860291cef39ce2ad5cc712520a62a5b953`; exact diff is `.github/workflows/ios-llamaengine-ci.yml` and `runtime/ios/scripts/build-llama-cpp.sh` only.
+- Added a cache-hit source verification gate: the workflow now runs `build-llama-cpp.sh verify` (pinned tag/commit and tarball byte-count/SHA-256 verification) before `verify-artifacts` (all expected archives and llama/Metal symbols). Cache misses or verification failures rebuild; XCFramework assembly and all downstream build/test/smoke stages remain mandatory.
+- Draft PR #128: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/128, current head `cf18d0be1ef27b63fb34c9a3045bc78c88d2eaeb`, 3 commits ahead / 0 behind the refreshed integration base. Superseded PR #119 closed.
+- Draft mainline validation PR #129: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/129, exact head `065e6bf927b8d1c94f2c141c0f08aea002e075ae`, mergeable against main `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`.
+- Exact-head PR #129 checks: Consumer, Cursor collaboration plugin, and Governance sidecar passed; Pocket AI Lab CI is in progress; iOS LlamaEngine CI is queued (`43752704642`). An earlier cache-branch iOS run (`43752636891`) was cancelled when the workflow was updated; it is not a pass/failure.
+- No actual cache hit or measured speedup has been observed yet. The first successful run must populate the cache; a subsequent exact-key run must demonstrate `cache-hit=true` while retaining all downstream validation.
