@@ -54,3 +54,10 @@ This is a verifier and replay-store primitive, not a production trust deployment
 - Runtime session invalidation and reconnect lifecycle still require integration.
 
 Until those gates are independently implemented and tested, app-level runtime trust must remain `Unverified`. A proof never grants action authorization, changes APEX/East approvals, or creates signed evidence receipts.
+
+
+## Keychain integration test environment
+
+The Keychain replay store is intentionally fail-closed: a Keychain API error is not interpreted as a successful replay check. GitHub's unsigned iOS simulator test host currently returns `errSecMissingEntitlement` (`-34018`) when attempting Keychain access. The XCTest integration test skips only for that exact OSStatus; it does not suppress other Keychain errors. The deterministic verifier tests continue to cover monotonic replay rejection and storage failure.
+
+This skip is not evidence that durable Keychain replay protection works on a physical device. Before release, run the persistence test in a correctly signed iOS host with the intended Keychain entitlement and verify persistence across verifier/store recreation and app relaunch. Do not weaken the runtime verifier to accommodate an unsigned test host.
