@@ -42,11 +42,11 @@ struct LocalConversationStore {
         guard archive.version == Self.currentVersion else { throw StoreError.unsupportedVersion }
         let cutoff = now().addingTimeInterval(-Self.retentionInterval)
         let retained = archive.messages.filter { $0.timestamp >= cutoff }
-        return Self.bounded(retained)
+        return Self.bounded(retained, now: now())
     }
 
     func save(_ messages: [ChatLine]) throws {
-        let boundedMessages = Self.bounded(messages)
+        let boundedMessages = Self.bounded(messages, now: now())
         let archive = Archive(version: Self.currentVersion, savedAt: now(), messages: boundedMessages)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -72,8 +72,8 @@ struct LocalConversationStore {
         try fileManager.removeItem(at: fileURL)
     }
 
-    private static func bounded(_ messages: [ChatLine]) -> [ChatLine] {
-        let cutoff = Date().addingTimeInterval(-retentionInterval)
+    private static func bounded(_ messages: [ChatLine], now: Date) -> [ChatLine] {
+        let cutoff = now.addingTimeInterval(-retentionInterval)
         var result = messages
             .filter { $0.timestamp >= cutoff }
             .suffix(maximumMessages)
