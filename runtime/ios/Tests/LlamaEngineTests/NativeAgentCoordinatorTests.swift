@@ -157,6 +157,60 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         let cancellations = await engine.cancelledRequestIDs
         XCTAssertEqual(cancellations.count, 1)
     }
+    func testMessageSinkReceivesEachCompletedRoleInSequence() async throws {
+        let engine = RecordingInferenceEngine(responses: ["reasoned", "criticized"])
+        let coordinator = NativeAgentCoordinator(
+            engine: engine,
+            session: RuntimeSession(id: "s", modelId: "m")
+        )
+        let recorder = AgentMessageRecorder()
+        let result = try await coordinator.run(
+            task: AgentTaskRequest(id: "task", objective: "Review", requiredCapabilities: []),
+            steps: [
+                NativeAgentStep(agentId: "reasoner", instructions: "Analyze"),
+                NativeAgentStep(agentId: "critic", instructions: "Challenge")
+            ],
+            onMessage: { message in await recorder.record(message) }
+        )
+
+        let recorded = await recorder.messages
+        XCTAssertEqual(result.messages, recorded)
+        XCTAssertEqual(recorded.map(\.sequence), [0, 1])
+        XCTAssertEqual(recorded.map(\.senderAgentId), ["reasoner", "critic"])
+    }
+
+    func testRejectedMessageSinkStopsBeforeTheNextRoleRuns() async {
+        let engine = RecordingInferenceEngine(responses: ["reasoned", "must-not-run"])
+        let coordinator = NativeAgentCoordinator(
+            engine: engine,
+            session: RuntimeSession(id: "s", modelId: "m")
+        )
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "task", objective: "Review", requiredCapabilities: []),
+                steps: [
+                    NativeAgentStep(agentId: "reasoner", instructions: "Analyze"),
+                    NativeAgentStep(agentId: "critic", instructions: "Challenge")
+                ],
+                onMessage: { _ in false }
+            )
+            XCTFail("rejected durable message should stop the run")
+        } catch NativeAgentCoordinatorError.messageSinkRejected {
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        let prompts = await engine.recordedPrompts
+        XCTAssertEqual(prompts.count, 1)
+    }
+
+}
+
+private actor AgentMessageRecorder {
+    private(set) var messages: [AgentMessageEnvelope] = []
+    func record(_ message: AgentMessageEnvelope) -> Bool {
+        messages.append(message)
+        return true
+    }
 }
 
 private actor RecordingInferenceEngine: LlamaEngine {
