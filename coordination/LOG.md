@@ -1593,3 +1593,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #115 head is now b61b1b64b44319c37f220413c83cd9a417c6cde4; exact-head iOS LlamaEngine CI run #206 (43760034998) and four companion workflows have started. Results pending.
 - Run #205 for PR #135 has advanced through native app compilation successfully; native app XCTest is now running. Simulator and real-GGUF smoke remain pending.
 - Temporary-directory removal errors in two app tests are not yet fixed: the failing log reports an NSCocoaErrorDomain Code 4 / ENOENT during artifact-mutation tests. The current test defer uses try? removeItem, so further source-level isolation is required before changing cleanup semantics.
+
+
+## 2026-11-15 — Latest native CI checkpoint
+
+- Run #205 / PR #135 (`7446cac45bdcb4095d327a9759d942acc4267a62`) passed the pinned llama.cpp simulator/macOS build, fail-closed typecheck, generic iOS device link, simulator selection, and native Pocket AI Lab app compilation. Native app XCTest is running; simulator XCTest and pinned-GGUF runtime smoke have not started. Attempt to fetch live job logs returned BlobNotFound while the job was active; no test outcome inferred.
+- PR #115 precision-fix commit `b61b1b64b44319c37f220413c83cd9a417c6cde4` triggered exact-head iOS run #206 (`43760034998`); it is building pinned llama.cpp. Four companion workflows also started. No results yet.
+- Requested branch `ios/private-iphone-test-hybrid` remains unchanged; its newest iOS run is #45 (`43245960654`), success. The repository still reports public visibility.
+- No signed archive, IPA, TestFlight/App Store publication, or physical iPhone installation was performed or demonstrated.
