@@ -194,12 +194,85 @@ final class LocalChatModel: ObservableObject {
 
     /// Agent Team uses the same model lease and scheduler as native chat.
     /// The returned messages remain untrusted proposals, never approvals or evidence.
-    func runAgentTeam(task: AgentTaskRequest, steps: [NativeAgentStep]) async throws -> NativeAgentRunResult {
+    func runAgentTeam(
+        task: AgentTaskRequest,
+        steps: [NativeAgentStep],
+        maxTokens: Int = 512,
+        temperature: Double = 0.2
+    ) async throws -> NativeAgentRunResult {
         guard !isBusy, let runtime, let lease else { throw LocalChatError.busy }
         isBusy = true
         defer { isBusy = false }
         let coordinator = runtime.makeAgentCoordinator(for: lease)
-        return try await coordinator.run(task: task, steps: steps)
+        return try await coordinator.run(
+            task: task,
+            steps: steps,
+            maxTokens: maxTokens,
+            temperature: temperature
+        )
+    }
+
+    /// Runs the bounded six-role plan through the same ModelPool lease and
+    /// InferenceScheduler as single-model chat. Every role result is untrusted.
+    func runDefaultAgentTeam(_ objective: String) async {
+        let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isBusy, !text.isEmpty else { return }
+        guard lease != nil else {
+            status = "Load the selected local model before running Agent Team."
+            return
+        }
+
+        let steps = [
+            NativeAgentStep(
+                agentId: "reasoner",
+                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work."
+            ),
+            NativeAgentStep(
+                agentId: "researcher",
+                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations."
+            ),
+            NativeAgentStep(
+                agentId: "engineer",
+                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code."
+            ),
+            NativeAgentStep(
+                agentId: "security-analyst",
+                instructions: "Review threats, trust boundaries, privacy, misuse, and failure modes. Preserve all APEX/East authorization boundaries.",
+                messageType: .counterargument
+            ),
+            NativeAgentStep(
+                agentId: "critic",
+                instructions: "Challenge assumptions and earlier proposals. Find contradictions, missing cases, and simpler alternatives.",
+                messageType: .counterargument
+            ),
+            NativeAgentStep(
+                agentId: "validator",
+                instructions: "Synthesize a concise result. Label unverified claims, list remaining gaps, and propose next steps. Never claim tests or external actions occurred.",
+                messageType: .validation
+            )
+        ]
+        let task = AgentTaskRequest(
+            id: UUID().uuidString,
+            objective: text,
+            requiredCapabilities: ["reasoning", "analysis", "engineering", "security-review", "critique", "validation"]
+        )
+
+        messages.append(ChatLine(role: "You · Agent Team task", text: text))
+        do {
+            let result = try await runAgentTeam(task: task, steps: steps, maxTokens: 192, temperature: 0.2)
+            for message in result.messages {
+                guard case .object(let payload) = message.payload,
+                      case .string(let output)? = payload["text"] else { continue }
+                messages.append(ChatLine(
+                    role: "Agent Team · \(message.senderAgentId) · \(message.sequence + 1)/\(result.messages.count)",
+                    text: output
+                ))
+            }
+            status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+        } catch {
+            messages.append(ChatLine(role: "Agent Team runtime", text: "Team run failed: \(error.localizedDescription)"))
+            status = "Agent Team did not complete. No synthetic result was substituted. Runtime trust remains unverified."
+        }
     }
 
     private static func estimatedMemoryMB(for url: URL) throws -> Int {
@@ -295,8 +368,15 @@ enum LocalChatError: LocalizedError, Equatable {
     }
 }
 
+private enum LocalInteractionMode: String, CaseIterable, Identifiable {
+    case chat = "Chat"
+    case agentTeam = "Agent Team"
+    var id: String { rawValue }
+}
+
 struct LocalChatView: View {
     @StateObject private var model = LocalChatModel()
+    @State private var mode: LocalInteractionMode = .chat
     @State private var showImporter = false
     @State private var prompt = ""
     @State private var importError: String?
@@ -327,15 +407,40 @@ struct LocalChatView: View {
                         Text(line.text).textSelection(.enabled)
                     }.listRowSeparator(.hidden)
                 }
-                HStack(alignment: .bottom) {
-                    TextField("Message your local model…", text: $prompt, axis: .vertical)
+                VStack(spacing: 6) {
+                    Picker("Interaction mode", selection: $mode) {
+                        ForEach(LocalInteractionMode.allCases) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if mode == .agentTeam {
+                        Text("Six sequential logical roles share one loaded local model. They are not six independent models and cannot run tools.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    HStack(alignment: .bottom) {
+                        TextField(
+                            mode == .chat ? "Message your local model…" : "Describe a task for Agent Team…",
+                            text: $prompt,
+                            axis: .vertical
+                        )
                         .textFieldStyle(.roundedBorder).lineLimit(1...4)
-                    Button {
-                        let value = prompt
-                        prompt = ""
-                        Task { await model.send(value) }
-                    } label: { Image(systemName: "arrow.up.circle.fill").font(.title) }
-                    .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isBusy)
+                        Button {
+                            let value = prompt
+                            prompt = ""
+                            Task {
+                                if mode == .chat {
+                                    await model.send(value)
+                                } else {
+                                    await model.runDefaultAgentTeam(value)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: mode == .chat ? "arrow.up.circle.fill" : "person.3.fill")
+                                .font(.title)
+                        }
+                        .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isBusy)
+                    }
                 }.padding(.horizontal)
                 Text("Local model output cannot approve actions or create APEX evidence.")
                     .font(.caption2).foregroundStyle(.secondary).padding(.bottom, 6)
