@@ -1703,3 +1703,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Confirmed the shared test helper created `LocalChatModel` without overriding `availableMemoryMB`. Fixed only the test helper to inject deterministic 4,096 MB headroom; production memory admission and fail-closed behavior are unchanged.
 - Propagated the exact test-only correction to all four branches: #115 `bd8eaca235faff239a61aa60a802e2c5dcd57c19`; #129 `83278c528de9000d1e26b860c2e10eb9f04fecf3`; #133 `7a393a6b819e00c63ed5dab12d3af7fc38b1e3b4`; #135 `d12783187eb6a11352a1b82abb15d0b0cc794659`.
 - New exact-head GitHub Actions validation is required. The previous runs failed in app XCTest and therefore did not reach simulator XCTest, pinned-GGUF smoke, or macOS XCTest. No production runtime, model-pool admission, APEX/Director, East/e3, Evidence, trust, or authorization code was changed. All PRs remain draft/open/unmerged.
+
+
+## 2026-11-15 22:12 UTC — Exact-head validation restarted after deterministic fixture correction
+
+- New exact-head workflows are active for all four branches. iOS runs: #115 `43766682007`; #129 `43766685710`; #135 `43766690292`. PR #133 feature branch companion Pocket AI Lab CI: `43766683567`.
+- Companion workflow snapshots: #115 Cursor passed; Pocket AI Lab, Consumer, Governance, and iOS are running. #129 Cursor passed; Pocket AI Lab, Consumer, Governance, and iOS are running. #135 Cursor passed; Pocket AI Lab, Consumer, Governance, and iOS are running. #133 Pocket AI Lab CI is running.
+- PR heads confirmed mergeable and still draft/open: #115 `bd8eaca235faff239a61aa60a802e2c5dcd57c19`; #129 `83278c528de9000d1e26b860c2e10eb9f04fecf3`; #133 `7a393a6b819e00c63ed5dab12d3af7fc38b1e3b4`; #135 `d12783187eb6a11352a1b82abb15d0b0cc794659`.
+- No merge or main-branch write performed. Wait for exact-head app XCTest before claiming the deterministic memory fixture repair is validated; simulator, pinned-GGUF smoke, and macOS stages remain unverified.
