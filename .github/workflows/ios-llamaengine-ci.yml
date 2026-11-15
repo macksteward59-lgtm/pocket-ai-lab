@@ -41,29 +41,67 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Show Xcode
+        id: toolchain
         run: |
           xcodebuild -version
           swift --version
           uname -m
+          echo "xcode_hash=$(xcodebuild -version | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Install CMake and Ninja
-        run: brew install cmake ninja xcodegen
+        id: build-tools
+        run: |
+          brew install cmake ninja xcodegen
+          tool_versions="$(brew list --versions cmake ninja)"
+          echo "build_tools_hash=$(printf '%s\n%s\n' "$(xcodebuild -version)" "$tool_versions" | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pinned llama.cpp build artifacts
+        id: llama-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: pocket-llama-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-tools.outputs.build_tools_hash }}-${{ hashFiles('runtime/ios/pin/llama-cpp.json', 'runtime/ios/scripts/build-llama-cpp.sh') }}
 
       - name: Build pinned llama.cpp for the simulator and macOS
+        id: llama-build
         run: |
           chmod +x runtime/ios/scripts/build-llama-cpp.sh
-          runtime/ios/scripts/build-llama-cpp.sh simulator
-          rm -rf runtime/ios/build/cmake-simulator
-          runtime/ios/scripts/build-llama-cpp.sh ios-device
-          rm -rf runtime/ios/build/cmake-ios-device
-          runtime/ios/scripts/build-llama-cpp.sh macos
-          rm -rf runtime/ios/build/cmake-macos
+          if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
+            echo "Reusing checksum-keyed llama.cpp archives for this pinned source and Xcode toolchain."
+          else
+            runtime/ios/scripts/build-llama-cpp.sh simulator
+            rm -rf runtime/ios/build/cmake-simulator
+            runtime/ios/scripts/build-llama-cpp.sh ios-device
+            rm -rf runtime/ios/build/cmake-ios-device
+            runtime/ios/scripts/build-llama-cpp.sh macos
+            rm -rf runtime/ios/build/cmake-macos
+          fi
+          runtime/ios/scripts/build-llama-cpp.sh verify-artifacts
           runtime/ios/scripts/build-llama-cpp.sh xcframework
           test -d runtime/ios/build/xc/llama.xcframework
           test -d runtime/ios/build/xc/llama.xcframework/ios-arm64
           find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
+
+      - name: Save verified pinned llama.cpp build cache
+        if: always() && steps.llama-cache.outputs.cache-hit != 'true' && steps.llama-build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: ${{ steps.llama-cache.outputs.cache-primary-key }}
 
       - name: Typecheck the unlinked fail-closed branch
         run: |
