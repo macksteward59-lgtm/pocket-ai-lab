@@ -94,3 +94,14 @@ Still required before production autonomy:
 7. Native iOS lifecycle, background execution constraints, resource/thermal budgets, and physical-device acceptance.
 
 Do not describe the product as fully autonomous until these integrations are implemented and verified.
+
+
+## East integration bridge
+
+`packages/intelligence/autonomy/EastTaskLifecycleAdapter.ts` connects the lifecycle kernel to the existing East six-agent deliberation API. It creates a serial dependency plan for assignment, each permanent agent execution, deliberation, and the non-authorizing evidence-gate result. Every stage is claimed and completed through the lifecycle coordinator.
+
+The bridge deliberately uses one attempt for each inference-bearing step. If the provider call may have happened but the lifecycle completion was not durably recorded, the adapter fails the workflow instead of blindly repeating generation. This favors duplicate-effect safety over automatic retry. A future host runner can add idempotency only when the provider/execution contract can prove it.
+
+The bridge returns `authorized: false` and surfaces East's current APEX decision/evidence-gate states. East's current implementation is still in-memory; this adapter does not make East durable. The coordinator's injected store must be a production transactional implementation before this bridge is used for production recovery. It also does not cancel an already-running provider request when a task is cancelled; cancellation propagation requires a cancellable East/InferenceProvider contract.
+
+The bridge is an integration milestone and test seam, not the final production scheduler. It must not be interpreted as APEX authorization, accepted evidence, or a release-ready end-to-end workflow.
