@@ -1695,3 +1695,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #129 run `43764214487` remains at native app XCTest, with all prior native build/link stages successful and no failed steps reported.
 - PR #135 run `43764653370` remains at native app XCTest, with all prior native build/link stages successful and no failed steps reported.
 - Updated the coordination board to reflect PR #115's stage transition. The three Actions runs have not yet reported a completed result; simulator XCTest, pinned GGUF smoke, and macOS XCTest remain downstream and unverified.
+
+
+## 2026-11-15 22:10 UTC — Native app XCTest memory-fixture root cause repaired
+
+- Exact logs from iOS runs `43764211279`, `43764214487`, and `43764653370` show the task-history, catalog, and self-evaluation suites passing; the native app test suite failed five cases because its injected `FingerprintTestEngine` used the production default `os_proc_available_memory()` admission signal on hosted CI. The runner's app-allocatable memory value can be below the fixture's 1,024 MB estimate, so `ModelPool.acquire` correctly rejected the fake model before test generation/load assertions.
+- Confirmed the shared test helper created `LocalChatModel` without overriding `availableMemoryMB`. Fixed only the test helper to inject deterministic 4,096 MB headroom; production memory admission and fail-closed behavior are unchanged.
+- Propagated the exact test-only correction to all four branches: #115 `bd8eaca235faff239a61aa60a802e2c5dcd57c19`; #129 `83278c528de9000d1e26b860c2e10eb9f04fecf3`; #133 `7a393a6b819e00c63ed5dab12d3af7fc38b1e3b4`; #135 `d12783187eb6a11352a1b82abb15d0b0cc794659`.
+- New exact-head GitHub Actions validation is required. The previous runs failed in app XCTest and therefore did not reach simulator XCTest, pinned-GGUF smoke, or macOS XCTest. No production runtime, model-pool admission, APEX/Director, East/e3, Evidence, trust, or authorization code was changed. All PRs remain draft/open/unmerged.
