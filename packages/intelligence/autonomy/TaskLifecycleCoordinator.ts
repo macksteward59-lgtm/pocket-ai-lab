@@ -398,7 +398,8 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     }
     if (step.dependsOn !== undefined && !Array.isArray(step.dependsOn)) {
       throw new TaskLifecycleError("invalid_dependency", "Step dependencies must be an array");
-    }\n    const dependsOn = [...(step.dependsOn ?? [])];
+    }
+    const dependsOn = [...(step.dependsOn ?? [])];
     if (dependsOn.some(id => typeof id !== "string" || !id.trim() || id === step.id)) {
       throw new TaskLifecycleError("invalid_dependency", "Step dependencies must reference other step ids");
     }
