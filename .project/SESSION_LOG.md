@@ -28,3 +28,18 @@ Append a dated entry for each meaningful session. Include branch, commits, tests
 - Tests executed directly in this session: none (no local Xcode environment). CI results are reported separately above.
 - No merges, main changes, permission changes, or visibility changes.
 - Next: complete latest iOS CI inspection, then integrate #109 onto a main-targeting candidate for native XCTest validation.
+
+
+## 2026-11-15 — Native CI repair and aggregate lease-lifecycle hardening
+
+- Refreshed live repository state. Main remains `818799eced634577c8f1760fa2bdd1f657bd8427`; no main changes or merges.
+- PR #107 latest head before repair `104389c5e85b47d09954a230c01fd57714b5ea78` failed only two app XCTest assertions in the staged-importer test: it expected 14 bytes although the minimum valid GGUF fixture is 24 bytes. Device framework linking and app build succeeded.
+- Fixed both stale expected values on #107. Commit: `ed32fecef579dfd53c0263c3e73f00d95cc1af32`. New iOS run `43740561987` was still building pinned llama.cpp at checkpoint; companion workflows were still running.
+- PR #104 iOS run `43731823992` completed successfully, including native app XCTest, simulator XCTest, smoke GGUF download, and macOS XCTest. Updated its PR description to reflect the actual pass.
+- Retargeted #109 from the #107 feature branch to `main`, creating a 38-commit/15-file mainline aggregate at that point. After follow-up hardening, its latest head is `a6de5e5387a0f6745c61ba509678fae3811d0cf6`, 41 commits ahead / 0 behind main.
+- Reviewed the content-integrity reload path and found a lease leak: if the artifact became unreadable while reloading an already-loaded model, the outer catch cleared the only UI lease reference while ModelPool retained the lease. Fixed by preserving existing lease state on preflight errors and retaining an acquired lease if exact release unexpectedly fails. Commits: `613a1c4426babfe335f0d8d699be6ecd2f466417` and regression test `a6de5e5387a0f6745c61ba509678fae3811d0cf6`.
+- Added an explicit comment to the 24-byte fixture helper. The aggregate #109 iOS run `43740720673` was pending at checkpoint; Pocket AI Lab, Consumer prototype, Cursor collaboration plugin, and Governance sidecar workflows were in progress. No aggregate CI pass is claimed.
+- Updated PR #107 and #109 descriptions with accurate current heads, CI state, limitations, and safety boundaries. Both remain draft; no submitted review threads were returned for #107/#109/#104 at last check.
+- Updated `.project/STATE.md` and the native-inference work record to preserve current heads, run IDs, known failure, fixes, and next actions.
+- No local Xcode execution or physical iPhone testing. No merge, main-branch write, permission change, or visibility change.
+- Next: refresh #107 run `43740561987` and #109 run `43740720673`; inspect all jobs and XCTest logs; fix concrete failures only; inspect combined diff and review threads; keep all PRs draft.
