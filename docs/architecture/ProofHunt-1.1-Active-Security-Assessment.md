@@ -29,7 +29,7 @@ Preapproval means the workflow can run the exact checks listed in the signed pol
 - Wildcards, CIDR ranges, ports, URL paths, queries, and fragments are rejected as requested target identifiers. If a verified bounty policy contains a matching path-scoped URL rule, the host-only gate returns a denial rather than guessing which path is covered. IP ranges require a future dedicated evaluator and explicit approval.
 - Exclusions are evaluated before inclusions and always win.
 - Malformed target entries reject the entire configuration rather than being ignored.
-- Both program and operational records expire independently.
+- Both program and operational records expire independently. For bounty programs, the published policy snapshot's effective date, expiry, and explicit testing window are re-evaluated at every plan decision; a historical `ready-for-human-review` state cannot keep a policy active outside its current time window. The testing window is start-inclusive and end-exclusive.
 - For bounty programs, the operational request-rate ceiling cannot exceed the strictest published requests-per-second or requests-per-minute limit. If the published limit cannot be reconciled, the plan is denied.
 - A policy-version mismatch, revoked/pending record, failed verifier, unknown check, or failed audit write denies the plan.
 - stopOnScopeViolation is mandatory and cannot be disabled.
