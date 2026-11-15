@@ -41,6 +41,12 @@ The app exposes a self-test action and a read-only history screen. Clearing conv
 
 The hash chain is tamper-evident, not a hardware-backed signature. A privileged actor able to rewrite the entire file and recompute every hash could forge a new chain. Production-grade authenticity still requires the separately governed runtime proof/signature pipeline.
 
+## Score interpretation and limits
+
+The current objective percentage is a narrow exact-match subset, not an overall intelligence score. The summary deduplicates retries by model fingerprint, suite version, and case ID, and uses only the latest attempt for each case. A failed, partial, or empty generation is a failed objective check. Four categories remain uncovered until a separate Critic/Validator runtime is integrated; they are not assigned zero, 100%, or an inferred grade.
+
+The memory metric stored today is the ModelPool's configured admission estimate, not measured resident memory. Prompt/output sizes are UTF-8 byte counts, not tokenizer token counts. Latency is wall-clock elapsed time for the runner call. GPU utilization, thermal behavior, battery use, measured peak memory, token throughput, and persistent cross-session recall are not claimed by this initial suite.
+
 ## Integration boundary and remaining work
 
 This is integrated into the native app through a self-test action and a read-only history screen. The runner requires the app's exact active ModelPool lease, calls the shared NativeInferenceRuntime evaluation path under its scheduler permit, and verifies that the lease model ID/path match the catalog content-addressed model file. It does not reach around the ModelPool or call LlamaEngine directly. The runtime derives its provider kind from the engine instance it owns; mocks and alternate providers are labelled unverified. A successful completed llama.cpp stream plus stable model-file fingerprint is required before the attempt is marked `nativeExecutionObserved`.
