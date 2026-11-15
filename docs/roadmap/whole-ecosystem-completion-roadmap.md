@@ -27,7 +27,7 @@ The following is a snapshot of visible pull requests and reported checks, not a 
 
 | Workstream | Current evidence | Remaining gate |
 |---|---|---|
-| Autonomous task lifecycle, PR #94 | Draft PR; four reported CI workflows succeeded | Production durable store, host scheduler, Director/APEX and East/e3 integration, restart/fault-injection tests |
+| Autonomous task lifecycle, PR #94 | Draft PR; initial kernel passed four workflows; a new six-agent East lifecycle bridge and tests are now committed, with four new workflows running | Production transactional store, cross-process scheduler, governed action adapter, cancellation propagation, real East persistence, and full end-to-end fault-injection acceptance |
 | Ecosystem work ethic/integration contract, PR #93 | Draft PR; four workflows succeeded; iOS LlamaEngine workflow was still running at snapshot | Adopt contract as implementation acceptance criteria and map every dependency edge |
 | Runtime proof verifier, PR #83 | Five reported workflows succeeded, including iOS LlamaEngine CI | Reconcile old base with current main; validate physical runtime session and replay behavior |
 | GGUF import/workspace hardening, PR #84 | Five reported workflows succeeded, including iOS LlamaEngine CI | Reconcile branch dependencies and validate on supported physical hardware |
@@ -38,6 +38,10 @@ The following is a snapshot of visible pull requests and reported checks, not a 
 | Rubric binding, PR #92 | No PR-triggered workflow runs returned for inspected head | Validate stacked dependency on #91 and obtain CI evidence |
 
 PRs remain open and unmerged in this snapshot. CI success means configured workflows passed for the inspected commit; it does not mean product acceptance. Some branches are stacked on older open PRs and must be reconciled before integration.
+
+
+
+**Progress update (2026-11-15):** The lifecycle PR now includes `EastTaskLifecycleAdapter.ts`, which sequences the existing six-agent East deliberation through leased lifecycle steps and explicitly preserves `authorized: false`. It is a tested integration seam, not yet a production host scheduler: East task state remains in-memory, the lifecycle store is injected, cancellation does not yet interrupt an in-flight inference call, and the adapter deliberately does not retry inference-bearing steps after ambiguous failures. The latest PR #94 CI runs are still in progress at this update.
 
 ## Delivery phases and estimates
 
