@@ -29,6 +29,7 @@ CREATE TABLE proofhunt.authorization_records (
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, record_id),
+  UNIQUE (project_id, record_id, policy_version, policy_hash),
   FOREIGN KEY (project_id, parent_program_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   CHECK (
@@ -127,6 +128,8 @@ CREATE TABLE proofhunt.assessment_policies (
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, operational_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, operational_authorization_id, policy_version, policy_hash)
+    REFERENCES proofhunt.authorization_records(project_id, record_id, policy_version, policy_hash),
   CHECK (expires_at > effective_at),
   CHECK (program_authorization_id <> operational_authorization_id)
 );
