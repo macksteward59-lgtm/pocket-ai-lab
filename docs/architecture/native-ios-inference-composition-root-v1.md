@@ -49,3 +49,8 @@ The runtime composition root is resource management only. A model lease, schedul
 - East/e3 remains the durable workflow execution layer.
 - ExploitGym isolation, BridgeGate trusted-origin/message authorization, RuntimeController lifecycle boundaries, and signed Evidence verification remain unchanged.
 - Model output remains untrusted proposal data. No inference path may approve actions, execute tools, create evidence receipts, or bypass authorization.
+
+
+## Import validation boundary
+
+The staged importer checks the 24-byte minimum GGUF header: magic, little-endian version (currently v1-v3), tensor count field, and metadata-entry count field. It rejects truncated headers and unsupported versions before replacing the last known-good file. This is a structural header check only; it is not a full GGUF metadata/tensor parser, checksum, provenance check, or model authenticity guarantee.
