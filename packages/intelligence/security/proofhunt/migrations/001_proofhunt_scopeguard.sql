@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS proofhunt.authorization_records (
   record_kind TEXT NOT NULL CHECK (record_kind IN ('bug_bounty_program', 'asset_ownership', 'operational_approval')),
   environment TEXT NOT NULL CHECK (environment IN ('bounty', 'owned')),
   subject_id TEXT NOT NULL,
-  parent_program_authorization_id UUID REFERENCES proofhunt.authorization_records(record_id),
+  parent_program_authorization_id UUID,
   evidence_reference TEXT NOT NULL,
   source_revision TEXT NOT NULL,
   record_status TEXT NOT NULL CHECK (record_status IN ('pending', 'verified', 'approved', 'revoked', 'expired')),
@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.authorization_records (
   approved_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, record_id),
+  FOREIGN KEY (project_id, parent_program_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
   CHECK (
     (record_kind = 'operational_approval' AND parent_program_authorization_id IS NOT NULL
       AND policy_version IS NOT NULL AND approved_by IS NOT NULL
@@ -39,7 +42,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.authorized_targets (
   hostname TEXT NOT NULL,
   include_subdomains BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (project_id, authorization_record_id, hostname)
+  UNIQUE (project_id, authorization_record_id, hostname),
+  FOREIGN KEY (project_id, authorization_record_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
 
 CREATE TABLE IF NOT EXISTS proofhunt.excluded_targets (
@@ -50,7 +55,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.excluded_targets (
   include_subdomains BOOLEAN NOT NULL DEFAULT FALSE,
   exclusion_reason TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (project_id, authorization_record_id, hostname)
+  UNIQUE (project_id, authorization_record_id, hostname),
+  FOREIGN KEY (project_id, authorization_record_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
 
 CREATE TABLE IF NOT EXISTS proofhunt.assessment_policies (
@@ -68,6 +75,11 @@ CREATE TABLE IF NOT EXISTS proofhunt.assessment_policies (
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, policy_version),
+  UNIQUE (project_id, policy_id),
+  FOREIGN KEY (project_id, program_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, operational_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
   CHECK (expires_at > effective_at)
 );
 
@@ -85,6 +97,13 @@ CREATE TABLE IF NOT EXISTS proofhunt.assessment_jobs (
   job_status TEXT NOT NULL CHECK (job_status IN ('planned', 'queued', 'running', 'completed', 'cancelled', 'failed', 'stopped')),
   decision_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, job_id),
+  FOREIGN KEY (project_id, program_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, operational_authorization_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, policy_id)
+    REFERENCES proofhunt.assessment_policies(project_id, policy_id),
   CHECK (program_authorization_id <> operational_authorization_id)
 );
 
@@ -96,7 +115,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.assessment_events (
   event_type TEXT NOT NULL,
   details JSONB NOT NULL DEFAULT '{}'::JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (project_id, job_id, event_sequence)
+  UNIQUE (project_id, job_id, event_sequence),
+  FOREIGN KEY (project_id, job_id)
+    REFERENCES proofhunt.assessment_jobs(project_id, job_id)
 );
 
 CREATE TABLE IF NOT EXISTS proofhunt.audit_events (
@@ -123,7 +144,9 @@ CREATE TABLE IF NOT EXISTS proofhunt.validation_results (
   evidence_references JSONB NOT NULL DEFAULT '[]'::JSONB,
   counter_evidence JSONB NOT NULL DEFAULT '[]'::JSONB,
   validator_reference TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id, job_id)
+    REFERENCES proofhunt.assessment_jobs(project_id, job_id)
 );
 
 -- Project context is mandatory. Missing app.project_id evaluates to NULL and
