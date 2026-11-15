@@ -1784,3 +1784,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Verified all eight core native self-evaluation/evidence/runtime/test files in #140 are byte-identical to the #135 validation branch: LocalChatView, NativeEvaluationJournal, NativeEvaluationRunner, NativeEvaluationHistoryView, PocketAILabTests, NativeEvaluationTests, NativeInferenceRuntime, LlamaEngineTests, and NativeEvaluationRuntimeTests. (Nine files compared; all equal.)
 - #135 iOS run 43771107787 passed pinned llama.cpp build and fail-closed typecheck and is linking the physical-device engine; simulator selection, app build, app XCTest, simulator XCTest, pinned GGUF smoke, and macOS XCTest are still pending.
 - #115 run 43771097290 is building pinned llama.cpp; #129 run 43771100673 is queued for its iOS workflow. Companion workflows for their latest heads have passed. #133 remains open/stale until #140 iOS validation completes; no PR merged.
+
+
+## 2026-11-15 22:49 UTC — ProofHunt final SQL hash-format update revalidated
+
+- PR #139 latest head dc113558ff8b15fe7691327dfa75e9ce4b4b3ccf passed all five exact-head workflows: Pocket AI Lab CI 43771262341 and 43771266580, Cursor 43771266533, Governance 43771266511, Consumer 43771266486.
+- Exact-head tests: intelligence 72 files / 650 passed; workspace 28 files / 318 passed / 2 skipped; archive checks passed. Migration now explicitly validates the GENESIS marker or 64-character SHA-256 hashes in audit chain rows. SQL still has not been executed against PostgreSQL.
+- PR #139 remains draft/open/mergeable against main. No merge performed.
