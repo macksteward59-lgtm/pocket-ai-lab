@@ -157,6 +157,24 @@ BEGIN
 END;
 $$;
 
+DO $$
+DECLARE path_rule_matches BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM proofhunt.authorization_records a
+    CROSS JOIN LATERAL jsonb_array_elements(a.scope_policy_snapshot->'inScope' || a.scope_policy_snapshot->'outOfScope') AS rules(rule)
+    WHERE a.record_id = '00000000-0000-0000-0000-000000000001'
+      AND rule->>'kind' = 'url'
+      AND (regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[2] <> '/'
+      AND lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.')) = 'restricted.example.org'
+  ) INTO path_rule_matches;
+  IF NOT path_rule_matches THEN
+    RAISE EXCEPTION 'Path-scope fixture predicate did not match';
+  END IF;
+END;
+$$;
+
 -- A child hostname explicitly covered by the approved subdomain flag is admitted.
 INSERT INTO proofhunt.assessment_jobs (
   job_id, project_id, program_authorization_id, operational_authorization_id,
