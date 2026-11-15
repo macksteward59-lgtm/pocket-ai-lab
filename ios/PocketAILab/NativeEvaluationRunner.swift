@@ -7,15 +7,19 @@ struct NativeEvaluationCase: Sendable {
     let suiteVersion: String
     let caseID: String
     let prompt: String
+    let evaluationCriteria: String
+    let expectedOutcome: String
     let maxTokens: Int
     let temperature: Double
 
-    init(suiteID: String, suiteVersion: String, caseID: String, prompt: String,
-         maxTokens: Int = 256, temperature: Double = 0) {
+    init(suiteID: String, suiteVersion: String, caseID: String, prompt: String, evaluationCriteria: String,
+         expectedOutcome: String = "", maxTokens: Int = 256, temperature: Double = 0) {
         self.suiteID = suiteID
         self.suiteVersion = suiteVersion
         self.caseID = caseID
         self.prompt = prompt
+        self.evaluationCriteria = evaluationCriteria
+        self.expectedOutcome = expectedOutcome
         self.maxTokens = maxTokens
         self.temperature = temperature
     }
@@ -43,6 +47,7 @@ struct NativeEvaluationRunner: Sendable {
         guard !evaluationCase.suiteID.isEmpty, !evaluationCase.suiteVersion.isEmpty,
               !evaluationCase.caseID.isEmpty,
               !evaluationCase.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !evaluationCase.evaluationCriteria.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               evaluationCase.maxTokens > 0, evaluationCase.maxTokens <= 4096,
               evaluationCase.temperature.isFinite,
               (0...2).contains(evaluationCase.temperature),
@@ -107,6 +112,8 @@ struct NativeEvaluationRunner: Sendable {
             suiteID: evaluationCase.suiteID,
             suiteVersion: evaluationCase.suiteVersion,
             caseID: evaluationCase.caseID,
+            evaluationCriteria: evaluationCase.evaluationCriteria,
+            expectedOutcome: evaluationCase.expectedOutcome,
             modelID: session.modelId,
             modelArtifactSHA256: modelArtifactSHA256,
             runtimeSessionID: session.id,
