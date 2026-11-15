@@ -122,3 +122,6 @@ A scanner alert is not automatically a vulnerability. Confidence must be tied to
 The ScopeGuard module checks global and per-project emergency stops, independent program and operational authorization verifiers, the hash-bound normalized bounty scope snapshot (using the existing bug-bounty ScopeEvaluator), expiry, policy version, exact targets, exclusions, the human-reviewed program check allowlist, approved check names, rate/concurrency bounds, and mandatory stop-on-scope-violation. It emits an approved plan with executionPerformed=false. Audit persistence failure changes an otherwise approved result to denied.
 
 This is an authorization foundation, not a scanner. It does not claim real-world authorization unless the trusted host supplies verifiers backed by authoritative evidence and APEX/Director. No live network assessment or exploit functionality is present.
+
+
+See [ProofHunt 1.1 — APEX and East/e3 integration contract](ProofHunt-Apex-East-Integration-Contract.md) for the required governance receipt, durable scheduler, and release gates. The current ScopeGuard plan must not be treated as an APEX execution grant.
