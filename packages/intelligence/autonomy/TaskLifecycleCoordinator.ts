@@ -41,6 +41,8 @@ export interface TaskStepRecord {
   dependsOn: string[];
   maxAttempts: number;
   attempts: number;
+  /** Every issued attempt ID is retained to prevent reuse after retries/restarts. */
+  attemptIds: string[];
   status: StepStatus;
   currentAttempt: StepAttempt | null;
   completedAt: string | null;
@@ -187,11 +189,12 @@ export class TaskLifecycleCoordinator {
       if (typeof attemptId !== "string" || !attemptId.trim() || attemptId.length > 256) {
         throw new TaskLifecycleError("invalid_attempt_id", "Attempt id generator returned an invalid id");
       }
-      const expires = new Date(now.getTime() + task.leaseMs);
+      if ([...this.records.values()].some(record => record.steps.some(item => item.attemptIds.includes(attemptId)))) {\n        throw new TaskLifecycleError("duplicate_attempt_id", "Attempt id has already been issued");\n      }\n      const expires = new Date(now.getTime() + task.leaseMs);
       const updated = cloneTask(task);
       const target = updated.steps.find(item => item.id === step.id)!;
       target.status = "running";
       target.attempts += 1;
+      target.attemptIds.push(attemptId);
       target.currentAttempt = {
         id: attemptId,
         startedAt: now.toISOString(),
@@ -398,7 +401,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     }
     return {
       id: step.id, description: step.description.trim(), dependsOn, maxAttempts,
-      attempts: 0, status: "pending", currentAttempt: null, completedAt: null,
+      attempts: 0, attemptIds: [], status: "pending", currentAttempt: null, completedAt: null,
       result: null, evidenceRefs: [], lastError: null
     };
   });
@@ -481,7 +484,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     typeof step.description !== "string" || !step.description.trim() ||
     !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
     !Array.isArray(step.dependsOn) || step.dependsOn.some(id => !ids.has(id)) ||
-    !Number.isInteger(step.attempts) || step.attempts < 0 ||
+    !Number.isInteger(step.attempts) || step.attempts < 0 ||\n    !Array.isArray(step.attemptIds) || step.attemptIds.length !== step.attempts ||\n    step.attemptIds.some(id => typeof id !== "string" || !id.trim()) || new Set(step.attemptIds).size !== step.attemptIds.length ||
     !Number.isInteger(step.maxAttempts) || step.maxAttempts < 1 || step.maxAttempts > 5 ||
     !Array.isArray(step.evidenceRefs) ||
     (step.status === "running") !== (step.currentAttempt !== null) ||
