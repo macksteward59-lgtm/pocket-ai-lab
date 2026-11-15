@@ -124,15 +124,22 @@ describe("ProofHunt ScopeGuard", () => {
     expect((await guard.authorizeAssessment(config, "api.example.com", "static_analysis")).permitted).toBe(true);
   });
 
-  it("gives exclusions precedence over matching inclusions", async () => {
-    const { guard } = makeGuard();
+  it("gives operational exclusions precedence over matching inclusions", async () => {
+    const base = makeConfig();
+    const scopePolicy = { ...base.programAuthorization.scopePolicy!, outOfScope: [] };
     const config = makeConfig({
       targets: [{ hostname: "example.com", includeSubdomains: true }],
-      excludedTargets: [{ hostname: "admin.example.com", includeSubdomains: true }]
+      excludedTargets: [{ hostname: "admin.example.com", includeSubdomains: true }],
+      programAuthorization: {
+        ...base.programAuthorization,
+        scopePolicy,
+        scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy)
+      }
     });
+    const { guard } = makeGuard();
     const result = await guard.authorizeAssessment(config, "admin.example.com", "static_analysis");
     expect(result.permitted).toBe(false);
-    expect(result.reason).toContain("out-of-scope rule takes precedence");
+    expect(result.reason).toContain("Target is explicitly excluded");
   });
 
   it("requires both independent authorization verifiers", async () => {
