@@ -217,7 +217,7 @@ struct ChatLine: Identifiable {
     let text: String
 }
 
-enum LocalChatError: LocalizedError {
+enum LocalChatError: LocalizedError, Equatable {
     case notGGUF, emptyOutput, busy, memoryEstimateUnavailable, modelMustBeUnloaded, invalidGGUFHeader
     var errorDescription: String? {
         switch self {
