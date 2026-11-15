@@ -30,6 +30,7 @@ CREATE TABLE proofhunt.authorization_records (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, record_id),
   UNIQUE (project_id, record_id, policy_version, policy_hash),
+  UNIQUE (project_id, record_id, scope_policy_hash),
   FOREIGN KEY (project_id, parent_program_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   CHECK (
@@ -144,6 +145,8 @@ CREATE TABLE proofhunt.assessment_policies (
   UNIQUE (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id),
   FOREIGN KEY (project_id, program_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
+  FOREIGN KEY (project_id, program_authorization_id, program_scope_hash)
+    REFERENCES proofhunt.authorization_records(project_id, record_id, scope_policy_hash),
   FOREIGN KEY (project_id, operational_authorization_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, operational_authorization_id, policy_version, policy_hash)
@@ -194,11 +197,105 @@ AS $$
 DECLARE
   allowed_subdomains BOOLEAN;
   target_is_excluded BOOLEAN;
+  program_kind TEXT;
+  program_status TEXT;
+  program_expires_at TIMESTAMPTZ;
+  stored_program_scope_hash CHAR(64);
+  program_scope_snapshot JSONB;
+  program_environment TEXT;
+  program_checks TEXT[];
+  operational_kind TEXT;
+  operational_status TEXT;
+  operational_expires_at TIMESTAMPTZ;
+  operational_parent UUID;
+  operational_environment TEXT;
+  operational_policy_version TEXT;
+  operational_policy_hash CHAR(64);
+  policy_preapproved BOOLEAN;
+  policy_checks TEXT[];
+  policy_effective_at TIMESTAMPTZ;
+  policy_expires_at TIMESTAMPTZ;
+  policy_stop_on_scope_violation BOOLEAN;
+  authorization_revoked BOOLEAN;
 BEGIN
   IF NEW.decision <> 'approved_plan' THEN
     RETURN NEW;
   END IF;
 
+  SELECT record_kind, record_status, expires_at, scope_policy_hash,
+         scope_policy_snapshot, permitted_checks, environment
+  INTO program_kind, program_status, program_expires_at, stored_program_scope_hash,
+       program_scope_snapshot, program_checks, program_environment
+  FROM proofhunt.authorization_records
+  WHERE project_id = NEW.project_id AND record_id = NEW.program_authorization_id;
+  IF NOT FOUND OR program_status <> 'verified' OR program_expires_at <= CURRENT_TIMESTAMP THEN
+    RAISE EXCEPTION 'ProofHunt program/ownership authorization is missing, unverified, or expired';
+  END IF;
+  IF NEW.check_type <> ALL(program_checks) THEN
+    RAISE EXCEPTION 'ProofHunt check is not included in the reviewed program/ownership permissions';
+  END IF;
+
+  SELECT record_kind, record_status, expires_at, parent_program_authorization_id,
+         environment, policy_version, policy_hash
+  INTO operational_kind, operational_status, operational_expires_at, operational_parent,
+       operational_environment, operational_policy_version, operational_policy_hash
+  FROM proofhunt.authorization_records
+  WHERE project_id = NEW.project_id AND record_id = NEW.operational_authorization_id;
+  IF NOT FOUND OR operational_kind <> 'operational_approval' OR
+     operational_status <> 'approved' OR operational_expires_at <= CURRENT_TIMESTAMP OR
+     operational_parent <> NEW.program_authorization_id OR
+     operational_environment <> program_environment OR
+     operational_policy_version <> NEW.policy_version OR
+     operational_policy_hash <> NEW.policy_hash THEN
+    RAISE EXCEPTION 'ProofHunt operational approval is missing, revoked, expired, or mismatched';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM proofhunt.authorization_revocations r
+    WHERE r.project_id = NEW.project_id
+      AND r.authorization_record_id IN (NEW.program_authorization_id, NEW.operational_authorization_id)
+  ) INTO authorization_revoked;
+  IF authorization_revoked THEN
+    RAISE EXCEPTION 'ProofHunt authorization has been revoked';
+  END IF;
+
+  SELECT preapproved, allowed_checks, effective_at, expires_at, stop_on_scope_violation
+  INTO policy_preapproved, policy_checks, policy_effective_at, policy_expires_at,
+       policy_stop_on_scope_violation
+  FROM proofhunt.assessment_policies
+  WHERE project_id = NEW.project_id AND policy_id = NEW.policy_id;
+  IF NOT FOUND OR NOT policy_preapproved OR NEW.check_type <> ALL(policy_checks) OR
+     policy_effective_at > CURRENT_TIMESTAMP OR policy_expires_at <= CURRENT_TIMESTAMP OR
+     NOT policy_stop_on_scope_violation THEN
+    RAISE EXCEPTION 'ProofHunt operational policy is not currently active or does not permit this check';
+  END IF;
+
+  IF program_kind = 'bug_bounty_program' THEN
+    IF NEW.program_scope_hash IS NULL OR NEW.program_scope_hash <> stored_program_scope_hash THEN
+      RAISE EXCEPTION 'ProofHunt job does not bind the verified published program scope digest';
+    END IF;
+    IF program_scope_snapshot ? 'effectiveAt' AND
+       (program_scope_snapshot->>'effectiveAt')::TIMESTAMPTZ > CURRENT_TIMESTAMP THEN
+      RAISE EXCEPTION 'ProofHunt published program scope is not yet effective';
+    END IF;
+    IF program_scope_snapshot ? 'expiresAt' AND
+       (program_scope_snapshot->>'expiresAt')::TIMESTAMPTZ <= CURRENT_TIMESTAMP THEN
+      RAISE EXCEPTION 'ProofHunt published program scope has expired';
+    END IF;
+    IF NOT (program_scope_snapshot ? 'testingWindow') OR
+       (program_scope_snapshot->'testingWindow'->>'startsAt') IS NULL OR
+       (program_scope_snapshot->'testingWindow'->>'endsAt') IS NULL OR
+       (program_scope_snapshot->'testingWindow'->>'startsAt')::TIMESTAMPTZ > CURRENT_TIMESTAMP OR
+       (program_scope_snapshot->'testingWindow'->>'endsAt')::TIMESTAMPTZ <= CURRENT_TIMESTAMP THEN
+      RAISE EXCEPTION 'ProofHunt published program testing window is not currently active';
+    END IF;
+  ELSIF program_kind = 'asset_ownership' THEN
+    IF NEW.program_scope_hash IS NOT NULL THEN
+      RAISE EXCEPTION 'Owned-infrastructure job cannot claim a bounty program scope digest';
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'ProofHunt program authorization kind is unsupported';
+  END IF;
   IF NEW.target_hostname <> lower(rtrim(NEW.target_hostname, '.')) OR
      NEW.authorized_target_hostname <> lower(rtrim(NEW.authorized_target_hostname, '.')) THEN
     RAISE EXCEPTION 'ProofHunt job hostnames must be canonical lowercase DNS/IP values';
