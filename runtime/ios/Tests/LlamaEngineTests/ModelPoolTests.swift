@@ -317,6 +317,38 @@ final class ModelPoolTests: XCTestCase {
         try await pool.unload(modelId: "second")
     }
 
+    func testSystemMemoryAdmissionSubtractsExistingModelReservations() async throws {
+        let engine = PoolTestEngine()
+        let configuration = try ModelPoolConfiguration(
+            maxResidentMemoryMB: 2_048,
+            maxLoadedModels: 2,
+            minimumFreeMemoryMB: 100
+        )
+        // Keep the host snapshot constant to model a delayed/stale OS memory
+        // reading while the pool already has a resident reservation.
+        let pool = ModelPool(
+            engine: engine,
+            configuration: configuration,
+            availableMemoryMB: { 600 }
+        )
+
+        let first = try await pool.acquire(model: model("resident"), estimatedMemoryMB: 400)
+        do {
+            _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 101)
+            XCTFail("Existing reservations must be subtracted from the host memory snapshot")
+        } catch ModelPoolError.insufficientMemory(let required, let available) {
+            XCTAssertEqual(required, 101)
+            XCTAssertEqual(available, 100)
+        }
+
+        let snapshot = await pool.snapshot()
+        XCTAssertEqual(snapshot.reservedMemoryMB, 400)
+        XCTAssertEqual(snapshot.loadedModelIDs, ["resident"])
+        let released = await pool.release(first)
+        XCTAssertTrue(released)
+        try await pool.unload(modelId: "resident")
+    }
+
     private func makePool(
         engine: any LlamaEngine,
         maxMemory: Int = 2_048,
