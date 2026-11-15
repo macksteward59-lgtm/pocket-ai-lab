@@ -1389,3 +1389,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Draft mainline validation PR #129: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/129, exact head `065e6bf927b8d1c94f2c141c0f08aea002e075ae`, mergeable against main `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`.
 - Exact-head PR #129 checks: Consumer, Cursor collaboration plugin, and Governance sidecar passed; Pocket AI Lab CI is in progress; iOS LlamaEngine CI is queued (`43752704642`). An earlier cache-branch iOS run (`43752636891`) was cancelled when the workflow was updated; it is not a pass/failure.
 - No actual cache hit or measured speedup has been observed yet. The first successful run must populate the cache; a subsequent exact-key run must demonstrate `cache-hit=true` while retaining all downstream validation.
+
+
+## 2026-11-15 — ChatGPT PostgreSQL East lifecycle persistence
+
+- **Claim:** `codex/east-postgres-lifecycle-store` — new PostgreSQL snapshot store, migration, focused tests, coordinator reload support, and readiness documentation.
+- **Base:** PR #103's East lifecycle resumption integration head `5c0922ddbf14e9303894e245710b2f1f660abb0a`.
+- **Gap:** the current lifecycle coordinator accepts an injected `TaskLifecycleStore`, but only an in-memory implementation is included. The readiness checklist requires atomic replacement, cross-process concurrency control, monotonic versions, schema validation, and fail-closed recovery.
+- **Design:** namespaced PostgreSQL JSONB snapshot with `SELECT ... FOR UPDATE`, compare-and-swap record versions, explicit schema version, and a caller-injected SQL transaction adapter. Stale writers fail rather than overwrite; callers can reload the coordinator and reconcile. No database driver, credentials, migration execution, or production deployment will be added.
+- **Security boundary:** persistence is workflow state only. It grants no APEX approval, East authorization, evidence verification, or signed receipt authority.
