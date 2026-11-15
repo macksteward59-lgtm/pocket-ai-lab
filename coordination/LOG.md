@@ -1610,3 +1610,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `7446cac45bdcb4095d327a9759d942acc4267a62`: iOS run `43759496587` passed cached llama.cpp build, fail-closed typecheck, device link, and app build. Native app XCTest is still in progress; simulator, pinned-GGUF evaluation smoke, and macOS tests remain pending.
 - PR #115 current head `b61b1b64b44319c37f220413c83cd9a417c6cde4`: task-history ISO-8601 precision test repair is in progress through exact-head iOS run `43760034998`; four companion workflows passed.
 - No tests are marked passed until their workflow reports success. No merge, physical-device execution, runtime attestation, or cache speedup claim.
+
+
+## 2026-11-15 — Self-evaluation stack synchronized with latest catalog base
+
+- PR #115 catalog branch advanced from `4a79dd022a440639af0a3083ef9de3820ae20118` to `b61b1b64b44319c37f220413c83cd9a417c6cde4` with the two ISO-8601 precision assertions corrected.
+- Mirrored the exact corrected `LocalAgentTaskHistoryStoreTests.swift` into both the self-evaluation feature and mainline validation branches so known persistence-test failures are not reintroduced.
+- Added an explicit two-parent merge commit to feature branch `codex/native-self-evaluation-runtime-reconciled`: `3355e89505482e868b4be8f3a573deabb69d7865`, with current catalog base as second parent. PR #133 now reports mergeable, 30 commits ahead / 0 behind its base.
+- Mainline validation PR #135 refreshed at head `520b3fea98affd5bd533a5030698e8e4ff25e1e9`; its new exact-head workflows started. Cursor passed; iOS queued, other companion workflows were in progress at inspection.
+- Correction from source review: `NativeEvaluationScoringRule` currently has only `.exactMatch` and `.manualReview`; the runner's switch is exhaustive. No `.containsExpectedOutcome` rule is part of this version, so no such case is needed.
+- Existing PR #115 iOS failure log was inspected: in addition to the task-history timestamp assertions, app XCTest exposed temporary-root cleanup errors in multiple tests. The timestamp comparisons are now fixed; cleanup errors remain under investigation and must be rechecked in the latest run before claiming the suite passes.
