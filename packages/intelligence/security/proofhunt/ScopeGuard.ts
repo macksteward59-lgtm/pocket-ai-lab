@@ -104,6 +104,10 @@ export interface ScopeGuardDecision {
   readonly programAuthorizationId?: string;
   readonly operationalAuthorizationId?: string;
   readonly policyVersion?: string;
+  /** Digest of the full approved operational policy + target allowlist/exclusions. */
+  readonly operationalPolicyHash?: string;
+  /** Digest of the normalized published bounty scope snapshot, when applicable. */
+  readonly programScopeHash?: string;
   readonly executionPerformed: false;
 }
 
@@ -272,7 +276,11 @@ export class ScopeGuard {
       ...(permitted ? {
         programAuthorizationId: assessmentConfig!.programAuthorization.recordId,
         operationalAuthorizationId: assessmentConfig!.operationalAuthorization.recordId,
-        policyVersion: assessmentConfig!.policy.version
+        policyVersion: assessmentConfig!.policy.version,
+        operationalPolicyHash: assessmentConfig!.operationalAuthorization.policyHash,
+        ...(assessmentConfig!.programAuthorization.scopePolicyHash
+          ? { programScopeHash: assessmentConfig!.programAuthorization.scopePolicyHash }
+          : {})
       } : {}),
       executionPerformed: false
     });
@@ -291,6 +299,8 @@ export class ScopeGuard {
         programAuthorizationId: assessmentConfig?.programAuthorization?.recordId ?? null,
         operationalAuthorizationId: assessmentConfig?.operationalAuthorization?.recordId ?? null,
         policyVersion: assessmentConfig?.policy?.version ?? null,
+        operationalPolicyHash: assessmentConfig?.operationalAuthorization?.policyHash ?? null,
+        programScopeHash: assessmentConfig?.programAuthorization?.scopePolicyHash ?? null,
         executionPerformed: false
       });
     } catch {
