@@ -66,6 +66,33 @@ describe("runEastTaskWithLifecycle", () => {
     expect(committed).toBe(1);
   });
 
+  it("rejects a reused lifecycle ID bound to a different objective without executing East", async () => {
+    let executions = 0;
+    const east = {
+      getTask: () => ({ id: "east-3", objective: "Current objective" }),
+      assignAgent: () => { executions += 1; return "east-3"; },
+      executeAgent: async () => { executions += 1; return "unexpected"; },
+      runDeliberation: async () => { executions += 1; return { synthesis: "unexpected", evidence: [] }; },
+      commitTaskEvidence: async () => { executions += 1; return false; }
+    } as unknown as EastPlatformRuntime;
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "lifecycle-3",
+      objective: "Different objective",
+      steps: [{ id: "placeholder", description: "Existing unrelated work" }],
+      metadata: { eastTaskId: "east-3", workflow: "east-six-agent-deliberation-v1" }
+    });
+
+    await expect(runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId: "east-3", lifecycleTaskId: "lifecycle-3",
+      objective: "Current objective"
+    })).rejects.toThrow("Existing lifecycle task does not match this East workflow definition");
+    expect(executions).toBe(0);
+    expect(coordinator.getTask("lifecycle-3").objective).toBe("Different objective");
+  });
+
   it("fails closed and does not retry an agent generation after a provider failure", async () => {
     let attempts = 0;
     const east = {
