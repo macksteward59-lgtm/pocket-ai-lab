@@ -1568,3 +1568,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - The coordination protocol referenced `coordination/LEADERSHIP.md`, but that file was absent from the current `agent-coordination` branch (404). The authoritative leadership/agent-admission text exists on `main`; copied that exact text into the documentation-only coordination branch so future collaborators can follow the required start-of-work procedure.
 - Commit: `9640e6b3c071c1a94d9a0c656f694fd7a42cb2de`. No application code, main branch, permissions, or governance behavior changed.
+
+
+## 2026-11-15 — Parallel iOS integration CI checkpoint
+
+- Target branch `ios/private-iphone-test-hybrid` remains at `1d7140005f3f8a5cd4b7150e89c1ba7656b2b03e`; its latest iOS run #45 (`43245960654`) completed successfully: llama.cpp build, generic device link, native app build, app XCTest, simulator XCTest, pinned-GGUF macOS smoke all passed. Workflow signing was disabled and the run explicitly did not use a physical iPhone.
+- Self-evaluation validation PR #135 exact head `7446cac45bdcb4095d327a9759d942acc4267a62`: iOS run #205 (`43759496587`) is in progress. Pinned llama.cpp build and fail-closed typecheck passed; generic iOS device link is in progress; app compile/tests, simulator tests, and the new real-model evaluation smoke are not yet run.
+- Independent ModelPool memory-admission integration PR #124 exact head `f791085ffb070d37594941cceb54afbe511902a8`: iOS run #174 (`43751335652`) has passed app compilation, device linking, and native app XCTest; simulator XCTest is in progress. No merge or physical-device claim.
+- The newest run on the target branch is #45. The target branch's PR #38 is closed; the branch remains unchanged. Repository metadata still reports public visibility.
