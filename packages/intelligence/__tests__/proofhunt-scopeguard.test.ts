@@ -357,6 +357,21 @@ describe("ProofHunt ScopeGuard", () => {
     expect(result.reason).toContain("testing window");
   });
 
+  it("computes a stable operational digest independent of target ordering and hostname case", () => {
+    const policy = makeConfig().policy;
+    const first = hashOperationalAuthorizationSnapshot(
+      policy,
+      [{ hostname: "APP.EXAMPLE.COM." }, { hostname: "api.example.com" }],
+      [{ hostname: "ADMIN.example.com" }]
+    );
+    const reordered = hashOperationalAuthorizationSnapshot(
+      policy,
+      [{ hostname: "API.EXAMPLE.COM" }, { hostname: "app.example.com" }],
+      [{ hostname: "admin.example.com." }]
+    );
+    expect(first).toBe(reordered);
+  });
+
   it("binds the operational approval to the exact allowlist and exclusions", async () => {
     const base = makeConfig({
       environment: "owned",
