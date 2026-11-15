@@ -1562,3 +1562,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exact-head iOS LlamaEngine run #205 (`43759496587`) is in progress. The prior iOS run #204 (`43759463928`) was cancelled after the validation branch advanced; it is not a pass. Pocket AI Lab, Consumer, Cursor, and Governance checks passed on the new validation head.
 - Existing PR #115 run #199 (`43755647177`) failed native app XCTest after app compilation. Logs show two role-history equality assertions fail because ISO-8601 persistence truncates sub-second Date precision, plus multiple temporary-file cleanup errors during app-level tests. These are inherited catalog-stack test failures and remain a validation risk; no root cause for the cleanup errors is asserted yet.
 - No APEX/Director, East/e3, ExploitGym, BridgeGate, RuntimeController, signed Evidence, authorization, main, repository visibility, signing, or release changes were made.
+
+
+## 2026-11-15 — Coordination leadership document restored
+
+- The coordination protocol referenced `coordination/LEADERSHIP.md`, but that file was absent from the current `agent-coordination` branch (404). The authoritative leadership/agent-admission text exists on `main`; copied that exact text into the documentation-only coordination branch so future collaborators can follow the required start-of-work procedure.
+- Commit: `9640e6b3c071c1a94d9a0c656f694fd7a42cb2de`. No application code, main branch, permissions, or governance behavior changed.
