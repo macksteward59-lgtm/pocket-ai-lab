@@ -8,7 +8,10 @@ final class LocalChatModel: ObservableObject {
     @Published var modelName = "No model imported"
     @Published var modelFingerprintSummary = "No model fingerprint"
     @Published var status = "Import a GGUF model to begin."
-    @Published var messages: [ChatLine] = []
+    @Published var messages: [ChatLine] = [] { didSet { persistHistory() } }
+    @Published var historyStatus = "Conversation history is stored only on this device."
+
+    private let conversationStore = LocalConversationStore()
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
@@ -45,9 +48,35 @@ final class LocalChatModel: ObservableObject {
         metalStatus = probe.linked && probe.metalDeviceUsable
             ? "llama.cpp linked · Metal available · \(probe.metalDeviceDescription)"
             : "Metal is not verified in this build. Loading will fail closed if unavailable."
+        do {
+            messages = try conversationStore.load()
+            historyStatus = "\(messages.count) locally saved messages · 30-day retention · clear history anytime."
+        } catch {
+            historyStatus = "Saved history could not be read. The existing archive was preserved."
+        }
     }
 
     var isModelLoaded: Bool { lease != nil }
+
+    private func persistHistory() {
+        do {
+            try conversationStore.save(messages)
+            historyStatus = "Saved locally on this device · 30-day retention."
+        } catch {
+            historyStatus = "History could not be saved. Check available device storage."
+        }
+    }
+
+    func clearHistory() {
+        guard !isBusy else { return }
+        do {
+            try conversationStore.clear()
+            messages = []
+            historyStatus = "Local conversation and Agent Team history cleared."
+        } catch {
+            historyStatus = "History could not be cleared. The archive may still exist on this device."
+        }
+    }
 
     func importModel(from source: URL) async throws {
         guard !isBusy else { throw LocalChatError.busy }
@@ -394,10 +423,18 @@ enum LocalGGUFImporter {
     }
 }
 
-struct ChatLine: Identifiable {
-    let id = UUID()
+struct ChatLine: Identifiable, Codable {
+    let id: UUID
     let role: String
     let text: String
+    let timestamp: Date
+
+    init(id: UUID = UUID(), role: String, text: String, timestamp: Date = Date()) {
+        self.id = id
+        self.role = role
+        self.text = text
+        self.timestamp = timestamp
+    }
 }
 
 enum LocalChatError: LocalizedError, Equatable {
@@ -428,6 +465,7 @@ struct LocalChatView: View {
     @State private var showImporter = false
     @State private var prompt = ""
     @State private var importError: String?
+    @State private var showClearHistoryConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -436,6 +474,7 @@ struct LocalChatView: View {
                     Text(model.modelName).font(.headline)
                     Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
+                    Text(model.historyStatus).font(.caption2).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
                         .font(.caption2).foregroundStyle(.orange)
@@ -494,6 +533,18 @@ struct LocalChatView: View {
                     .font(.caption2).foregroundStyle(.secondary).padding(.bottom, 6)
             }
             .navigationTitle("Pocket AI Lab")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Clear history", role: .destructive) { showClearHistoryConfirmation = true }
+                        .disabled(model.messages.isEmpty || model.isBusy)
+                }
+            }
+            .confirmationDialog("Clear saved local history?", isPresented: $showClearHistoryConfirmation, titleVisibility: .visible) {
+                Button("Clear conversation and Agent Team history", role: .destructive) { model.clearHistory() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This deletes the saved message archive from this device. It does not delete imported model files.")
+            }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 do {
                     guard let url = try result.get().first else { throw LocalChatError.notGGUF }
