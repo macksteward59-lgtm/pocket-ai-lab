@@ -117,14 +117,18 @@ export class ScopeGuard {
     let hostname: string | undefined;
     let reason = "Assessment is not permitted";
     let permitted = false;
+    let assessmentConfig: ProofHuntAssessmentConfig | undefined;
 
     try {
-      validateConfig(config);
+      // Snapshot before any asynchronous verification to prevent caller mutation
+      // from changing the target list or policy while authorization is pending.
+      assessmentConfig = structuredClone(config);
+      validateConfig(assessmentConfig);
       hostname = normalizeTargetHostname(target);
 
-      const program = config.programAuthorization;
-      const operational = config.operationalAuthorization;
-      const policy = config.policy;
+      const program = assessmentConfig.programAuthorization;
+      const operational = assessmentConfig.operationalAuthorization;
+      const policy = assessmentConfig.policy;
 
       if (program.kind !== (config.environment === "bounty" ? "bug_bounty_program" : "asset_ownership")) {
         throw new ScopeGuardError("Program authorization kind does not match the assessment environment");
@@ -132,7 +136,7 @@ export class ScopeGuard {
       if (program.status !== "verified" || !program.evidenceReference.trim() || !program.sourceRevision.trim()) {
         throw new ScopeGuardError("Program authorization evidence is not independently verified");
       }
-      if (!isValidTimestamp(program.verifiedAt) || isExpired(program.expiresAt, this.now())) {
+      if (!isValidTimestamp(program.verifiedAt) || Date.parse(program.verifiedAt) > this.now() || isExpired(program.expiresAt, this.now())) {
         throw new ScopeGuardError("Program authorization is expired or has invalid timestamps");
       }
       if ((await this.options.programVerifier.verify(program)) !== true) {
@@ -151,7 +155,7 @@ export class ScopeGuard {
       if (!operational.approvedBy.trim() || !operational.approvalReference.trim() || !operational.signatureReference.trim()) {
         throw new ScopeGuardError("Operational approval provenance is incomplete");
       }
-      if (!isValidTimestamp(operational.approvedAt) || isExpired(operational.expiresAt, this.now())) {
+      if (!isValidTimestamp(operational.approvedAt) || Date.parse(operational.approvedAt) > this.now() || isExpired(operational.expiresAt, this.now())) {
         throw new ScopeGuardError("Operational authorization is expired or has invalid timestamps");
       }
       if ((await this.options.operationalVerifier.verify(operational)) !== true) {
@@ -165,10 +169,10 @@ export class ScopeGuard {
       if (!policy.allowedChecks.includes(check)) {
         throw new ScopeGuardError("Assessment type is not included in the approved policy");
       }
-      if (matchesAny(hostname, config.excludedTargets)) {
+      if (matchesAny(hostname, assessmentConfig.excludedTargets)) {
         throw new ScopeGuardError("Target is explicitly excluded");
       }
-      if (!matchesAny(hostname, config.targets)) {
+      if (!matchesAny(hostname, assessmentConfig.targets)) {
         throw new ScopeGuardError("Target is not explicitly authorized");
       }
 
@@ -185,11 +189,11 @@ export class ScopeGuard {
       ...(hostname ? { hostname } : {}),
       check,
       reason,
-      projectId: config?.projectId ?? "",
+      projectId: assessmentConfig?.projectId ?? "",
       ...(permitted ? {
-        programAuthorizationId: config.programAuthorization.recordId,
-        operationalAuthorizationId: config.operationalAuthorization.recordId,
-        policyVersion: config.policy.version
+        programAuthorizationId: assessmentConfig.programAuthorization.recordId,
+        operationalAuthorizationId: assessmentConfig.operationalAuthorization.recordId,
+        policyVersion: assessmentConfig.policy.version
       } : {}),
       executionPerformed: false
     });
@@ -205,9 +209,9 @@ export class ScopeGuard {
         decision: decision.decision,
         permitted: decision.permitted,
         reason: decision.reason,
-        programAuthorizationId: config?.programAuthorization?.recordId ?? null,
-        operationalAuthorizationId: config?.operationalAuthorization?.recordId ?? null,
-        policyVersion: config?.policy?.version ?? null,
+        programAuthorizationId: assessmentConfig?.programAuthorization?.recordId ?? null,
+        operationalAuthorizationId: assessmentConfig?.operationalAuthorization?.recordId ?? null,
+        policyVersion: assessmentConfig?.policy?.version ?? null,
         executionPerformed: false
       });
     } catch {
@@ -218,7 +222,7 @@ export class ScopeGuard {
         ...(hostname ? { hostname } : {}),
         check,
         reason: "Audit persistence failed; assessment plan denied",
-        projectId: config?.projectId ?? "",
+        projectId: assessmentConfig?.projectId ?? "",
         executionPerformed: false
       });
     }
