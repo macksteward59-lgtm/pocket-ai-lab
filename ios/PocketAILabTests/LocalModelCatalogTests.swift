@@ -114,4 +114,21 @@ final class LocalModelCatalogTests: XCTestCase {
         }
         XCTAssertEqual(try Data(contentsOf: file), original)
     }
+
+    func testUnknownSelectedModelReferenceFailsClosedAndPreservesArchive() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let models = root.appendingPathComponent("Models", isDirectory: true)
+        try FileManager.default.createDirectory(at: models, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("catalog.json")
+        let original = Data("{\"version\":1,\"savedAt\":\"2026-01-01T00:00:00Z\",\"selectedModelID\":\"sha256-missing\",\"entries\":[]}".utf8)
+        try original.write(to: file)
+        let store = LocalModelCatalogStore(fileURL: file, modelDirectory: models)
+
+        XCTAssertThrowsError(try store.load()) { error in
+            XCTAssertEqual(error as? LocalModelCatalogStore.StoreError, .invalidEntry)
+        }
+        XCTAssertEqual(try Data(contentsOf: file), original)
+    }
+
 }
