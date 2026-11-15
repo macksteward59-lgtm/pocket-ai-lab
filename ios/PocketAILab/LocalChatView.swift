@@ -539,6 +539,7 @@ struct LocalChatView: View {
                     Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                     Text(model.historyStatus).font(.caption2).foregroundStyle(.secondary)
+                    Text(model.agentTaskHistoryStatus).font(.caption2).foregroundStyle(.secondary)
                     Text(model.metalStatus).font(.caption2).foregroundStyle(.secondary)
                     Label("Runtime trust: \(model.trustStatus)", systemImage: "exclamationmark.shield")
                         .font(.caption2).foregroundStyle(.orange)
@@ -552,11 +553,48 @@ struct LocalChatView: View {
                             .disabled(model.isBusy)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding()
-                List(model.messages) { line in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(line.role).font(.caption.bold()).foregroundStyle(.secondary)
-                        Text(line.text).textSelection(.enabled)
-                    }.listRowSeparator(.hidden)
+                List {
+                    if !model.agentTaskHistory.isEmpty {
+                        Section("Recent Agent Team tasks") {
+                            ForEach(model.agentTaskHistory) { task in
+                                DisclosureGroup {
+                                    Text(task.status.rawValue.capitalized)
+                                        .font(.caption.bold())
+                                    Text(task.objective)
+                                        .font(.subheadline)
+                                    if let finalResponse = task.finalResponse {
+                                        Text(finalResponse).textSelection(.enabled)
+                                    }
+                                    ForEach(task.roleResults) { result in
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("\(result.sequence + 1). \(result.role)")
+                                                .font(.caption.bold()).foregroundStyle(.secondary)
+                                            Text(result.text).textSelection(.enabled)
+                                        }
+                                    }
+                                    if let failure = task.failureSummary {
+                                        Text(failure).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Text("Task history is a record only. Interrupted tasks are not automatically resumed.")
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(task.objective).lineLimit(2)
+                                        Text("\(task.status.rawValue.capitalized) · \(task.roleResults.count) role results")
+                                            .font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Section("Conversation") {
+                        ForEach(model.messages) { line in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(line.role).font(.caption.bold()).foregroundStyle(.secondary)
+                                Text(line.text).textSelection(.enabled)
+                            }.listRowSeparator(.hidden)
+                        }
+                    }
                 }
                 VStack(spacing: 6) {
                     Picker("Interaction mode", selection: $mode) {
