@@ -3,6 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AuditLedger } from "../security/AuditLedger";
+import { normalizeProgramPolicy } from "../bug-bounty";
+import { hashNormalizedProgramPolicy } from "../security/proofhunt";
 import {
   ScopeGuard,
   normalizeTargetHostname,
@@ -11,6 +13,24 @@ import {
 } from "../security/proofhunt";
 
 function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHuntAssessmentConfig {
+  const scopePolicy = normalizeProgramPolicy({
+    programId: "program-demo",
+    programName: "ProofHunt demo program",
+    platform: "manual",
+    sourceUrl: "https://bounty.example/program/rules",
+    retrievedAt: "2026-11-15T12:00:00Z",
+    effectiveAt: "2026-11-01T00:00:00Z",
+    expiresAt: "2027-01-01T00:00:00Z",
+    scope: {
+      inScope: [{ kind: "domain", value: "*.example.com" }],
+      outOfScope: [{ kind: "domain", value: "admin.example.com" }]
+    },
+    allowedActivities: ["static analysis", "API specification review"],
+    prohibitedActivities: ["intrusive testing", "denial of service"],
+    vulnerabilityExclusions: ["self-XSS without impact"],
+    rateLimit: { requestsPerSecond: 1 },
+    testingWindow: { startsAt: "2026-11-01T00:00:00Z", endsAt: "2027-01-01T00:00:00Z", timezone: "UTC" }
+  }, new Date("2026-11-15T12:00:00Z"));
   return {
     projectId: "proofhunt-demo",
     environment: "bounty",
@@ -20,6 +40,8 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
       subjectId: "program-demo",
       evidenceReference: "https://bounty.example/program/rules",
       sourceRevision: "sha256:program-rules-revision-1",
+      scopePolicy,
+      scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy),
       status: "verified",
       verifiedAt: "2026-11-15T12:00:00Z",
       expiresAt: "2027-01-01T00:00:00Z"
@@ -221,6 +243,27 @@ describe("ProofHunt ScopeGuard", () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it("denies a target that the published bounty policy excludes even if the operational allowlist is broader", async () => {
+    const base = makeConfig();
+    const config = makeConfig({
+      targets: [{ hostname: "example.com", includeSubdomains: true }],
+      excludedTargets: []
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "admin.example.com", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("published program scope");
+  });
+
+  it("denies a bounty scope snapshot whose digest no longer matches its contents", async () => {
+    const base = makeConfig();
+    const config = makeConfig({
+      programAuthorization: { ...base.programAuthorization, scopePolicyHash: "0".repeat(64) }
+    });
+    const { guard } = makeGuard();
+    expect((await guard.authorizeAssessment(config, "app.example.com", "static_analysis")).permitted).toBe(false);
   });
 
 });
