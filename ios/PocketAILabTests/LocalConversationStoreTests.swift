@@ -86,8 +86,8 @@ final class LocalConversationStoreTests: XCTestCase {
 
         let model = LocalChatModel(conversationStore: store)
 
-        XCTAssertEqual(model.messages.map(\\.id), [saved.id])
-        XCTAssertEqual(model.messages.map(\\.text), [saved.text])
+        XCTAssertEqual(model.messages.map(\.id), [saved.id])
+        XCTAssertEqual(model.messages.map(\.text), [saved.text])
         model.clearHistory()
         XCTAssertTrue(model.messages.isEmpty)
         XCTAssertTrue(try store.load().isEmpty)
