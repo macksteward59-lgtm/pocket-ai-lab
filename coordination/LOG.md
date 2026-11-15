@@ -1584,3 +1584,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Scope: repair the two reproducible task-history persistence assertions caused by ISO-8601 sub-second Date precision, and investigate the app XCTest temporary-artifact cleanup failures from run #199. Keep production persistence semantics unchanged unless a genuine production defect is demonstrated.
 - PR #115 current recorded head at claim: `4a79dd022a440639af0a3083ef9de3820ae20118`; exact CI failure inspected: run #199 / job `132939028186`.
 - No APEX/East, runtime trust, model readiness, Evidence, signing, main, or repository visibility changes.
+
+
+## 2026-11-15 — Task-history persistence test precision fix pushed
+
+- Updated LocalAgentTaskHistoryStoreTests.swift on codex/ios-native-model-catalog: replaced two full Equatable comparisons of role results (which compared sub-second Date values) with field-by-field assertions and a 1.0-second timestamp tolerance matching the existing JSONEncoder.dateEncodingStrategy = .iso8601 whole-second persistence behavior.
+- Production archive encoding/decoding and runtime behavior were not changed.
+- PR #115 head is now b61b1b64b44319c37f220413c83cd9a417c6cde4; exact-head iOS LlamaEngine CI run #206 (43760034998) and four companion workflows have started. Results pending.
+- Run #205 for PR #135 has advanced through native app compilation successfully; native app XCTest is now running. Simulator and real-GGUF smoke remain pending.
+- Temporary-directory removal errors in two app tests are not yet fixed: the failing log reports an NSCocoaErrorDomain Code 4 / ENOENT during artifact-mutation tests. The current test defer uses try? removeItem, so further source-level isolation is required before changing cleanup semantics.
