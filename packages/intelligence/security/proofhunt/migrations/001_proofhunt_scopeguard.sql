@@ -289,4 +289,4 @@ CREATE INDEX validation_results_job_state_idx
 
 
 COMMENT ON COLUMN proofhunt.authorization_records.policy_hash IS
-  'SHA-256 of the canonical operational policy plus exact authorized-target and excluded-target snapshots; any change requires a new approval.';
+  'SHA-256 of project ID, environment, parent authorization ID, canonical operational policy, and exact authorized-target and excluded-target snapshots; any change requires a new approval.';
