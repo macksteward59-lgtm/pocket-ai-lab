@@ -46,7 +46,7 @@ Preserve APEX/Director governance, East/e3 durable workflows, ExploitGym isolati
 - Carries #107/#109 shared runtime + content-addressed artifact integrity, plus #84 Workspace navigation lifecycle and #85 bounded six-role Agent Team UI wired through the shared runtime.
 - Native Agent Team coordinator now enforces UTF-8 byte limits, 1–8 unique roles, 4k objective, 12k prompt, 1.2k prior-output truncation, 8k output cap, and 512 tokens/role.
 - Workspace allows HTTPS and HTTP loopback only, rejects embedded credentials and non-web schemes, restores once, and reloads only on explicit Open.
-- CI started on this exact head: iOS LlamaEngine run `43741079412`; companion runs `43741079416` (Pocket AI Lab), `43741079393` (Consumer prototype), `43741079479` (Cursor collaboration plugin), and `43741079363` (Governance sidecar). At last check, iOS job was still in setup; no results yet.
+- CI on this exact head: Pocket AI Lab `43741079416`, Consumer prototype `43741079393`, Cursor collaboration plugin `43741079479`, and Governance sidecar `43741079363` all succeeded. iOS LlamaEngine `43741079412` remains in progress building pinned llama.cpp for simulator/macOS; app build and XCTest have not started. No native XCTest pass is claimed.
 - No review submissions or threads checked for #110 yet.
 
 ### Older dependency-chain reconciliation
