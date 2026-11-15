@@ -119,7 +119,12 @@ final class LocalChatModel: ObservableObject {
                     throw LocalChatError.modelChanged
                 }
             } catch {
-                _ = await runtime.release(acquired)
+                guard await runtime.release(acquired) else {
+                    // Keep the exact lease reachable so the caller can retry unload;
+                    // never drop the only handle to a still-leased native session.
+                    lease = acquired
+                    throw LocalChatError.leaseReleaseFailed
+                }
                 try? await runtime.unload(modelId: acquired.model.id)
                 throw error
             }
@@ -128,7 +133,9 @@ final class LocalChatModel: ObservableObject {
                 after: "A real llama.cpp model session is loaded through the shared ModelPool."
             )
         } catch {
-            lease = nil
+            // Preserve any previously held lease on preflight errors (for example,
+            // an artifact becoming unreadable). Clearing it here would orphan the
+            // ModelPool lease and make the loaded session impossible to unload.
             status = "Model load failed closed: \(error.localizedDescription)"
         }
     }
@@ -273,7 +280,7 @@ struct ChatLine: Identifiable {
 }
 
 enum LocalChatError: LocalizedError, Equatable {
-    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable, modelMustBeUnloaded, invalidGGUFHeader, modelChanged
+    case notGGUF, emptyOutput, busy, memoryEstimateUnavailable, modelMustBeUnloaded, invalidGGUFHeader, modelChanged, leaseReleaseFailed
     var errorDescription: String? {
         switch self {
         case .notGGUF: return "Choose a GGUF model file."
@@ -283,6 +290,7 @@ enum LocalChatError: LocalizedError, Equatable {
         case .modelMustBeUnloaded: return "Unload the current model before importing or replacing a model file."
         case .invalidGGUFHeader: return "The selected file does not contain a complete supported GGUF v1-v3 header. The previous model file was preserved."
         case .modelChanged: return "The model file changed while the native runtime was loading it."
+        case .leaseReleaseFailed: return "The native model lease could not be released; the session remains retained for safe cleanup."
         }
     }
 }
