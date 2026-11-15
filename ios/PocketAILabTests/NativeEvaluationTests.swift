@@ -4,7 +4,7 @@ import PocketLlamaEngine
 
 final class NativeEvaluationTests: XCTestCase {
     private func makeContext(
-        responses: [String],
+        responses: [[String]],
         failAfterOutput: Bool = false,
         mutateFile: Bool = false
     ) async throws -> (NativeEvaluationJournal, URL, URL, NativeInferenceRuntime, ModelPoolLease, MockEvaluationEngine) {
@@ -67,7 +67,7 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testRunnerUsesExactModelPoolLeaseAndNeverPromotesTestDoubleToNativeEvidence() async throws {
-        let (journal, directory, modelURL, runtime, lease, engine) = try await makeContext(responses: ["42"])
+        let (journal, directory, modelURL, runtime, lease, engine) = try await makeContext(responses: [["42"]])
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
 
@@ -98,7 +98,7 @@ final class NativeEvaluationTests: XCTestCase {
 
     func testPartialOutputAndRetriesArePersistedWithoutOverwritingHistory() async throws {
         let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(
-            responses: ["partial answer"], failAfterOutput: true
+            responses: [["partial answer"], ["42"]], failAfterOutput: true
         )
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
@@ -131,7 +131,7 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testEmptyGenerationIsRetainedAsFailedAttempt() async throws {
-        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: [""])
+        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: [[""]])
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
 
@@ -149,7 +149,7 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testReleasedLeaseCannotProduceNativeEvaluationAttempt() async throws {
-        let (journal, directory, modelURL, runtime, lease, engine) = try await makeContext(responses: ["must not run"])
+        let (journal, directory, modelURL, runtime, lease, engine) = try await makeContext(responses: [["must not run"]])
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
         let released = await runtime.release(lease)
@@ -168,7 +168,7 @@ final class NativeEvaluationTests: XCTestCase {
 
     func testModelMutationDuringGenerationIsRetainedButNotCountedAsNative() async throws {
         let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(
-            responses: ["42"], mutateFile: true
+            responses: [["42"]], mutateFile: true
         )
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
@@ -188,7 +188,7 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testCriticValidatorAndChallengesAreSeparateAppendOnlyEvents() async throws {
-        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: ["42"])
+        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: [["42"]])
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
         let attempt = try await runner.run(evaluationCase())
@@ -262,7 +262,7 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
     func testHashChainDetectsModifiedHistoricalOutput() async throws {
-        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: ["original-output"])
+        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: [["original-output"]])
         defer { try? FileManager.default.removeItem(at: directory) }
         let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
         _ = try await runner.run(evaluationCase())
@@ -293,7 +293,7 @@ final class NativeEvaluationTests: XCTestCase {
         try header.write(to: sourceURL)
 
         let journal = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("evaluation.ndjson"))
-        let engine = MockEvaluationEngine(responses: ["42"])
+        let engine = MockEvaluationEngine(responses: [["42"]])
         let model = LocalChatModel(
             engine: engine,
             modelDirectory: modelDirectory,
@@ -331,7 +331,7 @@ final class NativeEvaluationTests: XCTestCase {
             poolConfiguration: ModelPoolConfiguration(maxResidentMemoryMB: 1024, maxLoadedModels: 1),
             availableMemoryMB: { 2048 }
         )
-        let (journal, directory, modelURL, testRuntime, lease, _) = try await makeContext(responses: ["ok"])
+        let (journal, directory, modelURL, testRuntime, lease, _) = try await makeContext(responses: [["ok"]])
         defer { try? FileManager.default.removeItem(at: directory) }
         XCTAssertEqual(nativeRuntime.providerKind, .llamaCpp)
         XCTAssertEqual(testRuntime.providerKind, .other)
@@ -345,13 +345,13 @@ final class NativeEvaluationTests: XCTestCase {
 }
 
 private actor MockEvaluationEngine: LlamaEngine {
-    private let responses: [String]
+    private let responses: [[String]]
     private let failAfterOutput: Bool
     private let mutationURL: URL?
     private var recordedPrompts: [String] = []
     private var generations = 0
 
-    init(responses: [String], failAfterOutput: Bool = false, mutationURL: URL? = nil) {
+    init(responses: [[String]], failAfterOutput: Bool = false, mutationURL: URL? = nil) {
         self.responses = responses
         self.failAfterOutput = failAfterOutput
         self.mutationURL = mutationURL
@@ -365,8 +365,9 @@ private actor MockEvaluationEngine: LlamaEngine {
 
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
         recordedPrompts.append(request.prompt)
-        let chunks = responses
         generations += 1
+        let responseIndex = min(generations - 1, responses.count - 1)
+        let chunks = responses[responseIndex]
         let shouldFail = failAfterOutput && generations == 1
         if let mutationURL {
             try Data("mutated model artifact".utf8).write(to: mutationURL)
