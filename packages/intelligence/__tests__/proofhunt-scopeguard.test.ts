@@ -40,6 +40,9 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
       subjectId: "program-demo",
       evidenceReference: "https://bounty.example/program/rules",
       sourceRevision: "sha256:program-rules-revision-1",
+      permittedChecks: ["static_analysis", "api_spec_review", "configuration_review", "dependency_review", "security_metadata_review"],
+      permittedChecksReviewedBy: "human-reviewer",
+      permittedChecksReviewReference: "review://proofhunt-demo/checks/1",
       scopePolicy,
       scopePolicyHash: hashNormalizedProgramPolicy(scopePolicy),
       status: "verified",
@@ -303,6 +306,20 @@ describe("ProofHunt ScopeGuard", () => {
     const result = await guard.authorizeAssessment(config, "app.example.com", "static_analysis");
     expect(result.permitted).toBe(false);
     expect(result.reason).toContain("path-scoped");
+  });
+
+  it("requires each check to be permitted by the independently reviewed program or ownership record", async () => {
+    const base = makeConfig();
+    const config = makeConfig({
+      programAuthorization: {
+        ...base.programAuthorization,
+        permittedChecks: ["static_analysis"]
+      }
+    });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "app.example.com", "dependency_review");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("not permitted by the independently reviewed");
   });
 
 });
