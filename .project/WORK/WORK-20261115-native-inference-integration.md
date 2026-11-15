@@ -137,3 +137,11 @@ Refresh runs `43740561987` (#107), `43740720673` (#109), and `43741621034` (#110
 - New tests assert Agent Team task/role messages are not copied into ordinary chat context.
 - Latest exact-head iOS workflow `43742353789` is in progress; XCTest has not started. Companion CI: Cursor passed; other three companion workflows remain in progress.
 - Continue by inspecting the exact-head iOS workflow through native app, simulator, and macOS XCTest; fix concrete failures only. Keep PR draft and do not merge.
+
+## Exact latest PR #110 status — 2026-11-15 17:41 UTC
+
+- Current head: `50b5adcd306c1079b5df137e7801894aae796a61`; draft PR #110 targets main.
+- Chat transcript cap: 1,500 UTF-8 bytes, up to eight prior user/assistant messages, excludes Agent Team and runtime messages, in-memory only. Byte count is not tokenizer count.
+- Added regression test for Agent Team context isolation.
+- Exact-head CI: iOS LlamaEngine `43742353789` building pinned llama.cpp; app/simulator/macOS XCTest not started. Cursor and Governance passed; Consumer passed; Pocket AI Lab CI still in progress.
+- Continue native validation before adding persistence or independent model pool orchestration. No merge.
