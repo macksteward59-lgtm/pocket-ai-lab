@@ -87,7 +87,7 @@ final class NativeEvaluationRuntimeTests: XCTestCase {
         XCTAssertEqual(testRuntime.providerKind, .other)
     }
 
-    private func makeRuntime(engine: PartialFailureEvaluationEngine) throws -> NativeInferenceRuntime {
+    private func makeRuntime(engine: any LlamaEngine) throws -> NativeInferenceRuntime {
         try NativeInferenceRuntime(
             engine: engine,
             poolConfiguration: ModelPoolConfiguration(
