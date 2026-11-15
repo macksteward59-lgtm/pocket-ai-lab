@@ -327,15 +327,19 @@ BEGIN
     -- Host-only plans reject matching path-scoped URL rules rather than guessing.
     SELECT EXISTS (
       SELECT 1
-      FROM jsonb_array_elements(program_scope_snapshot->'inScope' || program_scope_snapshot->'outOfScope') AS rules(rule)
-      WHERE rule->>'kind' = 'url'
-        AND (regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[2] <> '/'
+      FROM (
+        SELECT jsonb_array_elements(program_scope_snapshot->'inScope') AS rule
+        UNION ALL
+        SELECT jsonb_array_elements(program_scope_snapshot->'outOfScope') AS rule
+      ) AS rules
+      WHERE rules.rule->>'kind' = 'url'
+        AND (regexp_match(rules.rule->>'value', '^https?://([^/]+)(/.*)$'))[2] <> '/'
         AND (
-          lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
+          lower(rtrim((regexp_match(rules.rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
           OR (
-            coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
-            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.'))) + 1)
-              = '.' || lower(rtrim((regexp_match(rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.'))
+            coalesce((rules.rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rules.rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.'))) + 1)
+              = '.' || lower(rtrim((regexp_match(rules.rule->>'value', '^https?://([^/]+)(/.*)$'))[1], '.'))
           )
         )
     ) INTO program_path_scoped;
@@ -350,18 +354,18 @@ BEGIN
         rule->>'kind' = 'domain'
         AND (
           (coalesce((rule->>'includeApex')::BOOLEAN, TRUE) AND lower(rtrim(rule->>'value', '.')) = NEW.target_hostname)
-          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+          OR (coalesce((rules.rule->>'includeSubdomains')::BOOLEAN, FALSE)
             AND right(NEW.target_hostname, length(lower(rtrim(rule->>'value', '.'))) + 1)
               = '.' || lower(rtrim(rule->>'value', '.')))
         )
       ) OR (
-        rule->>'kind' = 'url'
-        AND (regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[2] = '/'
+        rules.rule->>'kind' = 'url'
+        AND (regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[2] = '/'
         AND (
-          lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
-          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
-            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.'))) + 1)
-              = '.' || lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')))
+          lower(rtrim((regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
+          OR (coalesce((rules.rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.'))) + 1)
+              = '.' || lower(rtrim((regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')))
         )
       )
     ) INTO program_scope_excluded;
@@ -376,18 +380,18 @@ BEGIN
         rule->>'kind' = 'domain'
         AND (
           (coalesce((rule->>'includeApex')::BOOLEAN, TRUE) AND lower(rtrim(rule->>'value', '.')) = NEW.target_hostname)
-          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
+          OR (coalesce((rules.rule->>'includeSubdomains')::BOOLEAN, FALSE)
             AND right(NEW.target_hostname, length(lower(rtrim(rule->>'value', '.'))) + 1)
               = '.' || lower(rtrim(rule->>'value', '.')))
         )
       ) OR (
-        rule->>'kind' = 'url'
-        AND (regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[2] = '/'
+        rules.rule->>'kind' = 'url'
+        AND (regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[2] = '/'
         AND (
-          lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
-          OR (coalesce((rule->>'includeSubdomains')::BOOLEAN, FALSE)
-            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.'))) + 1)
-              = '.' || lower(rtrim((regexp_match(rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')))
+          lower(rtrim((regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')) = NEW.target_hostname
+          OR (coalesce((rules.rule->>'includeSubdomains')::BOOLEAN, FALSE)
+            AND right(NEW.target_hostname, length(lower(rtrim((regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.'))) + 1)
+              = '.' || lower(rtrim((regexp_match(rules.rule->>'value', '^https://([^/]+)(/.*)$'))[1], '.')))
         )
       )
     ) INTO program_scope_included;
