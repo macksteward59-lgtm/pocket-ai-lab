@@ -14,7 +14,6 @@ enum NativeEvaluationJournalError: Error, Equatable {
 /// No delete, truncate, replace, or retention-expiry operation is exposed.
 enum NativeEvaluationScoringRule: String, Codable {
     case exactMatch
-    case containsExpectedOutcome
     case manualReview
 }
 
@@ -364,7 +363,7 @@ actor NativeEvaluationJournal {
         switch rule {
         case .manualReview:
             return passed == nil && score == nil
-        case .exactMatch, .containsExpectedOutcome:
+        case .exactMatch:
             guard let passed, let score, score.isFinite else { return false }
             return score == (passed ? 1.0 : 0.0)
         }
