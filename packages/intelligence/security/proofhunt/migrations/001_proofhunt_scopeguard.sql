@@ -231,6 +231,8 @@ DECLARE
   operational_policy_hash CHAR(64);
   policy_preapproved BOOLEAN;
   policy_checks TEXT[];
+  policy_max_concurrent_jobs INTEGER;
+  active_job_count BIGINT;
   policy_effective_at TIMESTAMPTZ;
   policy_expires_at TIMESTAMPTZ;
   policy_stop_on_scope_violation BOOLEAN;
@@ -290,8 +292,8 @@ BEGIN
     RAISE EXCEPTION 'ProofHunt authorization has been revoked';
   END IF;
 
-  SELECT preapproved, allowed_checks, effective_at, expires_at, stop_on_scope_violation
-  INTO policy_preapproved, policy_checks, policy_effective_at, policy_expires_at,
+  SELECT preapproved, allowed_checks, max_concurrent_jobs, effective_at, expires_at, stop_on_scope_violation
+  INTO policy_preapproved, policy_checks, policy_max_concurrent_jobs, policy_effective_at, policy_expires_at,
        policy_stop_on_scope_violation
   FROM proofhunt.assessment_policies
   WHERE project_id = NEW.project_id AND policy_id = NEW.policy_id;
@@ -435,6 +437,21 @@ BEGIN
 
   IF target_is_excluded THEN
     RAISE EXCEPTION 'ProofHunt job target is explicitly excluded';
+  END IF;
+
+  -- Serialize admissions for this policy so concurrent inserts cannot exceed
+  -- its preapproved job limit.
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    'proofhunt-policy:' || NEW.project_id || ':' || NEW.policy_id::TEXT, 0
+  ));
+  SELECT count(*) INTO active_job_count
+  FROM proofhunt.assessment_jobs
+  WHERE project_id = NEW.project_id
+    AND policy_id = NEW.policy_id
+    AND decision = 'approved_plan'
+    AND job_status IN ('planned', 'queued', 'running');
+  IF active_job_count >= policy_max_concurrent_jobs THEN
+    RAISE EXCEPTION 'ProofHunt policy maximum concurrent jobs reached';
   END IF;
 
   RETURN NEW;
