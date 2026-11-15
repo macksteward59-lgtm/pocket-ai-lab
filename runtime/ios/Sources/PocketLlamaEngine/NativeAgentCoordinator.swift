@@ -34,19 +34,31 @@ public enum NativeAgentCoordinatorError: Error, Equatable, Sendable {
     case invalidPlan
     case busy
     case emptyModelResponse
+    case responseTooLarge
 }
 
 /// Native, sequential multi-role orchestration over an injected inference runtime.
 /// Agent messages are untrusted proposals. This actor has no APEX/East authorization API.
 public actor NativeAgentCoordinator {
+    private static let maxOutputBytes = 8_000
     private let engine: any LlamaEngine
     private let session: RuntimeSession
+    private let runtime: NativeInferenceRuntime?
     private var activeTaskId: String?
     private var activeRequestId: String?
 
     public init(engine: any LlamaEngine, session: RuntimeSession) {
         self.engine = engine
         self.session = session
+        self.runtime = nil
+    }
+
+    /// Uses the shared ModelPool/InferenceScheduler composition root. The caller
+    /// must retain the supplied lease until this coordinator run has returned.
+    public init(runtime: NativeInferenceRuntime, lease: ModelPoolLease) {
+        self.engine = runtime.engine
+        self.session = lease.session
+        self.runtime = runtime
     }
 
     public func run(task: AgentTaskRequest, conversationId: String = UUID().uuidString,
@@ -77,16 +89,30 @@ public actor NativeAgentCoordinator {
                 temperature: temperature
             )
             activeRequestId = request.requestId
-            let stream = try await engine.generate(session: session, request: request)
-            var output = ""
-            do {
-                for try await token in stream {
-                    try Task.checkCancellation()
-                    output += token.text
+            let output: String
+            if let runtime {
+                output = try await runtime.generate(
+                    session: session,
+                    request: request,
+                    maxOutputBytes: Self.maxOutputBytes
+                )
+            } else {
+                let stream = try await engine.generate(session: session, request: request)
+                var collected = ""
+                do {
+                    for try await token in stream {
+                        try Task.checkCancellation()
+                        let (nextCount, overflow) = collected.utf8.count.addingReportingOverflow(token.text.utf8.count)
+                        guard !overflow, nextCount <= Self.maxOutputBytes else {
+                            throw NativeAgentCoordinatorError.responseTooLarge
+                        }
+                        collected += token.text
+                    }
+                } catch {
+                    await engine.cancelAndWait(sessionId: session.id, requestId: request.requestId)
+                    throw error
                 }
-            } catch {
-                await engine.cancel(sessionId: session.id, requestId: request.requestId)
-                throw error
+                output = collected
             }
             activeRequestId = nil
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -122,7 +148,7 @@ public actor NativeAgentCoordinator {
     /// Cancels only the currently active request; it cannot authorize or mutate external work.
     public func cancelCurrentTask() async {
         guard let requestId = activeRequestId else { return }
-        await engine.cancel(sessionId: session.id, requestId: requestId)
+        await engine.cancelAndWait(sessionId: session.id, requestId: requestId)
     }
 
     private static func makePrompt(task: AgentTaskRequest, step: NativeAgentStep,
