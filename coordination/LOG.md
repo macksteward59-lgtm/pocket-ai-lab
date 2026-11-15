@@ -1647,3 +1647,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added a shared `makeTemporaryRoot()` helper that creates the UUID directory before returning it, and converted all 12 app-test root fixtures to use it. This is a test-only correction; no production cleanup behavior changed.
 - Separately fixed the evaluation retry mock to accept per-generation response chunks, so the first attempt can emit partial output/fail and the second can return `42` as the test expects.
 - Propagating the app-test fixture repair to PR #115 and #129, and the evaluation retry fixture to feature PR #133. New exact-head iOS CI is required before any pass is claimed.
+
+
+## 2026-11-15 21:40 UTC — XCTest fixture repairs propagated to native validation stack
+
+- PR #135 branch `codex/native-self-evaluation-validation`: app temp-root helper commit `9f50e7a569bd49bd5ed711209486f7d6612f9b2c`; per-generation evaluation retry fixture commit `b886584d0c5f33936462f4919d80e15dddf6e77b`. Exact-head iOS run `43764146558` is building pinned llama.cpp; companion workflows passed.
+- PR #115 branch `codex/ios-native-model-catalog`: app temp-root helper commit `373a0a0c2fcb6d123c52a19c3a542097b98b022a`; exact-head iOS run `43764211279` is building pinned llama.cpp.
+- PR #129 branch `codex/ios-native-catalog-cache-validation`: same app temp-root helper commit `e9251e9c09b2d8bdf67a296c6fa0ac03e8dd6482`; exact-head iOS run `43764214487` is building pinned llama.cpp.
+- PR #133 feature branch `codex/native-self-evaluation-runtime-reconciled`: mirrored both test-only repairs and merged refreshed catalog base `373a0a0c2fcb6d123c52a19c3a542097b98b022a`; current merge head `8e5e1620751a46a19862c007751c0da82436f483`. The branch now includes the latest catalog base as a parent; its intelligence workflow is running.
+- Reviewed `NativeInferenceRuntime.generateForEvaluation`: it retains exact lease/use pin/scheduler/cancellation-drain behavior; test-provider output remains unverified. No production runtime changes were made in this checkpoint.
+- All four PRs remain draft/open/unmerged. No simulator XCTest, pinned-GGUF smoke, macOS XCTest, physical iPhone run, attestation, or production readiness is claimed until exact-head checks complete.
