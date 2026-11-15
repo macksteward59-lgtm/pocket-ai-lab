@@ -101,6 +101,7 @@ final class LocalChatModel: ObservableObject {
     }
 
     var currentEvaluationSummary: NativeEvaluationScoreSummary {
+        guard let selectedModelID else { return NativeEvaluationScoreSummary(attempts: []) }
         let current = evaluationAttempts.filter {
             $0.modelID == selectedModelID &&
             $0.suiteID == NativeEvaluationSuite.id &&
