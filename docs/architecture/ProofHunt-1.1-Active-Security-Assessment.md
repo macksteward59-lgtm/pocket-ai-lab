@@ -26,7 +26,7 @@ Preapproval means the workflow can run the exact checks listed in the signed pol
 
 - Exact hostnames and exact IP addresses only in this first slice.
 - Subdomains are excluded unless includeSubdomains=true is explicitly recorded for that entry.
-- Wildcards, CIDR ranges, ports, URL paths, queries, and fragments are rejected by ScopeGuard. IP ranges require a future dedicated evaluator and explicit approval.
+- Wildcards, CIDR ranges, ports, URL paths, queries, and fragments are rejected as requested target identifiers. If a verified bounty policy contains a matching path-scoped URL rule, the host-only gate returns a denial rather than guessing which path is covered. IP ranges require a future dedicated evaluator and explicit approval.
 - Exclusions are evaluated before inclusions and always win.
 - Malformed target entries reject the entire configuration rather than being ignored.
 - Both program and operational records expire independently.
