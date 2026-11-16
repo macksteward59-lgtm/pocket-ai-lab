@@ -898,6 +898,10 @@ final class PocketAILabTests: XCTestCase {
         let engine = FingerprintTestEngine()
         let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
+        model.updateRoutingCapabilities(
+            try XCTUnwrap(model.selectedModelID),
+            from: "reasoning, analysis, engineering, security-review, critique, validation"
+        )
         await model.loadModel()
 
         await model.runDefaultAgentTeam("Sensitive Agent Team-only objective")
@@ -921,6 +925,10 @@ final class PocketAILabTests: XCTestCase {
         let engine = FingerprintTestEngine()
         let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
+        model.updateRoutingCapabilities(
+            try XCTUnwrap(model.selectedModelID),
+            from: "reasoning, analysis, engineering, security-review, critique, validation"
+        )
         await model.loadModel()
         XCTAssertTrue(model.isModelLoaded)
 
