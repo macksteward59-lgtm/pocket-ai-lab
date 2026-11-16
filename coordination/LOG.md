@@ -2247,3 +2247,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added XCTest coverage for persistence of recipient/type/conversation/parent linkage and decoding of legacy v1 role records without the new fields. Source-level comparison shows exactly three files changed relative to the routing integration base.
 - Draft PR #148: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/148 (stacked on #146). Mainline validation PR #149: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/149. Both point at exact head `121487049d57f96730ae70f789a9495cf49bc70a`.
 - Exact-head workflows have not yet appeared in the commit workflow-run query. CI remains pending; no local Xcode execution or physical iPhone validation is claimed. No model/session identity is inferred from the wire envelope; persisted text/linkage remains untrusted proposal data.
+
+
+## 2026-11-16 16:45 UTC — Native routed Agent Team app integration claimed
+
+- ChatGPT claims the next additive iOS integration slice on `codex/ios-routed-agent-app-integration`, based on persistence head `121487049d57f96730ae70f789a9495cf49bc70a`.
+- First repair the exact-head iOS build regression in `AgentTaskRoleResult`: Swift's synthesized memberwise initializer omits optional stored properties initialized to `nil`, so the newly added linkage arguments currently fail compilation. Add an explicit initializer and backward-compatible decoding defaults, then retain the legacy v1 archive test.
+- Then connect operator-configured local catalog capability metadata to per-role `NativeAgentModelProfile` construction and the routed coordinator in `LocalChatView`; the app must not claim specialist routing unless the operator assigns matching labels. Missing routes fail before model load/generation. Preserve the existing single-model chat path, one-model ModelPool memory limit, sequential scheduler, cancellation drain, and transcript-untrusted semantics.
+- Scope overlaps `LocalChatView.swift` with the prior persistence PR only because that PR is already in-review; this claim adds the distinct UI routing integration and compile repair. No other AI agent is registered active. No APEX/East/BridgeGate/Evidence or tool-permission changes.
+- Validation target: new exact-head iOS CI must pass native app build/XCTest, simulator XCTest, pinned GGUF smoke/checksum, and macOS XCTest; no physical iPhone validation is implied.
