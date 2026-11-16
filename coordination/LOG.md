@@ -2281,3 +2281,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated `NativeAgentCoordinator` to retry a routed acquisition after `modelLimitExceeded` or `insufficientMemory` by calling `runtime.unloadIdleModels()`. The pool skips entries with active leases or in-flight uses; the retry still fails closed if no capacity can safely be freed. This retains cache reuse when capacity permits and only evicts under admission pressure.
 - Added tests for two-role/two-model routing with a one-resident pool, plus a separate caller-held lease that must never be evicted. Existing two-resident test remains a cache-reuse check.
 - New exact head: `7fdb54bbedbba8caebdddba911de7c01a1a14b8e`. Feature PR #150 and validation PR #151 track this head. Latest CI: Cursor `43911705044` passed; Pocket AI Lab `43911705129`, Consumer `43911705085`, Governance `43911705012` in progress; iOS LlamaEngine `43911705025` queued. No merge, local Xcode run, or physical-device claim.
+
+
+## 2026-11-16 21:25 UTC — Routed Agent Team CI simulator startup failure
+
+- Exact head `7fdb54bbedbba8caebdddba911de7c01a1a14b8e`: Cursor, Pocket AI Lab, Consumer, and Governance workflows passed. iOS LlamaEngine run `43911705025` failed at simulator boot, not compilation or XCTest.
+- Job logs show the selected iPhone SE (3rd generation) remained in first-boot data migration (`com.apple.-0LaunchServicesMigrator`) and `xcrun simctl bootstatus ... -b` timed out after 300 seconds. The pinned llama.cpp simulator/macOS build, Swift typecheck, and generic physical-iOS-target link all passed; app build, app XCTest, simulator XCTest, GGUF smoke, and macOS XCTest were skipped after boot failure.
+- Claim extended to the CI workflow reliability slice in `.github/workflows/ios-llamaengine-ci.yml`: prefer an already-booted iPhone simulator and improve bounded boot timeout/diagnostics. No application runtime or governance semantics change. No physical iPhone validation claimed.
