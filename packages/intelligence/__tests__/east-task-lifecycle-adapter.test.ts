@@ -11,24 +11,46 @@ describe("runEastTaskWithLifecycle", () => {
     const assignments: string[] = [];
     const executions: string[] = [];
     let committed = 0;
+    let taskExists = true;
     const eastTask = {
       id: "east-1",
       objective: "Review the integration architecture",
-      assignments: [],
-      synthesis: null,
-      evidenceRefs: [],
+      assignments: [] as { id: string; agentId: string }[],
+      synthesis: null as string | null,
+      evidenceRefs: [] as string[],
       evidenceGate: { status: "not_submitted" as const },
       apexDecision: { status: "unread" as const },
       authorized: false as const
     };
     const east = {
       createAgentTask: () => "east-1",
-      assignAgent: (_taskId: string, agentId: string) => { assignments.push(agentId); return "east-1"; },
+      assignAgent: (_taskId: string, agentId: string) => {
+        assignments.push(agentId);
+        eastTask.assignments.push({ id: "assignment-" + agentId, agentId });
+        return "east-1";
+      },
       executeAgent: async (_taskId: string, agentId: string) => { executions.push(agentId); return "message-" + agentId; },
-      runDeliberation: async () => ({ synthesis: "Unverified synthesis", evidence: ["evidence:one"] }),
+      runDeliberation: async () => {
+        eastTask.synthesis = "Unverified synthesis";
+        eastTask.evidenceRefs = ["evidence:one"];
+        return { synthesis: "Unverified synthesis", evidence: ["evidence:one"] };
+      },
       commitTaskEvidence: async () => { committed += 1; return false as const; },
       readApexDecision: async () => ({ status: "unread" as const }),
-      getTask: () => eastTask,
+      getTask: () => {
+        if (!taskExists) throw Object.assign(new Error("Unknown task"), { code: "unknown_task" });
+        return eastTask;
+      },
+      checkpointTask: () => ({
+        version: 1 as const,
+        task: { ...eastTask, assignments: [...eastTask.assignments], evidenceRefs: [...eastTask.evidenceRefs] },
+        messages: [],
+        evidenceMemoryCommitted: committed > 0
+      }),
+      restoreTask: (checkpoint: { task: typeof eastTask }) => {
+        Object.assign(eastTask, checkpoint.task);
+        taskExists = true;
+      },
       orchestrator: {} as EastPlatformRuntime["orchestrator"],
       memory: {} as EastPlatformRuntime["memory"]
     } as unknown as EastPlatformRuntime;
@@ -54,6 +76,9 @@ describe("runEastTaskWithLifecycle", () => {
     // same durable-store contract. Completed inference and evidence steps must
     // be returned from lifecycle state, not executed a second time.
     const resumedCoordinator = new TaskLifecycleCoordinator({ store });
+    // Simulate a new East process: its in-memory task map is gone, but the
+    // durable lifecycle snapshot contains the completed task and thread.
+    taskExists = false;
     const resumed = await runEastTaskWithLifecycle({
       coordinator: resumedCoordinator, east, eastTaskId: "east-1",
       lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
@@ -101,6 +126,17 @@ describe("runEastTaskWithLifecycle", () => {
         synthesis: null, evidenceRefs: [], evidenceGate: { status: "not_submitted" },
         apexDecision: { status: "unread" }, authorized: false
       }),
+      checkpointTask: () => ({
+        version: 1 as const,
+        task: {
+          id: "east-2", objective: "Test failure", assignments: [],
+          synthesis: null, evidenceRefs: [], evidenceGate: { status: "not_submitted" as const },
+          apexDecision: { status: "unread" as const }, authorized: false as const
+        },
+        messages: [],
+        evidenceMemoryCommitted: false
+      }),
+      restoreTask: () => undefined,
       assignAgent: () => "east-2",
       executeAgent: async () => { attempts += 1; throw new Error("provider unavailable"); },
       runDeliberation: async () => ({ synthesis: "never", evidence: [] }),
