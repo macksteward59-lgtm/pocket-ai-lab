@@ -351,6 +351,55 @@ describe("TaskLifecycleCoordinator", () => {
     await expect(restartedAfterChronologyTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
   });
 
+  it("rejects persisted cancellation states that the coordinator cannot produce", async () => {
+    const completedStore = new InMemoryTaskLifecycleStore();
+    const completedCoordinator = new TaskLifecycleCoordinator({ store: completedStore });
+    await completedCoordinator.init();
+    await completedCoordinator.createTask({
+      id: "completed-then-cancelled", objective: "A completed task cannot become cancelled",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    const completedClaim = await completedCoordinator.claimNextStep("completed-then-cancelled");
+    await completedCoordinator.completeStep({
+      taskId: "completed-then-cancelled", stepId: "one",
+      attemptId: completedClaim!.attemptId, result: "Done"
+    });
+    const completedSnapshot = completedStore.load();
+    completedSnapshot[0].status = "cancelled";
+    completedStore.save(completedSnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: completedStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+
+    const readyStore = new InMemoryTaskLifecycleStore();
+    const readyCoordinator = new TaskLifecycleCoordinator({ store: readyStore });
+    await readyCoordinator.init();
+    await readyCoordinator.createTask({
+      id: "ready-with-cancelled-step", objective: "Ready work cannot contain cancelled steps",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    await readyCoordinator.cancelTask("ready-with-cancelled-step");
+    const readySnapshot = readyStore.load();
+    readySnapshot[0].status = "ready";
+    readySnapshot[0].completedAt = null;
+    readyStore.save(readySnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: readyStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+
+    const resultStore = new InMemoryTaskLifecycleStore();
+    const resultCoordinator = new TaskLifecycleCoordinator({ store: resultStore });
+    await resultCoordinator.init();
+    await resultCoordinator.createTask({
+      id: "cancelled-with-result", objective: "Cancelled steps cannot claim a result",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    await resultCoordinator.cancelTask("cancelled-with-result");
+    const resultSnapshot = resultStore.load();
+    resultSnapshot[0].steps[0].result = "Forged completion";
+    resultStore.save(resultSnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: resultStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
   it("rejects unknown and duplicate dependencies and out-of-range controls", async () => {
     const h = harness();
     await h.coordinator.init();
