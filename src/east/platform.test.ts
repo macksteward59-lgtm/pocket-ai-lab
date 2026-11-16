@@ -40,7 +40,7 @@ function payloadFor(request: InferenceRequest): InferenceResult {
   }
 }
 
-function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = {}): EastPlatformRuntime {
+function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = {}): EastPlatformRuntime & { calls: InferenceRequest[] } {
   const calls: InferenceRequest[] = [];
   const platform = createEastPlatform({
     inference: overrides.inference ?? {
@@ -61,7 +61,7 @@ function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = 
 }
 
 function assignTeam(platform: EastPlatformRuntime, taskId: string): void {
-  for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+  for (const agentId of ["director", "reasoner", "researcher", "engineer", "security", "critic", "validator", "archivist"]) {
     platform.assignAgent(taskId, agentId);
   }
 }
@@ -154,6 +154,22 @@ describe("East platform functions", () => {
     expect(starved.getTask(starvedTask).authorized).toBe(false);
   });
 
+  it("restores an East task and validated message thread into a fresh runtime", async () => {
+    const source = runtime({ createId: () => "checkpoint-source" });
+    const taskId = source.createAgentTask("Restore a completed agent proposal");
+    source.assignAgent(taskId, "reasoner");
+    await source.executeAgent(taskId, "reasoner");
+    const checkpoint = source.checkpointTask(taskId);
+
+    const restored = runtime({ createId: () => "checkpoint-target" });
+    restored.restoreTask(checkpoint);
+    expect(restored.getTask(taskId)).toEqual(source.getTask(taskId));
+    expect(restored.orchestrator.bus.getThread(taskId)).toEqual(source.orchestrator.bus.getThread(taskId));
+    await restored.executeAgent(taskId, "reasoner");
+    expect(restored.orchestrator.bus.getThread(taskId)).toHaveLength(2);
+    expect(restored.getTask(taskId).authorized).toBe(false);
+  });
+
   it("refuses deliberation until the core team is assigned", async () => {
     const platform = runtime();
     const taskId = platform.createAgentTask("Need the team");
@@ -167,6 +183,8 @@ describe("East platform functions", () => {
     const taskId = platform.createAgentTask("Show the boundary");
     assignTeam(platform, taskId);
     const result = await platform.runDeliberation(taskId);
+    const deliberationAgents = new Set(platform.calls.map(call => call.agentId));
+    expect(deliberationAgents).toEqual(new Set(["reasoner", "researcher", "engineer", "security", "critic", "validator", "director", "archivist"]));
     expect(result.synthesis).toBe("Agents proposed a result. Nothing was authorized.");
     expect(result.evidence).toEqual(["ref-1"]);
     expect(platform.orchestrator.bus.getThread(taskId).length).toBeGreaterThan(0);
@@ -394,9 +412,9 @@ describe("East device-evidence fail-closed gate", () => {
 describe("East APEX decision read", () => {
   it("surfaces the live pending decision read-only and never authorizes from East", async () => {
     expect(OPEN_DECISIONS).toEqual({ rule: "pending", patch: "pending", release: "pending" });
-    expect(readFileSync("packages/director/src/lib/apex/trust.ts", "utf8")).toBe(
-      "PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED"
-    );
+    expect(readFileSync("packages/director/src/lib/apex/trust.ts", "utf8").trim())
+      .toBe("PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED");
+    expect(existsSync("packages/director/src/lib/apex/SignedEvidenceVerifierV2.ts")).toBe(true);
     expect(existsSync("packages/director/src/lib/apex/rls.ts")).toBe(false);
     expect(existsSync("packages/director/src/lib/apex/schema.ts")).toBe(false);
     const source = readFileSync("src/east/platform.ts", "utf8") + readFileSync("src/east/apex-decision.ts", "utf8");

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AgentManager, CORE_AGENTS } from "../agents/AgentManager";
 import { DeliberationEngine, DeliberationStage } from "../deliberation/DeliberationEngine";
 import { AgentMessage, AgentMessageSchema, MessageBus } from "../message-bus/MessageBus";
+import { AgentTaskRequestSchema } from "../contracts/AgentProtocol";
 import { ModelDescriptor } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "../model-router/ModelRouter";
 import { Orchestrator } from "../orchestrator/Orchestrator";
@@ -36,10 +37,52 @@ const model: ModelDescriptor = {
   memoryEstimateMB: 512
 };
 
+describe("AgentTaskRequestSchema", () => {
+  it("accepts legacy requests and bounded explicitly selected memory context", () => {
+    expect(AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "legacy", objective: "Review", requiredCapabilities: []
+    }).context).toBeUndefined();
+    const request = AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "Untrusted selected memory", contextRefs: ["memory-1"]
+    });
+    expect(request.contextRefs).toEqual(["memory-1"]);
+  });
+
+  it("requires memory context references to be paired and unique", () => {
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "Context without references"
+    })).toThrow();
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "Context with duplicate references", contextRefs: ["memory-1", "memory-1"]
+    })).toThrow();
+  });
+
+  it("rejects oversized memory context and unknown request fields", () => {
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "x".repeat(2_001), contextRefs: ["memory-1"]
+    })).toThrow();
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "x", contextRefs: ["memory-1"], authorized: true
+    })).toThrow();
+  });
+});
+
 describe("MessageBus", () => {
   it("rejects a payload that does not match its message type", () => {
     expect(() => AgentMessageSchema.parse(message("analysis", "reasoner", { wrong: true }, 0)))
       .toThrow();
+  });
+
+  it("rejects unknown top-level message envelope fields", () => {
+    expect(() => AgentMessageSchema.parse({
+      ...message("analysis", "reasoner", { analysis: "Known payload" }, 0),
+      authorized: true
+    })).toThrow();
   });
 
   it("deep-freezes published messages and nested payloads", () => {
@@ -52,6 +95,42 @@ describe("MessageBus", () => {
     expect(() => {
       (published.payload as { analysis: string }).analysis = "tampered";
     }).toThrow();
+  });
+
+  it("restores a validated task thread without replaying listener side effects", () => {
+    const source = new MessageBus();
+    const first = source.publish(message("analysis", "reasoner", { analysis: "First" }, 0));
+    const second = source.publish(message("validation", "validator", {
+      claim: "First analysis", verified: false
+    }, 1));
+
+    const restored = new MessageBus();
+    let notifications = 0;
+    restored.subscribe("validator", () => notifications++);
+    restored.restoreThread("task-1", [second, first]);
+
+    expect(restored.getThread("task-1").map(item => item.sequence)).toEqual([0, 1]);
+    expect(Object.isFrozen(restored.getThread("task-1")[0].payload)).toBe(true);
+    expect(() => {
+      (restored.getThread("task-1")[0].payload as { analysis: string }).analysis = "tampered";
+    }).toThrow();
+    expect(notifications).toBe(0);
+    expect(() => restored.restoreThread("task-1", [first])).toThrow(/existing task messages/);
+    expect(() => new MessageBus().restoreThread("task-1", [first, first])).toThrow(/duplicate message/);
+    expect(() => new MessageBus().restoreThread("task-1", [message("analysis", "reasoner", { analysis: "gap" }, 1)]))
+      .toThrow(/contiguous/);
+    const orphan = {
+      ...message("revision", "engineer", { revision: "No parent", addressesMessageIds: [] }, 0),
+      parentMessageId: crypto.randomUUID()
+    };
+    expect(() => new MessageBus().restoreThread("task-1", [orphan])).toThrow(/missing or forward parent/);
+    const anotherTask = new MessageBus();
+    anotherTask.publish(first);
+    expect(() => anotherTask.restoreThread("task-2", [{
+      ...first,
+      taskId: "task-2",
+      conversationId: "task-2"
+    }])).toThrow(/duplicate message/);
   });
 
   it("delivers broadcast messages and supports unsubscribe", () => {
@@ -187,7 +266,7 @@ describe("Orchestrator", () => {
     });
 
     orchestrator.models.register(model);
-    for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+    for (const agentId of ["director", "reasoner", "researcher", "engineer", "security", "critic", "validator", "archivist"]) {
       orchestrator.models.associateAgent(agentId, model.id);
     }
 
@@ -200,7 +279,7 @@ describe("Orchestrator", () => {
     expect(result.synthesis).toBe("Integrated result");
     expect(result.consensus).toBe(true);
     const thread = orchestrator.bus.getThread("orchestration-test");
-    expect(thread).toHaveLength(10);
-    expect(thread.map(item => item.sequence)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(thread).toHaveLength(12);
+    expect(thread.map(item => item.sequence)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 });

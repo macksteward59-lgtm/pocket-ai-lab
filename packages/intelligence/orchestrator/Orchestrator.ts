@@ -58,8 +58,8 @@ export interface InferenceProvider {
 }
 
 const STAGE_PLAN: Record<DeliberationStage, AgentId[]> = {
-  independent: ["reasoner", "researcher", "engineer"],
-  "cross-review": ["critic", "validator"],
+  independent: ["reasoner", "researcher", "engineer", "archivist"],
+  "cross-review": ["security", "critic", "validator"],
   challenge: ["critic"],
   revision: ["reasoner", "engineer"],
   verification: ["validator"],

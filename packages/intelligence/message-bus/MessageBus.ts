@@ -41,7 +41,7 @@ const BaseMessageSchema = z.object({
   parentMessageId: z.string().uuid().optional(),
   createdAt: z.string().datetime(),
   sequence: z.number().int().nonnegative()
-});
+}).strict();
 
 export const AgentMessageSchema = BaseMessageSchema.superRefine((message, ctx) => {
   const parsed = PayloadSchemas[message.messageType].safeParse(message.payload);
@@ -78,6 +78,45 @@ export class MessageBus {
       for (const listener of this.listeners.get(recipient) ?? []) listener(frozen);
     }
     return frozen;
+  }
+
+  /**
+   * Restores a previously persisted task thread without notifying listeners.
+   * Every message is revalidated and sequence/message identifiers must be unique.
+   */
+  restoreThread(taskId: string, messages: readonly AgentMessage[]): void {
+    if (typeof taskId !== "string" || !taskId.trim()) throw new Error("taskId is required");
+    if (this.messages.some(message => message.taskId === taskId)) {
+      throw new Error("Cannot restore a thread over existing task messages");
+    }
+    const restored = messages.map(message => deepFreeze(AgentMessageSchema.parse(message)));
+    if (restored.some(message => message.taskId !== taskId)) {
+      throw new Error("Restored thread contains a message for another task");
+    }
+    const messageById = new Map<string, AgentMessage>();
+    const sequences = new Set<number>();
+    for (const message of restored) {
+      if (messageById.has(message.messageId) || sequences.has(message.sequence) ||
+          this.messages.some(existing => existing.messageId === message.messageId)) {
+        throw new Error("Restored thread contains duplicate message identifiers or sequence numbers");
+      }
+      messageById.set(message.messageId, message);
+      sequences.add(message.sequence);
+    }
+    restored.sort((left, right) => left.sequence - right.sequence);
+    for (let index = 0; index < restored.length; index += 1) {
+      const message = restored[index];
+      if (message.sequence !== index) {
+        throw new Error("Restored thread sequence must be contiguous from zero");
+      }
+      if (message.parentMessageId) {
+        const parent = messageById.get(message.parentMessageId);
+        if (!parent || parent.sequence >= message.sequence) {
+          throw new Error("Restored thread contains a missing or forward parent message");
+        }
+      }
+    }
+    this.messages.push(...restored);
   }
 
   subscribe(agentId: string, callback: (msg: AgentMessage) => void): () => void {

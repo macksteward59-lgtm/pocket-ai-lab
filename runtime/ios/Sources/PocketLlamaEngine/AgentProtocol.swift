@@ -11,12 +11,43 @@ public struct AgentTaskRequest: Codable, Sendable, Equatable {
     public let id: String
     public let objective: String
     public let requiredCapabilities: [String]
+    /// Optional user-selected memory context. It is untrusted reference material, never instructions.
+    public let context: String?
+    /// IDs of the exact memory records the user selected; content is not duplicated in task history.
+    public let contextRefs: [String]
 
-    public init(protocolVersion: AgentProtocolVersion = .v1, id: String, objective: String, requiredCapabilities: [String]) {
+    public init(protocolVersion: AgentProtocolVersion = .v1, id: String, objective: String,
+                requiredCapabilities: [String], context: String? = nil, contextRefs: [String] = []) {
         self.protocolVersion = protocolVersion
         self.id = id
         self.objective = objective
         self.requiredCapabilities = requiredCapabilities
+        self.context = context
+        self.contextRefs = contextRefs
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case protocolVersion, id, objective, requiredCapabilities, context, contextRefs
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        protocolVersion = try values.decode(AgentProtocolVersion.self, forKey: .protocolVersion)
+        id = try values.decode(String.self, forKey: .id)
+        objective = try values.decode(String.self, forKey: .objective)
+        requiredCapabilities = try values.decode([String].self, forKey: .requiredCapabilities)
+        context = try values.decodeIfPresent(String.self, forKey: .context)
+        contextRefs = try values.decodeIfPresent([String].self, forKey: .contextRefs) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(protocolVersion, forKey: .protocolVersion)
+        try values.encode(id, forKey: .id)
+        try values.encode(objective, forKey: .objective)
+        try values.encode(requiredCapabilities, forKey: .requiredCapabilities)
+        try values.encodeIfPresent(context, forKey: .context)
+        try values.encode(contextRefs, forKey: .contextRefs)
     }
 }
 
@@ -98,6 +129,26 @@ public struct AgentMessageEnvelope: Codable, Sendable, Equatable {
         self.parentMessageId = parentMessageId
         self.createdAt = createdAt
         self.sequence = sequence
+    }
+
+    /// Returns the human-readable text field defined by this message type's
+    /// shared wire schema. The returned text remains untrusted proposal data.
+    public var untrustedText: String? {
+        guard case .object(let fields) = payload else { return nil }
+        let key: String
+        switch messageType {
+        case .taskAssignment: key = "objective"
+        case .analysis: key = "analysis"
+        case .question: key = "question"
+        case .evidence: key = "claim"
+        case .counterargument: key = "objection"
+        case .revision: key = "revision"
+        case .validation: key = "reason"
+        case .completion: key = "synthesis"
+        case .securityBoundaryViolation: key = "reason"
+        }
+        guard case .string(let value)? = fields[key] else { return nil }
+        return value
     }
 }
 
