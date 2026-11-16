@@ -11,7 +11,9 @@
       "name": "exploitgym-main.zip",
       "sha256": "fa6e111a5348ce91e6518aeff04a766ad6752ebb7adab39e4b976baf9d4c1fa4",
       "upstreamRepository": "https://github.com/sunblaze-ucb/exploitgym",
-      "upstreamCommit": "a8029e47135a29f1c1a6e79109bf86fba379b3f3",
+      "archiveCommitEmbedded": false,
+      "restoredCommit": "a8029e47135a29f1c1a6e79109bf86fba379b3f3",
+      "restoredCommitDate": "2026-11-09",
       "restoredAs": "packages/exploitgym"
     }
   ],
