@@ -6,6 +6,8 @@ options:
 packages:
   PocketLlamaEngine:
     path: ../runtime/ios
+  ApexBridge:
+    path: ../packages/director/ios
 schemes:
   PocketAILab:
     build:
@@ -38,16 +40,21 @@ targets:
     dependencies:
       - package: PocketLlamaEngine
         product: PocketLlamaEngine
+      - package: ApexBridge
+        product: ApexBridge
   PocketAILabTests:
     type: bundle.unit-test
     platform: iOS
     hostApplication: PocketAILab
     sources:
       - path: PocketAILabTests
+      - path: ../packages/director/ios/Tests/ApexBridgeTests
     dependencies:
       - target: PocketAILab
       - package: PocketLlamaEngine
         product: PocketLlamaEngine
+      - package: ApexBridge
+        product: ApexBridge
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal.tests
