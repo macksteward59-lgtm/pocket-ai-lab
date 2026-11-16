@@ -12,6 +12,26 @@ final class AgentProtocolTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(AgentTaskRequest.self, from: data), task)
     }
 
+    func testLegacyTaskPayloadDecodesWithoutOptionalMemoryFields() throws {
+        let data = Data(#"{"protocolVersion":1,"id":"legacy-task","objective":"Legacy objective","requiredCapabilities":["reasoning"]}"#.utf8)
+        let task = try JSONDecoder().decode(AgentTaskRequest.self, from: data)
+        XCTAssertNil(task.context)
+        XCTAssertTrue(task.contextRefs.isEmpty)
+    }
+
+    func testExplicitMemoryContextFieldsRoundTrip() throws {
+        let task = AgentTaskRequest(
+            id: "memory-task",
+            objective: "Use selected context carefully",
+            requiredCapabilities: ["reasoning"],
+            context: "A user-selected untrusted memory record.",
+            contextRefs: ["memory-id-1"]
+        )
+        let data = try JSONEncoder().encode(task)
+        let decoded = try JSONDecoder().decode(AgentTaskRequest.self, from: data)
+        XCTAssertEqual(decoded, task)
+    }
+
     func testMessageEnvelopeRoundTripsAndPreservesSnakeCaseMessageType() throws {
         let message = AgentMessageEnvelope(
             protocolVersion: .v1, messageId: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!,
