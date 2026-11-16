@@ -925,6 +925,11 @@ struct LocalChatView: View {
                                         .font(.caption.bold())
                                     Text(task.objective)
                                         .font(.subheadline)
+                                    if let refs = task.contextRefs, !refs.isEmpty {
+                                        Text("User-selected memory references: " + refs.joined(separator: ", "))
+                                            .font(.caption2).foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                    }
                                     if let finalResponse = task.finalResponse {
                                         Text(finalResponse).textSelection(.enabled)
                                     }
@@ -1067,14 +1072,14 @@ struct LocalChatView: View {
                                 if mode == .chat {
                                     await model.send(value)
                                 } else {
-                                    await model.runDefaultAgentTeam(value, agentIDs: selectedAgentIDs)
+                                    await model.runDefaultAgentTeam(value, agentIDs: selectedAgentIDs, memoryContext: selectedMemoryContext, memoryContextRefs: selectedMemoryContext == nil ? [] : selectedMemoryEntries.map(\.id))
                                 }
                             }
                         } label: {
                             Image(systemName: mode == .chat ? "arrow.up.circle.fill" : "person.3.fill")
                                 .font(.title)
                         }
-                        .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isBusy)
+                        .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isBusy || (mode == .agentTeam && selectedMemoryContextIssue != nil))
                     }
                 }.padding(.horizontal)
                 Text("Local model output cannot approve actions or create APEX evidence.")
@@ -1109,7 +1114,10 @@ struct LocalChatView: View {
             .sheet(isPresented: $showEvaluationHistory) {
                 NativeEvaluationHistoryView(events: model.evaluationEvents, selectedModelID: model.selectedModelID)
             }
-            .task { await model.loadEvaluationHistory() }
+            .task {
+                await model.loadEvaluationHistory()
+                await refreshSavedMemories()
+            }
             .alert("Import failed", isPresented: Binding(get: { importError != nil },
                 set: { if !$0 { importError = nil } })) {
                 Button("OK", role: .cancel) { importError = nil }
