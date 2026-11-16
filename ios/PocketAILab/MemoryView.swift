@@ -154,7 +154,8 @@ struct MemoryView: View {
     @MainActor
     private func reload() async {
         do {
-            entries = try await store.load().sorted { $0.createdAt > $1.createdAt }
+            let loaded = try await store.load()
+            entries = loaded.sorted { $0.createdAt > $1.createdAt }
             status = "Encrypted on this device · \(entries.count) saved · no automatic capture"
         } catch NativeMemoryVaultError.keyUnavailable {
             status = "Memory is locked or its Keychain key is unavailable. Existing encrypted data was not replaced."
