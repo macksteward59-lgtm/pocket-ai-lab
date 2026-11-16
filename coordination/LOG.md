@@ -2416,3 +2416,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Scope:** Replace the placeholder trust module with a candidate-only Ed25519 verifier using immutable host-provisioned keys, exact attempt/model/runtime binding, freshness, and fail-closed nonce replay. Define a cross-runtime v2 canonical payload with domain separation and length-prefixed fields; add deterministic tests.
 - **Explicit non-goals:** No `authorized=true`, APEX receipt, policy grant, RLS/schema, database deployment, trusted-key provisioning/rotation service, or production replay-store implementation. Verified candidate evidence remains distinct from authorization.
 - **Reason:** Current East/APEX integration explicitly states that trust.ts is a placeholder, APEX RLS/schema are absent, and Swift SignedRun has a newline-delimited canonical form not bound to all fields. Do not wire candidate verification into action dispatch until those contracts and owner-controlled trust provisioning are independently reviewed.
+
+
+## 2026-11-16 — APEX signed evidence verification v2 implementation checkpoint
+
+- **PR:** #159 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/159, draft.
+- **Branch:** `codex/apex-signed-evidence-verification-v2`; latest recorded head `2ed9d16944ddf88fa24953029c91f467e773ab88` after adding the product status-register entry.
+- **Implementation:** Replaced the placeholder trust source with an injected Ed25519 verifier using domain-separated length-prefixed v2 canonicalization, exact attempt binding, runtime allowlists, key validity/revocation, freshness, and fail-closed replay-store acceptance. Added deterministic tests.
+- **Boundary:** Success is `verified_candidate` only. No action authorization, receipt, RLS/schema, production key registry, durable replay store, or East dispatch wiring. Exact-head CI pending.
