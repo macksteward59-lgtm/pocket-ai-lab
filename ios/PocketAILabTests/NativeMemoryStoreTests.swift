@@ -99,7 +99,8 @@ final class NativeMemoryStoreTests: XCTestCase {
             keyProvider: FixedNativeMemoryKeyProvider(material: Data(repeating: 6, count: 32), mayCreate: true)
         )
         let id = try await store.insert(layer: .procedural, content: "Initial note", agentId: "user")
-        let original = try await store.load().first
+        let originalEntries = try await store.load()
+        let original = originalEntries.first
         let updated = try await store.update(id: id, content: "Edited note", sourceRefs: ["manual:1"])
         XCTAssertTrue(updated)
         let edited = try await store.load()
