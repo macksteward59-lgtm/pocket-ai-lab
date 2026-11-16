@@ -1040,7 +1040,7 @@ struct LocalChatView: View {
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(entry.layer.title).font(.caption.bold())
                                             Text(entry.content).font(.caption).lineLimit(3)
-                                            Text("\(entry.provenance.verified ? "Verified" : "Unverified") · \(entry.id.prefix(8))")
+                                            Text("\(entry.provenance.verified ? "Verified" : "Unverified") · \(String(entry.id.prefix(8)))")
                                                 .font(.caption2).foregroundStyle(.secondary)
                                         }
                                     }
@@ -1067,12 +1067,15 @@ struct LocalChatView: View {
                         .textFieldStyle(.roundedBorder).lineLimit(1...4)
                         Button {
                             let value = prompt
+                            let selectedContext = mode == .agentTeam ? selectedMemoryContext : nil
+                            let selectedReferences = selectedContext == nil ? [] : selectedMemoryEntries.map(\.id)
+                            let selectedPlan = selectedAgentIDs
                             prompt = ""
                             Task {
                                 if mode == .chat {
                                     await model.send(value)
                                 } else {
-                                    await model.runDefaultAgentTeam(value, agentIDs: selectedAgentIDs, memoryContext: selectedMemoryContext, memoryContextRefs: selectedMemoryContext == nil ? [] : selectedMemoryEntries.map(\.id))
+                                    await model.runDefaultAgentTeam(value, agentIDs: selectedPlan, memoryContext: selectedContext, memoryContextRefs: selectedReferences)
                                 }
                             }
                         } label: {
