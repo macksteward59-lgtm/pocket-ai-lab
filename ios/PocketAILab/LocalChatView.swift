@@ -480,6 +480,28 @@ final class LocalChatModel: ObservableObject {
             guard !profiles.isEmpty else {
                 throw NativeAgentCoordinatorError.modelRoutingFailed("No imported local model profiles are available.")
             }
+            // The app intentionally caps the pool at one resident model. If a
+            // chat lease is still held, do not pretend a different specialist
+            // profile can be loaded beside it or silently route to that model.
+            if let lease {
+                let router = NativeAgentModelRouter()
+                let routes = try steps.map { step in
+                    try router.route(
+                        NativeAgentRouteRequest(
+                            agentId: step.agentId,
+                            requiredCapabilities: step.requiredCapabilities.isEmpty
+                                ? Set(task.requiredCapabilities)
+                                : step.requiredCapabilities
+                        ),
+                        from: profiles
+                    )
+                }
+                guard routes.allSatisfy({ $0.model.id == lease.model.id }) else {
+                    throw NativeAgentCoordinatorError.modelRoutingFailed(
+                        "Unload the chat model before running a team that routes any role to a different model. The app keeps only one model resident at a time."
+                    )
+                }
+            }
             coordinator = NativeAgentCoordinator(runtime: runtime, profiles: profiles)
         }
         return try await coordinator.run(
@@ -491,8 +513,9 @@ final class LocalChatModel: ObservableObject {
         )
     }
 
-    /// Runs the bounded six-role plan through the same ModelPool lease and
-    /// InferenceScheduler as single-model chat. Every role result is untrusted.
+    /// Runs the bounded six-role plan through the shared ModelPool and
+    /// InferenceScheduler. Routed roles may use different models sequentially;
+    /// the one-resident-model limit is preserved. Every role result is untrusted.
     func runDefaultAgentTeam(_ objective: String) async {
         let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isBusy, !text.isEmpty else { return }
