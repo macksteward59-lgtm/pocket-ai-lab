@@ -206,13 +206,25 @@ jobs:
             -scheme PocketAILab \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath /tmp/pocket-app-derived \
+            -resultBundlePath /tmp/pocket-app-simulator.xcresult \
             CODE_SIGNING_ALLOWED=NO
           xcodebuild build \
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
             -destination 'generic/platform=iOS' \
             -derivedDataPath /tmp/pocket-app-device-derived \
+            -resultBundlePath /tmp/pocket-app-device.xcresult \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload native app build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-build-diagnostics-${{ github.run_id }}
+          path: |
+            /tmp/pocket-app-simulator.xcresult
+            /tmp/pocket-app-device.xcresult
+          if-no-files-found: warn
 
       - name: XCTest the native Pocket AI Lab app
         timeout-minutes: 20
