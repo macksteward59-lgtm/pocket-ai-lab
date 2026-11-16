@@ -191,7 +191,7 @@ private func waitForTestCondition(
     _ condition: () async -> Bool
 ) async throws {
     let deadline = Date().addingTimeInterval(timeout)
-    while !(await condition()) {
+    while await condition() {
         guard Date() < deadline else {
             XCTFail("Timed out waiting for asynchronous test condition", file: file, line: line)
             throw TestWaitTimeout()
