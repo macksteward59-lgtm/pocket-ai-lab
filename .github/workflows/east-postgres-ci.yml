@@ -51,3 +51,5 @@ jobs:
         run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/migrations/001_task_lifecycle_snapshots.sql
       - name: Verify row locking, compare-and-swap, namespace isolation, and rollback
         run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/tests/postgres-integration.sql
+      - name: Verify concurrent stale writers serialize on the database row lock
+        run: bash packages/intelligence/autonomy/tests/postgres-concurrency.sh
