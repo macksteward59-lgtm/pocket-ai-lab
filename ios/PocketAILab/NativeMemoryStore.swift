@@ -231,6 +231,7 @@ public struct KeychainNativeMemoryKeyProvider: NativeMemoryKeyProvider {
             SecRandomCopyBytes(kSecRandomDefault, 32, buffer.baseAddress!)
         }
         guard status == errSecSuccess else { throw NativeMemoryVaultError.keyUnavailable }
+        defer { bytes.resetBytes(in: 0..<bytes.count) }
         var query = baseQuery()
         query[kSecValueData as String] = bytes
         query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
@@ -240,7 +241,6 @@ public struct KeychainNativeMemoryKeyProvider: NativeMemoryKeyProvider {
             return raced
         }
         guard addStatus == errSecSuccess else { throw NativeMemoryVaultError.keyUnavailable }
-        defer { bytes.resetBytes(in: 0..<bytes.count) }
         return SymmetricKey(data: bytes)
     }
 
