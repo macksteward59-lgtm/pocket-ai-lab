@@ -1868,3 +1868,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Current exact branch head: `2d5b6c063ed062cd7bda8a323b6e200ca8984783`. PR #94 remains draft/open/mergeable. Four exact-head workflows (Pocket AI Lab, Consumer, Cursor, Governance) are running; Cursor has completed successfully, the other three remain in progress. No full validation pass is claimed yet.
 - Requested reruns for the cancelled native iOS jobs: PR #135 run `43771107787` and PR #115 run `43771097290`. Both reruns are active: #135 has rebuilt the pinned llama.cpp artifacts and is linking the device engine; #115 is rebuilding pinned llama.cpp. Simulator, pinned-GGUF, and macOS results remain pending.
 - No application code was changed outside the existing lifecycle claim. APEX/Director, East trust/evidence semantics, RLS/schema, signed receipts, native runtime, and production autonomy boundaries remain untouched.
+
+
+## 2026-11-16 01:31 UTC — CI failure triage and regression-test correction
+
+- Inspected failing Consumer and Pocket AI Lab job logs on prior lifecycle head `2d5b6c063ed062cd7bda8a323b6e200ca8984783`. The failure was isolated to the new cross-task duplicate-attempt corruption test: its fixture used a constant attempt-ID generator, so the coordinator correctly rejected the second legitimate claim before the test could mutate persisted state.
+- Corrected the fixture to generate distinct attempt IDs, then deliberately corrupt the second persisted task to reuse the first task's ID. This now tests the intended initialization-time corruption guard rather than the runtime ID generator guard.
+- New lifecycle branch head: `bd520d03e3fa3195aae88bb9c6a1b28549d92be5`. Four workflows are running on this exact head; Cursor CI has passed, the remaining three are still in progress. Await exact-head results before claiming success.
+- Native PR #135 and PR #115 reruns both completed native app XCTest successfully and are currently running simulator XCTest. GGUF smoke and macOS XCTest have not yet been confirmed.
+- PR #115, #129, #135, and #140 remain open drafts and individually mergeable against their current bases. Continue detailed dependency/diff reconciliation before proposing merge order.
