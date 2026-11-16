@@ -2002,3 +2002,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added tests for concurrent writer conflict → failed save leaves local state unchanged → `reload()` adopts remote state → safe subsequent write; and for task-scoped lease recovery leaving other tasks' expired leases untouched. Focused suite now contains 19 tests.
 - Added docs for conflict reconciliation and task-scoped recovery. Current PR #94 head `03b6247db1766d01015472525b8ccb93aeefd938`; exact-head CI is running (Pocket AI Lab push/PR, Consumer, Governance, Cursor). Previous head `bb6102e99af4f2567b91e876be7eeb65fce06096` passed all five workflows.
 - This is interface alignment only; PR #131/#132 still require careful diff reconciliation and review before any merge. No production PostgreSQL instance or migration has been executed.
+
+
+## 2026-11-16 — Lifecycle/PostgreSQL interface alignment passes exact-head CI
+
+- PR #94 exact head `03b6247db1766d01015472525b8ccb93aeefd938` passed all five workflows: Pocket AI Lab CI push `43795249282` and PR `43795253519`, Consumer prototype CI `43795253544`, Governance sidecar CI `43795253511`, and Cursor collaboration plugin CI `43795253509`.
+- Focused autonomy suite: 19/19 passed. Intelligence suite: 72 test files passed. Workspace suite: 28 test files, 318 passed / 2 skipped. Consumer job: 36 test files / 307 passed and 14 test files / 159 passed / 1 skipped; sidecar: 46 passed; Cursor plugin: 5 passed. No test failures.
+- Added `reload()` with full snapshot validation and global attempt-ID uniqueness checks for safe reconciliation after `store_conflict`; added optional task-scoped `recoverExpiredLeases(taskId?)` used by the East lifecycle adapter. Tests cover concurrent-writer conflict recovery and scoped lease recovery.
+- PR #94 remains draft/open/unmerged. Production PostgreSQL deployment, real database migration, cross-process scheduling/locking, East production execution, and governed host authorization remain open. No APEX approval or signed receipt is issued.
