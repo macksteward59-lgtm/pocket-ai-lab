@@ -227,7 +227,7 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(runtimeSnapshot.loadedModelIDs.isEmpty)
     }
 
-    func testCatalogHashMismatchReleasesTheAcquiredLease() async throws {
+    func testCatalogHashMismatchFailsBeforeAcquiringLease() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_500))
         let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
@@ -243,6 +243,33 @@ final class RuntimeControllerTests: XCTestCase {
         let snapshot = await runtime.snapshot()
         XCTAssertTrue(reports.isEmpty)
         XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
+    }
+
+    func testDuplicateRuntimeSessionCannotOverwriteExistingLease() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_750))
+        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+
+        let first = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        do {
+            _ = try await controller.load(
+                model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+            )
+            XCTFail("A second bridge record must not overwrite the first lease for the same runtime session.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .duplicateSession)
+        }
+
+        let reports = await controller.reports()
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(reports.count, 1)
+        XCTAssertEqual(reports.first?.sessionId, first.sessionId)
+        XCTAssertEqual(snapshot.activeLeaseCount, 1)
+
+        XCTAssertTrue(await controller.unload(sessionId: first.sessionId!))
+        XCTAssertTrue((await runtime.snapshot()).loadedModelIDs.isEmpty)
     }
 
     func testReadinessExpiresAndCannotBeReused() async throws {
