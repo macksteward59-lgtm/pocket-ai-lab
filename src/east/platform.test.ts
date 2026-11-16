@@ -154,6 +154,22 @@ describe("East platform functions", () => {
     expect(starved.getTask(starvedTask).authorized).toBe(false);
   });
 
+  it("restores an East task and validated message thread into a fresh runtime", async () => {
+    const source = runtime({ createId: () => "checkpoint-source" });
+    const taskId = source.createAgentTask("Restore a completed agent proposal");
+    source.assignAgent(taskId, "reasoner");
+    await source.executeAgent(taskId, "reasoner");
+    const checkpoint = source.checkpointTask(taskId);
+
+    const restored = runtime({ createId: () => "checkpoint-target" });
+    restored.restoreTask(checkpoint);
+    expect(restored.getTask(taskId)).toEqual(source.getTask(taskId));
+    expect(restored.orchestrator.bus.getThread(taskId)).toEqual(source.orchestrator.bus.getThread(taskId));
+    await restored.executeAgent(taskId, "reasoner");
+    expect(restored.orchestrator.bus.getThread(taskId)).toHaveLength(2);
+    expect(restored.getTask(taskId).authorized).toBe(false);
+  });
+
   it("refuses deliberation until the core team is assigned", async () => {
     const platform = runtime();
     const taskId = platform.createAgentTask("Need the team");
