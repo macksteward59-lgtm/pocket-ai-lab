@@ -251,7 +251,7 @@ final class RuntimeControllerTests: XCTestCase {
         let clock = TestClock(Date(timeIntervalSince1970: 3_000))
         let (controller, _, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
-        let loaded = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
+        let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
         try Data("GGUF-replaced-with-different-size".utf8).write(to: modelURL, options: .atomic)
         do {
@@ -309,7 +309,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
-        let (controller, runtime, modelURL, descriptor) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         _ = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
         await controller.disconnect()
