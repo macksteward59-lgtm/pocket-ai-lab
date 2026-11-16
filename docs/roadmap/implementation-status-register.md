@@ -15,8 +15,8 @@
 | Encrypted native memory | AES-GCM vault, Keychain device-only key, explicit CRUD/provenance, no automatic ingestion | Integrated in draft PR #156 | App XCTest, physical lock/unlock/restart checks, documented backup/recovery |
 | Automatic model selection | Operator-configured capability labels and deterministic candidate routing exist | Partial; no measured device-aware Automatic policy | Device memory/thermal/context/readiness measurements, selection rationale and safe unavailable behavior |
 | Multi-agent knowledge integration | Eight logical roles and specialist templates | Partial; memory is not retrieved into context | Consent-based retrieval, provenance, relevance, retention, deletion and cross-agent context tests |
-| Durable East/e3 lifecycle | Lifecycle kernel and East adapter work in PRs #94/#103; PostgreSQL store PR #131 and validation PR #132 | Partial, unmerged | Transactional production adapter, migration, leases, idempotency, cancellation, restart and fault-injection tests |
-| APEX authorization/evidence | Existing authorization/evidence modules; native runtime proof verifier PR #83; candidate-only Ed25519 evidence verifier v2 PR #159 | Partial; trust verifier foundation only, not action authorization | Swift/TypeScript canonicalization fixtures, host-provisioned keys, durable replay storage, receipt schema, RLS, independent policy decisions and end-to-end approved/denied action tests |
+| Durable East/e3 lifecycle | Lifecycle kernel, East adapter, PostgreSQL snapshot store and eight-role pipeline are stacked in PR #158 from #94/#103/#131 | Partial, unmerged | Exact-head tests; durable East task/message restoration after process restart; deployed PostgreSQL transaction/RLS contract; idempotency, cancellation, event correlation and fault injection |
+| APEX authorization/evidence | Existing authorization/evidence modules and separate proof verifier PR #83 | Partial integration | End-to-end approved/denied actions with independent APEX decision, signed evidence and replay tests |
 | ExploitGym | Isolated evaluation workstream exists in repository | Not integrated into native task lifecycle | Synthetic workload execution, isolation, quotas, reproducibility and no escape tests |
 | Cloud provider | Explicit per-message consent path in draft PR #152 | Local prototype only | Server-side secret lifecycle, authentication, privacy review, network failure tests and no silent cloud fallback |
 | Offline/recovery | PWA shell caching and local native data stores | Partial | Offline task queue/restart recovery, interrupted-run handling, storage pressure and migration tests |
@@ -24,7 +24,7 @@
 
 ## Integration stack
 
-- **Native app candidate:** PR #156 is the unified mainline candidate. It contains the dependency stack from #146/#148/#150 plus the catalogue and encrypted-memory changes. It remains draft and must not be treated as merged or release-ready.
+- **Native app candidate:** PR #156 is the unified native mainline candidate; PR #158 stacks East lifecycle and eight-role integration on it. It contains the dependency stack from #146/#148/#150 plus the catalogue and encrypted-memory changes. It remains draft and must not be treated as merged or release-ready.
 - **Earlier native slices:** #150/#151 routed Agent Team; #153 encrypted memory; #154 catalogue; #155 catalogue mainline validation. Their implementation is reconciled into #156; retain the original PRs until #156 exact-head validation and review are complete.
 - **Durable task lifecycle:** #94 and #103 are lifecycle foundations; #131 adds a PostgreSQL transactional store on #103; #132 is its mainline validation aggregate. These remain a separate critical integration stack.
 - **Cloud consumer prototype:** #152 is explicitly consented cloud chat; it is not part of the offline native runtime.
@@ -40,17 +40,12 @@
 6. **Integrate ExploitGym and evaluation:** run only isolated/synthetic workloads, preserve reproducible evidence, and keep evaluation scores separate from authorization.
 7. **Release acceptance:** offline/restart, privacy, security, storage, memory/thermal/performance, signing, upgrade/rollback, and iPhone Air physical test matrix.
 
-## APEX evidence verification foundation
-
-- Draft PR #159 replaces the placeholder APEX trust source with an injected Ed25519 v2 candidate verifier. It validates signature, freshness, trusted-key validity/allowlists, exact attempt binding, and replay-store acceptance. It returns only verified_candidate.
-- It is intentionally not connected to East action dispatch and cannot set authorized, issue receipts, or approve consequential work. Production trusted-key provisioning, durable replay store, receipt schema, RLS, and APEX decision/policy integration remain missing.
-
 ## Current exact-head CI snapshot (2026-11-16)
 
 - **Unified native candidate #156**, head `09207c1c2a9ea94ff351eb7e6ed999a91a8a7d07`: Pocket AI Lab CI `43923738084` passed; Consumer prototype CI `43923737874` passed; Governance sidecar CI `43923737750` passed; Cursor collaboration plugin CI `43923737795` passed; iOS LlamaEngine CI `43923737970` is still in progress building the pinned llama.cpp simulator/macOS artifacts. Native app build and XCTest have not yet been reached in that job.
 - **Whole-product execution candidate #157**, head `44c8e936ee1cb336e5290fcdeba1c1f9df08e12c`: Pocket AI Lab push CI `43923985317` passed. PR-triggered companion workflows are pending observation. No production database, physical device, or end-to-end authorized action has been tested.
 
-## Evidence rules
+## Critical integration defects still open\n\n- `createEastPlatform` and `MessageBus` remain in-memory during execution, but PR #158 now serializes validated task/message checkpoints into completed durable lifecycle step results and restores them into a fresh runtime. This is restart recovery only at completed-step boundaries: a process loss during an in-flight provider call leaves a leased attempt that must expire and fail closed; it is not exactly-once execution. Production restart safety still requires a deployed durable `TaskLifecycleStore`, durable `MemoryStore`, snapshot size limits, and fault-injection validation.\n- The native Swift app and TypeScript East service do not yet share a defined local service/IPC contract, task identifier, event stream, or cancellation protocol. They are separate working surfaces, not one connected iPhone-to-East vertical slice.\n- `Orchestrator.executeTask` writes final synthesis to its in-memory `MemoryManager`; native AES-GCM memory is a separate vault. Consent-based retrieval, cross-runtime synchronization and retention/deletion are not integrated.\n\n## Evidence rules
 
 - A commit is implementation, not validation.
 - A draft PR is not merged.
