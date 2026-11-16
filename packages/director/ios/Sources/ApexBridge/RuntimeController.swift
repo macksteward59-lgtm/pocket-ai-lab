@@ -140,6 +140,8 @@ public actor RuntimeController {
             sessions[sessionId] = active
             throw error
         }
+        active.readiness = nil
+        sessions[sessionId] = active
         let request = GenerationRequest(
             prompt: "Pocket AI Lab native runtime readiness probe. Return one token.",
             maxTokens: 1,
@@ -321,10 +323,17 @@ public actor RuntimeController {
             throw RuntimeControllerError.modelFileUnavailable
         }
         guard values.isRegularFile == true, values.isSymbolicLink != true,
-              let size = values.fileSize, size > 0 else {
+              let size = values.fileSize, size >= 4,
+              hasGGUFHeader(url) else {
             throw RuntimeControllerError.modelFileUnavailable
         }
         return ModelFileIdentity(size: Int64(size), modifiedAt: values.contentModificationDate)
+    }
+
+    private func hasGGUFHeader(_ url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        return (try? handle.read(upToCount: 4)) == Data("GGUF".utf8)
     }
 
     private static func sha256File(_ url: URL) throws -> String {
