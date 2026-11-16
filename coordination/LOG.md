@@ -2779,3 +2779,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Re-polled iOS job #133697485358; no step transition since the prior checkpoint. Job log retrieval returns GitHub `BlobNotFound`, and no artifacts are published. Therefore the reason for the long-running app-build step cannot be established. No cancellation or rerun was issued.
 - PR #164 remains draft/open; PR #156 remains open/unmerged. No model download/generation, overall iOS workflow pass, physical iPhone Air test, signing, or deployment is claimed.
 - Updated BOARD and PR #164 validation summary with the companion CI success and the iOS job's unresolved state. No source code or APEX trust-boundary change.
+
+
+## 2026-11-16 UTC — PR #160 archive restoration conflict audit
+
+- Inspected PR #160 metadata, changed-file list, and patch while PR #164's native bridge build remains active.
+- PR #160 current head is `20c5588e6bc6f50629e4683efef1db448926979a`, base is the same native-runtime prerequisite `31bdc57b8812243279097899fecd2c938a96e78f`, and GitHub compare reports `diverged`, 73 commits ahead / 230 behind. PR #160 is open, draft, and marked not mergeable.
+- It duplicates PR #164's bridge package/runtime, WorkspaceView, XcodeGen, and iOS workflow paths. Its distinct archive slice is the ExploitGym submodule/gitlink, Grok status/attachment snapshots and manifest, and desktop archive scanner/package changes to exclude gitlinks and symlinks.
+- Decision: do not merge PR #160 wholesale and do not edit files overlapping the active #164 claim. Once #164's exact-head validation completes, isolate the archive-only changes, rebase/rebuild them on the accepted native-runtime base, and validate them in a separate scoped PR. ExploitGym remains host-side only; no benchmark workload was run.
+- Re-polled PR #164 iOS run #43981080474: still in progress at app build step 13, no later steps started; job-log endpoint still returns BlobNotFound. Companion Intelligence CI #43981072947 remains successful. No source changes, workflow cancellation/rerun, merge, approval, or trust-boundary change.
