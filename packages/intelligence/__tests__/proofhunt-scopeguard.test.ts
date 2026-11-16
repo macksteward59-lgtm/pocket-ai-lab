@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AuditLedger } from "../security/AuditLedger";
@@ -100,6 +100,24 @@ function makeGuard(options: {
   });
   return { guard, audit };
 }
+
+describe("ProofHunt PostgreSQL migration contract", () => {
+  it("binds policy rows to the exact operational approval and its parent program", async () => {
+    const sql = await readFile(new URL("../security/proofhunt/migrations/001_proofhunt_scopeguard.sql", import.meta.url), "utf8");
+    expect(sql).toContain("UNIQUE (project_id, record_id, parent_program_authorization_id)");
+    expect(sql).toContain("FOREIGN KEY (project_id, operational_authorization_id, program_authorization_id)");
+    expect(sql).toContain("REFERENCES proofhunt.authorization_records(project_id, record_id, parent_program_authorization_id)");
+    expect(sql).toContain("AND target_scope_hash IS NOT NULL");
+  });
+
+  it("keeps project RLS forced and historical tables append-only", async () => {
+    const sql = await readFile(new URL("../security/proofhunt/migrations/001_proofhunt_scopeguard.sql", import.meta.url), "utf8");
+    expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(sql).toContain("FORCE ROW LEVEL SECURITY");
+    expect(sql).toContain("BEFORE UPDATE OR DELETE");
+    expect(sql).toContain("proofhunt.audit_events");
+  });
+});
 
 describe("ProofHunt ScopeGuard", () => {
   it("produces a plan for an exact target and preapproved non-destructive check", async () => {
