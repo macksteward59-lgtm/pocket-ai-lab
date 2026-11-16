@@ -13,6 +13,10 @@ final class BridgeGateTests: XCTestCase {
             URL(string: "https://workspace.example.test:8443/app")!,
             trusted: URL(string: "https://workspace.example.test")!
         ))
+        XCTAssertFalse(BridgeGate.sameOrigin(
+            URL(string: "https://user:password@workspace.example.test/app")!,
+            trusted: URL(string: "https://workspace.example.test")!
+        ))
     }
 
     func testRemoteHTTPIsRejectedButLoopbackHTTPIsAllowed() {
