@@ -118,7 +118,7 @@ describe("APEX signed evidence v2", () => {
     const expired = await verifier(new MemoryReplayStore(), [
       trustedKey({ notAfter: new Date(now - 1).toISOString() })
     ]).verify(signedEvidence(), expected);
-    expect(expired).toEqual({ ok: false, status: "rejected", reason: "unknown_key" });
+    expect(expired).toEqual({ ok: false, status: "rejected", reason: "key_not_valid" });
 
     const revoked = await verifier(new MemoryReplayStore(), [
       trustedKey({ revokedAt: new Date(now - 1).toISOString() })
