@@ -88,6 +88,21 @@ CREATE TABLE proofhunt.authorization_records (
   )
 );
 
+-- Revocation is represented as a new immutable event; authorization records
+-- remain append-only and are never updated in place.
+CREATE TABLE proofhunt.authorization_revocations (
+  revocation_id UUID PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  authorization_record_id UUID NOT NULL,
+  revoked_by TEXT NOT NULL,
+  revocation_reference TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  revoked_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (project_id, authorization_record_id),
+  FOREIGN KEY (project_id, authorization_record_id)
+    REFERENCES proofhunt.authorization_records(project_id, record_id)
+);
+
 CREATE TABLE proofhunt.authorized_targets (
   target_id UUID PRIMARY KEY,
   project_id TEXT NOT NULL,
@@ -223,6 +238,7 @@ DECLARE
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'authorization_records',
+    'authorization_revocations',
     'authorized_targets',
     'excluded_targets',
     'assessment_policies',
@@ -270,6 +286,70 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Approved plans may only be persisted while both independent approvals
+-- remain active and the exact policy snapshot is currently effective.
+CREATE OR REPLACE FUNCTION proofhunt.require_active_assessment_authorizations()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.decision = 'approved_plan' THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM proofhunt.authorization_records program
+      WHERE program.project_id = NEW.project_id
+        AND program.record_id = NEW.program_authorization_id
+        AND program.record_status = 'verified'
+        AND program.expires_at > CURRENT_TIMESTAMP
+        AND NOT EXISTS (
+          SELECT 1 FROM proofhunt.authorization_revocations revoked
+          WHERE revoked.project_id = program.project_id
+            AND revoked.authorization_record_id = program.record_id
+        )
+    ) THEN
+      RAISE EXCEPTION 'ProofHunt program authorization is not active';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM proofhunt.authorization_records operational
+      WHERE operational.project_id = NEW.project_id
+        AND operational.record_id = NEW.operational_authorization_id
+        AND operational.parent_program_authorization_id = NEW.program_authorization_id
+        AND operational.record_kind = 'operational_approval'
+        AND operational.record_status = 'approved'
+        AND operational.expires_at > CURRENT_TIMESTAMP
+        AND NOT EXISTS (
+          SELECT 1 FROM proofhunt.authorization_revocations revoked
+          WHERE revoked.project_id = operational.project_id
+            AND revoked.authorization_record_id = operational.record_id
+        )
+    ) THEN
+      RAISE EXCEPTION 'ProofHunt operational authorization is not active';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM proofhunt.assessment_policies policy
+      WHERE policy.project_id = NEW.project_id
+        AND policy.policy_id = NEW.policy_id
+        AND policy.program_authorization_id = NEW.program_authorization_id
+        AND policy.operational_authorization_id = NEW.operational_authorization_id
+        AND policy.policy_hash = NEW.policy_hash
+        AND policy.effective_at <= CURRENT_TIMESTAMP
+        AND policy.expires_at > CURRENT_TIMESTAMP
+    ) THEN
+      RAISE EXCEPTION 'ProofHunt assessment policy is not currently effective';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER proofhunt_active_authorization_before_plan
+  BEFORE INSERT ON proofhunt.assessment_jobs
+  FOR EACH ROW EXECUTE FUNCTION proofhunt.require_active_assessment_authorizations();
 
 CREATE INDEX assessment_jobs_project_status_idx
   ON proofhunt.assessment_jobs (project_id, job_status, created_at);
