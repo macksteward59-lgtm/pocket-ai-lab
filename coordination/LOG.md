@@ -2178,3 +2178,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - PR #139 exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2` now has all five standard CI workflows plus PostgreSQL 16 integration passing. The database job applied the real migration and passed RLS, fail-closed context, least-privilege runtime role, approved plan, check allowlist, target binding, subdomain exclusion, append-only, and revocation assertions.
 - Reopened the existing ChatGPT-owned PR #132 validation claim (`codex/east-postgres-lifecycle-validation`) as `in-progress` to replace the remaining fake-database-only evidence with an ephemeral PostgreSQL integration job. Scope is limited to the East lifecycle migration and actual database semantics; no production credentials, RLS policy redesign, APEX grants, or changes to trust/evidence authority.
+
+
+## 2026-11-16 — East lifecycle PostgreSQL 16 integration evidence
+
+- Added `.github/workflows/east-postgres-ci.yml` and `packages/intelligence/autonomy/tests/postgres-integration.sql` on `codex/east-postgres-lifecycle-validation`.
+- The workflow applied the actual `001_task_lifecycle_snapshots.sql` migration to PostgreSQL 16 and passed real database checks for `SELECT ... FOR UPDATE`, initial and repeated namespace initialization, successful CAS update, stale-writer zero-row behavior, namespace isolation, transaction rollback, positive schema-version constraint, and JSON-array payload constraint. Job `43844783256` passed and logs report `East PostgreSQL lifecycle integration checks passed`.
+- Updated `docs/implementation/east-lifecycle-production-readiness.md` at head `e6badfaabe39518ff7cfb64a0adfcff2674a3d31` to distinguish real SQL/migration evidence from uncompleted driver-level integration and concurrent multi-process worker validation. Existing TypeScript adapter tests still use a serialized fake DB; no production DB or driver dependency added.
+- At the test head `958dc18216c4a545d48f82e649dae6f75553b450`, East PostgreSQL, Pocket AI Lab, Consumer, Governance, and Cursor workflows passed. The subsequent docs-only head `e6badfa...` has a Pocket AI Lab push run in progress. No production database, deployment, or merge.
