@@ -7,6 +7,7 @@ on:
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
+      - "docs/architecture/director-native-bridge.md"
       - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
@@ -18,6 +19,7 @@ on:
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
+      - "docs/architecture/director-native-bridge.md"
       - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
