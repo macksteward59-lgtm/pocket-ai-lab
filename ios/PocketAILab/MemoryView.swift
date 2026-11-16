@@ -39,6 +39,11 @@ struct MemoryView: View {
                                     Text(entry.createdAt, style: .date)
                                 }
                                 .font(.caption2).foregroundStyle(.tertiary)
+                                if !entry.provenance.sourceRefs.isEmpty {
+                                    Text("References: " + entry.provenance.sourceRefs.joined(separator: ", "))
+                                        .font(.caption2).foregroundStyle(.tertiary)
+                                        .textSelection(.enabled)
+                                }
                             }
                             .padding(.vertical, 4)
                             .swipeActions(edge: .trailing) {
@@ -157,9 +162,14 @@ struct MemoryView: View {
         do {
             let loaded = try await store.load()
             entries = loaded.sorted { $0.createdAt > $1.createdAt }
-            status = "Encrypted on this device · \(entries.count) saved · no automatic capture"
+            status = entries.isEmpty
+                ? "No saved memories · first save creates an encrypted on-device vault"
+                : "Encrypted on this device · \(entries.count) saved · no automatic capture"
         } catch NativeMemoryVaultError.keyUnavailable {
-            status = "Memory is locked or its Keychain key is unavailable. Existing encrypted data was not replaced."
+            status = "The Keychain key is unavailable. Unlock the device or restore the original key; existing encrypted data was not replaced."
+            showError = true
+        } catch NativeMemoryVaultError.storageUnavailable {
+            status = "Unlock the device and try again. The protected memory file is not currently accessible."
             showError = true
         } catch {
             status = "Memory could not be authenticated or read. No plaintext fallback is available."
