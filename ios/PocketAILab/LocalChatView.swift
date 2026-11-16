@@ -1012,6 +1012,46 @@ struct LocalChatView: View {
                             Text("Specialists are bounded templates, not extra running models. Capability labels only route to operator-configured models; missing routes stop the task before inference.")
                                 .font(.caption2).foregroundStyle(.secondary)
                         }
+                        DisclosureGroup("Use saved memory (\(selectedMemoryIDs.count) selected)") {
+                            Toggle("Include selected records in this task", isOn: $includeSelectedMemories)
+                                .disabled(model.isBusy)
+                            Text(memoryStatus).font(.caption2).foregroundStyle(.secondary)
+                            Button("Refresh saved memories") {
+                                Task { await refreshSavedMemories() }
+                            }
+                            .disabled(model.isBusy)
+                            if savedMemories.isEmpty {
+                                Text("No saved records are available. Create them in the Memory tab first.")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            } else {
+                                ForEach(savedMemories) { entry in
+                                    Toggle(isOn: Binding(
+                                        get: { selectedMemoryIDs.contains(entry.id) },
+                                        set: { selected in
+                                            if selected { selectedMemoryIDs.insert(entry.id) }
+                                            else { selectedMemoryIDs.remove(entry.id) }
+                                        }
+                                    )) {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(entry.layer.title).font(.caption.bold())
+                                            Text(entry.content).font(.caption).lineLimit(3)
+                                            Text("\(entry.provenance.verified ? "Verified" : "Unverified") · \(entry.id.prefix(8))")
+                                                .font(.caption2).foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .disabled(model.isBusy)
+                                }
+                            }
+                            if let issue = selectedMemoryContextIssue {
+                                Text(issue).font(.caption2).foregroundStyle(.secondary)
+                            } else if includeSelectedMemories {
+                                Text("Only these selected records are sent to the Agent Team. They remain untrusted context, not instructions or proof.")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            } else {
+                                Text("Memory is not sent to the model unless you enable it and select records.")
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
                     }
                     HStack(alignment: .bottom) {
                         TextField(
