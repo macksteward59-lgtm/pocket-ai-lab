@@ -2321,3 +2321,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Implemented:** Generic OpenAI-compatible cloud chat adapter; host-only API key configuration; HTTPS requirement for non-loopback endpoints; redirect rejection; local-default routing; explicit per-message cloud consent; UI disclosure; health response exposes only configured/model metadata; fail-closed tests for missing consent, insecure/incomplete config, consented request, and secret non-disclosure.
 - **Scope boundary:** Agent Team and Director remain local-only. Existing loopback-only bind and request checks remain unchanged. No authentication, production hosting, or APEX/East authorization is claimed.
 - **Validation:** PR #152 triggered five companion workflows. At this update, Pocket AI Lab CI was in progress; web and intelligence jobs were queued; sidecar was running. No test suite is yet recorded as passed.
+
+
+## 2026-11-16 — ChatGPT validation update
+
+- **Branch / PR:** `codex/consumer-cloud-provider-consent`, draft PR #152.
+- **Exact head:** `2d15997ad4238c0a88ce2e42223c062c711f109f`.
+- **CI:** All five exact-head workflows passed: Pocket AI Lab CI push + PR, Consumer prototype CI, Governance sidecar CI, and Cursor collaboration plugin CI. Consumer web job passed JavaScript syntax checks, 40/40 web tests, adjacent suites 10/10 and 16/16, and TypeScript build. The four new cloud tests passed.
+- **Review state:** PR is open, draft, mergeable, and has zero inline review threads. Not merged.
+- **Implementation detail:** Cloud consent is consumed after one message so a checked box cannot silently authorize later messages. UI disclosure sits below the composer controls. Local remains default; Agent Team/Director remain local-only.
+- **Limitations:** This is a local loopback prototype slice only. Authentication, production secret lifecycle, encrypted persistence, telemetry, and public deployment remain open.
