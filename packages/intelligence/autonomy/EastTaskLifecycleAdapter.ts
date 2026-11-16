@@ -63,7 +63,7 @@ function buildSteps(): TaskStepDefinition[] {
 function assertCompatibleLifecycle(task: TaskRecord, objective: string, eastTaskId: string, steps: TaskStepDefinition[]): void {
   if (task.objective !== objective ||
       task.metadata.eastTaskId !== eastTaskId ||
-      task.metadata.workflow !== "east-six-agent-deliberation-v1" ||
+      task.metadata.workflow !== "east-eight-agent-deliberation-v1" ||
       task.steps.length !== steps.length ||
       task.steps.some((step, index) => {
         const expected = steps[index];
@@ -78,7 +78,7 @@ function assertCompatibleLifecycle(task: TaskRecord, objective: string, eastTask
 }
 
 /**
- * Runs or resumes the six-agent East deliberation as a serial, leased lifecycle.
+ * Runs or resumes the eight-agent East deliberation as a serial, leased lifecycle.
  * Each inference-bearing provider call is single-attempt. Completed steps are
  * never repeated on re-entry; the deliberation text is persisted in its step
  * result so a later invocation can continue without generating it again.
@@ -115,7 +115,7 @@ export async function runEastTaskWithLifecycle(
       steps,
       maxConcurrentSteps: 1,
       leaseMs: 900_000,
-      metadata: { eastTaskId, workflow: "east-six-agent-deliberation-v1" }
+      metadata: { eastTaskId, workflow: "east-eight-agent-deliberation-v1" }
     });
   }
 
