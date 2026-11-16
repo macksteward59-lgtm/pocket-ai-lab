@@ -7,14 +7,16 @@ import {
   type TaskRecord
 } from "../autonomy/TaskLifecycleCoordinator";
 
-function harness(options: { leaseMs?: number; maxConcurrentSteps?: number } = {}) {
+function harness(options: { leaseMs?: number; maxConcurrentSteps?: number; workerId?: string } = {}) {
   let milliseconds = Date.parse("2026-11-15T12:00:00.000Z");
   let nextId = 0;
   const store = new InMemoryTaskLifecycleStore();
+  const now = () => new Date(milliseconds);
   const coordinator = new TaskLifecycleCoordinator({
     store,
-    now: () => new Date(milliseconds),
+    now,
     createId: () => "attempt-" + (++nextId),
+    workerId: options.workerId ?? "worker-main",
   });
   const advance = (ms: number) => { milliseconds += ms; };
   const create = () => coordinator.createTask({
@@ -28,7 +30,7 @@ function harness(options: { leaseMs?: number; maxConcurrentSteps?: number } = {}
       { id: "verify", description: "Verify the integrated result", dependsOn: ["implement"], maxAttempts: 1 }
     ]
   });
-  return { coordinator, store, advance, create };
+  return { coordinator, store, advance, create, now };
 }
 
 describe("TaskLifecycleCoordinator", () => {
@@ -181,6 +183,79 @@ describe("TaskLifecycleCoordinator", () => {
     await expect(h.coordinator.completeStep({
       taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "stale"
     })).rejects.toMatchObject({ code: "stale_attempt" });
+  });
+
+  it("binds a live lease to its claiming worker and rejects foreign completion or failure", async () => {
+    const h = harness();
+    await h.coordinator.init();
+    await h.create();
+    const claim = await h.coordinator.claimNextStep("task-1");
+    const foreign = new TaskLifecycleCoordinator({
+      store: h.store,
+      now: h.now,
+      workerId: "worker-foreign"
+    });
+    await foreign.init();
+
+    await expect(foreign.completeStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "foreign completion"
+    })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
+    await expect(foreign.failStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, error: "foreign failure"
+    })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
+
+    const completed = await h.coordinator.completeStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "owner completion"
+    });
+    expect(completed.steps[0].status).toBe("succeeded");
+    expect(claim?.ownerId).toBe("worker-main");
+  });
+
+  it("does not let a restarted worker adopt a live lease and recovers it only after expiry", async () => {
+    const h = harness({ leaseMs: 1_000 });
+    await h.coordinator.init();
+    await h.create();
+    const original = await h.coordinator.claimNextStep("task-1");
+    const restarted = new TaskLifecycleCoordinator({
+      store: h.store,
+      now: h.now,
+      workerId: "worker-restarted"
+    });
+    await restarted.init();
+
+    await expect(restarted.completeStep({
+      taskId: "task-1", stepId: original!.stepId, attemptId: original!.attemptId, result: "adopted"
+    })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
+
+    h.advance(1_001);
+    expect(await restarted.recoverExpiredLeases("task-1")).toBe(1);
+    const replacement = await restarted.claimNextStep("task-1");
+    expect(replacement?.attemptNumber).toBe(2);
+    expect(replacement?.ownerId).toBe("worker-restarted");
+  });
+
+  it("fails closed on a legacy active lease without owner identity until it expires", async () => {
+    const h = harness({ leaseMs: 1_000 });
+    await h.coordinator.init();
+    await h.create();
+    const original = await h.coordinator.claimNextStep("task-1");
+    const persisted = await h.store.load();
+    delete persisted[0].steps[0].currentAttempt!.ownerId;
+    await h.store.save(persisted);
+
+    const restarted = new TaskLifecycleCoordinator({
+      store: h.store,
+      now: h.now,
+      workerId: "worker-after-legacy"
+    });
+    await restarted.init();
+    await expect(restarted.completeStep({
+      taskId: "task-1", stepId: original!.stepId, attemptId: original!.attemptId, result: "legacy adoption"
+    })).rejects.toMatchObject({ code: "unowned_attempt" });
+
+    h.advance(1_001);
+    expect(await restarted.recoverExpiredLeases("task-1")).toBe(1);
+    expect((await restarted.claimNextStep("task-1"))?.attemptNumber).toBe(2);
   });
 
   it("persists state across coordinator recreation and recovers exhausted leases as failure", async () => {
