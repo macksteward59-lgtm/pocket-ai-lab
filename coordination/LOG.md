@@ -1979,3 +1979,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Prior iOS run `43793269022` on head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5` remains reported in progress at native app XCTest, with run `updated_at=02:38:05Z` and no retrievable job logs (`BlobNotFound`). Treat it as stale/stalled, not active progress. Its pinned llama.cpp build, fail-closed typecheck, device XCFramework link, simulator selection, and native app build passed; app XCTest did not conclude.
 - New exact-head iOS run `43794464434` is pending. Companion workflows on the new head are in progress. No new-head CI result is claimed. Simulator XCTest, pinned-GGUF inference smoke, macOS XCTest, physical iPhone generation, and runtime attestation remain unverified.
 - No production runtime, model trust, APEX/East authorization, signed Evidence, or receipt semantics changed. PR #135 remains draft/open/unmerged.
+
+
+## 2026-11-16 — Native validation companion checks green; iOS runner queued
+
+- PR #135 exact head `5cf2c215be5103eaff8f52cccd827f2114c1ade8`: all four companion workflow types passed. Pocket AI Lab CI pull-request run `43794464364` and push run `43794458512`, Consumer prototype `43794464402`, Governance sidecar `43794464615`, and Cursor collaboration plugin `43794464444` all completed successfully.
+- New iOS LlamaEngine run `43794464434` is still pending runner acquisition. Previous run `43793269022` has had its native app XCTest step cancelled after remaining stale; it did not complete app XCTest and never reached simulator package tests, pinned-GGUF smoke, or macOS XCTest. App build had passed on that prior head.
+- The new workflow hardening is therefore not yet validated by an iOS run. No physical-device run, runtime attestation, signed Evidence, APEX approval, East authorization, or production readiness is claimed.
