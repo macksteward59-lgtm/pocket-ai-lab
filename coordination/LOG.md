@@ -2212,3 +2212,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated `coordination/BOARD.md`: PR #122, #124, and #135 validation claims moved to `in-review`. No application code or trust boundary changed in this coordination update.
 - PR #140 remains in progress: its current head has no new exact-head workflow after the documentation correction; its functional implementation is covered by #135, but that does not substitute for a current-head check of #140. PR #115's recorded iOS run `43771097290` is cancelled.
 - No physical iPhone inference, memory/thermal/battery measurement, device attestation, production deployment, or merge is claimed. All reviewed PRs remain open/draft; `main` untouched.
+
+
+## 2026-11-16 — PR #140 exact-head check and cross-branch native review evidence
+
+- PR #140 exact head `58105c41adba5cab63361e6fdc710566764c7269` has a successful exact-head Pocket AI Lab push workflow `43799776929`.
+- Compared all nine files changed by #140 against the main-targeted #135 validation branch. Six implementation/test files are byte-identical. The three differing files contain only the explicit hash-chain suffix-truncation/privileged-rewrite caveat in the docs and journal comment, plus replacement of an unbounded XCTest actor-polling loop with a bounded wait helper.
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` passed its full native iOS workflow, including app XCTest, package simulator XCTest, pinned-GGUF smoke/checksum, and macOS XCTest. This is cross-PR validation evidence for the shared implementation; #140 itself has no independent iOS workflow because it is stacked on #115.
+- Updated the coordination board to move #140 to `in-review` with that qualification. PR #115's own iOS run remains cancelled; no claim is made that #115 independently passed its native iOS gate.
+- No application runtime code or trust semantics changed in this reconciliation. No physical iPhone inference, device attestation, production deployment, or merge is claimed; `main` untouched.
