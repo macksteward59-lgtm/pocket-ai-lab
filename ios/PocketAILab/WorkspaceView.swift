@@ -36,9 +36,9 @@ struct WorkspaceView: View {
 
     private func openWorkspace() {
         guard let components = URLComponents(string: address),
-              let scheme = components.scheme?.lowercased(),
-              scheme == "https" || (scheme == "http" && (components.host == "localhost" || components.host == "127.0.0.1")),
-              let url = components.url else {
+              components.user == nil, components.password == nil,
+              let url = components.url,
+              BridgeGate.sameOrigin(url, trusted: url) else {
             validationMessage = "Use HTTPS. HTTP is allowed only for localhost development."
             loadURL = nil
             return
@@ -80,7 +80,7 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
             decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
         ) {
             guard let target = navigationAction.request.url,
-                  navigationAction.targetFrame?.isMainFrame != false,
+                  navigationAction.targetFrame?.isMainFrame == true,
                   BridgeGate.sameOrigin(target, trusted: trustedURL) else {
                 decisionHandler(.cancel)
                 return
