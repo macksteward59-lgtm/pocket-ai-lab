@@ -2682,3 +2682,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`, run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502): pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, and simulator selection passed. Simulator boot is in progress. Native app build, XCTest, simulator XCTest, and pinned-GGUF smoke remain pending.
 - Updated the coordination board and traceability matrix to show the old XCTest fixture failure separately from the active corrected-head run. No current-head pass is claimed.
+
+
+## 2026-11-16 UTC — PR #164 CI stall and bridge scope review
+
+- Re-fetched workflow run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`. Run remains `in_progress`; run metadata `updated_at` remains `2026-11-16T23:08:33Z`. Simulator boot remains the active step, with bridge manifest validation, app build, XCTest, simulator XCTest, and pinned-GGUF smoke all pending. This appears stalled from the available API evidence; no conclusion or test pass is inferred.
+- Reviewed PR #164 bridge sources and tests. Confirmed the bridge is deliberately not yet connected to a `WKScriptMessageHandler`; challenge issuance/consumption is a host-side primitive only; `BridgeGate.parse` is schema/origin validation, not proof of challenge consumption or host approval. Consequential import/load/unload still require a host-supplied authorization decision. The PR documentation correctly states runtime-control messages remain unavailable until an approval coordinator and handler are implemented.
+- The current change is therefore a bridge foundation and navigation boundary, not a completed web-to-native control bridge. Do not describe it as end-to-end WebKit-to-runtime integration or treat a simulator boot as product acceptance.
+- No workflow cancellation/rerun was requested or performed. No source changes, PR approval/merge/closure, APEX policy changes, or physical-device tests occurred in this checkpoint.
