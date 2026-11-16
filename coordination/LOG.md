@@ -2668,3 +2668,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Disposition:** This artifact is not treated as the original Pocket AI Lab six-layer registry. It may be a separate learning/curriculum artifact; no mapping or renaming was performed. The authoritative M01–M42 source remains unrecovered.
 - **Traceability update:** Added this distinction to the blocker notes in `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md`. The 10 section-5 requirements remain blocked pending authoritative source recovery.
 - **CI checkpoint:** PR #164 exact-head run #43976612502 remains in progress at the physical-iOS link step after pinned llama.cpp build and Swift typecheck passed. No later gate result is yet available.
+
+
+## 2026-11-16 UTC — PR descriptions aligned with exact-head evidence
+
+- **PR #156:** Updated its validation section to state that iOS run #43957027828 concluded failure. The fetched job record is internally incomplete (app-build step still shown in progress; later tests pending), and the job-log endpoint returned BlobNotFound. The exact failing step/cause remains unknown; four companion workflows passed but do not constitute iOS acceptance.
+- **PR #162:** Updated the PR description to current head `1db0345938ac029c3742a391c51ad7027d57e3bc`. The passing push run #43961191072 is explicitly attributed to older head `9be72ff1b817044ded402984b1612dfc21754690`; current head has no surfaced workflow run/status and remains unverified.
+- **PR #164 CI checkpoint:** Exact-head run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502) has now passed pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, simulator selection, and is currently booting the iPhone Air simulator. Native app build, XCTest, simulator XCTest, and pinned-GGUF smoke remain pending. This is hosted CI; it is not physical-device acceptance.
+- **No merges, PR closures, APEX policy/trust changes, signing, deployment, or physical-device tests occurred.**
