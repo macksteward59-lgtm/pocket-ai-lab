@@ -73,3 +73,8 @@ npm run build
 - Unauthorized actions are denied by APEX.
 
 See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` for the complete engineering specification.
+
+
+## Master Requirements Handoff
+
+The comprehensive product and engineering requirements checklist is maintained at [`docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md`](docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md). It is the requirements baseline for agent coordination; checklist completion must be backed by implementation and verification evidence.
