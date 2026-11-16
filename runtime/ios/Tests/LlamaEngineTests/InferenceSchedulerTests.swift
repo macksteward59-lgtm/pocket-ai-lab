@@ -12,7 +12,7 @@ final class InferenceSchedulerTests: XCTestCase {
                 return 1
             }
         }
-        while await gate.orderSnapshot().isEmpty { await Task.yield() }
+        try await waitForTestCondition { await gate.orderSnapshot().isEmpty }
 
         let second = Task {
             try await scheduler.withPermit {
@@ -26,7 +26,7 @@ final class InferenceSchedulerTests: XCTestCase {
                 return 3
             }
         }
-        while (await scheduler.snapshot()).waitingRequests < 2 { await Task.yield() }
+        try await waitForTestCondition { (await scheduler.snapshot()).waitingRequests < 2 }
 
         await gate.releaseOne()
         let firstResult = try await first.value
@@ -52,7 +52,7 @@ final class InferenceSchedulerTests: XCTestCase {
             }
         }
 
-        while await gate.startedCount() < 2 { await Task.yield() }
+        try await waitForTestCondition { await gate.startedCount() < 2 }
         let waiting = await scheduler.snapshot()
         XCTAssertEqual(waiting.activeRequests, 2)
         XCTAssertEqual(waiting.waitingRequests, 1)
@@ -60,7 +60,7 @@ final class InferenceSchedulerTests: XCTestCase {
         XCTAssertEqual(maximumBeforeRelease, 2)
 
         await gate.releaseOne()
-        while await gate.startedCount() < 3 { await Task.yield() }
+        try await waitForTestCondition { await gate.startedCount() < 3 }
         await gate.releaseAll()
 
         let firstResult = try await tasks[0].value
@@ -83,7 +83,7 @@ final class InferenceSchedulerTests: XCTestCase {
                 return 1
             }
         }
-        while await gate.orderSnapshot().isEmpty { await Task.yield() }
+        try await waitForTestCondition { await gate.orderSnapshot().isEmpty }
 
         let second = Task {
             try await scheduler.withPermit {
@@ -91,7 +91,7 @@ final class InferenceSchedulerTests: XCTestCase {
                 return 2
             }
         }
-        while (await scheduler.snapshot()).waitingRequests == 0 { await Task.yield() }
+        try await waitForTestCondition { (await scheduler.snapshot()).waitingRequests == 0 }
         second.cancel()
         do {
             _ = try await second.value
@@ -181,3 +181,23 @@ private actor MultiWaiterGate {
     }
 }
 
+
+/// Bounds asynchronous fixture polling so a broken actor handshake fails with a
+/// useful XCTest failure instead of leaving the hosted simulator job spinning.
+private func waitForTestCondition(
+    timeout: TimeInterval = 15,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ condition: () async -> Bool
+) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while !(await condition()) {
+        guard Date() < deadline else {
+            XCTFail("Timed out waiting for asynchronous test condition", file: file, line: line)
+            throw TestWaitTimeout()
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+    }
+}
+
+private struct TestWaitTimeout: Error {}
