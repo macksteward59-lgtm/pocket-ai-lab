@@ -16,7 +16,7 @@
 | Automatic model selection | Operator-configured capability labels and deterministic candidate routing exist | Partial; no measured device-aware Automatic policy | Device memory/thermal/context/readiness measurements, selection rationale and safe unavailable behavior |
 | Multi-agent knowledge integration | Eight logical roles and specialist templates | Partial; memory is not retrieved into context | Consent-based retrieval, provenance, relevance, retention, deletion and cross-agent context tests |
 | Durable East/e3 lifecycle | Lifecycle kernel and East adapter work in PRs #94/#103; PostgreSQL store PR #131 and validation PR #132 | Partial, unmerged | Transactional production adapter, migration, leases, idempotency, cancellation, restart and fault-injection tests |
-| APEX authorization/evidence | Existing authorization/evidence modules and separate proof verifier PR #83 | Partial integration | End-to-end approved/denied actions with independent APEX decision, signed evidence and replay tests |
+| APEX authorization/evidence | Existing authorization/evidence modules; native runtime proof verifier PR #83; candidate-only Ed25519 evidence verifier v2 PR #159 | Partial; trust verifier foundation only, not action authorization | Swift/TypeScript canonicalization fixtures, host-provisioned keys, durable replay storage, receipt schema, RLS, independent policy decisions and end-to-end approved/denied action tests |
 | ExploitGym | Isolated evaluation workstream exists in repository | Not integrated into native task lifecycle | Synthetic workload execution, isolation, quotas, reproducibility and no escape tests |
 | Cloud provider | Explicit per-message consent path in draft PR #152 | Local prototype only | Server-side secret lifecycle, authentication, privacy review, network failure tests and no silent cloud fallback |
 | Offline/recovery | PWA shell caching and local native data stores | Partial | Offline task queue/restart recovery, interrupted-run handling, storage pressure and migration tests |
@@ -39,6 +39,11 @@
 5. **Integrate memory deliberately:** add user-controlled retrieval and context injection with provenance, bounded context budgets, retention/deletion semantics, and no auto-promotion to verified.
 6. **Integrate ExploitGym and evaluation:** run only isolated/synthetic workloads, preserve reproducible evidence, and keep evaluation scores separate from authorization.
 7. **Release acceptance:** offline/restart, privacy, security, storage, memory/thermal/performance, signing, upgrade/rollback, and iPhone Air physical test matrix.
+
+## APEX evidence verification foundation
+
+- Draft PR #159 replaces the placeholder APEX trust source with an injected Ed25519 v2 candidate verifier. It validates signature, freshness, trusted-key validity/allowlists, exact attempt binding, and replay-store acceptance. It returns only verified_candidate.
+- It is intentionally not connected to East action dispatch and cannot set authorized, issue receipts, or approve consequential work. Production trusted-key provisioning, durable replay store, receipt schema, RLS, and APEX decision/policy integration remain missing.
 
 ## Current exact-head CI snapshot (2026-11-16)
 
