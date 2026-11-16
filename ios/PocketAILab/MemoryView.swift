@@ -8,15 +8,22 @@ struct MemoryView: View {
     @State private var editingID: String?
     @State private var draftContent = ""
     @State private var draftLayer: NativeMemoryLayer = .episodic
-    @State private var draftSourceRefs = ""
     @State private var status = "Memory is encrypted on this device. Nothing is saved automatically."
     @State private var isBusy = false
     @State private var showError = false
+    @State private var loadFailed = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if entries.isEmpty {
+                if loadFailed {
+                    VStack(spacing: 12) {
+                        Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.secondary)
+                        Text("Memory unavailable").font(.headline)
+                        Text("The encrypted vault was not replaced. Resolve the Keychain or device-lock issue and try again.")
+                            .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                    }.padding()
+                } else if entries.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "brain").font(.largeTitle).foregroundStyle(.secondary)
                         Text("No saved memories").font(.headline)
@@ -62,9 +69,14 @@ struct MemoryView: View {
             }
             .navigationTitle("Memory")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if loadFailed {
+                        Button("Retry") { Task { await reload() } }.disabled(isBusy)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { beginCreate() } label: { Image(systemName: "plus") }
-                        .disabled(isBusy)
+                        .disabled(isBusy || loadFailed)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -82,11 +94,6 @@ struct MemoryView: View {
                         }
                         Section("Information to remember") {
                             TextEditor(text: $draftContent).frame(minHeight: 150)
-                        }
-                        Section("Source references") {
-                            TextField("Optional comma-separated references", text: $draftSourceRefs)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
                         }
                         Section {
                             Text("New and edited memories are unverified. Saving does not grant permissions or authorize actions.")
@@ -118,7 +125,6 @@ struct MemoryView: View {
         editingID = nil
         draftContent = ""
         draftLayer = .episodic
-        draftSourceRefs = ""
         isEditorPresented = true
     }
 
@@ -126,24 +132,20 @@ struct MemoryView: View {
         editingID = entry.id
         draftContent = entry.content
         draftLayer = entry.layer
-        draftSourceRefs = entry.provenance.sourceRefs.joined(separator: ", ")
         isEditorPresented = true
     }
 
     private func saveDraft() {
         let content = draftContent
-        let sourceRefs = draftSourceRefs.split(separator: ",").map {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.filter { !$0.isEmpty }
         let editing = editingID
         let layer = draftLayer
         isBusy = true
         Task {
             do {
                 if let editing {
-                    _ = try await store.update(id: editing, content: content, sourceRefs: sourceRefs)
+                    _ = try await store.update(id: editing, layer: layer, content: content)
                 } else {
-                    _ = try await store.insert(layer: layer, content: content, sourceRefs: sourceRefs)
+                    _ = try await store.insert(layer: layer, content: content)
                 }
                 await reload()
                 isEditorPresented = false
@@ -173,17 +175,21 @@ struct MemoryView: View {
     private func reload() async {
         do {
             let loaded = try await store.load()
+            loadFailed = false
             entries = loaded.sorted { $0.createdAt > $1.createdAt }
             status = entries.isEmpty
-                ? "No saved memories · first save creates an encrypted on-device vault"
+                ? "No saved memories · nothing is stored automatically"
                 : "Encrypted on this device · \(entries.count) saved · no automatic capture"
         } catch NativeMemoryVaultError.keyUnavailable {
+            loadFailed = true
             status = "The Keychain key is unavailable. Unlock the device or restore the original key; existing encrypted data was not replaced."
             showError = true
         } catch NativeMemoryVaultError.storageUnavailable {
+            loadFailed = true
             status = "Unlock the device and try again. The protected memory file is not currently accessible."
             showError = true
         } catch {
+            loadFailed = true
             status = "Memory could not be authenticated or read. No plaintext fallback is available."
             showError = true
         }
