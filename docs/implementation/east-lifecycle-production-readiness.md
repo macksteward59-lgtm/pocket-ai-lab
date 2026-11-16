@@ -16,6 +16,14 @@ A production `TaskLifecycleStore` must provide all of the following:
 
 The current `InMemoryTaskLifecycleStore` is for tests and ephemeral execution only.
 
+## Worker ownership and stale-process fencing
+
+Each new step lease records a bounded `ownerId` alongside its unique attempt ID and expiry. The coordinator returns that owner identity in the claim and requires the completing/failing coordinator instance to match it. A different process cannot adopt or finish a live lease merely because it can read the attempt ID.
+
+A restarted coordinator receives a new worker identity by default. It must wait for the prior lease to expire, then use task-scoped recovery before claiming replacement work. Historical active attempts without an owner identity remain readable for compatibility, but completion and failure are rejected; they must expire and be recovered rather than being silently adopted.
+
+This is concurrency fencing, not authentication or authorization. A worker ID is not a credential, model output is not permission, and the host must still enforce tenant isolation, database access controls, RLS context, and APEX approval independently.
+
 ## Recovery and duplicate-effect rules
 
 - Recover only expired leases. Never steal a live lease.
@@ -61,4 +69,4 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 
 The coordinator and East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, and idempotent completed-step resumption. The East task map and MessageBus remain in-memory, but the adapter serializes a validated task snapshot plus the new message delta into each successfully completed lifecycle step result. A fresh East runtime and fresh coordinator can rehydrate the task and full message thread from the shared lifecycle store without repeating completed inference; the adapter test now uses distinct runtime instances to prove that boundary.
 
-This is checkpoint-based recovery, not a durable per-message event log. If inference succeeds but the process fails before `completeStep` commits the checkpoint, the output may be unavailable after restart. Inference steps remain single-attempt and must fail closed for operator reconciliation rather than silently regenerate. A provider idempotency/result-retrieval contract or transactional outbox is still required to close that crash window. The restart test uses the shared in-memory store interface; the PostgreSQL adapter's atomicity/version-conflict tests are separate, and no live production database integration is claimed. A durable `MemoryStore` must also be injected if episodic memory is expected to survive a process restart. Active provider cancellation propagation and production database/RLS configuration remain open work.
+This is checkpoint-based recovery, not a durable per-message event log. If inference succeeds but the process fails before `completeStep` commits the checkpoint, the output may be unavailable after restart. Inference steps remain single-attempt and must fail closed for operator reconciliation rather than silently regenerate. A provider idempotency/result-retrieval contract or transactional outbox is still required to close that crash window. The restart test uses the shared in-memory store interface; the PostgreSQL adapter's atomicity/version-conflict tests are separate, and no live production database integration is claimed. New leases now persist a worker owner identity and reject completion/failure from a different coordinator; legacy ownerless attempts remain readable but must expire before recovery. A deterministic fake PostgreSQL adapter test verifies that concurrent workers cannot both claim the same step and that the losing worker cannot complete the winner's lease. No live PostgreSQL deployment, tenant RLS policy, transaction-pooling integration, or production credentials are configured. A durable `MemoryStore` must also be injected if episodic memory is expected to survive a process restart. Active provider cancellation propagation and production database/RLS configuration remain open work.
