@@ -12,16 +12,12 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         let first = Task {
             try await runtime.generate(lease: lease, request: firstRequest)
         }
-        while !(await engine.activeRequestIDs()).contains(firstRequest.requestId) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.activeRequestIDs()).contains(firstRequest.requestId) }
 
         let second = Task {
             try await runtime.generate(lease: lease, request: secondRequest)
         }
-        while (await runtime.schedulerSnapshot()).waitingRequests == 0 {
-            await Task.yield()
-        }
+        try await waitForTestCondition { (await runtime.schedulerSnapshot()).waitingRequests == 0 }
 
         let duringFirst = await runtime.schedulerSnapshot()
         XCTAssertEqual(duringFirst.activeRequests, 1)
@@ -30,9 +26,7 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         await engine.finish(firstRequest.requestId)
         let firstResult = try await first.value
         XCTAssertEqual(firstResult, "first result")
-        while !(await engine.activeRequestIDs()).contains(secondRequest.requestId) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.activeRequestIDs()).contains(secondRequest.requestId) }
         await engine.finish(secondRequest.requestId)
         let secondResult = try await second.value
         XCTAssertEqual(secondResult, "second result")
@@ -59,13 +53,9 @@ final class NativeInferenceRuntimeTests: XCTestCase {
             }
         }
 
-        while !(await engine.activeRequestIDs()).contains(request.requestId) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.activeRequestIDs()).contains(request.requestId) }
         await engine.finishWithCancellation(request.requestId)
-        while !(await engine.isCancellationDrainBlocked()) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.isCancellationDrainBlocked()) }
 
         let whileDraining = await runtime.snapshot()
         XCTAssertEqual(whileDraining.activeLeaseCount, 1)
@@ -98,16 +88,12 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         let first = Task {
             try await runtime.generate(lease: lease, request: firstRequest)
         }
-        while !(await engine.activeRequestIDs()).contains(firstRequest.requestId) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.activeRequestIDs()).contains(firstRequest.requestId) }
 
         let queued = Task {
             try await runtime.generate(lease: lease, request: queuedRequest)
         }
-        while (await runtime.schedulerSnapshot()).waitingRequests == 0 {
-            await Task.yield()
-        }
+        try await waitForTestCondition { (await runtime.schedulerSnapshot()).waitingRequests == 0 }
 
         let queuedSnapshot = await runtime.snapshot()
         XCTAssertEqual(queuedSnapshot.activeUseCount, 2)
@@ -148,13 +134,9 @@ final class NativeInferenceRuntimeTests: XCTestCase {
             try await runtime.generate(lease: lease, request: request, maxOutputBytes: 1)
         }
 
-        while !(await engine.activeRequestIDs()).contains(request.requestId) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.activeRequestIDs()).contains(request.requestId) }
         await engine.finish(request.requestId)
-        while !(await engine.isCancellationDrainBlocked()) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.isCancellationDrainBlocked()) }
 
         let whileDraining = await runtime.snapshot()
         XCTAssertEqual(whileDraining.activeUseCount, 1)
