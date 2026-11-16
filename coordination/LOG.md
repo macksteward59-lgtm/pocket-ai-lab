@@ -2052,3 +2052,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #131 exact head `ee81760ecb4eaac0acf9f7f8bacba4c39c2d9e11` passed Pocket AI Lab CI run `43796136430`. The new merge commit keeps the previously tested tree unchanged while recording PR #103 as the second parent; the branch is now 16 commits ahead / 0 behind its base and the PR diff is limited to five persistence-specific files.
 - Validation: 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence test files, 28 workspace test files; all passed. The PostgreSQL tests use a serialized fake database, not a live PostgreSQL server. No migration execution, RLS validation, credentials, backup, or production deployment occurred.
 - PR #131 remains draft/open/mergeable and stacked on PR #103. The correct integration order remains #103 before #131; no PR merged.
+
+
+## 2026-11-16 — Native app XCTest passes; package simulator XCTest running
+
+- PR #135 exact head `5cf2c215be5103eaff8f52cccd827f2114c1ade8`, iOS run `43794464434`: pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device XCFramework link, simulator selection and explicit boot, native Pocket AI Lab app build, and native app XCTest have all completed successfully.
+- The LlamaEngine package iOS simulator XCTest is now in progress. Pinned-GGUF download/inference smoke, macOS XCTest, and runner evidence summary remain pending. Companion Pocket AI Lab, Consumer, Governance, and Cursor workflows passed on the same exact head.
+- The physical-device XCFramework link is a build/link check only. No physical iPhone inference, signed runtime attestation, APEX approval, East authorization, or production readiness is claimed.
