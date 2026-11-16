@@ -234,6 +234,28 @@ describe("TaskLifecycleCoordinator", () => {
     });
   });
 
+  it("preserves retry history when a pending task is restored", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "retry-attempt" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "retry-restore", objective: "Restore a retryable failure",
+      steps: [{ id: "one", description: "One step", maxAttempts: 2 }]
+    });
+    const claim = await coordinator.claimNextStep("retry-restore");
+    await coordinator.failStep({
+      taskId: "retry-restore", stepId: "one", attemptId: claim!.attemptId,
+      error: "Transient failure", retryable: true
+    });
+
+    const restarted = new TaskLifecycleCoordinator({ store, createId: () => "retry-attempt-2" });
+    await restarted.init();
+    expect(restarted.getTask("retry-restore").steps[0]).toMatchObject({
+      status: "pending", attempts: 1, lastError: "Transient failure"
+    });
+    expect((await restarted.claimNextStep("retry-restore"))?.attemptNumber).toBe(2);
+  });
+
   it("rejects a persisted active attempt whose id is not the latest issued id", async () => {
     const store = new InMemoryTaskLifecycleStore();
     const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "issued-attempt" });
