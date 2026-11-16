@@ -23,7 +23,7 @@ There is no automatic import from the web prototype's plaintext memory file, and
 
 ## Boundaries
 
-Encryption at rest does not protect data while the app is unlocked and the key is in use, nor does it defend against a compromised process or operating system. Memory provenance is descriptive, not proof. A stored memory is not an authorization, APEX receipt, or runtime attestation. The vault is not yet connected to native Agent Team context retrieval or the TypeScript MemoryManager. That integration requires a separate consent, provenance, retention, and cross-runtime contract.
+Encryption at rest does not protect data while the app is unlocked and the key is in use, nor does it defend against a compromised process or operating system. Memory provenance is descriptive, not proof. A stored memory is not an authorization, APEX receipt, or runtime attestation. The vault is connected to native Agent Team only through explicit per-task selection: the operator enables memory context, selects individual records, and the selection is cleared after task submission. Context is capped at 2 KB, labelled untrusted in every role prompt, and only selected record IDs are stored in task history. No automatic retrieval or injection occurs. The vault is not synchronized with the TypeScript MemoryManager; cross-runtime retention, provenance, and deletion semantics remain separate work.
 
 ## Validation required
 
