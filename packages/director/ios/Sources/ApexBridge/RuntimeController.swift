@@ -337,10 +337,16 @@ public actor RuntimeController {
                 expiresAt: nil
             )
         }
-        let ready = active.readiness.map { $0.expiresAt > now } ?? false
+        let fileMatches: Bool
+        if let current = try? fileIdentity(URL(fileURLWithPath: active.lease.model.path)) {
+            fileMatches = current == active.fileIdentity
+        } else {
+            fileMatches = false
+        }
+        let ready = fileMatches && (active.readiness.map { $0.expiresAt > now } ?? false)
         return ModelReport(
             id: active.lease.model.id,
-            phase: ready ? "ready" : "loaded",
+            phase: fileMatches ? (ready ? "ready" : "loaded") : "invalidated",
             canGenerate: ready,
             sessionId: sessionId,
             fileHash: active.fileHash,
