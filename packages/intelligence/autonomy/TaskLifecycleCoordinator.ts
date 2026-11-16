@@ -340,13 +340,15 @@ export class TaskLifecycleCoordinator {
    * Requeues expired leases only while retry budget remains. Exhausted steps
    * become failed; task state then reflects the failure. Safe to call on startup.
    */
-  async recoverExpiredLeases(): Promise<number> {
+  async recoverExpiredLeases(taskId?: string): Promise<number> {
     return this.mutate(async () => {
       this.requireInitialized();
+      if (taskId !== undefined) this.requireTask(taskId);
       const now = this.now();
       const next = new Map(this.records);
       let recovered = 0;
       for (const [id, original] of this.records) {
+        if (taskId !== undefined && id !== taskId) continue;
         const updated = cloneTask(original);
         let changed = false;
         for (const step of updated.steps) {
