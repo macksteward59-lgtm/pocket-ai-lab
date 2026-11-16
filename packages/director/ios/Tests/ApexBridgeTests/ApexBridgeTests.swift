@@ -62,7 +62,6 @@ final class BridgeGateTests: XCTestCase {
             "id": UUID().uuidString,
             "action": "loadModel",
             "model": "local-model-1",
-            "estimatedMemoryMB": 512
         ]
         XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: false), .authorizationRequired)
         XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: true), .accepted)
