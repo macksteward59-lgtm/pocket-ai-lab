@@ -276,7 +276,10 @@ describe("TaskLifecycleCoordinator", () => {
 
   it("rejects duplicate attempt identities across persisted tasks", async () => {
     const store = new InMemoryTaskLifecycleStore();
-    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "unique-attempt" });
+    let nextAttempt = 0;
+    const coordinator = new TaskLifecycleCoordinator({
+      store, createId: () => "unique-attempt-" + (++nextAttempt)
+    });
     await coordinator.init();
     for (const id of ["first-task", "second-task"]) {
       await coordinator.createTask({
