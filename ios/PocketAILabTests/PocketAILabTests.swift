@@ -943,6 +943,24 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
+    func testAgentTeamMissingSpecialistRouteFailsBeforeModelLoad() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = makeLocalChatModel(engine: engine, root: root)
+        try await model.importModel(from: source)
+
+        await model.runDefaultAgentTeam("Attempt a specialist run without configured labels")
+
+        XCTAssertTrue(model.status.contains("did not complete") || model.status.contains("failed"))
+        XCTAssertFalse(model.isModelLoaded)
+        XCTAssertEqual(await engine.loadedModelIDs(), [])
+        XCTAssertEqual(await engine.recordedPrompts().count, 0)
+    }
+
+    @MainActor
     func testNativeSessionUsesContentAddressedModelId() async throws {
         let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
