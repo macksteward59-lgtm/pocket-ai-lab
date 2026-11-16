@@ -1964,3 +1964,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Hardened `validateStoredTask` to reject impossible cancellation snapshots: cancelled tasks must contain cancelled work and cannot conceal failed steps; ready/running tasks cannot contain cancelled steps; cancelled steps cannot retain a result. Added regression tests for forged completed-to-cancelled state, ready-with-cancelled-step, cancelled-step result, and failure concealed by cancellation.
 - Exact PR #94 head is `533341f664618c62a256bc4483c6856b315d2de0`. Exact-head Governance sidecar CI (`43794127649`) and Cursor collaboration plugin CI (`43794127562`) passed. Pocket AI Lab CI push (`43794126392`) and PR (`43794127584`) runs and Consumer prototype CI (`43794127579`) remain in progress. No new-head full CI pass is claimed.
 - Existing APEX/Director, East authorization/evidence semantics, trust/RLS/schema, receipts, native runtime, and production execution boundaries were not changed. PR #94 remains draft/open/unmerged.
+
+
+## 2026-11-16 — Autonomy cancellation-state hardening passes exact-head CI
+
+- PR #94 exact head `533341f664618c62a256bc4483c6856b315d2de0` passed all five check runs: Pocket AI Lab CI push `43794126392`, Pocket AI Lab CI pull request `43794127584`, Consumer prototype CI `43794127579`, Governance sidecar CI `43794127649`, and Cursor collaboration plugin CI `43794127562`.
+- The focused `packages/intelligence/__tests__/autonomy.test.ts` suite passed 17/17 in both Pocket AI Lab CI runs. The full intelligence run reports 72 test files passed; workspace suite reports 28 test files passed. Governance sidecar reported 46 tests passed and offline simulation passed with `authorized=false`; Cursor plugin reported 5 tests passed. No failures were reported.
+- Updated the board status to `in-review`. PR #94 remains draft/open/mergeable and unmerged. This does not implement a production transactional store, cross-process scheduler, governed host execution, or East production integration.
