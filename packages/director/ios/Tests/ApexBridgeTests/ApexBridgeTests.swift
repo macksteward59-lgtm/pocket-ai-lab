@@ -109,6 +109,43 @@ private actor StubLlamaEngine: LlamaEngine {
     func unload(sessionId: String) async {}
 }
 
+
+private actor SlowLlamaEngine: LlamaEngine {
+    private var drainedRequests: Set<String> = []
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        if request.prompt.contains("readiness probe") {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(Token(text: "ready", isComplete: true))
+                continuation.finish()
+            }
+        }
+        return AsyncThrowingStream { continuation in
+            let producer = Task {
+                do {
+                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                    continuation.yield(Token(text: "late", isComplete: true))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in producer.cancel() }
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {
+        drainedRequests.insert(requestId)
+    }
+    func unload(sessionId: String) async {}
+    func wasDrained(_ requestId: String) -> Bool { drainedRequests.contains(requestId) }
+}
+
 final class RuntimeControllerTests: XCTestCase {
     private func makeFixture(clock: TestClock, readinessTTL: TimeInterval = 120) throws -> (RuntimeController, NativeInferenceRuntime, URL, ModelDescriptor) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -219,6 +256,44 @@ final class RuntimeControllerTests: XCTestCase {
         }
         let reports = await controller.reports()
         XCTAssertFalse(reports.first?.canGenerate ?? true)
+    }
+
+
+    func testCancelGenerationWaitsForNativeDrain() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 5_000))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-slow-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let descriptor = ModelDescriptor(id: "slow-model", name: "Slow model", path: modelURL.path, contextLength: 1024)
+        let engine = SlowLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let controller = try RuntimeController(runtime: runtime, deviceId: "test-device", runtimeIdentity: "test-runtime", clock: { clock.now() })
+        let loaded = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
+        _ = try await controller.readiness(sessionId: loaded.sessionId!)
+        let requestId = UUID().uuidString
+        let generation = Task {
+            try await controller.generate(
+                sessionId: loaded.sessionId!, prompt: "slow request", requestId: requestId,
+                conversationRequestId: "conversation-2", attemptId: "attempt-2",
+                challengeNonce: "abcdef0123456789"
+            )
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        let cancelled = await controller.cancelGeneration(sessionId: loaded.sessionId!, requestId: requestId)
+        XCTAssertTrue(cancelled)
+        do {
+            _ = try await generation.value
+            XCTFail("Cancelled generation must not return output.")
+        } catch {}
+        let drained = await engine.wasDrained(requestId)
+        XCTAssertTrue(drained)
+        _ = await controller.unload(sessionId: loaded.sessionId!)
     }
 
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
