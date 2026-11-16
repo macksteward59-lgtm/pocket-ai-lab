@@ -49,6 +49,17 @@ describe("AgentTaskRequestSchema", () => {
     expect(request.contextRefs).toEqual(["memory-1"]);
   });
 
+  it("requires memory context references to be paired and unique", () => {
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "Context without references"
+    })).toThrow();
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "Context with duplicate references", contextRefs: ["memory-1", "memory-1"]
+    })).toThrow();
+  });
+
   it("rejects oversized memory context and unknown request fields", () => {
     expect(() => AgentTaskRequestSchema.parse({
       protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
