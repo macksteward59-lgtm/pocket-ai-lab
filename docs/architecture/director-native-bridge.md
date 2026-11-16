@@ -13,6 +13,7 @@ The package depends on the shared runtime/ios PocketLlamaEngine package. It does
 - Permits cleartext HTTP only for loopback development; remote workspaces require HTTPS.
 - Enforces action-specific required and allowed key sets; unknown fields fail closed.
 - Validates session/request UUIDs, model identifiers, bounded prompt bytes, and challenge nonce length. Memory estimates and model hashes are resolved by the native host catalog, never supplied by WebKit.
+- `BridgeChallengeStore` now issues cryptographically random, short-lived, one-use nonces from the native host and binds each nonce to the trusted origin, request UUID, and runtime session UUID. Failed binding attempts do not consume another request's challenge; expired and successfully consumed challenges are discarded. The store is a host-side primitive, not yet connected to a `WKScriptMessageHandler`.
 - Requires host-owned authorization for model import, load, and unload. A boolean in a WebKit message cannot grant that authorization.
 - The native Web Workspace now uses BridgeGate for top-level navigation policy and rejects credentialed workspace URLs. The WKScriptMessageHandler action dispatch is not yet connected; runtime-control messages remain unavailable until the host-owned approval coordinator is wired.
 
