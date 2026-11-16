@@ -2312,3 +2312,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Exclusions:** No public/network deployment, no claim of authentication/session security, no APEX/East trust or authorization changes, and no native iOS runtime changes. Existing loopback-only bind and request guards remain mandatory.
 - **Validation plan:** Unit/integration tests for default-local behavior, remote configuration absence, missing consent, remote consent, credential non-disclosure, provider failures/timeouts, and regression coverage for loopback guards; run exact-head CI before review.
 - **Status:** `claimed`; no application files changed yet.
+
+
+## 2026-11-16 — ChatGPT implementation update
+
+- **Branch / PR:** `codex/consumer-cloud-provider-consent`, draft PR #152.
+- **Exact head:** `40a3756ce251f1355597a6de54b67734adf6fb58`.
+- **Implemented:** Generic OpenAI-compatible cloud chat adapter; host-only API key configuration; HTTPS requirement for non-loopback endpoints; redirect rejection; local-default routing; explicit per-message cloud consent; UI disclosure; health response exposes only configured/model metadata; fail-closed tests for missing consent, insecure/incomplete config, consented request, and secret non-disclosure.
+- **Scope boundary:** Agent Team and Director remain local-only. Existing loopback-only bind and request checks remain unchanged. No authentication, production hosting, or APEX/East authorization is claimed.
+- **Validation:** PR #152 triggered five companion workflows. At this update, Pocket AI Lab CI was in progress; web and intelligence jobs were queued; sidecar was running. No test suite is yet recorded as passed.
