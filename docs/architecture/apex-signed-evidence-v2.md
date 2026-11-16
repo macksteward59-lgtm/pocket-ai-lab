@@ -2,9 +2,9 @@
 
 ## Scope and status
 
-This is a candidate-verification primitive, not an APEX authorization service. It replaces the placeholder trust.ts source with an injected Ed25519 verifier for device/runtime evidence. A successful result is named verified_candidate; it is not approval, permission, a receipt, or an authorized flag.
+This is a candidate-verification primitive, not an APEX authorization service. It adds a separate SignedEvidenceVerifierV2.ts candidate module with an injected Ed25519 verifier for device/runtime evidence. The existing trust.ts placeholder is intentionally left byte-for-byte unchanged because the governance desktop verification test explicitly freezes that boundary. A successful result is named verified_candidate; it is not approval, permission, a receipt, or an authorized flag.
 
-The verifier is deliberately not wired into East action dispatch. Existing validateDeviceEvidenceCandidate remains a shape/binding helper and does not call this verifier. Integration requires an independently reviewed persistent replay store, key provisioning/revocation, receipt schema, RLS, and APEX policy contract.
+The verifier is deliberately not wired into the guarded trust.ts module or East action dispatch. Existing validateDeviceEvidenceCandidate remains a shape/binding helper and does not call this verifier. Integration requires an independently reviewed persistent replay store, key provisioning/revocation, receipt schema, RLS, and APEX policy contract.
 
 ## v2 signed payload
 
