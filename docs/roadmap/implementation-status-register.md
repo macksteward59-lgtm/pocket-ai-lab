@@ -40,6 +40,11 @@
 6. **Integrate ExploitGym and evaluation:** run only isolated/synthetic workloads, preserve reproducible evidence, and keep evaluation scores separate from authorization.
 7. **Release acceptance:** offline/restart, privacy, security, storage, memory/thermal/performance, signing, upgrade/rollback, and iPhone Air physical test matrix.
 
+## Current exact-head CI snapshot (2026-11-16)
+
+- **Unified native candidate #156**, head `09207c1c2a9ea94ff351eb7e6ed999a91a8a7d07`: Pocket AI Lab CI `43923738084` passed; Consumer prototype CI `43923737874` passed; Governance sidecar CI `43923737750` passed; Cursor collaboration plugin CI `43923737795` passed; iOS LlamaEngine CI `43923737970` is still in progress building the pinned llama.cpp simulator/macOS artifacts. Native app build and XCTest have not yet been reached in that job.
+- **Whole-product execution candidate #157**, head `44c8e936ee1cb336e5290fcdeba1c1f9df08e12c`: Pocket AI Lab push CI `43923985317` passed. PR-triggered companion workflows are pending observation. No production database, physical device, or end-to-end authorized action has been tested.
+
 ## Evidence rules
 
 - A commit is implementation, not validation.
