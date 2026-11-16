@@ -125,13 +125,14 @@ struct MemoryView: View {
     private func saveDraft() {
         let content = draftContent
         let editing = editingID
+        let layer = draftLayer
         isBusy = true
         Task {
             do {
                 if let editing {
-                    _ = try await store.update(id: editing, content: content)
+                    _ = try await store.update(id: editing, layer: layer, content: content)
                 } else {
-                    _ = try await store.insert(layer: draftLayer, content: content)
+                    _ = try await store.insert(layer: layer, content: content)
                 }
                 await reload()
                 isEditorPresented = false
