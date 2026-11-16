@@ -1986,3 +1986,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `5cf2c215be5103eaff8f52cccd827f2114c1ade8`: all four companion workflow types passed. Pocket AI Lab CI pull-request run `43794464364` and push run `43794458512`, Consumer prototype `43794464402`, Governance sidecar `43794464615`, and Cursor collaboration plugin `43794464444` all completed successfully.
 - New iOS LlamaEngine run `43794464434` is still pending runner acquisition. Previous run `43793269022` has had its native app XCTest step cancelled after remaining stale; it did not complete app XCTest and never reached simulator package tests, pinned-GGUF smoke, or macOS XCTest. App build had passed on that prior head.
 - The new workflow hardening is therefore not yet validated by an iOS run. No physical-device run, runtime attestation, signed Evidence, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Autonomy terminal chronology guard passes exact-head CI
+
+- Added a persisted-state invariant to `validateStoredTask`: a terminal task timestamp cannot precede any successful step's completion timestamp. Added a regression case that forges a completed task's `completedAt` one millisecond before its final step's completion.
+- PR #94 exact head `bb6102e99af4f2567b91e876be7eeb65fce06096` passed all five exact-head workflows: Pocket AI Lab CI push `43794777257` and PR `43794773850`, Consumer prototype CI `43794777240`, Governance sidecar `43794777288`, and Cursor collaboration plugin `43794777199`.
+- Focused autonomy tests: 17/17 passed in both Pocket AI Lab runs. Full intelligence suite: 72 test files passed. Workspace suite: 28 test files, 318 passed / 2 skipped. No failures. PR remains draft/open/unmerged.
+- Production transactional persistence, cross-process scheduling, East production integration, governed host execution, and real multi-process/fault-injection acceptance remain open. No APEX authorization or signed receipt is produced by this lifecycle kernel.
