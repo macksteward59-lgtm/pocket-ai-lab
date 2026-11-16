@@ -119,6 +119,8 @@ describe.skipIf(!existsSync(proofHuntMigrationPath))("ProofHunt PostgreSQL migra
     expect(sql).toContain("policy.preapproved = TRUE");
     expect(sql).toContain("FOREIGN KEY (project_id, operational_authorization_id, authorized_target_id, target_hostname)");
     expect(sql).toContain("excluded.hostname = NEW.target_hostname");
+    expect(sql).toContain("excluded.include_subdomains = TRUE");
+    expect(sql).toContain("right(NEW.target_hostname, length(excluded.hostname) + 1)");
   });
 
   it("keeps project RLS forced and historical tables append-only", async () => {
