@@ -7,7 +7,7 @@ import { runEastTaskWithLifecycle } from "../autonomy/EastTaskLifecycleAdapter";
 import { EAST_DELIBERATION_AGENTS, type EastPlatformRuntime } from "../../../src/east/platform";
 
 describe("runEastTaskWithLifecycle", () => {
-  it("runs the six-agent East workflow through leased lifecycle steps without granting authority", async () => {
+  it("runs the eight-agent East workflow through leased lifecycle steps without granting authority", async () => {
     const assignments: string[] = [];
     const executions: string[] = [];
     let committed = 0;
@@ -82,7 +82,7 @@ describe("runEastTaskWithLifecycle", () => {
       id: "lifecycle-3",
       objective: "Different objective",
       steps: [{ id: "placeholder", description: "Existing unrelated work" }],
-      metadata: { eastTaskId: "east-3", workflow: "east-six-agent-deliberation-v1" }
+      metadata: { eastTaskId: "east-3", workflow: "east-eight-agent-deliberation-v1" }
     });
 
     await expect(runEastTaskWithLifecycle({
