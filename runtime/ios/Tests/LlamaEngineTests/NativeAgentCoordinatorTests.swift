@@ -297,8 +297,10 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         )
 
         XCTAssertEqual(result.messages.map(\.senderAgentId), ["reasoner", "security-analyst"])
-        XCTAssertEqual(await engine.generatedModelIDs, ["reasoning-model", "security-model"])
-        XCTAssertEqual(await engine.loadedModelIDs, ["reasoning-model", "security-model"])
+        let generatedModelIDs = await engine.generatedModelIDs
+        let loadedModelIDs = await engine.loadedModelIDs
+        XCTAssertEqual(generatedModelIDs, ["reasoning-model", "security-model"])
+        XCTAssertEqual(loadedModelIDs, ["reasoning-model", "security-model"])
         let snapshot = await runtime.snapshot()
         XCTAssertEqual(snapshot.activeLeaseCount, 0)
         XCTAssertEqual(snapshot.activeUseCount, 0)
@@ -336,8 +338,10 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         } catch {
             XCTFail("unexpected error: \\(error)")
         }
-        XCTAssertTrue(await engine.loadedModelIDs.isEmpty)
-        XCTAssertTrue(await engine.generatedModelIDs.isEmpty)
+        let loadedModelIDs = await engine.loadedModelIDs
+        let generatedModelIDs = await engine.generatedModelIDs
+        XCTAssertTrue(loadedModelIDs.isEmpty)
+        XCTAssertTrue(generatedModelIDs.isEmpty)
     }
 
 }
