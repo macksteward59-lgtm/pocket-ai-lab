@@ -171,8 +171,8 @@ public actor NativeMemoryStore {
                 withIntermediateDirectories: true,
                 attributes: [.protectionKey: FileProtectionType.complete]
             )
-            try output.write(to: fileURL, options: [.atomic, .completeFileProtection])
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
+            try output.write(to: fileURL, options: [.atomic, .completeFileProtection])
         } catch let error as NativeMemoryVaultError {
             throw error
         } catch {
