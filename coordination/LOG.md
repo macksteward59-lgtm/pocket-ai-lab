@@ -2432,3 +2432,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Repository gap:** current main contains only `Evidence.swift` under `packages/director/ios`; `BridgeGate.swift`, `RuntimeController.swift`, and `LlamaEngine.swift` are absent. `packages/exploitgym` and `packages/grok` are absent.
 - **Plan:** restore the bridge as a package backed by the current PocketLlamaEngine runtime, harden origin/port/action validation, avoid runtime-held Director signing keys, and return unsigned evidence candidates. Pin ExploitGym to the exact archived upstream commit as a submodule; document isolated host-only use. Preserve Grok Workspace as a workspace manifest/snapshot, not a fake live service.
 - **Boundaries:** no edits to the active APEX trust verifier PR (#159), RLS/schema, East integration PR #157, or native app UI. Do not blindly restore the original RuntimeController/ShellView implementation because it stores GGUF bytes in memory and accepts a signing key from the caller.
+
+
+## 2026-11-16 — Archived bridge and workspace restoration implementation
+
+- **Draft PR #160:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/160
+- **Exact head:** `b7f560c098bf8e172facaf682a80d831b50ae63e`.
+- **Restored:** hardened BridgeGate, LlamaEngine compatibility alias, actor-based RuntimeController backed by the shared PocketLlamaEngine runtime, unsigned evidence candidate, model-file hash/readiness/expiry/cancellation, ApexBridge package dependency in the native app, BridgeGate-based WebView navigation origin guard, ExploitGym submodule, Grok Workspace status snapshot and attachment manifest.
+- **Security hardening:** origin comparison includes effective port; remote HTTP and URL userinfo are rejected; unknown bridge fields fail closed; load/import/unload require host-owned authorization; RuntimeController does not accept a private key or copy GGUF bytes; model changes invalidate readiness; cancellation drains before lease release.
+- **ExploitGym pin:** upstream main commit `a8029e47135a29f1c1a6e79109bf86fba379b3f3` (2026-11-09). The archived ZIP does not contain its original Git commit metadata, so the selected pin is explicitly documented as a later upstream revision, not an exact archive match.
+- **CI:** Pocket AI Lab push run `43927028410` in progress; iOS PR workflow not yet surfaced. No test pass claimed yet.
+- **Deferred:** full Director web source archive reconciliation (169 files), WKScriptMessageHandler action dispatch, isolated ExploitGym worker adapter, Grok artifact persistence, and physical iPhone Air acceptance.
