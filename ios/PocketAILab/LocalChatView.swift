@@ -789,6 +789,7 @@ struct LocalChatView: View {
     @State private var importError: String?
     @State private var showClearHistoryConfirmation = false
     @State private var showEvaluationHistory = false
+    @State private var capabilityDrafts: [String: String] = [:]
 
     var body: some View {
         NavigationStack {
@@ -809,6 +810,37 @@ struct LocalChatView: View {
                         .disabled(model.isBusy || model.isModelLoaded)
                         Text("\(model.availableModels.count) imported models · one native model loaded at a time")
                             .font(.caption2).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Agent routing labels")
+                                .font(.subheadline.bold())
+                            Text("Assign comma-separated labels to each local model. Labels control candidate routing only; they are not permissions, quality scores, or runtime attestation.")
+                                .font(.caption2).foregroundStyle(.secondary)
+                            ForEach(model.availableModels) { entry in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(entry.name).font(.caption.bold())
+                                    HStack {
+                                        TextField(
+                                            "reasoning, analysis, engineering…",
+                                            text: Binding(
+                                                get: { capabilityDrafts[entry.id] ?? entry.capabilities.joined(separator: ", ") },
+                                                set: { capabilityDrafts[entry.id] = $0 }
+                                            )
+                                        )
+                                        .textFieldStyle(.roundedBorder)
+                                        .autocorrectionDisabled()
+                                        Button("Save") {
+                                            model.updateRoutingCapabilities(
+                                                entry.id,
+                                                from: capabilityDrafts[entry.id] ?? entry.capabilities.joined(separator: ", ")
+                                            )
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .disabled(model.isBusy || model.isModelLoaded)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 6)
                     }
                     Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
@@ -887,7 +919,7 @@ struct LocalChatView: View {
                     }
                     .pickerStyle(.segmented)
                     if mode == .agentTeam {
-                        Text("Six sequential logical roles share one loaded local model. They are not six independent models and cannot run tools.")
+                        Text("Six sequential logical roles are routed to operator-labeled local models. Only one model is loaded at a time; missing specialist routes fail before generation. Roles cannot run tools.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                     HStack(alignment: .bottom) {
