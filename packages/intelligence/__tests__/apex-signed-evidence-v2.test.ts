@@ -15,7 +15,7 @@ class MemoryReplayStore implements ApexEvidenceReplayStore {
 
   async accept(input: { attemptId: string; challengeNonce: string; keyId: string }): Promise<boolean> {
     if (this.fail) throw new Error("replay store unavailable");
-    const key = [input.keyId, input.attemptId, input.challengeNonce].join(":");
+    const key = [input.keyId, input.challengeNonce].join(":");
     if (this.accepted.has(key)) return false;
     this.accepted.add(key);
     return true;
@@ -153,6 +153,15 @@ describe("APEX signed evidence v2", () => {
     const check = verifier(store);
     expect((await check.verify(signedEvidence(), expected)).ok).toBe(true);
     expect(await check.verify(signedEvidence(), expected)).toEqual({
+      ok: false, status: "rejected", reason: "replay"
+    });
+
+    const crossAttempt = new MemoryReplayStore();
+    const crossAttemptVerifier = verifier(crossAttempt);
+    expect((await crossAttemptVerifier.verify(signedEvidence(), expected)).ok).toBe(true);
+    const secondEvidence = signedEvidence({ attemptId: "attempt-2" });
+    const secondBinding = { ...expected, attemptId: "attempt-2" };
+    expect(await crossAttemptVerifier.verify(secondEvidence, secondBinding)).toEqual({
       ok: false, status: "rejected", reason: "replay"
     });
 
