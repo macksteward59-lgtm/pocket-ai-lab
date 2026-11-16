@@ -2295,3 +2295,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added a CI-only fix on `codex/ios-routed-agent-app-integration`, commit `32e64d4fe34a554b86d1b16037924d4b8ea8509b`: simulator selection now prefers an already-booted iPhone, otherwise chooses the newest available iOS runtime/device; first-boot `bootstatus` allowance is increased from 300 to 600 seconds within a 12-minute step timeout; failures emit device/runtime diagnostics.
 - No app/runtime source, model-routing behavior, or governance boundary changed. Workflow source was re-fetched and inspected after update. Exact-head CI has not yet appeared in the workflow-run query; checks are pending. Previous iOS failure was a simulator first-boot LaunchServices migration timeout, not an app compile/test failure.
 - PR #150 and validation PR #151 track the feature branch. No merge, local Xcode run, or physical-device validation claimed.
+
+
+## 2026-11-16 21:40 UTC — Operator routing-label removal correction
+
+- Code review found that the native model catalog accepted operator label assignment but rejected an empty list, so the UI had no way to clear a mistaken capability assignment.
+- Updated `LocalModelCatalogStore.updateCapabilities` to allow an empty normalized label set while retaining the 16-label and 64-byte per-label bounds. Added a persistence assertion that clearing labels remains empty after reloading the catalog.
+- Commits: `ea1184b712b7a92450b578bcadf219267031bb7b` (implementation), `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5` (test). Exact-head CI pending. No route permission or trust semantics changed; an empty set simply cannot satisfy specialist routing requirements.
