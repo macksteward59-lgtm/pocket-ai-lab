@@ -76,6 +76,7 @@ final class NativeMemoryStoreTests: XCTestCase {
         )
         _ = try await original.insert(layer: .working, content: "Keep this private.", agentId: "user")
 
+        let originalCiphertext = try Data(contentsOf: file)
         let missingKey = NativeMemoryStore(
             fileURL: file,
             keyProvider: FixedNativeMemoryKeyProvider(material: nil, mayCreate: false)
@@ -87,6 +88,7 @@ final class NativeMemoryStoreTests: XCTestCase {
             XCTAssertEqual(error as? NativeMemoryVaultError, .keyUnavailable)
         }
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertEqual(try Data(contentsOf: file), originalCiphertext)
     }
 
     func testUpdateAndDeleteAreExplicitAndEditsRemainUnverified() async throws {
@@ -97,9 +99,12 @@ final class NativeMemoryStoreTests: XCTestCase {
             keyProvider: FixedNativeMemoryKeyProvider(material: Data(repeating: 6, count: 32), mayCreate: true)
         )
         let id = try await store.insert(layer: .procedural, content: "Initial note", agentId: "user")
+        let original = try await store.load().first
         let updated = try await store.update(id: id, content: "Edited note", sourceRefs: ["manual:1"])
         XCTAssertTrue(updated)
         let edited = try await store.load()
+        XCTAssertEqual(edited.first?.id, id)
+        XCTAssertEqual(edited.first?.createdAt, original?.createdAt)
         XCTAssertEqual(edited.first?.content, "Edited note")
         XCTAssertEqual(edited.first?.provenance.sourceRefs, ["manual:1"])
         XCTAssertFalse(edited.first?.provenance.verified ?? true)
