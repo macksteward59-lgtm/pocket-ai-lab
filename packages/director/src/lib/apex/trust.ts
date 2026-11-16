@@ -119,8 +119,17 @@ function exactShape(value: unknown): value is ApexSignedEvidenceV2 {
     "runtimeIdentity", "challengeNonce", "generationResultHash", "attestedAt",
     "healthCheckId", "algorithm", "signature"
   ];
-  return Object.keys(record).length === expected.length &&
-    expected.every(key => Object.prototype.hasOwnProperty.call(record, key));
+  if (Object.keys(record).length !== expected.length ||
+      !expected.every(key => Object.prototype.hasOwnProperty.call(record, key))) return false;
+  const stringFields = [
+    "keyId", "conversationRequestId", "attemptId", "modelId", "modelFileHash",
+    "runtimeSessionId", "runtimeVersion", "deviceId", "runtimeIdentity",
+    "challengeNonce", "generationResultHash", "attestedAt", "healthCheckId",
+    "algorithm", "signature"
+  ];
+  return record.protocolVersion === 2 &&
+    record.algorithm === "Ed25519" &&
+    stringFields.every(key => typeof record[key] === "string" && (record[key] as string).length > 0);
 }
 
 function bindingMatches(evidence: ApexSignedEvidenceV2, expected: ApexEvidenceAttemptBinding): boolean {
