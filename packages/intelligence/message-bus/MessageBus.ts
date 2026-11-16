@@ -89,20 +89,33 @@ export class MessageBus {
     if (this.messages.some(message => message.taskId === taskId)) {
       throw new Error("Cannot restore a thread over existing task messages");
     }
-    const restored = messages.map(message => AgentMessageSchema.parse(message));
+    const restored = messages.map(message => deepFreeze(AgentMessageSchema.parse(message)));
     if (restored.some(message => message.taskId !== taskId)) {
       throw new Error("Restored thread contains a message for another task");
     }
-    const messageIds = new Set<string>();
+    const messageById = new Map<string, AgentMessage>();
     const sequences = new Set<number>();
     for (const message of restored) {
-      if (messageIds.has(message.messageId) || sequences.has(message.sequence)) {
+      if (messageById.has(message.messageId) || sequences.has(message.sequence) ||
+          this.messages.some(existing => existing.messageId === message.messageId)) {
         throw new Error("Restored thread contains duplicate message identifiers or sequence numbers");
       }
-      messageIds.add(message.messageId);
+      messageById.set(message.messageId, message);
       sequences.add(message.sequence);
     }
     restored.sort((left, right) => left.sequence - right.sequence);
+    for (let index = 0; index < restored.length; index += 1) {
+      const message = restored[index];
+      if (message.sequence !== index) {
+        throw new Error("Restored thread sequence must be contiguous from zero");
+      }
+      if (message.parentMessageId) {
+        const parent = messageById.get(message.parentMessageId);
+        if (!parent || parent.sequence >= message.sequence) {
+          throw new Error("Restored thread contains a missing or forward parent message");
+        }
+      }
+    }
     this.messages.push(...restored);
   }
 
