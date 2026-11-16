@@ -2746,3 +2746,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - On branch `codex/bridge-native-runtime-integration`, changed only `.github/workflows/ios-llamaengine-ci.yml`. Added `set -o pipefail`; collect fetch output separately; accept exactly one existing absolute `.gguf` path; persist it with a newline; and recheck absolute suffix and file existence before invoking write-smoke-path.
 - Workflow file commit `f765562bcc16767548e4948ee5acb95a294f304c`; newline correction commit `6661bf655edef85e94fa1f363fcf54a33f20233c`. Current branch/PR #164 head is `6661bf655edef85e94fa1f363fcf54a33f20233c`.
 - No inference/runtime/model parser/test/pin or APEX/East trust code changed. No CI rerun/cancellation, merge/approval/closure, signing, or physical iPhone Air test. Fresh exact-head CI evidence is still required; prior run #43976612502 remains failed and cannot validate the fix.
+
+
+## 2026-11-16 UTC — PR #164 repaired-head validation started
+
+- GitHub Actions automatically started exact-head iOS workflow [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474) for `6661bf655edef85e94fa1f363fcf54a33f20233c` after the workflow-only smoke handoff repair.
+- Job #133697485358 is `in_progress`; setup, checkout, Xcode discovery, and CMake/Ninja install passed. Pinned build-cache restore is currently in progress; later gates are pending. No repaired smoke path or model generation has been validated yet.
+- Updated the board and PR #164 validation summary. No merge, approval, workflow cancellation, APEX trust change, or physical-device test.
