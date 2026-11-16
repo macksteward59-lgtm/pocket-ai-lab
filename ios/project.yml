@@ -6,7 +6,7 @@ options:
 packages:
   PocketLlamaEngine:
     path: ../runtime/ios
-  Apex:
+  ios:
     path: ../packages/director/ios
 schemes:
   PocketAILab:
@@ -40,7 +40,7 @@ targets:
     dependencies:
       - package: PocketLlamaEngine
         product: PocketLlamaEngine
-      - package: Apex
+      - package: ios
         product: ApexBridge
   PocketAILabTests:
     type: bundle.unit-test
@@ -53,7 +53,7 @@ targets:
       - target: PocketAILab
       - package: PocketLlamaEngine
         product: PocketLlamaEngine
-      - package: Apex
+      - package: ios
         product: ApexBridge
     settings:
       base:
