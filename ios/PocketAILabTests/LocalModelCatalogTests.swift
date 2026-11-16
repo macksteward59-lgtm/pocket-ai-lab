@@ -131,4 +131,28 @@ final class LocalModelCatalogTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: file), original)
     }
 
+    func testOperatorRoutingCapabilitiesPersistAndNormalize() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let models = root.appendingPathComponent("Models", isDirectory: true)
+        try FileManager.default.createDirectory(at: models, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = models.appendingPathComponent("model.gguf")
+        try Data("model bytes".utf8).write(to: file)
+        let catalogURL = root.appendingPathComponent("catalog.json")
+        let store = LocalModelCatalogStore(fileURL: catalogURL, modelDirectory: models)
+        let artifact = ImportedModelArtifact(url: file, fingerprint: try ModelArtifactFingerprint.compute(at: file))
+        let registered = try store.register(artifact, displayName: "Model")
+        let modelID = try XCTUnwrap(registered.selectedModelID)
+
+        let updated = try store.updateCapabilities(
+            for: modelID,
+            capabilities: [" Reasoning ", "analysis", "reasoning", ""]
+        )
+
+        XCTAssertEqual(updated.entries.first?.capabilities, ["analysis", "reasoning"])
+        XCTAssertEqual(try LocalModelCatalogStore(fileURL: catalogURL, modelDirectory: models).load().entries.first?.capabilities,
+                       ["analysis", "reasoning"])
+    }
+
+
 }
