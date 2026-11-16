@@ -334,7 +334,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
                 ]
             )
             XCTFail("missing specialist route must fail closed")
-        } catch NativeAgentCoordinatorError.modelRoutingFailed {
+        } catch NativeAgentCoordinatorError.modelRoutingFailed(_) {
         } catch {
             XCTFail("unexpected error: \\(error)")
         }
