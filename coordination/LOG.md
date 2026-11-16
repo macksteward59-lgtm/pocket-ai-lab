@@ -2535,3 +2535,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Passed:** Pocket AI Lab PR `43936311044`; Consumer `43936311095`; Governance `43936311118`; Cursor `43936311089`; Pocket AI Lab push `43936298279`.
 - **Pending:** iOS LlamaEngine PR workflow `43936311119`.
 - Desktop archive submodule regression test passed in the Pocket AI Lab checks. Native iOS package/app validation is not yet complete; physical iPhone Air acceptance remains outstanding.
+
+
+## 2026-11-16 — PR #160 exact-head Xcode package-resolution failure
+
+- **Branch/head:** `codex/restore-original-bridge-and-workspaces` at `f20cfa9c789931a70f76a0e2c4ba136e2442f185`.
+- **Exact-head non-iOS workflows:** Pocket AI Lab `43952378331`, Consumer `43952378242`, Governance `43952378195`, Cursor `43952378266` all completed successfully.
+- **iOS workflow:** `43952378234` failed at native app build before app XCTest, simulator XCTest, or pinned-GGUF smoke. The concrete Xcode error is `Missing package product 'ApexBridge'`; the resolved package graph lists the local package as `ios: (null)`. llama.cpp build, fail-closed typecheck, and generic iOS device-target link had passed. This is a package-reference/resolution failure, not a physical-device result.
+- **Scope clarification:** the bridge branch may update `ios/project.yml` and only the trusted-origin navigation policy in `ios/PocketAILab/WorkspaceView.swift`; it must not add WebKit action dispatch, change chat/agent UI, or bypass host approval. The full WKScriptMessageHandler/approval flow remains deferred.
+- **Repair attempt:** align the XcodeGen local package alias with the resolved local path identity and add an explicit Swift package manifest preflight. Exact-head CI will decide whether this diagnosis is correct; no pass is claimed yet.
