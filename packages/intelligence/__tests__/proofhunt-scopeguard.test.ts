@@ -111,6 +111,9 @@ describe.skipIf(!existsSync(proofHuntMigrationPath))("ProofHunt PostgreSQL migra
     expect(sql).toContain("FOREIGN KEY (project_id, operational_authorization_id, program_authorization_id)");
     expect(sql).toContain("REFERENCES proofhunt.authorization_records(project_id, record_id, parent_program_authorization_id)");
     expect(sql).toContain("AND target_scope_hash IS NOT NULL");
+    expect(sql).toContain("CREATE TABLE proofhunt.authorization_revocations");
+    expect(sql).toContain("CREATE TRIGGER proofhunt_active_authorization_before_plan");
+    expect(sql).toContain("ProofHunt operational authorization is not active");
   });
 
   it("keeps project RLS forced and historical tables append-only", async () => {
@@ -119,6 +122,8 @@ describe.skipIf(!existsSync(proofHuntMigrationPath))("ProofHunt PostgreSQL migra
     expect(sql).toContain("FORCE ROW LEVEL SECURITY");
     expect(sql).toContain("BEFORE UPDATE OR DELETE");
     expect(sql).toContain("proofhunt.audit_events");
+    expect(sql).toContain("'authorization_revocations'");
+    expect(sql).toContain("ProofHunt history records are append-only");
   });
 });
 
