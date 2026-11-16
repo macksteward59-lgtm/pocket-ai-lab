@@ -225,7 +225,10 @@ public actor RuntimeController {
             sessions[sessionId] = active
             throw error
         }
-        guard maxOutputBytes > 0, active.generations[requestId] == nil else {
+        guard (1...1_048_576).contains(maxOutputBytes) else {
+            throw RuntimeControllerError.invalidRequest
+        }
+        guard active.generations[requestId] == nil else {
             throw RuntimeControllerError.duplicateRequest
         }
         let request = GenerationRequest(
