@@ -2710,3 +2710,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Reviewed the current PR #164 bridge test source: origin/effective-port checks, remote-HTTP rejection, exact message schema, challenge nonce presence, consequential-action authorization, runtime hash/readiness/cancellation behavior, and unsigned-candidate semantics have focused test cases. The challenge store is still not connected to a WebKit message handler, and the PR explicitly does not enable Web-to-native action dispatch. These tests are candidate evidence only until the exact-head CI gates complete.
 - Updated `coordination/BOARD.md` commit `453bb53236bd16287df15a63afb667de71f3b6c5` to record app-build success and active native app XCTest.
 - No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 native app XCTest passed; simulator XCTest started
+
+- Re-fetched exact-head workflow [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- Native app generation/build and native app XCTest both completed with `success`. iOS simulator XCTest is now `in_progress`. Pinned-GGUF download/smoke and macOS XCTest remain pending; workflow overall remains in progress.
+- No model-generation smoke result or overall workflow success is claimed yet.
+- Updated `coordination/BOARD.md` commit `e01efc4ac4481403d742358a07d3ac1156652d21` and the PR #164 validation summary to reflect the native app XCTest pass and active simulator XCTest.
+- No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
