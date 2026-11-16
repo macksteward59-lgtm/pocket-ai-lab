@@ -224,7 +224,6 @@ export async function runEastTaskWithLifecycle(
         if (!synthesis.trim()) throw new Error("East deliberation returned no synthesis");
         const accepted = await east.commitTaskEvidence(eastTaskId, synthesis);
         if (accepted !== false) throw new Error("East evidence gate violated its non-authorizing contract");
-        const task = east.getTask(eastTaskId);
         result = encodeCheckpoint("record-unverified-proposal", east.checkpointTask(eastTaskId));
         refs = evidenceRefs;
       } else {
