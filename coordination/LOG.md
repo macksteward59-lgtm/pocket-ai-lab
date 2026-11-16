@@ -2360,3 +2360,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Scope:** Create the native catalog for eight permanent roles and bounded dynamic specialist templates, including explicit capability labels, instructions, message types, unique ID validation, and focused tests/docs.
 - **Exclusions:** No LocalChatView or coordinator changes, no automatic specialist selection, no provider execution, no APEX/East or memory changes. The catalog will not claim agents are active until a separate app integration invokes them.
 - **Dependency:** PR #150 native app integration; its exact-head iOS CI is being retried after an app-build failure.
+
+
+## 2026-11-16 — Native memory and agent catalogue implementation checkpoint
+
+- **Native memory:** Draft PR #153 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/153. Current exact head `916bd00399e76548cf2ef2a6e7005d75ac20bcb0`. Adds Keychain-backed AES-GCM vault, explicit Memory tab CRUD, provenance, no auto-save, and fail-closed key/tamper behavior. Pocket AI Lab push CI queued; PR workflows pending observation.
+- **Native agent catalog:** Draft PR #154 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/154. Exact head `7a2236627cd1b6e8dacc9c059f6e6be37562e0b9`, stacked on #150. Adds eight core logical roles and eight specialist templates with bounded explicit instantiation; no automatic specialist activation or UI integration yet. Pocket AI Lab push CI in progress.
+- Both PRs are unmerged and remain implementation slices. The overall product still requires their integration, native iPhone Air validation, runtime evidence, memory retrieval consent, and East/APEX execution integration.
