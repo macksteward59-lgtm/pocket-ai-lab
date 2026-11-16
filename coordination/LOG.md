@@ -2045,3 +2045,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Verified the three files changed on PR #103 since PR #131's previous base (coordinator, autonomy tests, lifecycle docs) were byte-identical in PR #131's tree. Created a two-parent merge commit `ee81760ecb4eaac0acf9f7f8bacba4c39c2d9e11` using the existing PR #131 tree and current PR #103 head as second parent; advanced the branch with a non-force expected-head ref update.
 - PR #131 now has 16 commits ahead / 0 behind its base, is mergeable, and its diff is narrowed to five files: PostgreSQL snapshot store, SQL migration, store tests, package exports, and East production-readiness docs. Coordinator/test/docs are inherited from the base rather than duplicated.
 - Previous content-identical tree head `50bfe77f28d6d2cdb79e6007dad35207d3df954b` passed Pocket AI Lab CI with 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence files, and 28 workspace files. New exact-head CI `43796136430` is running. No live PostgreSQL execution or migration is claimed.
+
+
+## 2026-11-16 — Synchronized PostgreSQL persistence branch exact-head CI passes
+
+- PR #131 exact head `ee81760ecb4eaac0acf9f7f8bacba4c39c2d9e11` passed Pocket AI Lab CI run `43796136430`. The new merge commit keeps the previously tested tree unchanged while recording PR #103 as the second parent; the branch is now 16 commits ahead / 0 behind its base and the PR diff is limited to five persistence-specific files.
+- Validation: 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence test files, 28 workspace test files; all passed. The PostgreSQL tests use a serialized fake database, not a live PostgreSQL server. No migration execution, RLS validation, credentials, backup, or production deployment occurred.
+- PR #131 remains draft/open/mergeable and stacked on PR #103. The correct integration order remains #103 before #131; no PR merged.
