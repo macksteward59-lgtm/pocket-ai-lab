@@ -21,6 +21,7 @@ CREATE TABLE proofhunt.authorization_records (
   record_status TEXT NOT NULL CHECK (record_status IN ('pending', 'verified', 'approved', 'revoked', 'expired')),
   policy_version TEXT,
   policy_hash CHAR(64),
+  target_scope_hash CHAR(64),
   approved_by TEXT,
   approval_reference TEXT,
   signature_reference TEXT,
@@ -76,6 +77,7 @@ CREATE TABLE proofhunt.authorization_records (
       AND scope_policy_snapshot IS NULL
       AND scope_policy_hash IS NULL
       AND policy_hash IS NULL
+      AND target_scope_hash IS NULL
     )
   )
 );
@@ -157,7 +159,7 @@ CREATE TABLE proofhunt.assessment_jobs (
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id)
     REFERENCES proofhunt.assessment_policies(project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id),
-  FOREIGN KEY (project_id, program_authorization_id, authorized_target_id)
+  FOREIGN KEY (project_id, operational_authorization_id, authorized_target_id)
     REFERENCES proofhunt.authorized_targets(project_id, authorization_record_id, target_id),
   CHECK (program_authorization_id <> operational_authorization_id),
   CHECK (decision <> 'approved_plan' OR authorized_target_id IS NOT NULL)
