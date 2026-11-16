@@ -44,6 +44,8 @@ export interface OperationalAuthorizationRecord {
   readonly policyVersion: string;
   /** SHA-256 of the exact immutable operational policy snapshot. */
   readonly policyHash: string;
+  /** Digest of the exact authorized and excluded target sets covered by the approval signature. */
+  readonly targetScopeHash: string;
   readonly status: "approved" | "pending" | "revoked";
   readonly approvedBy: string;
   readonly approvalReference: string;
@@ -206,6 +208,9 @@ export class ScopeGuard {
       if (operational.policyHash !== hashAssessmentPolicy(policy)) {
         throw new ScopeGuardError("Operational authorization policy digest does not match the active policy snapshot");
       }
+      if (operational.targetScopeHash !== hashAssessmentScope(assessmentConfig.targets, assessmentConfig.excludedTargets)) {
+        throw new ScopeGuardError("Operational authorization target-scope digest does not match the active allowlist and exclusions");
+      }
       if (!operational.approvedBy.trim() || !operational.approvalReference.trim() || !operational.signatureReference.trim()) {
         throw new ScopeGuardError("Operational approval provenance is incomplete");
       }
@@ -308,6 +313,21 @@ export function hashNormalizedProgramPolicy(policy: NormalizedProgramPolicy): st
 
 export function hashAssessmentPolicy(policy: ProofHuntAssessmentPolicy): string {
   return createHash("sha256").update(canonicalize(policy)).digest("hex");
+}
+
+/** Hashes the canonical exact allowlist and exclusion set covered by human approval. */
+export function hashAssessmentScope(
+  targets: readonly ExplicitTarget[],
+  excludedTargets: readonly ExplicitTarget[]
+): string {
+  const normalize = (entries: readonly ExplicitTarget[]) => entries.map(entry => ({
+    hostname: normalizeTargetHostname(entry.hostname),
+    includeSubdomains: entry.includeSubdomains === true
+  })).sort((a, b) => a.hostname.localeCompare(b.hostname) || Number(a.includeSubdomains) - Number(b.includeSubdomains));
+  return createHash("sha256").update(canonicalize({
+    targets: normalize(targets),
+    excludedTargets: normalize(excludedTargets)
+  })).digest("hex");
 }
 
 export function normalizeTargetHostname(value: string): string {
