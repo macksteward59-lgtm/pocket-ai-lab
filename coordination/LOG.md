@@ -2788,3 +2788,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - It duplicates PR #164's bridge package/runtime, WorkspaceView, XcodeGen, and iOS workflow paths. Its distinct archive slice is the ExploitGym submodule/gitlink, Grok status/attachment snapshots and manifest, and desktop archive scanner/package changes to exclude gitlinks and symlinks.
 - Decision: do not merge PR #160 wholesale and do not edit files overlapping the active #164 claim. Once #164's exact-head validation completes, isolate the archive-only changes, rebase/rebuild them on the accepted native-runtime base, and validate them in a separate scoped PR. ExploitGym remains host-side only; no benchmark workload was run.
 - Re-polled PR #164 iOS run #43981080474: still in progress at app build step 13, no later steps started; job-log endpoint still returns BlobNotFound. Companion Intelligence CI #43981072947 remains successful. No source changes, workflow cancellation/rerun, merge, approval, or trust-boundary change.
+
+
+## 2026-11-16 UTC — claimed isolated archive restoration slice
+
+- Claimed non-overlapping archive-only paths for ChatGPT on `codex/archive-restoration-isolated`: Grok Workspace historical snapshot/manifest/attachment documentation, desktop archive packaging and smoke tests, `.gitmodules`, and ExploitGym gitlink.
+- Explicit exclusions: PR #164's Director bridge, WorkspaceView, XcodeGen, and iOS workflow; APEX/East trust and authorization boundaries; no ExploitGym execution.
+- Source is PR #160 head `20c5588e6bc6f50629e4683efef1db448926979a`; it is divergent from its base (73 ahead/230 behind), so no wholesale cherry-pick. New branch will start from the exact PR #164 bridge head after current validation/reconciliation; only isolated archive paths will be rebuilt there.
+- Validation target: manifest and snapshot consistency, desktop archive packaging/smoke tests, gitlink/symlink exclusion, and review of provenance claims.
