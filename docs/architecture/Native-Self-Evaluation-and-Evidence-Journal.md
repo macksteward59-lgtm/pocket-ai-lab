@@ -10,7 +10,7 @@ The initial iOS implementation adds:
 - `NativeEvaluationJournal`: persists every attempt, including failed and partial generations, in the app's Application Support directory.
 - A SHA-256 fingerprint computed from the actual model file and checked immediately before and after generation.
 - Versioned case criteria and expected outcomes retained with each attempt, plus an assessment schema for independent Critic/Validator reviews across eight capability dimensions: reasoning, factual accuracy, coding, task completion, collaboration, memory retention, security/policy compliance, and runtime efficiency/reliability.
-- A newline-delimited, hash-chained journal. Reordering, editing, or removing an entry is detected during verification; writes fail closed if the on-disk chain changes.
+- A newline-delimited, hash-chained journal. Editing, reordering, or deleting an interior entry is detected during verification; writes fail closed if the on-disk chain changes. Because this version has no external trusted checkpoint, deleting a suffix (including truncating the latest events) can leave a valid prefix and is not detectable after restart.
 - Separate append-only records for Critic assessments, Validator assessments, and model/agent challenges.
 - Retry links and monotonically increasing attempt numbers per model fingerprint, suite, and case.
 
@@ -35,12 +35,12 @@ Test doubles may exercise the runner and journal, but their attempts are labelle
 - Four starter-suite cases use deterministic exact-match checks. The app reports an objective score only for those checks, deduplicating to the latest attempt per case. Reasoning, coding, collaboration, and security cases remain unscored pending independent Critic/Validator review; they are not silently counted as passes. The immediate recall case is not evidence of durable cross-session memory. The current UI does not yet launch separate Critic/Validator inference sessions automatically, so these four categories remain explicitly unscored.
 - Critic and Validator assessments are separate events tied to an existing attempt. A review must use both a different evaluator model ID and a different runtime session from the subject generation. The subject model cannot grade itself and have that grade accepted as independent.
 - Challenges append a separate event; they do not rewrite or erase a score.
-- No application API for delete, truncate, overwrite, or automatic retention expiry is provided.
+- No application API for delete, truncate, overwrite, or automatic retention expiry is provided. This is an API-level constraint, not filesystem-enforced immutability; a privileged actor can still alter or truncate the file.
 - The app stores the journal under Application Support and applies iOS file protection until the first device unlock. Normal device backup behavior is not disabled.
 
 The app exposes a self-test action and a read-only history screen. Clearing conversation/Agent Team history does not clear the evaluation journal. The journal has no application delete/truncate API and no automatic retention expiry. This is device-local persistence; uninstalling the app or losing the device can still remove it. Application Support follows normal iOS device-backup behavior; the app does not currently provide a separate export or cross-device sync workflow.
 
-The hash chain is tamper-evident, not a hardware-backed signature. A privileged actor able to rewrite the entire file and recompute every hash could forge a new chain. Production-grade authenticity still requires the separately governed runtime proof/signature pipeline.
+The hash chain is local tamper evidence, not a hardware-backed signature or a complete anti-rollback mechanism. It detects edits, reordering, and interior deletion, but a valid-prefix suffix truncation cannot be detected after restart without an independently protected checkpoint; a privileged actor can also rewrite the entire file and recompute every hash. Production-grade authenticity and rollback resistance still require the separately governed runtime proof/signature pipeline.
 
 ## Score interpretation and limits
 
