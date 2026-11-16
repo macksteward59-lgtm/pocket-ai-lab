@@ -2648,3 +2648,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #160/#164 overlap:** PR #160 is still open, based on `codex/native-product-experience-integration` at `31bdc57b8812243279097899fecd2c938a96e78f`, with head `20c5588e6bc6f50629e4683efef1db448926979a`. PR #164 is the focused bridge runtime candidate. #160 also contains ExploitGym/Grok Workspace archive restoration, so it is not a pure duplicate; archive scope needs a deliberate follow-on/reconciliation decision. No PR was closed or retargeted.
 - **Coordination board:** Updated the #156/#164 snapshot with exact current evidence, clarified that #164 does not include ExploitGym/Grok Workspace restoration, and moved the traceability claim to `in-progress`. The existing board entry for #162 still needs its stale head and old CI claim reconciled in a subsequent board pass.
 - **Boundaries:** No PR merged/closed/approved, no branch force-pushed, no APEX trust/policy/authorization changed, no signing or deployment performed, and no physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 XCTest fixture correction and head reconciliation
+
+- **Implementation branch:** `codex/bridge-native-runtime-integration`; updated exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- **Code change:** Updated only `ios/PocketAILabTests/PocketAILabTests.swift` so `PrivateWorkspaceWebView.Coordinator` is initialized with `trustedURL: URL(string: "https://workspace.example")!`. The production coordinator initializer and trust behavior were not weakened or changed.
+- **CI:** New exact-head iOS run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502) started and was observed in progress at the time of this entry (job #133682098392; source checkout underway). No test pass is claimed until the run completes.
+- **PR description:** Updated PR #164 to identify the corrected exact head and the active CI run. It remains draft/open.
+- **East worker fencing:** PR #162 current head is `1db0345938ac029c3742a391c51ad7027d57e3bc`; the previously recorded successful push run #43961191072 belongs to older head `9be72ff1b817044ded402984b1612dfc21754690`. Current head has no surfaced PR run or combined status. The board now marks exact-head CI as unverified.
+- **Verifier hardening:** PR #163 current head `cddb43103384711707c6474c1f99dab5e33c6dd3` still has no surfaced PR run or combined status.
+- **Coordination:** Updated board snapshots and detailed claims for PR #162 and #164 so commit hashes and CI claims match the currently observed heads. The traceability matrix remains at 316 requirement rows; none is marked verified.
+- **No APEX trust/policy/authorization changes, no PR merge/closure/approval, no force-push, no deployment/signing, and no physical iPhone Air test occurred.**
