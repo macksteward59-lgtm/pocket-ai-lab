@@ -2367,3 +2367,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Native memory:** Draft PR #153 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/153. Current exact head `916bd00399e76548cf2ef2a6e7005d75ac20bcb0`. Adds Keychain-backed AES-GCM vault, explicit Memory tab CRUD, provenance, no auto-save, and fail-closed key/tamper behavior. Pocket AI Lab push CI queued; PR workflows pending observation.
 - **Native agent catalog:** Draft PR #154 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/154. Exact head `7a2236627cd1b6e8dacc9c059f6e6be37562e0b9`, stacked on #150. Adds eight core logical roles and eight specialist templates with bounded explicit instantiation; no automatic specialist activation or UI integration yet. Pocket AI Lab push CI in progress.
 - Both PRs are unmerged and remain implementation slices. The overall product still requires their integration, native iPhone Air validation, runtime evidence, memory retrieval consent, and East/APEX execution integration.
+
+
+## 2026-11-16 — Routed Agent Team app compile error diagnosed and repaired
+
+- **Failing run:** iOS LlamaEngine CI `43916898000`, retry attempt 2, job `133484406232`, exact head `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5`.
+- **Exact compiler diagnostic:** six calls in `ios/PocketAILab/LocalChatView.swift` placed `requiredCapabilities` before `instructions`; Swift requires initializer arguments in declaration order (`agentId`, `instructions`, `messageType`, `requiredCapabilities`).
+- **Fix:** reordered all six NativeAgentStep calls without changing role behavior or routing metadata. New feature head `ce19771be39210bef9e141990010065df200b6bf`.
+- **Validation:** fresh iOS workflow `43922697190` and the companion exact-head workflows are running. No pass is claimed yet.
+- **Stack extension:** added catalog validation aggregate PR #155 at `4c06b9422c5bddbba54da1f656ba9e0d7966d97c`, which includes PR #150's dependency stack plus PR #154's catalog files and triggers mainline iOS validation.
