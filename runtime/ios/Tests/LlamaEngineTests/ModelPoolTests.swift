@@ -464,6 +464,7 @@ private actor FixedSessionPoolTestEngine: LlamaEngine {
 private actor BlockingUnloadPoolTestEngine: LlamaEngine {
     private var nextSession = 0
     private var unloadingStarted = false
+    private var shouldBlockUnload = true
     private var unloadContinuation: CheckedContinuation<Void, Never>?
     private let returnedModelIdOverride: String?
 
@@ -486,6 +487,8 @@ private actor BlockingUnloadPoolTestEngine: LlamaEngine {
     func cancel(sessionId: String, requestId: String) async {}
 
     func unload(sessionId: String) async {
+        guard shouldBlockUnload else { return }
+        shouldBlockUnload = false
         unloadingStarted = true
         await withCheckedContinuation { unloadContinuation = $0 }
     }
