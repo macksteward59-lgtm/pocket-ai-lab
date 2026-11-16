@@ -2010,3 +2010,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Focused autonomy suite: 19/19 passed. Intelligence suite: 72 test files passed. Workspace suite: 28 test files, 318 passed / 2 skipped. Consumer job: 36 test files / 307 passed and 14 test files / 159 passed / 1 skipped; sidecar: 46 passed; Cursor plugin: 5 passed. No test failures.
 - Added `reload()` with full snapshot validation and global attempt-ID uniqueness checks for safe reconciliation after `store_conflict`; added optional task-scoped `recoverExpiredLeases(taskId?)` used by the East lifecycle adapter. Tests cover concurrent-writer conflict recovery and scoped lease recovery.
 - PR #94 remains draft/open/unmerged. Production PostgreSQL deployment, real database migration, cross-process scheduling/locking, East production execution, and governed host authorization remain open. No APEX approval or signed receipt is issued.
+
+
+## 2026-11-16 — Claim lifecycle/East aggregate reconciliation
+
+- Claimed the existing PR #103 branch `codex/east-lifecycle-resumption-mainline` for a bounded reconciliation of the lifecycle kernel with PR #94's hardened validator and the PostgreSQL/East adapter interfaces. Scope is limited to the coordinator, its focused autonomy tests, and lifecycle docs; the East adapter implementation and authorization/evidence contracts remain untouched.
+- Reason: PR #103 is the integration aggregate for PR #94 + #102; PR #131 is stacked on #103 and introduces PostgreSQL persistence, while PR #132 validates the PostgreSQL/East adapter stack against main. Their coordinator copies currently diverge. The goal is one consistent coordinator contract before merge review, not a merge or production readiness claim.
