@@ -523,7 +523,6 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
         (step.status === "pending" && (step.result !== null || step.attempts >= step.maxAttempts)) ||
         (step.status === "running" && (step.attempts < 1 || step.result !== null)) ||
         (step.status === "succeeded" && (step.attempts < 1 || !step.result || !validTimestamp(step.completedAt))) ||
-        (step.status === "succeeded" && step.lastError === null && step.attemptIds.length !== step.attempts) ||
         (step.status !== "succeeded" && step.completedAt !== null) ||
         (step.status === "failed" && (step.attempts < 1 || !step.lastError || step.result !== null)) ||
         (step.status === "pending" && step.result !== null) ||
