@@ -352,6 +352,16 @@ describe("ProofHunt ScopeGuard", () => {
     expect(projectResult.reason).toContain("Emergency stop");
   });
 
+  it("canonicalizes the signed target scope independent of list ordering", async () => {
+    const base = makeConfig();
+    const config = makeConfig({
+      targets: [...base.targets].reverse(),
+      excludedTargets: [...base.excludedTargets].reverse()
+    });
+    const { guard } = makeGuard();
+    expect((await guard.authorizeAssessment(config, "app.example.com", "static_analysis")).permitted).toBe(true);
+  });
+
   it("denies target-scope expansion without a new signed operational approval", async () => {
     const base = makeConfig();
     const config = makeConfig({
