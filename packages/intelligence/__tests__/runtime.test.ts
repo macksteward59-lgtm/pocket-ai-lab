@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AgentManager, CORE_AGENTS } from "../agents/AgentManager";
 import { DeliberationEngine, DeliberationStage } from "../deliberation/DeliberationEngine";
 import { AgentMessage, AgentMessageSchema, MessageBus } from "../message-bus/MessageBus";
+import { AgentTaskRequestSchema } from "../contracts/AgentProtocol";
 import { ModelDescriptor } from "../model-registry/ModelRegistry";
 import { ModelRouter } from "../model-router/ModelRouter";
 import { Orchestrator } from "../orchestrator/Orchestrator";
@@ -35,6 +36,30 @@ const model: ModelDescriptor = {
   capabilities: ["reason", "code"],
   memoryEstimateMB: 512
 };
+
+describe("AgentTaskRequestSchema", () => {
+  it("accepts legacy requests and bounded explicitly selected memory context", () => {
+    expect(AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "legacy", objective: "Review", requiredCapabilities: []
+    }).context).toBeUndefined();
+    const request = AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "Untrusted selected memory", contextRefs: ["memory-1"]
+    });
+    expect(request.contextRefs).toEqual(["memory-1"]);
+  });
+
+  it("rejects oversized memory context and unknown request fields", () => {
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "x".repeat(4_001), contextRefs: ["memory-1"]
+    })).toThrow();
+    expect(() => AgentTaskRequestSchema.parse({
+      protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
+      context: "x", contextRefs: ["memory-1"], authorized: true
+    })).toThrow();
+  });
+});
 
 describe("MessageBus", () => {
   it("rejects a payload that does not match its message type", () => {
