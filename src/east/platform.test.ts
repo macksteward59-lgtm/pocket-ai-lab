@@ -40,7 +40,7 @@ function payloadFor(request: InferenceRequest): InferenceResult {
   }
 }
 
-function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = {}): EastPlatformRuntime {
+function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = {}): EastPlatformRuntime & { calls: InferenceRequest[] } {
   const calls: InferenceRequest[] = [];
   const platform = createEastPlatform({
     inference: overrides.inference ?? {
