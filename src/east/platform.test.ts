@@ -170,6 +170,30 @@ describe("East platform functions", () => {
     expect(restored.getTask(taskId).authorized).toBe(false);
   });
 
+  it("rejects forged authorization and malformed assignments in restored checkpoints", async () => {
+    const source = runtime({ createId: () => "checkpoint-invalid-source" });
+    const taskId = source.createAgentTask("Validate checkpoint trust boundary");
+    source.assignAgent(taskId, "reasoner");
+    const checkpoint = source.checkpointTask(taskId);
+
+    const forged = { ...checkpoint, task: { ...checkpoint.task, authorized: true } };
+    const target = runtime({ createId: () => "checkpoint-invalid-target" });
+    expect(() => target.restoreTask(forged as never)).toThrow(/Invalid East runtime checkpoint/);
+
+    const duplicateAssignment = {
+      ...checkpoint,
+      task: { ...checkpoint.task, assignments: [...checkpoint.task.assignments, checkpoint.task.assignments[0]] }
+    };
+    expect(() => target.restoreTask(duplicateAssignment as never)).toThrow(/Invalid East runtime checkpoint/);
+
+    const unknownAgent = {
+      ...checkpoint,
+      task: { ...checkpoint.task, assignments: [{ id: "assignment-unknown", agentId: "model-output-agent" }] }
+    };
+    expect(() => target.restoreTask(unknownAgent as never)).toThrow(/invalid or duplicate agent assignment/);
+    expect(() => target.getTask(taskId)).toThrow(/Unknown task/);
+  });
+
   it("refuses deliberation until the core team is assigned", async () => {
     const platform = runtime();
     const taskId = platform.createAgentTask("Need the team");
