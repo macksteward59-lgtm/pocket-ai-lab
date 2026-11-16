@@ -41,7 +41,7 @@ const BaseMessageSchema = z.object({
   parentMessageId: z.string().uuid().optional(),
   createdAt: z.string().datetime(),
   sequence: z.number().int().nonnegative()
-});
+}).strict();
 
 export const AgentMessageSchema = BaseMessageSchema.superRefine((message, ctx) => {
   const parsed = PayloadSchemas[message.messageType].safeParse(message.payload);
