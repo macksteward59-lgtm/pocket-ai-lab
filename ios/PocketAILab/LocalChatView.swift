@@ -527,36 +527,36 @@ final class LocalChatModel: ObservableObject {
         let steps = [
             NativeAgentStep(
                 agentId: "reasoner",
-                requiredCapabilities: ["reasoning"],
-                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work."
+                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work.",
+                requiredCapabilities: ["reasoning"]
             ),
             NativeAgentStep(
                 agentId: "researcher",
-                requiredCapabilities: ["analysis"],
-                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations."
+                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations.",
+                requiredCapabilities: ["analysis"]
             ),
             NativeAgentStep(
                 agentId: "engineer",
-                requiredCapabilities: ["engineering"],
-                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code."
+                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code.",
+                requiredCapabilities: ["engineering"]
             ),
             NativeAgentStep(
                 agentId: "security-analyst",
-                requiredCapabilities: ["security-review"],
                 instructions: "Review threats, trust boundaries, privacy, misuse, and failure modes. Preserve all APEX/East authorization boundaries.",
-                messageType: .counterargument
+                messageType: .counterargument,
+                requiredCapabilities: ["security-review"]
             ),
             NativeAgentStep(
                 agentId: "critic",
-                requiredCapabilities: ["critique"],
                 instructions: "Challenge assumptions and earlier proposals. Find contradictions, missing cases, and simpler alternatives.",
-                messageType: .counterargument
+                messageType: .counterargument,
+                requiredCapabilities: ["critique"]
             ),
             NativeAgentStep(
                 agentId: "validator",
-                requiredCapabilities: ["validation"],
                 instructions: "Synthesize a concise result. Label unverified claims, list remaining gaps, and propose next steps. Never claim tests or external actions occurred.",
-                messageType: .validation
+                messageType: .validation,
+                requiredCapabilities: ["validation"]
             )
         ]
         let task = AgentTaskRequest(
