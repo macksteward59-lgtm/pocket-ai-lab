@@ -1877,3 +1877,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - New lifecycle branch head: `bd520d03e3fa3195aae88bb9c6a1b28549d92be5`. Four workflows are running on this exact head; Cursor CI has passed, the remaining three are still in progress. Await exact-head results before claiming success.
 - Native PR #135 and PR #115 reruns both completed native app XCTest successfully and are currently running simulator XCTest. GGUF smoke and macOS XCTest have not yet been confirmed.
 - PR #115, #129, #135, and #140 remain open drafts and individually mergeable against their current bases. Continue detailed dependency/diff reconciliation before proposing merge order.
+
+
+## 2026-11-16 01:33 UTC — Exact-head CI rerun progressing
+
+- On lifecycle head `bd520d03e3fa3195aae88bb9c6a1b28549d92be5`, Cursor CI and Governance sidecar CI passed. Pocket AI Lab CI completed its intelligence job successfully, including type-check/build and the full test suite. Consumer prototype CI passed `npm test` and is still running `npm run build`. The complete workflow set is not yet all green.
+- The previous failing duplicate-attempt fixture is corrected in this head; the new exact-head intelligence tests pass. The prior failed run was not a product-code defect; it was a fixture that intentionally collided before corruption setup.
+- PR #135 and PR #115 native app XCTest succeeded on their respective reruns. Both simulator XCTest steps remain in progress; no simulator, GGUF smoke, or macOS pass is claimed.
+- PR #115 and #129 share the broad native catalog/runtime implementation; #129 adds the iOS workflow/cache changes. PR #135 layers the self-evaluation journal/runner and additional runtime evaluation support onto that base. PR #140 overlaps the self-evaluation files and should be treated as a reconciliation candidate, not merged independently until its exact base/head diff and test evidence are reconciled with #135.
