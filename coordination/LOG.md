@@ -2486,3 +2486,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Applied to:** PR #157 branch `codex/whole-product-execution-integration` commit `1c1cce65ffa0553ac610dfb30cd13a6e3b5040e8`; PR #156 branch `codex/native-product-experience-integration` commit `fc3bbaa83ad32d922f8daadee1c373218da32b44`; PR #159 branch `codex/apex-signed-evidence-verification-v2` commit `9694af8cbade5391bd72cdf4d835c99d05f826e9`.
 - **Validation:** exact-head workflows are pending. PR #156's iOS workflow also received a bounded `-jobs 2` build/test setting and retained build logs to reduce peak compiler pressure and improve diagnostics; that workflow change is on the same branch.
 - **No merge, production deployment, authorization grant, or physical iPhone Air acceptance claimed.**
+
+
+## 2026-11-16 — Native bridge runtime integrity hardening
+
+- **PR #160:** branch `codex/restore-original-bridge-and-workspaces`, current head `34175a03bb880bcf342e8f6d330dbfff02608989`.
+- **Changes:** RuntimeController now hashes the model against the host catalog expectation before acquiring a lease and again after load; a mismatch/change fails closed. Duplicate session IDs cannot overwrite an existing session lease. Generation evidence timestamps are captured after successful completion.
+- **Tests:** renamed the hash-mismatch test to reflect preflight behavior and added duplicate-session regression coverage, including preservation of the original active lease.
+- **Validation:** Pocket AI Lab push CI `43935362346` in progress; iOS LlamaEngine CI `43935380183` pending. No native test pass claimed yet.
+- **Security boundary:** all records remain unsigned candidates; no APEX authorization, receipt, or signing key is introduced.
