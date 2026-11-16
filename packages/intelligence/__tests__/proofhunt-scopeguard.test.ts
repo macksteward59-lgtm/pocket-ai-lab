@@ -117,6 +117,10 @@ describe.skipIf(!existsSync(proofHuntMigrationPath))("ProofHunt PostgreSQL migra
     expect(sql).toContain("AS $");
     expect(sql).toContain("NEW.check_type = ANY(policy.allowed_checks)");
     expect(sql).toContain("policy.preapproved = TRUE");
+    expect(sql).toContain("program.record_kind = 'bug_bounty_program' AND program.environment = 'bounty'");
+    expect(sql).toContain("program.record_kind = 'asset_ownership' AND program.environment = 'owned'");
+    expect(sql).toContain("operational.environment = (");
+    expect(sql).toContain("hostname = lower(hostname)");
     expect(sql).toContain("FOREIGN KEY (project_id, operational_authorization_id, authorized_target_id, target_hostname)");
     expect(sql).toContain("excluded.hostname = NEW.target_hostname");
     expect(sql).toContain("excluded.include_subdomains = TRUE");
