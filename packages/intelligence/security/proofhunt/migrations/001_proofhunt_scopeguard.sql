@@ -294,7 +294,7 @@ END $$;
 CREATE OR REPLACE FUNCTION proofhunt.require_active_assessment_authorizations()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF NEW.decision = 'approved_plan' THEN
     IF NOT EXISTS (
@@ -360,7 +360,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 CREATE TRIGGER proofhunt_active_authorization_before_plan
   BEFORE INSERT ON proofhunt.assessment_jobs
