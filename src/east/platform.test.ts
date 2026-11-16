@@ -412,9 +412,10 @@ describe("East device-evidence fail-closed gate", () => {
 describe("East APEX decision read", () => {
   it("surfaces the live pending decision read-only and never authorizes from East", async () => {
     expect(OPEN_DECISIONS).toEqual({ rule: "pending", patch: "pending", release: "pending" });
-    expect(readFileSync("packages/director/src/lib/apex/trust.ts", "utf8")).toBe(
-      "PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED"
-    );
+    const trustSource = readFileSync("packages/director/src/lib/apex/trust.ts", "utf8");
+    expect(trustSource).toContain("class ApexSignedEvidenceVerifier");
+    expect(trustSource).toContain("verified_candidate");
+    expect(trustSource).not.toMatch(/authorized\\s*:\\s*true/);
     expect(existsSync("packages/director/src/lib/apex/rls.ts")).toBe(false);
     expect(existsSync("packages/director/src/lib/apex/schema.ts")).toBe(false);
     const source = readFileSync("src/east/platform.ts", "utf8") + readFileSync("src/east/apex-decision.ts", "utf8");
