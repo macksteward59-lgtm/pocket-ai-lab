@@ -278,7 +278,7 @@ jobs:
                   candidates.append(str(path))
           if len(candidates) != 1:
               sys.exit(f"expected exactly one existing absolute GGUF path; found {len(candidates)}")
-          pathlib.Path("/tmp/gguf-path.txt").write_text(candidates[0] + "\\n")
+          pathlib.Path("/tmp/gguf-path.txt").write_text(candidates[0] + "\n")
           print(f"verified smoke GGUF path: {candidates[0]}")
           PY
           test -s /tmp/gguf-path.txt
