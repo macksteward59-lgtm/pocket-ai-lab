@@ -115,12 +115,12 @@ final class ModelPoolTests: XCTestCase {
         let firstTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while await engine.loadCallCount() == 0 { await Task.yield() }
+        try await waitForTestCondition { await engine.loadCallCount() == 0 }
 
         let secondTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while (await pool.snapshot()).pendingAcquirerCount < 2 { await Task.yield() }
+        try await waitForTestCondition { (await pool.snapshot()).pendingAcquirerCount < 2 }
         await engine.finishLoad()
 
         let first = try await firstTask.value
@@ -223,7 +223,7 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertTrue(firstReleased)
 
         let unloadTask = Task { try await pool.unload(modelId: "unloading") }
-        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+        try await waitForTestCondition { !(await engine.hasStartedUnloading()) }
 
         let duringUnload = await pool.snapshot()
         XCTAssertEqual(duringUnload.loadedModelIDs, [])
@@ -261,7 +261,7 @@ final class ModelPoolTests: XCTestCase {
         let firstAcquire = Task {
             try await pool.acquire(model: model("expected"), estimatedMemoryMB: 400)
         }
-        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+        try await waitForTestCondition { !(await engine.hasStartedUnloading()) }
 
         let duringUnload = await pool.snapshot()
         XCTAssertEqual(duringUnload.unloadingModelIDs, ["expected"])
@@ -300,7 +300,7 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertTrue(released)
 
         let unloadTask = Task { try await pool.unload(modelId: "first") }
-        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+        try await waitForTestCondition { !(await engine.hasStartedUnloading()) }
 
         do {
             _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 128)
@@ -317,36 +317,53 @@ final class ModelPoolTests: XCTestCase {
         try await pool.unload(modelId: "second")
     }
 
-    func testSystemMemoryAdmissionSubtractsExistingModelReservations() async throws {
-        let engine = PoolTestEngine()
+    func testPendingLoadReservationIsSubtractedWithoutDoubleCountingResidentFootprint() async throws {
+        let engine = BlockingPoolTestEngine()
+        let memory = MutableMemorySnapshot(600)
         let configuration = try ModelPoolConfiguration(
             maxResidentMemoryMB: 2_048,
             maxLoadedModels: 2,
             minimumFreeMemoryMB: 100
         )
-        // Keep the host snapshot constant to model a delayed/stale OS memory
-        // reading while the pool already has a resident reservation.
         let pool = ModelPool(
             engine: engine,
             configuration: configuration,
-            availableMemoryMB: { 600 }
+            availableMemoryMB: { memory.read() }
         )
 
-        let first = try await pool.acquire(model: model("resident"), estimatedMemoryMB: 400)
+        let firstLoad = Task {
+            try await pool.acquire(model: model("shared"), estimatedMemoryMB: 400)
+        }
+        try await waitForTestCondition { await engine.loadCallCount() == 0 }
+
+        let pending = await pool.snapshot()
+        XCTAssertEqual(pending.pendingModelIDs, ["shared"])
+        XCTAssertEqual(pending.reservedMemoryMB, 400)
         do {
             _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 101)
-            XCTFail("Existing reservations must be subtracted from the host memory snapshot")
+            XCTFail("A pending model reservation must protect a stale host snapshot")
         } catch ModelPoolError.insufficientMemory(let required, let available) {
             XCTAssertEqual(required, 101)
             XCTAssertEqual(available, 100)
         }
 
-        let snapshot = await pool.snapshot()
-        XCTAssertEqual(snapshot.reservedMemoryMB, 400)
-        XCTAssertEqual(snapshot.loadedModelIDs, ["resident"])
+        await engine.finishLoad()
+        let first = try await firstLoad.value
+        XCTAssertEqual(first.session.modelId, "shared")
+
+        // A fresh OS snapshot already reflects the resident model's footprint.
+        memory.set(200)
+        do {
+            _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 101)
+            XCTFail("The current app-headroom snapshot must preserve the minimum-free margin")
+        } catch ModelPoolError.insufficientMemory(let required, let available) {
+            XCTAssertEqual(required, 101)
+            XCTAssertEqual(available, 100)
+        }
+
         let released = await pool.release(first)
         XCTAssertTrue(released)
-        try await pool.unload(modelId: "resident")
+        try await pool.unload(modelId: "shared")
     }
 
     private func makePool(
@@ -479,3 +496,40 @@ private actor BlockingUnloadPoolTestEngine: LlamaEngine {
         unloadContinuation = nil
     }
 }
+
+private final class MutableMemorySnapshot: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Int
+
+    init(_ value: Int) { self.value = value }
+
+    func read() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+
+    func set(_ value: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.value = value
+    }
+}
+
+private func waitForTestCondition(
+    timeout: TimeInterval = 15,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ condition: () async -> Bool
+) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while await condition() {
+        guard Date() < deadline else {
+            XCTFail("Timed out waiting for asynchronous test condition", file: file, line: line)
+            throw TestWaitTimeout()
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+    }
+}
+
+private struct TestWaitTimeout: Error {}
