@@ -25,7 +25,7 @@ public struct NativeMemoryProvenance: Codable, Equatable, Sendable {
 
 public struct NativeMemoryEntry: Codable, Equatable, Identifiable, Sendable {
     public let id: String
-    public let layer: NativeMemoryLayer
+    public var layer: NativeMemoryLayer
     public var content: String
     public var provenance: NativeMemoryProvenance
     public let createdAt: Date
@@ -133,7 +133,7 @@ public actor NativeMemoryStore {
     }
 
     @discardableResult
-    public func update(id: String, content: String, sourceRefs: [String]? = nil) throws -> Bool {
+    public func update(id: String, layer: NativeMemoryLayer? = nil, content: String, sourceRefs: [String]? = nil) throws -> Bool {
         let normalized = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty, normalized.utf8.count <= Self.maximumContentBytes,
               sourceRefs == nil || (sourceRefs!.count <= 32 && sourceRefs!.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 512 })) else {
@@ -142,6 +142,7 @@ public actor NativeMemoryStore {
         var entries = try load()
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return false }
         entries[index].content = normalized
+        if let layer { entries[index].layer = layer }
         if let sourceRefs { entries[index].provenance.sourceRefs = sourceRefs }
         entries[index].provenance.verified = false
         try persist(entries)
