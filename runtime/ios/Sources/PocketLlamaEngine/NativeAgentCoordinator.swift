@@ -238,6 +238,9 @@ public actor NativeAgentCoordinator {
                 activeSessionId = nil
                 output = collected
             }
+            if cancelRequested || Task.isCancelled {
+                throw CancellationError()
+            }
             activeRequestId = nil
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw NativeAgentCoordinatorError.emptyModelResponse
@@ -271,10 +274,10 @@ public actor NativeAgentCoordinator {
     /// Cancels only the currently active request; it cannot authorize or mutate external work.
     public func cancelCurrentTask() async {
         guard let requestId = activeRequestId else { return }
+        cancelRequested = true
         guard let sessionId = activeSessionId ?? session?.id else {
             // A routed model may still be loading. Defer cancellation until the
             // exact lease arrives, then release it without starting generation.
-            cancelRequested = true
             return
         }
         await engine.cancelAndWait(sessionId: sessionId, requestId: requestId)
