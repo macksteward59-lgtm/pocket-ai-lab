@@ -2221,3 +2221,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` passed its full native iOS workflow, including app XCTest, package simulator XCTest, pinned-GGUF smoke/checksum, and macOS XCTest. This is cross-PR validation evidence for the shared implementation; #140 itself has no independent iOS workflow because it is stacked on #115.
 - Updated the coordination board to move #140 to `in-review` with that qualification. PR #115's own iOS run remains cancelled; no claim is made that #115 independently passed its native iOS gate.
 - No application runtime code or trust semantics changed in this reconciliation. No physical iPhone inference, device attestation, production deployment, or merge is claimed; `main` untouched.
+
+
+## 2026-11-16 14:10 UTC — Native agent model-routing foundation opened
+
+- Added `NativeAgentModelRouter`, route/profile/request value types, focused XCTest, and architecture note. Routing requires every requested capability to match; it rejects duplicate model IDs and malformed profiles; selection is deterministic by explicit priority, lower declared memory estimate, then model ID.
+- The router only selects a local candidate. It does not load the model, grant capabilities or tool permissions, issue Evidence, attest readiness, change the current sequential single-lease coordinator, or bypass APEX/Director, East/e3, BridgeGate, or human approval. Exact model-pool lease acquisition and fail-closed handling remain mandatory for the future coordinator integration.
+- Development draft PR #144: `codex/native-agent-model-routing-foundation`, exact head `55697d6ccfc83761fdcf785ba6d8e41676e1d143`, stacked on #135. Its exact-head Pocket AI Lab push workflow `43882623208` passed.
+- Opened main-targeted validation-only draft PR #145 from clean main base `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`, exact head `c3a9bdb2a2673bf19c0c661dc937a9c4c37990a9`, containing the same three files to trigger the full native iOS workflow. At last check, iOS LlamaEngine run `43882896127`, Pocket AI Lab run `43882896082`, and Consumer run `43882896046` were in progress; Cursor run `43882896060` and Governance sidecar run `43882896270` passed.
+- Updated the board with both ownership claims and the validation dependency. No merge or mainline code change. No physical-device inference claim.
