@@ -63,6 +63,7 @@ CREATE TABLE proofhunt.authorization_records (
       AND scope_policy_hash ~ '^[a-f0-9]{64}$'
       AND scope_policy_snapshot -> 'authorized' = 'false'::JSONB
       AND policy_hash IS NULL
+      AND target_scope_hash IS NULL
     )
     OR
     (
