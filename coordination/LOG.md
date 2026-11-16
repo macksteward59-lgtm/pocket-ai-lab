@@ -2700,3 +2700,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exact-head checks for PR #162 (`1db0345938ac029c3742a391c51ad7027d57e3bc`) and PR #163 (`cddb43103384711707c6474c1f99dab5e33c6dd3`) were rechecked: no PR-triggered workflow runs and no combined commit statuses were returned for either head. Their validation remains unverified.
 - Updated `coordination/BOARD.md` commit `d04c5cdc374209c09c8bc37f8a23325306d797e8` to replace the stale simulator-boot status with the observed current gate state.
 - No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 native app XCTest started
+
+- Re-fetched exact-head run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- Native app generation/build completed successfully. The next gate, native app XCTest, is now `in_progress`. Simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest remain pending. The workflow remains in progress; no test-suite pass is claimed.
+- The job-log endpoint continues to return `BlobNotFound`; no XCTest diagnosis is available from logs at this checkpoint.
+- Reviewed the current PR #164 bridge test source: origin/effective-port checks, remote-HTTP rejection, exact message schema, challenge nonce presence, consequential-action authorization, runtime hash/readiness/cancellation behavior, and unsigned-candidate semantics have focused test cases. The challenge store is still not connected to a WebKit message handler, and the PR explicitly does not enable Web-to-native action dispatch. These tests are candidate evidence only until the exact-head CI gates complete.
+- Updated `coordination/BOARD.md` commit `453bb53236bd16287df15a63afb667de71f3b6c5` to record app-build success and active native app XCTest.
+- No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
