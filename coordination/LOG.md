@@ -2094,3 +2094,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - PR #124 exact head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`: Governance sidecar `43797809543` and Cursor plugin `43797809528` passed; Consumer `43797812018` and Pocket AI Lab CI `43797809552` are in progress.
 - iOS LlamaEngine run `43797809538` is building pinned llama.cpp after setup and cache restore. It uses the same explicit simulator boot and bounded XCTest workflow as PR #135. No simulator/package test result yet.
+
+
+## 2026-11-16 — PR #124 build-script interface mismatch repaired
+
+- Inspected failed iOS run `43797809538` on PR #124 head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`. The pinned llama.cpp macOS archives compiled and staged successfully, then the workflow stopped because it invoked `build-llama-cpp.sh verify-artifacts` while the PR #124 script did not implement that destination. The error was `unknown destination: verify-artifacts`; downstream typecheck, device link, simulator, app tests, and GGUF smoke were skipped.
+- Updated only `runtime/ios/scripts/build-llama-cpp.sh` on `codex/ios-model-pool-integration-validation`, synchronizing the already-reviewed artifact verification implementation from PR #135. New exact head: `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658` (commit `fix(ios): add pinned llama artifact verification command`).
+- PR #124 remains draft/open. New exact-head CI evidence has not appeared yet. No simulator XCTest, pinned-GGUF inference smoke, or physical-device execution is claimed. Recheck the new exact-head iOS and companion workflows before proceeding.
