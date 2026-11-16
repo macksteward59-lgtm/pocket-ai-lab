@@ -22,7 +22,7 @@ final class BridgeGateTests: XCTestCase {
         ))
         XCTAssertTrue(BridgeGate.sameOrigin(
             URL(string: "http://localhost:8080/app")!,
-            trusted: URL(string: "http://127.0.0.1:8080")!
+            trusted: URL(string: "http://localhost:8080")!
         ))
     }
 
