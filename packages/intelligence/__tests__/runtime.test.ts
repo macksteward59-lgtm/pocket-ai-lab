@@ -52,7 +52,7 @@ describe("AgentTaskRequestSchema", () => {
   it("rejects oversized memory context and unknown request fields", () => {
     expect(() => AgentTaskRequestSchema.parse({
       protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
-      context: "x".repeat(4_001), contextRefs: ["memory-1"]
+      context: "x".repeat(2_001), contextRefs: ["memory-1"]
     })).toThrow();
     expect(() => AgentTaskRequestSchema.parse({
       protocolVersion: 1, id: "memory", objective: "Review", requiredCapabilities: [],
