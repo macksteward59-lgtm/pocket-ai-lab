@@ -43,6 +43,7 @@ public enum RuntimeControllerError: Error, Equatable, Sendable {
     case notReady
     case invalidRequest
     case duplicateRequest
+    case duplicateSession
     case emptyGeneration
 }
 
@@ -108,18 +109,23 @@ public actor RuntimeController {
         guard estimatedMemoryMB > 0, Self.validSHA256(expectedFileHash) else { throw RuntimeControllerError.invalidConfiguration }
         let url = URL(fileURLWithPath: model.path)
         let before = try fileIdentity(url)
+        let beforeHash = try Self.sha256File(url)
+        guard beforeHash == expectedFileHash.lowercased() else {
+            throw RuntimeControllerError.modelHashMismatch
+        }
         let lease = try await runtime.acquire(model: model, estimatedMemoryMB: estimatedMemoryMB)
         do {
             let after = try fileIdentity(url)
             guard before == after else { throw RuntimeControllerError.modelFileChanged }
-            let hash = try Self.sha256File(url)
-            guard hash == expectedFileHash.lowercased() else { throw RuntimeControllerError.modelHashMismatch }
-            let afterHash = try fileIdentity(url)
-            guard after == afterHash else { throw RuntimeControllerError.modelFileChanged }
+            let afterHash = try Self.sha256File(url)
+            guard afterHash == beforeHash else { throw RuntimeControllerError.modelFileChanged }
+            let afterHashIdentity = try fileIdentity(url)
+            guard after == afterHashIdentity else { throw RuntimeControllerError.modelFileChanged }
+            guard sessions[lease.session.id] == nil else { throw RuntimeControllerError.duplicateSession }
             sessions[lease.session.id] = ActiveSession(
                 lease: lease,
                 fileHash: hash,
-                fileIdentity: afterHash,
+                fileIdentity: afterHashIdentity,
                 readiness: nil,
                 readinessTaskId: nil,
                 readinessTask: nil,
@@ -275,7 +281,7 @@ public actor RuntimeController {
                 runtimeIdentity: runtimeIdentity,
                 challengeNonce: challengeNonce,
                 generationResultHash: Self.sha256(Data(output.utf8)),
-                generatedAt: now,
+                generatedAt: clock(),
                 healthCheckId: readiness.healthCheckId,
                 output: output
             )
