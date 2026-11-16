@@ -156,7 +156,7 @@ struct LocalModelCatalogStore {
         let normalized = Array(Set(capabilities.map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }.filter { !$0.isEmpty })).sorted()
-        guard !normalized.isEmpty, normalized.count <= 16,
+        guard normalized.count <= 16,
               normalized.allSatisfy({ $0.utf8.count <= 64 }) else {
             throw StoreError.invalidEntry
         }
