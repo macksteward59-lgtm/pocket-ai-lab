@@ -94,9 +94,10 @@ public actor NativeMemoryStore {
         let box: AES.GCM.SealedBox
         do { box = try AES.GCM.SealedBox(combined: combined) }
         catch { throw NativeMemoryVaultError.integrityFailure }
-        let plaintext: Data
+        var plaintext: Data
         do { plaintext = try AES.GCM.open(box, using: key, authenticating: Self.aad) }
         catch { throw NativeMemoryVaultError.integrityFailure }
+        defer { plaintext.resetBytes(in: 0..<plaintext.count) }
         let entries: [NativeMemoryEntry]
         do { entries = try JSONDecoder().decode([NativeMemoryEntry].self, from: plaintext) }
         catch { throw NativeMemoryVaultError.integrityFailure }
@@ -158,7 +159,8 @@ public actor NativeMemoryStore {
             throw NativeMemoryVaultError.invalidEntry
         }
         do {
-            let plaintext = try JSONEncoder().encode(entries)
+            var plaintext = try JSONEncoder().encode(entries)
+            defer { plaintext.resetBytes(in: 0..<plaintext.count) }
             let key = try keyProvider.getOrCreateKey()
             let sealed = try AES.GCM.seal(plaintext, using: key, authenticating: Self.aad)
             guard let combined = sealed.combined else { throw NativeMemoryVaultError.storageUnavailable }
@@ -209,7 +211,9 @@ public struct KeychainNativeMemoryKeyProvider: NativeMemoryKeyProvider {
         guard status == errSecSuccess, let data = result as? Data, data.count == 32 else {
             throw NativeMemoryVaultError.keyUnavailable
         }
-        return SymmetricKey(data: data)
+        var keyBytes = data
+        defer { keyBytes.resetBytes(in: 0..<keyBytes.count) }
+        return SymmetricKey(data: keyBytes)
     }
 
     public func getOrCreateKey() throws -> SymmetricKey {
@@ -228,6 +232,7 @@ public struct KeychainNativeMemoryKeyProvider: NativeMemoryKeyProvider {
             return raced
         }
         guard addStatus == errSecSuccess else { throw NativeMemoryVaultError.keyUnavailable }
+        defer { bytes.resetBytes(in: 0..<bytes.count) }
         return SymmetricKey(data: bytes)
     }
 
