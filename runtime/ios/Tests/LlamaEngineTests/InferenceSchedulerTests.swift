@@ -20,13 +20,17 @@ final class InferenceSchedulerTests: XCTestCase {
                 return 2
             }
         }
+        // Establish the second request's queue position before launching the
+        // third Task; Task creation order alone does not guarantee actor arrival.
+        try await waitForTestCondition { (await scheduler.snapshot()).waitingRequests != 1 }
+
         let third = Task {
             try await scheduler.withPermit {
                 await gate.record(3)
                 return 3
             }
         }
-        try await waitForTestCondition { (await scheduler.snapshot()).waitingRequests < 2 }
+        try await waitForTestCondition { (await scheduler.snapshot()).waitingRequests != 2 }
 
         await gate.releaseOne()
         let firstResult = try await first.value
