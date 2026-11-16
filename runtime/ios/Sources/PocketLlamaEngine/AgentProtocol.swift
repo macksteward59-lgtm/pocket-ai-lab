@@ -25,6 +25,30 @@ public struct AgentTaskRequest: Codable, Sendable, Equatable {
         self.context = context
         self.contextRefs = contextRefs
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case protocolVersion, id, objective, requiredCapabilities, context, contextRefs
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        protocolVersion = try values.decode(AgentProtocolVersion.self, forKey: .protocolVersion)
+        id = try values.decode(String.self, forKey: .id)
+        objective = try values.decode(String.self, forKey: .objective)
+        requiredCapabilities = try values.decode([String].self, forKey: .requiredCapabilities)
+        context = try values.decodeIfPresent(String.self, forKey: .context)
+        contextRefs = try values.decodeIfPresent([String].self, forKey: .contextRefs) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(protocolVersion, forKey: .protocolVersion)
+        try values.encode(id, forKey: .id)
+        try values.encode(objective, forKey: .objective)
+        try values.encode(requiredCapabilities, forKey: .requiredCapabilities)
+        try values.encodeIfPresent(context, forKey: .context)
+        try values.encode(contextRefs, forKey: .contextRefs)
+    }
 }
 
 public enum AgentMessageType: String, Codable, Sendable {
