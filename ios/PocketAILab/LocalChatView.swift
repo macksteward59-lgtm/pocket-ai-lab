@@ -1121,10 +1121,7 @@ struct LocalChatView: View {
             .sheet(isPresented: $showEvaluationHistory) {
                 NativeEvaluationHistoryView(events: model.evaluationEvents, selectedModelID: model.selectedModelID)
             }
-            .task {
-                await model.loadEvaluationHistory()
-                await refreshSavedMemories()
-            }
+            .task { await model.loadEvaluationHistory() }
             .onAppear {
                 Task { await refreshSavedMemories() }
             }
