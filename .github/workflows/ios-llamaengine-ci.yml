@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - codex/native-product-experience-integration
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
