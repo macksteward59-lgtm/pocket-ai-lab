@@ -2462,3 +2462,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Root cause:** `updateCapabilities` correctly persisted an empty list, but `isValid` still rejected entries whose capability list was empty. This contradicted the operator's ability to remove routing labels.
 - **Fix:** removed the non-empty capability requirement; maximum count and per-label validation remain. Commit `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`.
 - **Status:** exact-head push and companion CI reruns are queued; iOS PR workflow pending appearance. No new pass claimed yet.
+
+
+## 2026-11-16 — Routed coordinator simulator XCTest fixture failure identified
+
+- **PR:** #150 / #151, branch `codex/ios-routed-agent-app-integration`, exact head `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`.
+- **Run:** iOS workflow `43927798508`; llama.cpp build, typecheck, device-target link, simulator boot, native app build, and native app XCTest passed. The separate PocketLlamaEngine simulator XCTest failed 2 of 74 tests.
+- **Root cause:** `RecordingInferenceEngine.load(model:)` in `runtime/ios/Tests/LlamaEngineTests/NativeAgentCoordinatorTests.swift` returns `RuntimeSession(id: "session-\\\\(model.id)", ...)` with an escaped interpolation marker. This produces the same literal session ID for every model, causing a collision and an incorrect unload expectation. Production coordinator code is not implicated by this fixture defect.
+- **Next:** correct the mock to use actual Swift interpolation, rerun the exact branch iOS workflow, then re-evaluate the unified native product integration. No merge or physical-device acceptance claimed.
