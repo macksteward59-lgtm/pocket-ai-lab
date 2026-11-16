@@ -307,6 +307,49 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         XCTAssertEqual(snapshot.pendingAcquirerCount, 0)
     }
 
+
+    func testCancellationDuringRoutedModelLoadReleasesLeaseWithoutGeneration() async throws {
+        let engine = BlockingLoadInferenceEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 1_024,
+                maxLoadedModels: 1,
+                minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 2_048 }
+        )
+        let profile = NativeAgentModelProfile(
+            model: ModelDescriptor(id: "slow-model", name: "Slow", path: "/models/slow.gguf", contextLength: 4_096),
+            capabilities: ["reasoning"], estimatedMemoryMB: 512
+        )
+        let coordinator = NativeAgentCoordinator(runtime: runtime, profiles: [profile])
+        let run = Task {
+            try await coordinator.run(
+                task: AgentTaskRequest(id: "cancel-load", objective: "Do not generate", requiredCapabilities: []),
+                steps: [NativeAgentStep(agentId: "reasoner", instructions: "Reason", requiredCapabilities: ["reasoning"])]
+            )
+        }
+
+        await engine.waitForLoadStart()
+        await coordinator.cancelCurrentTask()
+        await engine.completeLoad(modelId: "slow-model")
+
+        do {
+            _ = try await run.value
+            XCTFail("cancellation during model load must stop before generation")
+        } catch is CancellationError {
+        } catch {
+            XCTFail("unexpected error: \\(error)")
+        }
+
+        let snapshot = await runtime.snapshot()
+        let generationCount = await engine.generationCount
+        XCTAssertEqual(snapshot.activeLeaseCount, 0)
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        XCTAssertEqual(generationCount, 0)
+    }
+
     func testRoutedPlanWithMissingSpecialistFailsBeforeLoadingAnyModel() async throws {
         let engine = RoutingRecordingEngine(responses: [])
         let runtime = try NativeInferenceRuntime(
@@ -397,6 +440,47 @@ private actor RoutingRecordingEngine: LlamaEngine {
         let response = responses.isEmpty ? "" : responses.removeFirst()
         return AsyncThrowingStream { continuation in
             continuation.yield(Token(text: response, isComplete: true))
+            continuation.finish()
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
+    func unload(sessionId: String) async {}
+}
+
+
+private actor BlockingLoadInferenceEngine: LlamaEngine {
+    private var loadContinuation: CheckedContinuation<RuntimeSession, Error>?
+    private var startContinuation: CheckedContinuation<Void, Never>?
+    private var loadStarted = false
+    private(set) var generationCount = 0
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<RuntimeSession, Error>) in
+            loadContinuation = continuation
+            loadStarted = true
+            startContinuation?.resume()
+            startContinuation = nil
+        }
+    }
+
+    func waitForLoadStart() async {
+        if loadStarted { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            startContinuation = continuation
+        }
+    }
+
+    func completeLoad(modelId: String) {
+        loadContinuation?.resume(returning: RuntimeSession(id: "session-\\(modelId)", modelId: modelId))
+        loadContinuation = nil
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        generationCount += 1
+        return AsyncThrowingStream { continuation in
+            continuation.yield(Token(text: "unexpected", isComplete: true))
             continuation.finish()
         }
     }
