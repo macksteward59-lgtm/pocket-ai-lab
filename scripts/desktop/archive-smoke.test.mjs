@@ -5,16 +5,19 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import net from "node:net";
-import { buildArchive, collectFiles } from "./package-archive.mjs";
+import { buildArchive } from "./package-archive.mjs";
 import { listenAvailable } from "./launcher-lib.mjs";
 
 test("extracted archive launcher, build, and tests work outside the repository", { timeout: 300000 }, async () => {
-  const trackedFiles = await collectFiles();
-  assert.equal(trackedFiles.includes("packages/exploitgym"), false, "A submodule gitlink is not a regular archive file.");
   const buildDir = await mkdtemp(path.join(tmpdir(), "pocket-zip-"));
   const extractDir = await mkdtemp(path.join(tmpdir(), "pocket-unpack-"));
   const home = await mkdtemp(path.join(tmpdir(), "pocket-home-"));
   const built = await buildArchive({ destDir: buildDir });
+  assert.equal(
+    built.manifest.files.some(file => file.path === "packages/exploitgym"),
+    false,
+    "A submodule gitlink is not a regular archive file."
+  );
   const unzip = spawnSync("unzip", ["-q", built.archivePath, "-d", extractDir], { encoding: "utf8" });
   assert.equal(unzip.status, 0, unzip.stderr);
   const root = path.join(extractDir, "pocket-ai-lab");
