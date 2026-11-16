@@ -11,11 +11,19 @@ struct MemoryView: View {
     @State private var status = "Memory is encrypted on this device. Nothing is saved automatically."
     @State private var isBusy = false
     @State private var showError = false
+    @State private var loadFailed = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if entries.isEmpty {
+                if loadFailed {
+                    VStack(spacing: 12) {
+                        Image(systemName: "lock.trianglebadge.exclamationmark").font(.largeTitle).foregroundStyle(.secondary)
+                        Text("Memory unavailable").font(.headline)
+                        Text("The encrypted vault was not replaced. Resolve the Keychain or device-lock issue and try again.")
+                            .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                    }.padding()
+                } else if entries.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "brain").font(.largeTitle).foregroundStyle(.secondary)
                         Text("No saved memories").font(.headline)
@@ -162,17 +170,21 @@ struct MemoryView: View {
     private func reload() async {
         do {
             let loaded = try await store.load()
+            loadFailed = false
             entries = loaded.sorted { $0.createdAt > $1.createdAt }
             status = entries.isEmpty
                 ? "No saved memories · nothing is stored automatically"
                 : "Encrypted on this device · \(entries.count) saved · no automatic capture"
         } catch NativeMemoryVaultError.keyUnavailable {
+            loadFailed = true
             status = "The Keychain key is unavailable. Unlock the device or restore the original key; existing encrypted data was not replaced."
             showError = true
         } catch NativeMemoryVaultError.storageUnavailable {
+            loadFailed = true
             status = "Unlock the device and try again. The protected memory file is not currently accessible."
             showError = true
         } catch {
+            loadFailed = true
             status = "Memory could not be authenticated or read. No plaintext fallback is available."
             showError = true
         }
