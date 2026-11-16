@@ -1070,6 +1070,10 @@ struct LocalChatView: View {
                             let selectedContext = mode == .agentTeam ? selectedMemoryContext : nil
                             let selectedReferences = selectedContext == nil ? [] : selectedMemoryEntries.map(\.id)
                             let selectedPlan = selectedAgentIDs
+                            if mode == .agentTeam {
+                                includeSelectedMemories = false
+                                selectedMemoryIDs.removeAll()
+                            }
                             prompt = ""
                             Task {
                                 if mode == .chat {
