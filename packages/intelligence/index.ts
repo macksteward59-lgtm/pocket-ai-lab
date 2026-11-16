@@ -17,7 +17,7 @@ export { DeliberationEngine } from "./deliberation/DeliberationEngine";
 export { MemoryManager } from "./memory/MemoryManager";
 export { TaskLifecycleCoordinator, InMemoryTaskLifecycleStore, TaskLifecycleError, type TaskDefinition, type TaskStepDefinition, type TaskRecord, type TaskStepRecord, type TaskStatus, type StepStatus, type StepClaim, type StepAttempt, type TaskLifecycleStore } from "./autonomy/TaskLifecycleCoordinator";
 export { runEastTaskWithLifecycle, type EastLifecycleRunOptions, type EastLifecycleRunResult } from "./autonomy/EastTaskLifecycleAdapter";
-export { PostgresTaskLifecycleStore, type PostgresTaskLifecycleTransaction, type PostgresTaskLifecycleRow } from "./autonomy/PostgresTaskLifecycleStore";
+export { PostgresTaskLifecycleStore, type TaskLifecycleSqlDatabase, type TaskLifecycleSqlTransaction, type TaskLifecycleSqlResult } from "./autonomy/PostgresTaskLifecycleStore";
 export { Orchestrator } from "./orchestrator/Orchestrator";
 export { routeSecurityTask, type SecurityRoute, type SpecialistMatch } from "./security/routing";
 export { DelegationGate, type DelegationVoucher, type VoucherVerifier, type DelegationDecision } from "./security/delegation";
