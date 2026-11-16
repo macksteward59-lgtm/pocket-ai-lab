@@ -37,6 +37,7 @@ struct WorkspaceView: View {
     private func openWorkspace() {
         guard let components = URLComponents(string: address),
               components.user == nil, components.password == nil,
+              components.query == nil, components.fragment == nil,
               let url = components.url,
               BridgeGate.sameOrigin(url, trusted: url) else {
             validationMessage = "Use HTTPS. HTTP is allowed only for localhost development."
