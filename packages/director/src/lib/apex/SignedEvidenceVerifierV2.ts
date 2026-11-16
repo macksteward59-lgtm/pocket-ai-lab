@@ -52,7 +52,7 @@ export interface ApexEvidenceReplayStore {
 export type ApexEvidenceVerificationFailure =
   | "invalid_shape" | "unsupported_protocol" | "invalid_binding"
   | "unknown_key" | "key_not_valid" | "runtime_not_allowed"
-  | "stale_evidence" | "invalid_signature" | "replay"
+  | "stale_evidence" | "clock_unavailable" | "invalid_signature" | "replay"
   | "replay_store_unavailable";
 
 export type ApexEvidenceVerificationResult =
@@ -99,6 +99,11 @@ function canonicalBase64(value: string, expectedBytes: number): Buffer | null {
   const decoded = Buffer.from(value, "base64");
   if (decoded.length !== expectedBytes || decoded.toString("base64") !== value) return null;
   return decoded;
+}
+
+function isNonEmptyBoundedString(value: unknown, maximumBytes: number): value is string {
+  return typeof value === "string" && value.trim().length > 0 &&
+    Buffer.byteLength(value, "utf8") <= maximumBytes;
 }
 
 function isSHA256(value: string): boolean {
@@ -183,7 +188,11 @@ export class ApexSignedEvidenceVerifier {
     }
 
     const grouped = new Map<string, ApexTrustedEvidenceKey[]>();
-    for (const key of options.trustedKeys ?? []) {
+    const trustedKeys: unknown[] = Array.isArray(options.trustedKeys) ? options.trustedKeys : [];
+    for (const candidate of trustedKeys) {
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+      const key = candidate as ApexTrustedEvidenceKey;
+      if (typeof key.keyId !== "string") continue;
       const list = grouped.get(key.keyId) ?? [];
       list.push(key);
       grouped.set(key.keyId, list);
@@ -199,14 +208,25 @@ export class ApexSignedEvidenceVerifier {
     for (const [keyId, entries] of grouped) {
       if (entries.length !== 1) continue;
       const source = entries[0];
-      const der = canonicalBase64(source.publicKeySPKIDERBase64, Buffer.from(source.publicKeySPKIDERBase64, "base64").length);
-      const notBefore = isISODate(source.notBefore);
-      const notAfter = isISODate(source.notAfter);
-      const revokedAt = source.revokedAt ? isISODate(source.revokedAt) : null;
-      if (!keyId || keyId.length > 128 || !der || der.length === 0 ||
+      const hasRevocation = source.revokedAt !== undefined && source.revokedAt !== null;
+      const revokedAt = hasRevocation && typeof source.revokedAt === "string"
+        ? isISODate(source.revokedAt)
+        : null;
+      const der = typeof source.publicKeySPKIDERBase64 === "string"
+        ? canonicalBase64(source.publicKeySPKIDERBase64, 44)
+        : null;
+      const notBefore = typeof source.notBefore === "string" ? isISODate(source.notBefore) : null;
+      const notAfter = typeof source.notAfter === "string" ? isISODate(source.notAfter) : null;
+      const runtimeIdentitiesValid = Array.isArray(source.allowedRuntimeIdentities) &&
+        source.allowedRuntimeIdentities.length > 0 && source.allowedRuntimeIdentities.length <= 32 &&
+        source.allowedRuntimeIdentities.every(value => isNonEmptyBoundedString(value, 128));
+      const runtimeVersionsValid = Array.isArray(source.allowedRuntimeVersions) &&
+        source.allowedRuntimeVersions.length > 0 && source.allowedRuntimeVersions.length <= 32 &&
+        source.allowedRuntimeVersions.every(value => isNonEmptyBoundedString(value, 128));
+      if (!isNonEmptyBoundedString(keyId, 128) ||
+          !isNonEmptyBoundedString(source.publicKeySPKIDERBase64, 256) || !der ||
           notBefore === null || notAfter === null || notAfter <= notBefore ||
-          (source.revokedAt && revokedAt === null) ||
-          !source.allowedRuntimeIdentities.length || !source.allowedRuntimeVersions.length) continue;
+          (hasRevocation && revokedAt === null) || !runtimeIdentitiesValid || !runtimeVersionsValid) continue;
       try {
         const publicKey = createPublicKey({ key: der, format: "der", type: "spki" });
         if (publicKey.asymmetricKeyType !== "ed25519") continue;
@@ -243,7 +263,13 @@ export class ApexSignedEvidenceVerifier {
 
     const key = this.keys.get(evidence.keyId);
     if (!key) return this.reject("unknown_key");
-    const now = this.now();
+    let now: number;
+    try {
+      now = this.now();
+    } catch {
+      return this.reject("clock_unavailable");
+    }
+    if (!Number.isSafeInteger(now)) return this.reject("clock_unavailable");
     const attestedAt = isISODate(evidence.attestedAt);
     if (now < key.notBefore || now >= key.notAfter ||
         (key.revokedAt !== null && now >= key.revokedAt)) {
