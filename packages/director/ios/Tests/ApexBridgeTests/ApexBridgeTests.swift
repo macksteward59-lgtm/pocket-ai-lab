@@ -329,7 +329,7 @@ final class RuntimeControllerTests: XCTestCase {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
         let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
-        _ = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
+        _ = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         await controller.disconnect()
         let reports = await controller.reports()
         let snapshot = await runtime.snapshot()
