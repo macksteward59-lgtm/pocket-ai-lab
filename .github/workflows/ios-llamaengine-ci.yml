@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "runtime/ios/**"
+      - "packages/director/ios/**"
       - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
@@ -64,6 +65,16 @@ jobs:
           find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
+
+      - name: Test Director APEX native bridge package
+        working-directory: packages/director/ios
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme ApexBridge \
+            -destination "platform=macOS,arch=$(uname -m)" \
+            -derivedDataPath /tmp/apex-bridge-derived \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Typecheck the unlinked fail-closed branch
         run: |
