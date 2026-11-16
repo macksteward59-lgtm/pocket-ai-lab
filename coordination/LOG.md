@@ -2195,3 +2195,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PostgreSQL workflow run `43845865782` passed the earlier SQL migration/locking/CAS/concurrency suite; run `43845855901` passed the actual TypeScript adapter through `pg`; exact implementation head `1b0e1bd664a42a3e5fd130fe38e2c01ce576f6d0` passed East PostgreSQL, Pocket AI Lab, Consumer, Governance, and Cursor workflows. Updated production-readiness docs at `60a9fa6e5fa99b72dc45c6a2d2c2590c0776f896`; its Pocket AI Lab CI run `43846054990` passed.
 - This is now real driver-level adapter and database-concurrency evidence in an ephemeral CI database. Remaining limitations: production deployment/credentials/TLS/RLS hardening, full East worker process restart/crash recovery, provider cancellation/drain, and physical-device lifecycle validation. PR #132 remains open/draft, unmerged.
 - PR #139 is also moved to `in-review`: exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2` passed all five standard workflows and the dedicated PostgreSQL 16 integration workflow. Both remain unmerged; `main` untouched.
+
+
+## 2026-11-16 — Validation board refresh
+
+- PR #132 latest docs head `60a9fa6e5fa99b72dc45c6a2d2c2590c0776f896`: all five standard workflows plus East PostgreSQL integration passed. The integration uses PostgreSQL 16 and node-postgres against the actual `PostgresTaskLifecycleStore`, including independent-store races, stale-writer conflict/reload, namespace isolation, and rollback. Remaining lifecycle limits are full East worker restart/crash/cancellation and production deployment.
+- PR #139 exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2`: all five standard workflows plus PostgreSQL 16 integration passed. Both #132 and #139 are now marked `in-review`, not merged.
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` still has all five workflows, including iOS LlamaEngine CI, passed; moved its validation-only board claim to `in-review`. Physical iPhone inference/thermal/memory testing remains outstanding.
