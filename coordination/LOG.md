@@ -2384,3 +2384,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Purpose:** stop shipping isolated native slices. Integrate the eight-role catalogue and bounded specialist selection into the actual native Agent Team screen, integrate the encrypted memory tab into the complete native tab shell without dropping Workspace/Runtime, and add app-level acceptance tests.
 - **Dependencies:** #150 routed native app + persistence stack; catalogue work from #154; encrypted vault from #153. The integration branch will copy/reconcile those sources and validate them together rather than claim either standalone PR is product-complete.
 - **Exclusions:** no APEX/East, BridgeGate, Evidence, runtime proof, or authorization semantics changed. No merge; exact-head CI and physical iPhone Air acceptance remain required.
+
+
+## 2026-11-16 — Native memory security and validation refinements
+
+- Reordered directory-protection application before the atomic vault write so a directory-attribute failure cannot be reported after the new ciphertext has already been committed.
+- Clear temporary plaintext and copied key-data buffers on normal Swift scope exit where Foundation/CryptoKit permit. This is best-effort memory hygiene, not a guarantee of process-memory erasure.
+- Added assertions that missing-key failure leaves the original ciphertext byte-for-byte unchanged and that edits preserve entry identity/creation time while remaining unverified.
+- Current PR #153 head `17d8a10ff186a8c6cfeab00ab37b81a886f751de`. Latest push CI `43923217168` is queued. An earlier PR iOS workflow was cancelled after a newer commit; waiting for the new exact-head run. No native test pass is claimed yet.
