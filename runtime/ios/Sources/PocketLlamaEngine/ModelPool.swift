@@ -156,8 +156,19 @@ public actor ModelPool {
             throw ModelPoolError.invalidResourceSnapshot
         }
         let poolAvailable = configuration.maxResidentMemoryMB - reservedMemoryMB
-        let systemAvailableAfterReserve = max(0, systemAvailable - configuration.minimumFreeMemoryMB)
-        let available = min(poolAvailable, systemAvailableAfterReserve)
+        // The host snapshot (for example, os_proc_available_memory) already
+        // reflects resident model footprint. Pending loads and native unloads are
+        // transient reservations that may not yet be reflected, so subtract only
+        // the non-resident portion of the pool's reservation total.
+        let residentMemoryMB = entries.values.reduce(0) {
+            $0 + $1.estimatedMemoryMB
+        }
+        let transientReservationMB = max(0, reservedMemoryMB - residentMemoryMB)
+        let systemAvailableAfterTransientReservations = max(
+            0,
+            systemAvailable - transientReservationMB - configuration.minimumFreeMemoryMB
+        )
+        let available = min(poolAvailable, systemAvailableAfterTransientReservations)
         guard estimatedMemoryMB <= available else {
             throw ModelPoolError.insufficientMemory(requiredMB: estimatedMemoryMB, availableMB: available)
         }
