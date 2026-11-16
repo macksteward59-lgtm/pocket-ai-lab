@@ -59,4 +59,6 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 
 ## Current status
 
-The coordinator and East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, and idempotent completed-step resumption. The repository's current in-memory store does not satisfy the production requirements above. Active provider cancellation propagation and a production transactional store remain open work.
+The coordinator and East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, and idempotent completed-step resumption. A PostgreSQL snapshot adapter is now included at `packages/intelligence/autonomy/PostgresTaskLifecycleStore.ts`. It uses a namespaced JSONB snapshot, a database transaction with `SELECT ... FOR UPDATE`, monotonic record versions, compare-and-swap rejection of stale writers, and explicit schema-version checks. After a `store_conflict`, the host must call `coordinator.reload()` and reconcile before retrying a worker result.
+
+The adapter does not provision or execute migrations, provide a PostgreSQL driver, enforce tenant authorization/RLS, encrypt payloads itself, provision keys, or implement a transactional outbox. The host must configure database TLS, least-privilege credentials, encryption at rest, tenant/namespace authorization, backup/restore, and reviewed migration execution. The in-memory store remains test/ephemeral only. Active provider cancellation propagation and end-to-end production integration remain open work.
