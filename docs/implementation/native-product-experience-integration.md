@@ -20,7 +20,7 @@ Capability labels are candidate-routing metadata only. They do not create tool p
 
 The Memory tab is a user-controlled, device-local notebook. AES-256-GCM protects the vault; the random 256-bit key is held in Keychain with WhenUnlockedThisDeviceOnly accessibility. The encrypted file is stored in app-private Application Support with complete file protection. Create, edit, and delete are explicit user actions. Records include layer and descriptive provenance; new records are unverified and edits reset verification to false.
 
-Chat and agent outputs are not automatically ingested. An operator may explicitly select individual saved records for one Agent Team task; only those records are added as bounded untrusted context, and only their IDs are written to task history. Nothing is retrieved or injected by default. No cloud sync, plaintext migration, or silent key replacement is provided. If the original Keychain key is missing, the existing vault fails closed rather than being overwritten.
+Chat and agent outputs are not automatically ingested. An operator may explicitly enable and select individual saved records for one Agent Team task; only those records are added as bounded (2 KB) untrusted context, and only their IDs are written to task history. The consent and selection are cleared after submission, so every task requires a fresh opt-in. Nothing is injected by default. No cloud sync, plaintext migration, or silent key replacement is provided. If the original Keychain key is missing, the existing vault fails closed rather than being overwritten.
 
 ## What remains outside this slice
 
