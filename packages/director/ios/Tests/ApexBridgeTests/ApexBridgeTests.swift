@@ -268,8 +268,10 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertEqual(reports.first?.sessionId, first.sessionId)
         XCTAssertEqual(snapshot.activeLeaseCount, 1)
 
-        XCTAssertTrue(await controller.unload(sessionId: first.sessionId!))
-        XCTAssertTrue((await runtime.snapshot()).loadedModelIDs.isEmpty)
+        let didUnload = await controller.unload(sessionId: first.sessionId!)
+        XCTAssertTrue(didUnload)
+        let afterUnload = await runtime.snapshot()
+        XCTAssertTrue(afterUnload.loadedModelIDs.isEmpty)
     }
 
     func testReadinessExpiresAndCannotBeReused() async throws {
