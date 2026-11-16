@@ -23,8 +23,8 @@ The user's Library contains east-unified.zip, inspected on 2026-11-16.
 
 ## Next integration gates
 
-1. Run the new ApexBridge Swift package tests in CI against the same pinned llama.cpp runtime dependency.
-2. Integrate BridgeGate into the native WebKit workspace shell with host-owned approval state.
+1. Run ApexBridge tests as part of the native app XCTest suite against the same pinned llama.cpp runtime dependency.
+2. Connect the WKScriptMessageHandler action dispatcher to BridgeGate and RuntimeController with host-owned approval state and explicit response/error handling.
 3. Reconcile the full Director web workspace against current packages without overwriting the active trust verifier, RLS contract, or East lifecycle work.
 4. Implement a separately approved isolated ExploitGym worker adapter; do not allow automatic agent execution.
 5. Add Grok Workspace artifact/attachment persistence with explicit import, hash, provenance, and retention.
