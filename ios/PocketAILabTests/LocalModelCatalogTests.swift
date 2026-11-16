@@ -152,6 +152,10 @@ final class LocalModelCatalogTests: XCTestCase {
         XCTAssertEqual(updated.entries.first?.capabilities, ["analysis", "reasoning"])
         XCTAssertEqual(try LocalModelCatalogStore(fileURL: catalogURL, modelDirectory: models).load().entries.first?.capabilities,
                        ["analysis", "reasoning"])
+
+        let cleared = try store.updateCapabilities(for: modelID, capabilities: [])
+        XCTAssertEqual(cleared.entries.first?.capabilities, [])
+        XCTAssertEqual(try LocalModelCatalogStore(fileURL: catalogURL, modelDirectory: models).load().entries.first?.capabilities, [])
     }
 
 
