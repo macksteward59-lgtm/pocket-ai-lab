@@ -126,6 +126,14 @@ describe("APEX signed evidence v2", () => {
     expect(revoked).toEqual({ ok: false, status: "rejected", reason: "key_not_valid" });
   });
 
+  it("excludes trusted keys with empty or malformed revocation timestamps", async () => {
+    const empty = await verifier(new MemoryReplayStore(), [trustedKey({ revokedAt: "" })]).verify(signedEvidence(), expected);
+    expect(empty).toEqual({ ok: false, status: "rejected", reason: "unknown_key" });
+
+    const malformed = await verifier(new MemoryReplayStore(), [trustedKey({ revokedAt: "not-a-timestamp" })]).verify(signedEvidence(), expected);
+    expect(malformed).toEqual({ ok: false, status: "rejected", reason: "unknown_key" });
+  });
+
   it("rejects a runtime identity or version outside the key allowlist", async () => {
     const result = await verifier().verify(
       signedEvidence({ runtimeVersion: "llama-runtime-1.2.1" }),
@@ -146,6 +154,22 @@ describe("APEX signed evidence v2", () => {
       expected
     );
     expect(future).toEqual({ ok: false, status: "rejected", reason: "stale_evidence" });
+  });
+
+  it("rejects a non-finite or throwing verifier clock", async () => {
+    const invalid = new ApexSignedEvidenceVerifier({
+      trustedKeys: [trustedKey()], replayStore: new MemoryReplayStore(), now: () => Number.NaN
+    });
+    expect(await invalid.verify(signedEvidence(), expected)).toEqual({
+      ok: false, status: "rejected", reason: "clock_unavailable"
+    });
+
+    const throwing = new ApexSignedEvidenceVerifier({
+      trustedKeys: [trustedKey()], replayStore: new MemoryReplayStore(), now: () => { throw new Error("clock offline"); }
+    });
+    expect(await throwing.verify(signedEvidence(), expected)).toEqual({
+      ok: false, status: "rejected", reason: "clock_unavailable"
+    });
   });
 
   it("rejects replay and replay-store failures closed", async () => {
