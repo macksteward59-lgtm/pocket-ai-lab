@@ -142,8 +142,9 @@ struct NativeEvaluationJournalEvent: Codable, Equatable, Identifiable {
     let payload: NativeEvaluationJournalPayload
 }
 
-/// Hash-chained, append-only local journal. A changed, reordered, or removed
-/// event causes reads and subsequent writes to fail closed.
+/// Hash-chained, append-only local journal. Edits, reordering, and interior
+/// deletion cause reads and subsequent writes to fail closed. Without an
+/// external trusted checkpoint, suffix truncation can leave a valid prefix.
 actor NativeEvaluationJournal {
     private static let genesis = "GENESIS"
     private let fileURL: URL
