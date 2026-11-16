@@ -24,6 +24,11 @@ struct AgentTaskRoleResult: Codable, Equatable, Identifiable {
     let sequence: Int
     let text: String
     let createdAt: Date
+    /// Optional protocol linkage fields; absent in legacy v1 archives.
+    let conversationID: String? = nil
+    let recipientAgentID: String? = nil
+    let messageType: String? = nil
+    let parentMessageID: String? = nil
 }
 
 /// A bounded local audit trail for Agent Team UI tasks. It is not an execution
@@ -145,7 +150,11 @@ struct LocalAgentTaskHistoryStore {
                 role: Self.clipped(result.role, limit: 128),
                 sequence: result.sequence,
                 text: Self.clipped(result.text, limit: Self.maximumRoleTextBytes),
-                createdAt: result.createdAt
+                createdAt: result.createdAt,
+                conversationID: result.conversationID.map { Self.clipped($0, limit: 512) },
+                recipientAgentID: result.recipientAgentID.map { Self.clipped($0, limit: 128) },
+                messageType: result.messageType.map { Self.clipped($0, limit: 64) },
+                parentMessageID: result.parentMessageID.map { Self.clipped($0, limit: 64) }
             )
         )
         tasks[index].updatedAt = now()
@@ -189,7 +198,11 @@ struct LocalAgentTaskHistoryStore {
                     role: Self.clipped(result.role, limit: 128),
                     sequence: max(0, result.sequence),
                     text: Self.clipped(result.text, limit: Self.maximumRoleTextBytes),
-                    createdAt: result.createdAt
+                    createdAt: result.createdAt,
+                    conversationID: result.conversationID.map { Self.clipped($0, limit: 512) },
+                    recipientAgentID: result.recipientAgentID.map { Self.clipped($0, limit: 128) },
+                    messageType: result.messageType.map { Self.clipped($0, limit: 64) },
+                    parentMessageID: result.parentMessageID.map { Self.clipped($0, limit: 64) }
                 )
             }
         }

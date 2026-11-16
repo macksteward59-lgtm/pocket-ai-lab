@@ -603,7 +603,11 @@ private actor AgentTaskHistoryJournal {
             role: message.senderAgentId,
             sequence: message.sequence,
             text: text,
-            createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date()
+            createdAt: ISO8601DateFormatter().date(from: message.createdAt) ?? Date(),
+            conversationID: message.conversationId,
+            recipientAgentID: message.recipientAgentId,
+            messageType: message.messageType.rawValue,
+            parentMessageID: message.parentMessageId?.uuidString
         )
         do {
             try store.appendRoleResult(taskID: taskID, result: result)
