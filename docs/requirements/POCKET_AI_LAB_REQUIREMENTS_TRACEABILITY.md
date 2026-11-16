@@ -355,7 +355,7 @@
 2. **Native product base:** PR #156 exact head `31bdc57b8812243279097899fecd2c938a96e78f` has iOS run [#43957027828](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957027828) concluded failure. The current job record shows app compilation was still in progress at the fetched run snapshot; failure cause is not established from that run record. Do not attribute a cause without its failing step/log.
 3. **East:** PR #162 has exact-head push CI evidence [#43961191072](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43961191072), but this is not live PostgreSQL/RLS deployment, provider idempotency, or full production recovery evidence.
 4. **Verifier:** PR #163 head `cddb43103384711707c6474c1f99dab5e33c6dd3` has no PR-triggered workflow run surfaced in the current check. Its result remains candidate-only and is not APEX authorization.
-5. **Original capability registry:** The authoritative six-layer M01–M42 names and assignments remain a source-recovery blocker. Do not invent identifiers.
+5. **Original capability registry:** The authoritative six-layer M01–M42 names and assignments remain a source-recovery blocker. Library search found a separate `Mr. Robot Cybersecurity Academy` HTML artifact describing 42 cybersecurity skill areas, but it has no M01–M42 identifiers or six-layer assignment and is not accepted as the authoritative registry. Do not relabel or retrofit it without owner confirmation.
 6. **Physical device:** No physical iPhone Air install/generation/thermal/offline acceptance is represented by the hosted simulator results.
 
 ## Audit sequence
