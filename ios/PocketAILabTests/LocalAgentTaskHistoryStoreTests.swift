@@ -85,7 +85,21 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         XCTAssertNil(role.messageType)
         XCTAssertNil(role.parentMessageID)
         XCTAssertEqual(restored.finalResponse, "Legacy complete")
+        XCTAssertNil(restored.contextRefs)
         XCTAssertEqual(try Data(contentsOf: file), legacy)
+    }
+
+    func testTaskHistoryPersistsOnlySelectedMemoryRecordReferences() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = LocalAgentTaskHistoryStore(fileURL: root.appendingPathComponent("tasks.json"))
+
+        try store.begin(id: "memory-task", objective: "Use selected context", contextRefs: ["memory-1", "memory-2"])
+
+        let restored = try XCTUnwrap(store.load().first)
+        XCTAssertEqual(restored.contextRefs, ["memory-1", "memory-2"])
+        let archive = try String(contentsOf: root.appendingPathComponent("tasks.json"), encoding: .utf8)
+        XCTAssertFalse(archive.contains("memory content"))
     }
 
     func testRunningTaskIsMarkedInterruptedOnRecoveryAndNeverResumed() throws {
