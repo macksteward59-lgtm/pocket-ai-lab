@@ -316,6 +316,41 @@ describe("TaskLifecycleCoordinator", () => {
     await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
   });
 
+  it("rejects persisted attempt budgets exhausted while pending and impossible task completion chronology", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "chronology-attempt" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "invalid-pending-budget", objective: "Reject exhausted pending work",
+      steps: [{ id: "one", description: "One step", maxAttempts: 2 }]
+    });
+
+    const exhausted = store.load();
+    exhausted[0].steps[0].attempts = 2;
+    exhausted[0].steps[0].attemptIds = ["attempt-one", "attempt-two"];
+    store.save(exhausted);
+    const restartedAfterBudgetTamper = new TaskLifecycleCoordinator({ store });
+    await expect(restartedAfterBudgetTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
+
+    const chronologyStore = new InMemoryTaskLifecycleStore();
+    const valid = new TaskLifecycleCoordinator({ store: chronologyStore, createId: () => "chronology-success" });
+    await valid.init();
+    await valid.createTask({
+      id: "invalid-completion-time", objective: "Reject impossible completion chronology",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    const claim = await valid.claimNextStep("invalid-completion-time");
+    await valid.completeStep({
+      taskId: "invalid-completion-time", stepId: "one", attemptId: claim!.attemptId,
+      result: "Completed"
+    });
+    const completed = chronologyStore.load();
+    completed[0].completedAt = new Date(Date.parse(completed[0].createdAt) - 1).toISOString();
+    chronologyStore.save(completed);
+    const restartedAfterChronologyTamper = new TaskLifecycleCoordinator({ store: chronologyStore });
+    await expect(restartedAfterChronologyTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
   it("rejects unknown and duplicate dependencies and out-of-range controls", async () => {
     const h = harness();
     await h.coordinator.init();
