@@ -2495,3 +2495,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Tests:** renamed the hash-mismatch test to reflect preflight behavior and added duplicate-session regression coverage, including preservation of the original active lease.
 - **Validation:** Pocket AI Lab push CI `43935362346` in progress; iOS LlamaEngine CI `43935380183` pending. No native test pass claimed yet.
 - **Security boundary:** all records remain unsigned candidates; no APEX authorization, receipt, or signing key is introduced.
+
+
+## 2026-11-16 — Desktop archive compatibility with restored ExploitGym submodule
+
+- **PR #160** current head `77e23ad5ad1fdfdd532afd581e26bad18bb118b0`.
+- **Failure evidence:** Pocket AI Lab and Consumer workflows on previous head `34175a03bb880bcf342e8f6d330dbfff02608989` failed in desktop archive tests. `scripts/desktop/package-archive.mjs:44` attempted `readFile` on the `packages/exploitgym` submodule gitlink directory, raising `EISDIR`.
+- **Fix:** `collectFiles` now uses `lstat` and packages only regular non-symlink files; gitlink directories and symlinks are excluded from archive scanning/copying. Added archive smoke assertion that `packages/exploitgym` is not listed as a regular file.
+- **Validation:** latest Pocket AI Lab push run `43935672650` in progress; PR/iOS runs not yet surfaced. No pass claimed yet.
