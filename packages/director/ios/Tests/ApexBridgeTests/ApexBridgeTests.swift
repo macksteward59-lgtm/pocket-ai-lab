@@ -91,7 +91,7 @@ private final class TestClock: @unchecked Sendable {
     }
 }
 
-private actor StubLlamaEngine: LlamaEngine {
+private actor StubLlamaEngine: ApexBridge.LlamaEngine {
     func load(model: ModelDescriptor) async throws -> RuntimeSession {
         RuntimeSession(id: UUID().uuidString, modelId: model.id)
     }
@@ -110,7 +110,7 @@ private actor StubLlamaEngine: LlamaEngine {
 }
 
 
-private actor SlowLlamaEngine: LlamaEngine {
+private actor SlowLlamaEngine: ApexBridge.LlamaEngine {
     private var drainedRequests: Set<String> = []
 
     func load(model: ModelDescriptor) async throws -> RuntimeSession {
