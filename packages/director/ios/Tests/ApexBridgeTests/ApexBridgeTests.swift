@@ -228,6 +228,24 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(runtimeSnapshot.loadedModelIDs.isEmpty)
     }
 
+    func testCatalogHashMismatchReleasesTheAcquiredLease() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_500))
+        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let wrongHash = String(repeating: "0", count: 64)
+        XCTAssertNotEqual(expectedHash, wrongHash)
+        do {
+            _ = try await controller.load(model: descriptor, expectedFileHash: wrongHash, estimatedMemoryMB: 256)
+            XCTFail("A catalog hash mismatch must fail closed.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .modelHashMismatch)
+        }
+        let reports = await controller.reports()
+        let snapshot = await runtime.snapshot()
+        XCTAssertTrue(reports.isEmpty)
+        XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
+    }
+
     func testReadinessExpiresAndCannotBeReused() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 2_000))
         let (controller, _, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock, readinessTTL: 30)
