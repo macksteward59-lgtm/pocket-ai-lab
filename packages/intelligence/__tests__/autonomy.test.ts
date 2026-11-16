@@ -234,6 +234,63 @@ describe("TaskLifecycleCoordinator", () => {
     });
   });
 
+  it("rejects a persisted active attempt whose id is not the latest issued id", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "issued-attempt" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "tampered-attempt", objective: "Reject forged persisted lease identity",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    await coordinator.claimNextStep("tampered-attempt");
+
+    const snapshot = store.load();
+    snapshot[0].steps[0].currentAttempt!.id = "forged-attempt";
+    store.save(snapshot);
+
+    const restarted = new TaskLifecycleCoordinator({ store });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+  it("rejects duplicate attempt identities across persisted tasks", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "unique-attempt" });
+    await coordinator.init();
+    for (const id of ["first-task", "second-task"]) {
+      await coordinator.createTask({
+        id, objective: "Create independent task " + id,
+        steps: [{ id: "one", description: "One step" }]
+      });
+      await coordinator.claimNextStep(id);
+    }
+
+    const snapshot = store.load();
+    snapshot[1].steps[0].attemptIds[0] = snapshot[0].steps[0].attemptIds[0];
+    snapshot[1].steps[0].currentAttempt!.id = snapshot[0].steps[0].attemptIds[0];
+    store.save(snapshot);
+
+    const restarted = new TaskLifecycleCoordinator({ store });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+  it("rejects malformed persisted timestamps and evidence references", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "bad-record", objective: "Reject malformed persisted data",
+      steps: [{ id: "one", description: "One step" }]
+    });
+
+    const snapshot = store.load();
+    snapshot[0].createdAt = "not-a-timestamp";
+    snapshot[0].steps[0].evidenceRefs = [""];
+    store.save(snapshot);
+
+    const restarted = new TaskLifecycleCoordinator({ store });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
   it("rejects unknown and duplicate dependencies and out-of-range controls", async () => {
     const h = harness();
     await h.coordinator.init();
