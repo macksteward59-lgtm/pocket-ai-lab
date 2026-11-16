@@ -2503,3 +2503,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Failure evidence:** Pocket AI Lab and Consumer workflows on previous head `34175a03bb880bcf342e8f6d330dbfff02608989` failed in desktop archive tests. `scripts/desktop/package-archive.mjs:44` attempted `readFile` on the `packages/exploitgym` submodule gitlink directory, raising `EISDIR`.
 - **Fix:** `collectFiles` now uses `lstat` and packages only regular non-symlink files; gitlink directories and symlinks are excluded from archive scanning/copying. Added archive smoke assertion that `packages/exploitgym` is not listed as a regular file.
 - **Validation:** latest Pocket AI Lab push run `43935672650` in progress; PR/iOS runs not yet surfaced. No pass claimed yet.
+
+
+## 2026-11-16 — Archive submodule regression test correction
+
+- **PR #160** current head `4fc057eb54a20cab2d765ea1b4829f59c23af610`.
+- **Previous run:** Pocket AI Lab push `43935672650` correctly identified the archive test path issue after the implementation fix: the new test called `collectFiles()` without its required repository-root argument. The production `buildArchive()` call supplies its default root and was not affected.
+- **Fix:** assert `packages/exploitgym` exclusion against the completed archive manifest instead of calling the internal collector directly. Exact-head push CI `43936002601` queued; PR/iOS workflows pending.
