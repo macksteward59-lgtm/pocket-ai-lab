@@ -16,7 +16,7 @@ public enum BridgeGate {
         "listModels": ["id", "action"],
         "importModel": ["id", "action", "model", "artifactId"],
         "validateModel": ["id", "action", "model"],
-        "loadModel": ["id", "action", "model", "estimatedMemoryMB"],
+        "loadModel": ["id", "action", "model"],
         "checkReadiness": ["id", "action", "sessionId"],
         "generate": ["id", "action", "sessionId", "prompt", "requestId", "conversationRequestId", "attemptId", "challengeNonce", "maxTokens", "temperature"],
         "cancelGeneration": ["id", "action", "sessionId", "requestId"],
@@ -75,8 +75,7 @@ public enum BridgeGate {
                 return .invalidMessage
             }
         case "loadModel":
-            guard let model = body["model"] as? String, validToken(model, maxBytes: 128),
-                  let estimate = body["estimatedMemoryMB"] as? Int, (1...65_536).contains(estimate) else {
+            guard let model = body["model"] as? String, validToken(model, maxBytes: 128) else {
                 return .invalidMessage
             }
         case "checkReadiness", "unloadModel":
