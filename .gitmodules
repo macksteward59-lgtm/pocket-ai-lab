@@ -1,0 +1,3 @@
+[submodule "packages/exploitgym"]
+	path = packages/exploitgym
+	url = https://github.com/sunblaze-ucb/exploitgym.git

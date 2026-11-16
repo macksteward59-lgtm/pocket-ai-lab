@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import ApexBridge
 
 struct WorkspaceView: View {
     @AppStorage("workspaceURL") private var workspaceURL = ""
@@ -35,9 +36,10 @@ struct WorkspaceView: View {
 
     private func openWorkspace() {
         guard let components = URLComponents(string: address),
-              let scheme = components.scheme?.lowercased(),
-              scheme == "https" || (scheme == "http" && (components.host == "localhost" || components.host == "127.0.0.1")),
-              let url = components.url else {
+              components.user == nil, components.password == nil,
+              components.query == nil, components.fragment == nil,
+              let url = components.url,
+              BridgeGate.sameOrigin(url, trusted: url) else {
             validationMessage = "Use HTTPS. HTTP is allowed only for localhost development."
             loadURL = nil
             return
@@ -50,14 +52,54 @@ struct WorkspaceView: View {
 
 struct PrivateWorkspaceWebView: UIViewRepresentable {
     let url: URL
+    func makeCoordinator() -> Coordinator {
+        Coordinator(trustedURL: url)
+    }
+
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         let view = WKWebView(frame: .zero, configuration: config)
+        view.navigationDelegate = context.coordinator
         view.load(URLRequest(url: url))
         return view
     }
     func updateUIView(_ view: WKWebView, context: Context) {
         if view.url != url { view.load(URLRequest(url: url)) }
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        private let trustedURL: URL
+
+        init(trustedURL: URL) {
+            self.trustedURL = trustedURL
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let target = navigationAction.request.url,
+                  navigationAction.targetFrame?.isMainFrame == true,
+                  BridgeGate.sameOrigin(target, trusted: trustedURL) else {
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+        ) {
+            guard let target = navigationResponse.response.url,
+                  BridgeGate.sameOrigin(target, trusted: trustedURL) else {
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
+        }
     }
 }

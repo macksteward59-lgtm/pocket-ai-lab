@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "runtime/ios/**"
+      - "packages/director/ios/**"
+      - "docs/architecture/director-native-bridge.md"
       - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
@@ -16,6 +18,8 @@ on:
       - ios/private-iphone-test-hybrid
     paths:
       - "runtime/ios/**"
+      - "packages/director/ios/**"
+      - "docs/architecture/director-native-bridge.md"
       - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
@@ -106,6 +110,11 @@ jobs:
           print(f"id={chosen['udid']}")
           print(f"name={chosen['name']}")
           PY
+
+      - name: Validate restored Director bridge package manifest
+        run: |
+          test -f packages/director/ios/Package.swift
+          swift package --package-path packages/director/ios describe
 
       - name: Generate and build the native Pocket AI Lab app
         run: |
