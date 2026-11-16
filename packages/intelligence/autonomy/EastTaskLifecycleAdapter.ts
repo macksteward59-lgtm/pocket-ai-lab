@@ -190,6 +190,14 @@ export async function runEastTaskWithLifecycle(
     throw new Error("East task objective does not match the lifecycle objective");
   }
 
+  let checkpointedMessageCount = east.checkpointTask(eastTaskId).messages.length;
+  const captureCheckpoint = (kind: string): string => {
+    const checkpoint = east.checkpointTask(eastTaskId);
+    const encoded = encodeCheckpoint(kind, checkpoint, checkpointedMessageCount);
+    checkpointedMessageCount = checkpoint.messages.length;
+    return encoded;
+  };
+
   if (lifecycle.status === "failed" || lifecycle.status === "cancelled") {
     throw new Error("Existing East lifecycle is terminal: " + lifecycle.status);
   }
@@ -217,11 +225,11 @@ export async function runEastTaskWithLifecycle(
       let refs: string[] = [];
       if (claim.stepId === "assign-core-agents") {
         for (const agentId of EAST_DELIBERATION_AGENTS) east.assignAgent(eastTaskId, agentId);
-        result = encodeCheckpoint("assign-core-agents", east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("assign-core-agents");
       } else if (claim.stepId.startsWith("execute-")) {
         const agentId = claim.stepId.slice("execute-".length);
         const messageId = await east.executeAgent(eastTaskId, agentId);
-        result = encodeCheckpoint("execute-" + agentId, east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("execute-" + agentId);
         refs = ["east-message:" + messageId];
       } else if (claim.stepId === "deliberate") {
         const deliberation = await east.runDeliberation(eastTaskId);
@@ -231,13 +239,13 @@ export async function runEastTaskWithLifecycle(
         synthesis = deliberation.synthesis;
         evidenceRefs = [...deliberation.evidence];
         // Persist the proposal and thread so a fresh East runtime can restore it.
-        result = encodeCheckpoint("deliberate", east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("deliberate");
         refs = evidenceRefs;
       } else if (claim.stepId === "record-unverified-proposal") {
         if (!synthesis.trim()) throw new Error("East deliberation returned no synthesis");
         const accepted = await east.commitTaskEvidence(eastTaskId, synthesis);
         if (accepted !== false) throw new Error("East evidence gate violated its non-authorizing contract");
-        result = encodeCheckpoint("record-unverified-proposal", east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("record-unverified-proposal");
         refs = evidenceRefs;
       } else {
         throw new Error("Unknown East lifecycle step " + claim.stepId);
