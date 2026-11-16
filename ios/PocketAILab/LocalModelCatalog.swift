@@ -273,8 +273,13 @@ struct LocalModelCatalogStore {
         entry.byteCount > 0 &&
         entry.contextLength > 0 &&
         entry.estimatedMemoryMB > 0 &&
-        !entry.capabilities.isEmpty &&
-        entry.capabilities.count <= 16
+        entry.capabilities.count <= 16 &&
+        entry.capabilities.allSatisfy {
+            !$0.isEmpty &&
+            $0.utf8.count <= 64 &&
+            $0 == $0.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            $0 == $0.lowercased()
+        }
     }
 
     private static func isHexDigest(_ value: String) -> Bool {
