@@ -2331,3 +2331,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Review state:** PR is open, draft, mergeable, and has zero inline review threads. Not merged.
 - **Implementation detail:** Cloud consent is consumed after one message so a checked box cannot silently authorize later messages. UI disclosure sits below the composer controls. Local remains default; Agent Team/Director remain local-only.
 - **Limitations:** This is a local loopback prototype slice only. Authentication, production secret lifecycle, encrypted persistence, telemetry, and public deployment remain open.
+
+
+## 2026-11-16 — ChatGPT native iOS validation blocker
+
+- **PRs:** #150 and mainline validation #151; branch `codex/ios-routed-agent-app-integration`.
+- **Exact head:** `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5`.
+- **Workflow:** iOS LlamaEngine CI run `43916898000`, job `133473547446`, failed at the native Pocket AI Lab app build while compiling `ios/PocketAILab/LocalChatView.swift`.
+- **Passed before failure:** pinned llama.cpp simulator/macOS build; fail-closed branch typecheck; physical-iOS-target link; simulator selection and boot.
+- **Skipped:** native app XCTest, simulator XCTest, pinned GGUF smoke, macOS XCTest.
+- **Diagnosis:** the downloaded job log shows the failed SwiftCompile target but no surfaced source diagnostic in the available output. Do not invent a compiler error; reproduce or improve diagnostic capture before applying a fix.
+- **Device acceptance:** iPhone Air, 256 GB is the sole physical target. Hosted simulator remains CI-only. No physical iPhone test is claimed.
+- **Status:** PR #150 remains open/draft; the integration claim is returned to `in-progress` until the native app build is repaired and exact-head CI passes.
