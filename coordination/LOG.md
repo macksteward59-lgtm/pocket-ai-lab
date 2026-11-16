@@ -2816,3 +2816,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - New focused test builds a temporary Git index with a directory gitlink and symlink and asserts both are excluded from archive file collection. It has not yet been observed executing; CI is running the tests.
 - PR #164 iOS LlamaEngine run #43981080474 remains in progress at native app build step 13, unchanged; later XCTest/GGUF/inference gates remain pending. No job logs are available from that runner.
 - No merge/approval, no ExploitGym workload, no physical device validation, and no APEX/East trust change.
+
+
+## 2026-11-16 UTC — PR #165 exact-head CI passed
+
+- Rechecked PR #165 exact head `b89d0bffd319ba940b17c50ee971fa1674dd541f` and run [#43983284394](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43983284394).
+- Workflow completed with conclusion `success`: dependency install/advisory steps, JavaScript syntax, type-check/build, and the full test job all passed.
+- Desktop archive suite reports 17 tests, 17 passed, 0 failed, 0 skipped. New test `archive file collection excludes submodule gitlinks and symlinks` passed; archive extraction/build/test smoke also passed.
+- Other visible test output: EAGLE Python suite ran 10 tests with 4 skipped and no failures; custom-GGUF Python suite ran 7 tests and passed. The complete workflow test job succeeded.
+- This is hosted CI on exact PR #165 head, not Windows/macOS physical packaging validation, not ExploitGym workload execution, and not physical iPhone acceptance.
+- PR #165 remains draft/open and stacked on PR #164. PR #164 iOS run #43981080474 remains stuck at native app build step 13 with no later XCTest/GGUF/inference gates observed. No merges, approvals, or APEX/East trust changes.
