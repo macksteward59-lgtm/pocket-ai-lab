@@ -28,7 +28,8 @@ export type {
   EastPlatformDependencies,
   EastPlatformErrorCode,
   EastPlatformRuntime,
-  EastTaskRecord
+  EastTaskRecord,
+  EastRuntimeCheckpoint
 } from "./platform";
 
 const createAgentTask = East.platform("createAgentTask", [StringType], StringType);
