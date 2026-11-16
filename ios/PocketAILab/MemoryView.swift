@@ -69,9 +69,14 @@ struct MemoryView: View {
             }
             .navigationTitle("Memory")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if loadFailed {
+                        Button("Retry") { Task { await reload() } }.disabled(isBusy)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { beginCreate() } label: { Image(systemName: "plus") }
-                        .disabled(isBusy)
+                        .disabled(isBusy || loadFailed)
                 }
             }
             .safeAreaInset(edge: .bottom) {
