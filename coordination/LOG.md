@@ -2729,3 +2729,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Attempted to retrieve the failing job log; GitHub's log endpoint returned `BlobNotFound`. The run published no artifacts. The failure's test name, assertion, and diagnostic are therefore unavailable; no root cause is inferred. Successful GGUF download is not evidence that model generation passed.
 - Inspected the exact-head CI workflow and build script. The macOS gate copies the iOS runtime package into `/tmp/pocket-host` and runs the same `PocketLlamaEngine` XCTest scheme against a macOS destination. This identifies the failing gate's execution path, not the underlying failure.
 - PR #164 remains draft/open. No source edits, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust changes, signing/deployment, or physical iPhone Air tests occurred.
+
+
+## 2026-11-16 UTC — PR #164 smoke-artifact handoff repair claimed
+
+- Exact-head run #43976612502 logs are now retrievable. The macOS failure is diagnosed: fetch-gguf encountered DNS resolution failure (URLError: [Errno 8] nodename nor servname provided, or not known); the workflow piped it to tee without set -o pipefail, so the step was reported successful. The script's earlier stdout line 'pin header matches b12233 5f490d7bfe78844e6390c869454c149fd7e003a8' was then selected as the only/last line and written into SmokePath.swift.
+- GGUF metadata and both inference smoke tests consequently failed because that string is not a readable file path. This is a CI artifact-handoff defect, not evidence of an inference-engine failure; actual model generation did not occur on macOS.
+- ChatGPT claims a narrow repair on existing branch codex/bridge-native-runtime-integration: .github/workflows/ios-llamaengine-ci.yml smoke-download step only. Add pipeline failure propagation and explicit validation that exactly one absolute existing GGUF path is passed to the smoke test. No changes to inference runtime, model parser, tests, pin values, or APEX trust boundaries.
+- This workflow file overlaps the earlier CI-cache PR #128 review area; current repair is confined to the later smoke-download handoff and will preserve cache logic verbatim. No other active in-progress owner claim on this exact smoke handoff was found.
+- Do not rerun/cancel the prior workflow; its evidence remains failed at the macOS smoke stage. Fresh exact-head CI is required after the workflow fix. No physical-device validation.
