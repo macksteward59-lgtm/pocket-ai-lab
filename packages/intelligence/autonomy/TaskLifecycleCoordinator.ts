@@ -528,7 +528,8 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
         (step.status === "cancelled" && step.result !== null) ||
         (step.status === "pending" && step.result !== null) ||
         (step.completedAt !== null && (Date.parse(step.completedAt) < Date.parse(task.createdAt) ||
-          Date.parse(step.completedAt) > Date.parse(task.updatedAt))) ||
+          Date.parse(step.completedAt) > Date.parse(task.updatedAt) ||
+          (task.completedAt !== null && Date.parse(step.completedAt) > Date.parse(task.completedAt)))) ||
         (step.currentAttempt !== null && (!step.currentAttempt ||
           typeof step.currentAttempt.id !== "string" || !step.currentAttempt.id.trim() ||
           step.currentAttempt.id !== step.attemptIds[step.attemptIds.length - 1] ||
