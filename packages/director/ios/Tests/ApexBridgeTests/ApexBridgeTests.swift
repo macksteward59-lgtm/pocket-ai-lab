@@ -173,9 +173,12 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertEqual(record.challengeNonce, "0123456789abcdef")
         XCTAssertFalse(record.authorized)
         XCTAssertFalse(String(describing: record).contains("signature"))
-        XCTAssertTrue(await controller.unload(sessionId: loaded.sessionId!))
-        XCTAssertTrue(await controller.reports().isEmpty)
-        XCTAssertTrue(await runtime.snapshot().loadedModelIDs.isEmpty)
+        let unloaded = await controller.unload(sessionId: loaded.sessionId!)
+        let remainingReports = await controller.reports()
+        let runtimeSnapshot = await runtime.snapshot()
+        XCTAssertTrue(unloaded)
+        XCTAssertTrue(remainingReports.isEmpty)
+        XCTAssertTrue(runtimeSnapshot.loadedModelIDs.isEmpty)
     }
 
     func testReadinessExpiresAndCannotBeReused() async throws {
@@ -214,7 +217,8 @@ final class RuntimeControllerTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? RuntimeControllerError, .modelFileChanged)
         }
-        XCTAssertFalse((await controller.reports()).first?.canGenerate ?? true)
+        let reports = await controller.reports()
+        XCTAssertFalse(reports.first?.canGenerate ?? true)
     }
 
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
@@ -223,7 +227,9 @@ final class RuntimeControllerTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         _ = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
         await controller.disconnect()
-        XCTAssertTrue(await controller.reports().isEmpty)
-        XCTAssertTrue(await runtime.snapshot().loadedModelIDs.isEmpty)
+        let reports = await controller.reports()
+        let snapshot = await runtime.snapshot()
+        XCTAssertTrue(reports.isEmpty)
+        XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 }
