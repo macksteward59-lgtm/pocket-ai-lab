@@ -12,7 +12,7 @@ The package depends on the shared runtime/ios PocketLlamaEngine package. It does
 - Rejects userinfo and non-HTTP(S) schemes.
 - Permits cleartext HTTP only for loopback development; remote workspaces require HTTPS.
 - Enforces action-specific required and allowed key sets; unknown fields fail closed.
-- Validates session/request UUIDs, model identifiers, bounded prompt bytes, challenge nonce length, and memory estimates.
+- Validates session/request UUIDs, model identifiers, bounded prompt bytes, and challenge nonce length. Memory estimates and model hashes are resolved by the native host catalog, never supplied by WebKit.
 - Requires host-owned authorization for model import, load, and unload. A boolean in a WebKit message cannot grant that authorization.
 - The native Web Workspace now uses BridgeGate for top-level navigation policy and rejects credentialed workspace URLs. The WKScriptMessageHandler action dispatch is not yet connected; runtime-control messages remain unavailable until the host-owned approval coordinator is wired.
 
@@ -21,7 +21,7 @@ The package depends on the shared runtime/ios PocketLlamaEngine package. It does
 - Is an actor and owns exact ModelPool leases.
 - Delegates all load/generation work to the shared NativeInferenceRuntime and its InferenceScheduler.
 - Stores only session/metadata, never a full GGUF byte copy.
-- Computes a streaming SHA-256 model-file hash, compares it with the expected hash supplied by the host's local model catalog, and binds it to the loaded runtime session. The WebKit message carries only a model ID; the host resolves both the expected hash and memory estimate from the local catalog.
+- Computes a streaming SHA-256 model-file hash before acquiring the runtime lease and again after load; both values must match the host catalog's expected hash and each other before the session is registered. The WebKit message carries only a model ID; the host resolves both the expected hash and memory estimate from the local catalog.
 - Requires a real bounded one-token generation probe before reporting readiness; readiness expires.
 - Checks the model file identity before readiness and generation. File changes invalidate readiness and fail closed.
 - Tracks generation tasks, supports cancellation, and waits for the runtime cancellation-drain path before releasing a session.
