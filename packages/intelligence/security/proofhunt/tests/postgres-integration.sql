@@ -7,24 +7,24 @@ GRANT USAGE ON SCHEMA proofhunt TO proofhunt_app;
 GRANT SELECT ON ALL TABLES IN SCHEMA proofhunt TO proofhunt_app;
 GRANT INSERT ON proofhunt.assessment_jobs, proofhunt.assessment_events TO proofhunt_app;
 
-DO $
-DECLARE bypass_rls BOOLEAN;
-BEGIN
-  SELECT rolbypassrls INTO bypass_rls
-    FROM pg_roles
-   WHERE rolname = 'proofhunt_app';
-  IF bypass_rls IS DISTINCT FROM FALSE THEN
-    RAISE EXCEPTION 'Runtime role must not have BYPASSRLS';
-  END IF;
-  IF has_table_privilege('proofhunt_app', 'proofhunt.authorization_records', 'INSERT')
-     OR has_table_privilege('proofhunt_app', 'proofhunt.authorization_revocations', 'INSERT')
-     OR has_table_privilege('proofhunt_app', 'proofhunt.authorized_targets', 'INSERT')
-     OR has_table_privilege('proofhunt_app', 'proofhunt.excluded_targets', 'INSERT')
-     OR has_table_privilege('proofhunt_app', 'proofhunt.assessment_policies', 'INSERT') THEN
-    RAISE EXCEPTION 'Runtime role has an unauthorized authorization-state INSERT grant';
-  END IF;
-END
-$;
+SELECT (SELECT NOT rolbypassrls FROM pg_roles WHERE rolname = 'proofhunt_app') AS runtime_role_no_bypassrls \gset
+\if :runtime_role_no_bypassrls
+\else
+\echo Runtime role must not have BYPASSRLS
+\quit 1
+\endif
+SELECT NOT (
+  has_table_privilege('proofhunt_app', 'proofhunt.authorization_records', 'INSERT')
+  OR has_table_privilege('proofhunt_app', 'proofhunt.authorization_revocations', 'INSERT')
+  OR has_table_privilege('proofhunt_app', 'proofhunt.authorized_targets', 'INSERT')
+  OR has_table_privilege('proofhunt_app', 'proofhunt.excluded_targets', 'INSERT')
+  OR has_table_privilege('proofhunt_app', 'proofhunt.assessment_policies', 'INSERT')
+) AS runtime_role_least_privilege \gset
+\if :runtime_role_least_privilege
+\else
+\echo Runtime role has an unauthorized authorization-state INSERT grant
+\quit 1
+\endif
 
 -- Seed a second tenant to prove forced project RLS isolation.
 INSERT INTO proofhunt.authorization_records (
