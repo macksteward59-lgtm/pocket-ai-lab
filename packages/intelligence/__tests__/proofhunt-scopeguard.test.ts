@@ -114,6 +114,11 @@ describe.skipIf(!existsSync(proofHuntMigrationPath))("ProofHunt PostgreSQL migra
     expect(sql).toContain("CREATE TABLE proofhunt.authorization_revocations");
     expect(sql).toContain("CREATE TRIGGER proofhunt_active_authorization_before_plan");
     expect(sql).toContain("ProofHunt operational authorization is not active");
+    expect(sql).toContain("AS $");
+    expect(sql).toContain("NEW.check_type = ANY(policy.allowed_checks)");
+    expect(sql).toContain("policy.preapproved = TRUE");
+    expect(sql).toContain("FOREIGN KEY (project_id, operational_authorization_id, authorized_target_id, target_hostname)");
+    expect(sql).toContain("excluded.hostname = NEW.target_hostname");
   });
 
   it("keeps project RLS forced and historical tables append-only", async () => {
