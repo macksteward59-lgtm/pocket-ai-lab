@@ -2470,3 +2470,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Run:** iOS workflow `43927798508`; llama.cpp build, typecheck, device-target link, simulator boot, native app build, and native app XCTest passed. The separate PocketLlamaEngine simulator XCTest failed 2 of 74 tests.
 - **Root cause:** `RecordingInferenceEngine.load(model:)` in `runtime/ios/Tests/LlamaEngineTests/NativeAgentCoordinatorTests.swift` returns `RuntimeSession(id: "session-\\\\(model.id)", ...)` with an escaped interpolation marker. This produces the same literal session ID for every model, causing a collision and an incorrect unload expectation. Production coordinator code is not implicated by this fixture defect.
 - **Next:** correct the mock to use actual Swift interpolation, rerun the exact branch iOS workflow, then re-evaluate the unified native product integration. No merge or physical-device acceptance claimed.
+
+
+## 2026-11-16 — Unified native product CI failure triage
+
+- **PR #156:** `codex/native-product-experience-integration`, exact head `09207c1c2a9ea94ff351eb7e6ed999a91a8a7d07`, iOS run `43923737970` failed during the native app build. The retrieved log shows four failed SwiftCompile build commands across app source batches but contains no actual compiler diagnostic, no `error:` line, and no explicit signal/OOM evidence. Treat root cause as unknown; do not attribute it to a particular Swift file yet.
+- **PR #150:** exact head `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`, iOS run `43927798508`: native app build and app XCTest passed. The later PocketLlamaEngine simulator XCTest failed 2/74 tests because `RecordingInferenceEngine` test fixture used escaped Swift interpolation in generated session IDs. Production coordinator code is not implicated by the observed failures.
+- **Actions:** corrected the test-fixture interpolation on branch `codex/ios-routed-agent-app-integration` (commit `20ea14d4a7b4625e1ff7dde300bfa7f037485498`). Next, reduce xcodebuild parallelism and preserve complete build diagnostics on PR #156, then rerun exact-head CI. No merge or physical-device acceptance claimed.
