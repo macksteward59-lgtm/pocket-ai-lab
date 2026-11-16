@@ -8,6 +8,7 @@ struct MemoryView: View {
     @State private var editingID: String?
     @State private var draftContent = ""
     @State private var draftLayer: NativeMemoryLayer = .episodic
+    @State private var draftSourceRefs = ""
     @State private var status = "Memory is encrypted on this device. Nothing is saved automatically."
     @State private var isBusy = false
     @State private var showError = false
@@ -82,6 +83,11 @@ struct MemoryView: View {
                         Section("Information to remember") {
                             TextEditor(text: $draftContent).frame(minHeight: 150)
                         }
+                        Section("Source references") {
+                            TextField("Optional comma-separated references", text: $draftSourceRefs)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
                         Section {
                             Text("New and edited memories are unverified. Saving does not grant permissions or authorize actions.")
                                 .font(.caption).foregroundStyle(.secondary)
@@ -112,6 +118,7 @@ struct MemoryView: View {
         editingID = nil
         draftContent = ""
         draftLayer = .episodic
+        draftSourceRefs = ""
         isEditorPresented = true
     }
 
@@ -119,19 +126,24 @@ struct MemoryView: View {
         editingID = entry.id
         draftContent = entry.content
         draftLayer = entry.layer
+        draftSourceRefs = entry.provenance.sourceRefs.joined(separator: ", ")
         isEditorPresented = true
     }
 
     private func saveDraft() {
         let content = draftContent
+        let sourceRefs = draftSourceRefs.split(separator: ",").map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }.filter { !$0.isEmpty }
         let editing = editingID
+        let layer = draftLayer
         isBusy = true
         Task {
             do {
                 if let editing {
-                    _ = try await store.update(id: editing, content: content)
+                    _ = try await store.update(id: editing, content: content, sourceRefs: sourceRefs)
                 } else {
-                    _ = try await store.insert(layer: draftLayer, content: content)
+                    _ = try await store.insert(layer: layer, content: content, sourceRefs: sourceRefs)
                 }
                 await reload()
                 isEditorPresented = false
