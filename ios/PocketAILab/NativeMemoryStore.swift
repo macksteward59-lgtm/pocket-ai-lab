@@ -101,7 +101,9 @@ public actor NativeMemoryStore {
         let entries: [NativeMemoryEntry]
         do { entries = try JSONDecoder().decode([NativeMemoryEntry].self, from: plaintext) }
         catch { throw NativeMemoryVaultError.integrityFailure }
-        guard entries.count <= Self.maximumEntries, entries.allSatisfy(Self.isValid) else {
+        guard entries.count <= Self.maximumEntries,
+              entries.allSatisfy(Self.isValid),
+              Set(entries.map(\.id)).count == entries.count else {
             throw NativeMemoryVaultError.integrityFailure
         }
         return entries
@@ -155,7 +157,9 @@ public actor NativeMemoryStore {
     }
 
     private func persist(_ entries: [NativeMemoryEntry]) throws {
-        guard entries.count <= Self.maximumEntries, entries.allSatisfy(Self.isValid) else {
+        guard entries.count <= Self.maximumEntries,
+              entries.allSatisfy(Self.isValid),
+              Set(entries.map(\.id)).count == entries.count else {
             throw NativeMemoryVaultError.invalidEntry
         }
         do {
