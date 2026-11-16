@@ -31,6 +31,8 @@ export interface TaskDefinition {
 
 export interface StepAttempt {
   id: string;
+  /** Unique process/worker identity that acquired this lease; not an authorization credential. */
+  ownerId?: string;
   startedAt: string;
   leaseExpiresAt: string;
 }
@@ -68,6 +70,8 @@ export interface StepClaim {
   taskId: string;
   stepId: string;
   attemptId: string;
+  /** Durable owner identity recorded with the active attempt. */
+  ownerId: string;
   description: string;
   objective: string;
   attemptNumber: number;
@@ -109,11 +113,14 @@ export class TaskLifecycleCoordinator {
   private readonly store: TaskLifecycleStore;
   private readonly now: () => Date;
   private readonly createId: () => string;
+  private readonly workerId: string;
 
   constructor(options: {
     store: TaskLifecycleStore;
     now?: () => Date;
     createId?: () => string;
+    /** Unique identity for this worker process/coordinator instance. */
+    workerId?: string;
   }) {
     if (!options?.store || typeof options.store.load !== "function" || typeof options.store.save !== "function") {
       throw new TaskLifecycleError("invalid_store", "A task lifecycle store is required");
@@ -121,6 +128,11 @@ export class TaskLifecycleCoordinator {
     this.store = options.store;
     this.now = options.now ?? (() => new Date());
     this.createId = options.createId ?? (() => crypto.randomUUID());
+    const workerId = options.workerId ?? "worker-" + crypto.randomUUID();
+    if (typeof workerId !== "string" || !workerId.trim() || workerId.length > 256) {
+      throw new TaskLifecycleError("invalid_worker_id", "Worker id must be a non-empty string up to 256 characters");
+    }
+    this.workerId = workerId;
   }
 
   async init(): Promise<void> {
@@ -236,6 +248,7 @@ export class TaskLifecycleCoordinator {
       target.attemptIds.push(attemptId);
       target.currentAttempt = {
         id: attemptId,
+        ownerId: this.workerId,
         startedAt: now.toISOString(),
         leaseExpiresAt: expires.toISOString()
       };
@@ -247,6 +260,7 @@ export class TaskLifecycleCoordinator {
         taskId,
         stepId: target.id,
         attemptId,
+        ownerId: this.workerId,
         description: target.description,
         objective: updated.objective,
         attemptNumber: target.attempts,
@@ -382,6 +396,12 @@ export class TaskLifecycleCoordinator {
     if (!step) throw new TaskLifecycleError("unknown_step", "Unknown task step");
     if (step.status !== "running" || !step.currentAttempt || step.currentAttempt.id !== attemptId) {
       throw new TaskLifecycleError("stale_attempt", "Attempt is no longer active");
+    }
+    if (step.currentAttempt.ownerId === undefined) {
+      throw new TaskLifecycleError("unowned_attempt", "Attempt has no recorded worker owner; wait for expiry and recover before continuing");
+    }
+    if (step.currentAttempt.ownerId !== this.workerId) {
+      throw new TaskLifecycleError("lease_owner_mismatch", "Attempt lease belongs to a different worker");
     }
     if (Date.parse(step.currentAttempt.leaseExpiresAt) <= now.getTime()) {
       throw new TaskLifecycleError("expired_attempt", "Attempt lease has expired");
@@ -562,6 +582,8 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
         (step.currentAttempt !== null && (!step.currentAttempt ||
           typeof step.currentAttempt.id !== "string" || !step.currentAttempt.id.trim() ||
           step.currentAttempt.id !== step.attemptIds[step.attemptIds.length - 1] ||
+          (step.currentAttempt.ownerId !== undefined &&
+            (typeof step.currentAttempt.ownerId !== "string" || !step.currentAttempt.ownerId.trim() || step.currentAttempt.ownerId.length > 256)) ||
           !validTimestamp(step.currentAttempt.leaseExpiresAt) ||
           !validTimestamp(step.currentAttempt.startedAt) ||
           Date.parse(step.currentAttempt.startedAt) < Date.parse(task.createdAt) ||
