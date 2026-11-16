@@ -12,14 +12,14 @@ The user's Library contains east-unified.zip, inspected on 2026-11-16.
 ## Restored in this slice
 
 - Director/APEX iOS BridgeGate, RuntimeController, and LlamaEngine compatibility boundary, hardened and backed by the shared PocketLlamaEngine package.
-- ExploitGym source as a Git submodule pinned to the exact archived upstream commit a8029e47135a29f1c1a6e79109bf86fba379b3f3.
+- ExploitGym source as a Git submodule pinned to upstream main commit a8029e47135a29f1c1a6e79109bf86fba379b3f3 (2026-11-09). The archived ZIP did not contain commit metadata, so this is a verified later upstream pin, not a claim that it is the exact ZIP revision.
 - Grok Workspace status snapshot and attachment manifest, clearly marked historical and not live.
 
 ## Deferred rather than blindly copied
 
 - The archive contains a much larger Director web workspace. The current repository has only a small subset of that source tree. This PR does not claim that all 169 archived Director files have been restored. Trust/RLS/schema files remain subject to the active owner-authored contract and APEX verifier work; they must not be copied over current work without reconciliation.
 - The original ApexShell SwiftUI/WebKit shell is not copied as executable code because it creates an ephemeral signing key and passes it into the runtime controller. The replacement bridge returns unsigned evidence candidates and leaves signing/authorization to Director.
-- The original ExploitGym ZIP attachment is not duplicated in Git; the upstream source is represented by the pinned submodule, while the exact archived attachment hash is preserved in the Grok workspace manifest.
+- The original ExploitGym ZIP attachment is not duplicated in Git; the upstream source is represented by the pinned submodule, while the archived attachment hash is preserved in the Grok workspace manifest.
 
 ## Next integration gates
 
