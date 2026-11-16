@@ -560,7 +560,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
       (task.status === "completed" && (!allSucceeded || !validTimestamp(task.completedAt))) ||
       (task.status === "failed" && (!hasFailed || runningCount > 0 ||
         task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
-      (task.status === "cancelled" && (!hasCancelled || runningCount > 0 ||
+      (task.status === "cancelled" && (hasFailed || !hasCancelled || runningCount > 0 ||
         task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
       (task.completedAt !== null && (Date.parse(task.completedAt) < Date.parse(task.createdAt) ||
         Date.parse(task.completedAt) > Date.parse(task.updatedAt)))) {
