@@ -2408,3 +2408,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Editing now persists the selected memory layer as well as content/source references; identity and creation timestamp remain stable and verification resets to false.
 - Added unique memory-ID validation, excluded the dedicated device-bound vault directory from backup, and moved key-byte clearing into a defer that covers Keychain duplicate/error exits.
 - Latest PR #153 head `f1dda415a1808d1e9fdead5812136339f2d1a1b6`. Exact-head CI: Pocket AI Lab push in progress; PR iOS workflow queued; Consumer/Governance/Cursor workflows in progress. Native build/XCTest results are pending.
+
+
+## 2026-11-16 — APEX signed evidence verification v2 started
+
+- **Branch:** `codex/apex-signed-evidence-verification-v2`, based on whole-product candidate #157 head `467c4ec010a1c98bcb012ff90bcc12c4b9fd6e84`.
+- **Scope:** Replace the placeholder trust module with a candidate-only Ed25519 verifier using immutable host-provisioned keys, exact attempt/model/runtime binding, freshness, and fail-closed nonce replay. Define a cross-runtime v2 canonical payload with domain separation and length-prefixed fields; add deterministic tests.
+- **Explicit non-goals:** No `authorized=true`, APEX receipt, policy grant, RLS/schema, database deployment, trusted-key provisioning/rotation service, or production replay-store implementation. Verified candidate evidence remains distinct from authorization.
+- **Reason:** Current East/APEX integration explicitly states that trust.ts is a placeholder, APEX RLS/schema are absent, and Swift SignedRun has a newline-delimited canonical form not bound to all fields. Do not wire candidate verification into action dispatch until those contracts and owner-controlled trust provisioning are independently reviewed.
