@@ -2238,3 +2238,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Scope: `ios/PocketAILab/LocalAgentTaskHistoryStore.swift`, `ios/PocketAILab/LocalChatView.swift`, `ios/PocketAILabTests/LocalAgentTaskHistoryStoreTests.swift`, and a focused architecture note only if required. First action is contract inspection; no implementation is presumed complete.
 - Dependency: PR #146's routed `NativeAgentCoordinator` API. Existing #146/#147 remain draft/unmerged; exact-head native iOS CI is still running. Work will remain isolated and will not alter coordinator/runtime files or governance boundaries.
 - No other AI agent is registered active. No application code, APEX/East trust, authorization, Evidence, or mainline change is included in this claim.
+
+
+## 2026-11-16 21:16 UTC — Routed Agent Team history linkage implemented
+
+- Added optional `conversationID`, `recipientAgentID`, `messageType`, and `parentMessageID` fields to `AgentTaskRoleResult`. The existing version-1 archive format remains compatible because all added fields are optional; no schema-version bump or destructive migration is required.
+- `AgentTaskHistoryJournal` now maps those fields from the exact `AgentMessageEnvelope` received through the coordinator's `onMessage` sink. The bounded store still enforces task status, monotonic role sequence, unique message IDs, byte limits, 30-day retention, and interrupted recovery without replay.
+- Added XCTest coverage for persistence of recipient/type/conversation/parent linkage and decoding of legacy v1 role records without the new fields. Source-level comparison shows exactly three files changed relative to the routing integration base.
+- Draft PR #148: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/148 (stacked on #146). Mainline validation PR #149: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/149. Both point at exact head `121487049d57f96730ae70f789a9495cf49bc70a`.
+- Exact-head workflows have not yet appeared in the commit workflow-run query. CI remains pending; no local Xcode execution or physical iPhone validation is claimed. No model/session identity is inferred from the wire envelope; persisted text/linkage remains untrusted proposal data.
