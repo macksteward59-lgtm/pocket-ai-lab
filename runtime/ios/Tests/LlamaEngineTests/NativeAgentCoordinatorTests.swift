@@ -157,7 +157,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("oversized memory context must be rejected")
         } catch NativeAgentCoordinatorError.invalidTask {
         } catch {
-            XCTFail("unexpected error: \\(error)")
+            XCTFail("unexpected error: \(error)")
         }
 
         let unreferenced = AgentTaskRequest(
@@ -171,7 +171,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("memory context without record IDs must be rejected")
         } catch NativeAgentCoordinatorError.invalidTask {
         } catch {
-            XCTFail("unexpected error: \\(error)")
+            XCTFail("unexpected error: \(error)")
         }
         let prompts = await engine.recordedPrompts
         XCTAssertTrue(prompts.isEmpty)
@@ -269,7 +269,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
                 XCTFail("model-generated \\(forbidden) must be rejected before inference")
             } catch NativeAgentCoordinatorError.invalidPlan {
             } catch {
-                XCTFail("unexpected error: \\(error)")
+                XCTFail("unexpected error: \(error)")
             }
             let prompts = await engine.recordedPrompts
             XCTAssertTrue(prompts.isEmpty)
@@ -438,7 +438,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("a caller-owned active lease must prevent model eviction")
         } catch ModelPoolError.modelLimitExceeded {
         } catch {
-            XCTFail("unexpected error: \\(error)")
+            XCTFail("unexpected error: \(error)")
         }
 
         let loaded = await engine.loadedModelIDs
@@ -486,7 +486,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("cancellation during model load must stop before generation")
         } catch is CancellationError {
         } catch {
-            XCTFail("unexpected error: \\(error)")
+            XCTFail("unexpected error: \(error)")
         }
 
         let snapshot = await runtime.snapshot()
@@ -525,7 +525,7 @@ final class NativeAgentCoordinatorTests: XCTestCase {
             XCTFail("missing specialist route must fail closed")
         } catch NativeAgentCoordinatorError.modelRoutingFailed(_) {
         } catch {
-            XCTFail("unexpected error: \\(error)")
+            XCTFail("unexpected error: \(error)")
         }
         let loadedModelIDs = await engine.loadedModelIDs
         let generatedModelIDs = await engine.generatedModelIDs
