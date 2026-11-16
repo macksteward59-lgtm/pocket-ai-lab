@@ -44,7 +44,7 @@ No production trusted-key registry, key provisioning, rotation, or revocation se
 
 Verification requires exact equality with a caller-supplied attempt binding for conversation request, attempt, model ID, model-file hash, runtime session, device ID, runtime identity, challenge nonce, and health-check ID. The model-file hash and generation-result hash must be 64-character SHA-256 values.
 
-Evidence freshness defaults to 30 seconds with a 1-second future clock-skew allowance. The injected replay store must atomically accept the key/attempt/nonce tuple. A replay or replay-store exception rejects the candidate. The included tests use an in-memory store only; production requires a durable transactional store with concurrency guarantees.
+Evidence freshness defaults to 30 seconds with a 1-second future clock-skew allowance. The injected replay store must atomically enforce challenge-nonce uniqueness across all attempts for the same key ID (while retaining the attempt ID for audit). A replay or replay-store exception rejects the candidate. The included tests use an in-memory store only; production requires a durable transactional store with concurrency guarantees.
 
 ## What success does not mean
 
