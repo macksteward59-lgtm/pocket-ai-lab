@@ -233,7 +233,9 @@ export class ApexSignedEvidenceVerifier {
     if (evidence.protocolVersion !== 2 || evidence.algorithm !== "Ed25519") {
       return this.reject("unsupported_protocol");
     }
-    if (!expected || !isSHA256(expected.modelFileHash) ||
+    if (!expected ||
+        Object.values(expected).some(value => typeof value !== "string" || value.length === 0) ||
+        !isSHA256(expected.modelFileHash) ||
         !isSHA256(evidence.modelFileHash) || !isSHA256(evidence.generationResultHash) ||
         !bindingMatches(evidence, expected)) {
       return this.reject("invalid_binding");
