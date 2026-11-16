@@ -303,7 +303,7 @@ final class RuntimeControllerTests: XCTestCase {
             availableMemoryMB: { 4096 }
         )
         let controller = try RuntimeController(runtime: runtime, deviceId: "test-device", runtimeIdentity: "test-runtime", clock: { clock.now() })
-        let loaded = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
+        let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
         let requestId = UUID().uuidString
         let generation = Task {
