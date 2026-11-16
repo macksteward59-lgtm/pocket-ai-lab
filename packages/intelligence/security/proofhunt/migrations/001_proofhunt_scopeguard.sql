@@ -110,6 +110,7 @@ CREATE TABLE proofhunt.authorized_targets (
   hostname TEXT NOT NULL,
   include_subdomains BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (length(hostname) > 0 AND hostname = lower(hostname) AND right(hostname, 1) <> '.'),
   UNIQUE (project_id, authorization_record_id, hostname),
   UNIQUE (project_id, authorization_record_id, target_id),
   UNIQUE (project_id, authorization_record_id, target_id, hostname),
@@ -125,6 +126,7 @@ CREATE TABLE proofhunt.excluded_targets (
   include_subdomains BOOLEAN NOT NULL DEFAULT FALSE,
   exclusion_reason TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (length(hostname) > 0 AND hostname = lower(hostname) AND right(hostname, 1) <> '.'),
   UNIQUE (project_id, authorization_record_id, hostname),
   FOREIGN KEY (project_id, authorization_record_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id)
@@ -303,6 +305,10 @@ BEGIN
       WHERE program.project_id = NEW.project_id
         AND program.record_id = NEW.program_authorization_id
         AND program.record_status = 'verified'
+        AND (
+          (program.record_kind = 'bug_bounty_program' AND program.environment = 'bounty')
+          OR (program.record_kind = 'asset_ownership' AND program.environment = 'owned')
+        )
         AND program.expires_at > CURRENT_TIMESTAMP
         AND NOT EXISTS (
           SELECT 1 FROM proofhunt.authorization_revocations revoked
@@ -319,6 +325,12 @@ BEGIN
       WHERE operational.project_id = NEW.project_id
         AND operational.record_id = NEW.operational_authorization_id
         AND operational.parent_program_authorization_id = NEW.program_authorization_id
+        AND operational.environment = (
+          SELECT program.environment
+          FROM proofhunt.authorization_records program
+          WHERE program.project_id = NEW.project_id
+            AND program.record_id = NEW.program_authorization_id
+        )
         AND operational.record_kind = 'operational_approval'
         AND operational.record_status = 'approved'
         AND operational.expires_at > CURRENT_TIMESTAMP
