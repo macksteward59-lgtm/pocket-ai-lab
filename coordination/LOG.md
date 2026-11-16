@@ -2109,3 +2109,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The pinned smoke GGUF download and checksum verification passed, and the macOS smoke test path was configured. The macOS XCTest step is currently in progress; the workflow is not complete and no final runner summary exists yet.
 - PR #124 exact head `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658` has all four companion workflows green. Its iOS run `43799416564` has restored the corrected script and is still building the pinned llama.cpp artifacts; downstream device/simulator/inference gates have not run yet.
 - No physical iPhone execution, device inference, runtime attestation, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Self-evaluation journal integrity claim corrected
+
+- Reviewed the self-evaluation journal implementation and found an overstatement in the documentation and source comment: a self-contained SHA-256 chain detects modified/reordered/interior-deleted events, but suffix truncation can leave a valid prefix and cannot be detected after restart without an independently protected checkpoint.
+- Updated PR #140 documentation and `NativeEvaluationJournal.swift` comment to state this limitation explicitly. No runtime behavior, Evidence trust, or authorization semantics changed. New exact head `58105c41adba5cab63361e6fdc710566764c7269`.
+- PR #140 is stacked on #115 and does not independently trigger the main-targeted iOS workflow. The corresponding functional implementation remains covered by PR #135's native iOS run `43797547712`, where all app and simulator XCTest plus pinned-GGUF checksum gates have passed; macOS XCTest remains in progress. No signed attestation or rollback-resistant journal is claimed.
