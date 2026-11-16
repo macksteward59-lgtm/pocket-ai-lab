@@ -520,15 +520,22 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
         (step.lastError !== null && (typeof step.lastError !== "string" || !step.lastError.trim() || step.lastError.length > 2_000)) ||
         (step.completedAt !== null && !validTimestamp(step.completedAt)) ||
         (step.status === "running") !== (step.currentAttempt !== null) ||
-        (step.status === "succeeded" && (!step.result || !validTimestamp(step.completedAt))) ||
+        (step.status === "pending" && (step.result !== null || step.attempts >= step.maxAttempts)) ||
+        (step.status === "running" && (step.attempts < 1 || step.result !== null)) ||
+        (step.status === "succeeded" && (step.attempts < 1 || !step.result || !validTimestamp(step.completedAt))) ||
+        (step.status === "succeeded" && step.lastError === null && step.attemptIds.length !== step.attempts) ||
         (step.status !== "succeeded" && step.completedAt !== null) ||
-        (step.status === "failed" && !step.lastError) ||
+        (step.status === "failed" && (step.attempts < 1 || !step.lastError || step.result !== null)) ||
         (step.status === "pending" && step.result !== null) ||
+        (step.completedAt !== null && (Date.parse(step.completedAt) < Date.parse(task.createdAt) ||
+          Date.parse(step.completedAt) > Date.parse(task.updatedAt))) ||
         (step.currentAttempt !== null && (!step.currentAttempt ||
           typeof step.currentAttempt.id !== "string" || !step.currentAttempt.id.trim() ||
           step.currentAttempt.id !== step.attemptIds[step.attemptIds.length - 1] ||
           !validTimestamp(step.currentAttempt.leaseExpiresAt) ||
           !validTimestamp(step.currentAttempt.startedAt) ||
+          Date.parse(step.currentAttempt.startedAt) < Date.parse(task.createdAt) ||
+          Date.parse(step.currentAttempt.startedAt) > Date.parse(task.updatedAt) ||
           Date.parse(step.currentAttempt.leaseExpiresAt) <= Date.parse(step.currentAttempt.startedAt) ||
           Date.parse(step.currentAttempt.leaseExpiresAt) - Date.parse(step.currentAttempt.startedAt) > task.leaseMs))) {
       throw new TaskLifecycleError("corrupt_store", "Stored task step is invalid");
@@ -553,7 +560,9 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
       (task.status === "failed" && (!hasFailed || runningCount > 0 ||
         task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
       (task.status === "cancelled" && (runningCount > 0 ||
-        task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt)))) {
+        task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
+      (task.completedAt !== null && (Date.parse(task.completedAt) < Date.parse(task.createdAt) ||
+        Date.parse(task.completedAt) > Date.parse(task.updatedAt)))) {
     throw new TaskLifecycleError("corrupt_store", "Stored task state is inconsistent");
   }
 
