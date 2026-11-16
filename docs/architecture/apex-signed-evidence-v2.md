@@ -36,7 +36,7 @@ The host injects an immutable list of ApexTrustedEvidenceKey entries. Each key c
 - allowlists of runtime identities and runtime versions;
 - validity start/end timestamps and optional revocation time.
 
-Duplicate key IDs are excluded. Invalid keys, malformed dates, unknown IDs, expired/revoked keys, and runtime identities or versions outside the allowlists fail closed. The proof cannot add or rotate a trusted key. No private key is accepted by the verifier.
+Duplicate key IDs are excluded. Invalid keys, malformed validity dates, unknown IDs, expired/revoked keys, and runtime identities or versions outside the allowlists fail closed. An omitted or null `revokedAt` means no revocation; any supplied value must be a canonical UTC ISO timestamp. Empty, non-string, or malformed revocation timestamps exclude the key rather than being treated as unrevoked. The proof cannot add or rotate a trusted key. No private key is accepted by the verifier.
 
 No production trusted-key registry, key provisioning, rotation, or revocation service is included. Until the host supplies approved keys, no evidence can verify.
 
@@ -44,7 +44,7 @@ No production trusted-key registry, key provisioning, rotation, or revocation se
 
 Verification requires exact equality with a caller-supplied attempt binding for conversation request, attempt, model ID, model-file hash, runtime session, device ID, runtime identity, challenge nonce, and health-check ID. The model-file hash and generation-result hash must be 64-character SHA-256 values.
 
-Evidence freshness defaults to 30 seconds with a 1-second future clock-skew allowance. The injected replay store must atomically enforce challenge-nonce uniqueness across all attempts for the same key ID (while retaining the attempt ID for audit). A replay or replay-store exception rejects the candidate. The included tests use an in-memory store only; production requires a durable transactional store with concurrency guarantees.
+Evidence freshness defaults to 30 seconds with a 1-second future clock-skew allowance. A throwing, non-finite, or unsafe-integer verifier clock rejects with `clock_unavailable`; freshness is never skipped when time cannot be established. The injected replay store must atomically enforce challenge-nonce uniqueness across all attempts for the same key ID (while retaining the attempt ID for audit). A replay or replay-store exception rejects the candidate. The included tests use an in-memory store only; production requires a durable transactional store with concurrency guarantees.
 
 ## What success does not mean
 
