@@ -1925,3 +1925,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Rechecked PR #94 head `4c35146848f7c7c7bcc28e5f6728ffca8834b13f` through GitHub check-runs and job logs. Pocket AI Lab CI, Consumer prototype CI, Cursor collaboration plugin CI, and Governance sidecar CI all completed successfully. The focused autonomy test job reports 16 tests passed, 0 failed.
 - PR #94 remains open, draft, and mergeable; no merge was performed. Transactional cross-process persistence, governed host execution, and production East scheduling remain future integration gates.
+
+
+## 2026-11-16 02:37 UTC — Removed remaining unbounded simulator XCTest polling
+
+- Follow-up review of the PR #135 native XCTest sources found additional multiline `while ... { await Task.yield() }` loops that the earlier one-line transformation had not matched. The simulator suite therefore still contained unbounded actor handshakes despite the prior bounded-wait commit; this was the concrete coverage gap.
+- Replaced the remaining 9 loops in `NativeInferenceRuntimeTests.swift` and 1 in `NativeEvaluationRuntimeTests.swift` with the same 15-second async condition helper. The native evaluation test file now has its own file-scoped helper. Verified across all eight LlamaEngine XCTest files that no `Task.yield()` polling loops remain; the file-read `while let chunk` loop is ordinary bounded file streaming, not a test synchronization spin.
+- PR #135 exact head is now `2a738881b2d2ade93bf096d7fa3c74e553eecdb5`. Exact-head plugin CI has passed; Pocket AI Lab CI, Consumer CI, and sidecar CI were running; iOS LlamaEngine CI was pending at the last poll. No new-head iOS pass is claimed.
+- Previous run `43788021235` remained stale in the simulator XCTest step with no log artifact available. This confirms the runner did not advance to pinned-GGUF or macOS tests, but does not establish the original root cause. New bounded waits are intended to turn a missing fixture transition into a timed XCTest failure rather than indefinite polling.
