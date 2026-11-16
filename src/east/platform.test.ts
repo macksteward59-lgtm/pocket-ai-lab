@@ -61,7 +61,7 @@ function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = 
 }
 
 function assignTeam(platform: EastPlatformRuntime, taskId: string): void {
-  for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+  for (const agentId of ["director", "reasoner", "researcher", "engineer", "security", "critic", "validator", "archivist"]) {
     platform.assignAgent(taskId, agentId);
   }
 }
@@ -167,6 +167,8 @@ describe("East platform functions", () => {
     const taskId = platform.createAgentTask("Show the boundary");
     assignTeam(platform, taskId);
     const result = await platform.runDeliberation(taskId);
+    const deliberationAgents = new Set(platform.calls.map(call => call.agentId));
+    expect(deliberationAgents).toEqual(new Set(["reasoner", "researcher", "engineer", "security", "critic", "validator", "director", "archivist"]));
     expect(result.synthesis).toBe("Agents proposed a result. Nothing was authorized.");
     expect(result.evidence).toEqual(["ref-1"]);
     expect(platform.orchestrator.bus.getThread(taskId).length).toBeGreaterThan(0);
