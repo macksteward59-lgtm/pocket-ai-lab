@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import Security
+import CoreFoundation
 
 public enum NativeMemoryLayer: String, Codable, CaseIterable, Identifiable, Sendable {
     case working, episodic, semantic, procedural
