@@ -45,7 +45,7 @@ export interface ApexEvidenceAttemptBinding {
 }
 
 export interface ApexEvidenceReplayStore {
-  /** Must be durable and atomic in production. False means replay or conflict. */
+  /** Must atomically reject reuse of a keyId/challengeNonce pair across all attempts. */
   accept(input: { attemptId: string; challengeNonce: string; keyId: string }): Promise<boolean>;
 }
 
