@@ -2376,3 +2376,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Fix:** reordered all six NativeAgentStep calls without changing role behavior or routing metadata. New feature head `ce19771be39210bef9e141990010065df200b6bf`.
 - **Validation:** fresh iOS workflow `43922697190` and the companion exact-head workflows are running. No pass is claimed yet.
 - **Stack extension:** added catalog validation aggregate PR #155 at `4c06b9422c5bddbba54da1f656ba9e0d7966d97c`, which includes PR #150's dependency stack plus PR #154's catalog files and triggers mainline iOS validation.
+
+
+## 2026-11-16 — Unified native product integration started
+
+- **Branch:** `codex/native-product-experience-integration`, based on PR #150 current head `ce19771be39210bef9e141990010065df200b6bf`.
+- **Purpose:** stop shipping isolated native slices. Integrate the eight-role catalogue and bounded specialist selection into the actual native Agent Team screen, integrate the encrypted memory tab into the complete native tab shell without dropping Workspace/Runtime, and add app-level acceptance tests.
+- **Dependencies:** #150 routed native app + persistence stack; catalogue work from #154; encrypted vault from #153. The integration branch will copy/reconcile those sources and validate them together rather than claim either standalone PR is product-complete.
+- **Exclusions:** no APEX/East, BridgeGate, Evidence, runtime proof, or authorization semantics changed. No merge; exact-head CI and physical iPhone Air acceptance remain required.
