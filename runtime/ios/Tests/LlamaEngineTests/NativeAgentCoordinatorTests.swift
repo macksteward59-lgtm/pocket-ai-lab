@@ -266,6 +266,80 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         XCTAssertEqual(prompts.count, 1)
     }
 
+    func testRoutedRolesAcquireExactModelLeasesAndReleaseAfterEachGeneration() async throws {
+        let engine = RoutingRecordingEngine(responses: ["reasoned", "secured"])
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 2_048,
+                maxLoadedModels: 2,
+                minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 4_096 }
+        )
+        let profiles = [
+            NativeAgentModelProfile(
+                model: ModelDescriptor(id: "reasoning-model", name: "Reasoning", path: "/models/reasoning.gguf", contextLength: 4_096),
+                capabilities: ["reasoning"], estimatedMemoryMB: 512
+            ),
+            NativeAgentModelProfile(
+                model: ModelDescriptor(id: "security-model", name: "Security", path: "/models/security.gguf", contextLength: 4_096),
+                capabilities: ["security"], estimatedMemoryMB: 640
+            )
+        ]
+        let coordinator = NativeAgentCoordinator(runtime: runtime, profiles: profiles)
+        let result = try await coordinator.run(
+            task: AgentTaskRequest(id: "routed-task", objective: "Review safely", requiredCapabilities: []),
+            steps: [
+                NativeAgentStep(agentId: "reasoner", instructions: "Reason", requiredCapabilities: ["reasoning"]),
+                NativeAgentStep(agentId: "security-analyst", instructions: "Review security", requiredCapabilities: ["security"])
+            ]
+        )
+
+        XCTAssertEqual(result.messages.map(\.senderAgentId), ["reasoner", "security-analyst"])
+        XCTAssertEqual(await engine.generatedModelIDs, ["reasoning-model", "security-model"])
+        XCTAssertEqual(await engine.loadedModelIDs, ["reasoning-model", "security-model"])
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeLeaseCount, 0)
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        XCTAssertEqual(snapshot.pendingAcquirerCount, 0)
+    }
+
+    func testRoutedPlanWithMissingSpecialistFailsBeforeLoadingAnyModel() async throws {
+        let engine = RoutingRecordingEngine(responses: [])
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 1_024,
+                maxLoadedModels: 1,
+                minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 2_048 }
+        )
+        let profiles = [
+            NativeAgentModelProfile(
+                model: ModelDescriptor(id: "reasoning-model", name: "Reasoning", path: "/models/reasoning.gguf", contextLength: 4_096),
+                capabilities: ["reasoning"], estimatedMemoryMB: 512
+            )
+        ]
+        let coordinator = NativeAgentCoordinator(runtime: runtime, profiles: profiles)
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "missing-route", objective: "Review safely", requiredCapabilities: []),
+                steps: [
+                    NativeAgentStep(agentId: "reasoner", instructions: "Reason", requiredCapabilities: ["reasoning"]),
+                    NativeAgentStep(agentId: "security-analyst", instructions: "Review", requiredCapabilities: ["security"])
+                ]
+            )
+            XCTFail("missing specialist route must fail closed")
+        } catch NativeAgentCoordinatorError.modelRoutingFailed {
+        } catch {
+            XCTFail("unexpected error: \\(error)")
+        }
+        XCTAssertTrue(await engine.loadedModelIDs.isEmpty)
+        XCTAssertTrue(await engine.generatedModelIDs.isEmpty)
+    }
+
 }
 
 private actor AgentMessageRecorder {
@@ -298,5 +372,32 @@ private actor RecordingInferenceEngine: LlamaEngine {
 
     func cancel(sessionId: String, requestId: String) async { cancelledRequestIDs.append(requestId) }
     func cancelAndWait(sessionId: String, requestId: String) async { cancelledRequestIDs.append(requestId) }
+    func unload(sessionId: String) async {}
+}
+
+
+private actor RoutingRecordingEngine: LlamaEngine {
+    private var responses: [String]
+    private(set) var loadedModelIDs: [String] = []
+    private(set) var generatedModelIDs: [String] = []
+
+    init(responses: [String]) { self.responses = responses }
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        loadedModelIDs.append(model.id)
+        return RuntimeSession(id: "session-\\(model.id)", modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        generatedModelIDs.append(session.modelId)
+        let response = responses.isEmpty ? "" : responses.removeFirst()
+        return AsyncThrowingStream { continuation in
+            continuation.yield(Token(text: response, isComplete: true))
+            continuation.finish()
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async {}
 }
