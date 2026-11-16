@@ -39,7 +39,12 @@ CREATE TABLE proofhunt.authorization_records (
       AND parent_program_authorization_id IS NOT NULL
       AND policy_version IS NOT NULL
       AND policy_hash IS NOT NULL
-      AND policy_hash ~ '^[a-f0-9]{64}
+      AND policy_hash ~ '^[a-f0-9]{64}'
+      AND length(policy_hash) = 64
+      AND target_scope_hash IS NOT NULL
+      AND target_scope_hash ~ '^[a-f0-9]{64}'
+      AND length(target_scope_hash) = 64
+      AND approved_by IS NOT NULL
       AND approval_reference IS NOT NULL
       AND signature_reference IS NOT NULL
       AND approved_at IS NOT NULL
