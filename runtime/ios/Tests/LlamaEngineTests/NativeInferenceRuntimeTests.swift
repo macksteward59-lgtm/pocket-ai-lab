@@ -200,7 +200,7 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         let lease = try await runtime.acquire(model: model("pinned"), estimatedMemoryMB: 128)
         let request = GenerationRequest(prompt: "pin session", maxTokens: 16, temperature: 0)
         let generation = Task { try await runtime.generate(lease: lease, request: request) }
-        while !(await engine.activeRequestIDs()).contains(request.requestId) { await Task.yield() }
+        try await waitForTestCondition { !((await engine.activeRequestIDs()).contains(request.requestId)) }
         let released = await runtime.release(lease)
         XCTAssertTrue(released)
         let during = await runtime.snapshot()
@@ -339,3 +339,23 @@ private actor ControlledRuntimeTestEngine: LlamaEngine {
         cancellationDrainContinuation = nil
     }
 }
+
+/// Bounds asynchronous fixture polling so a broken actor handshake fails with a
+/// useful XCTest failure instead of leaving the hosted simulator job spinning.
+private func waitForTestCondition(
+    timeout: TimeInterval = 15,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ condition: () async -> Bool
+) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while !(await condition()) {
+        guard Date() < deadline else {
+            XCTFail("Timed out waiting for asynchronous test condition", file: file, line: line)
+            throw TestWaitTimeout()
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+    }
+}
+
+private struct TestWaitTimeout: Error {}
