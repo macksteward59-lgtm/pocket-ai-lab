@@ -2676,3 +2676,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #162:** Updated the PR description to current head `1db0345938ac029c3742a391c51ad7027d57e3bc`. The passing push run #43961191072 is explicitly attributed to older head `9be72ff1b817044ded402984b1612dfc21754690`; current head has no surfaced workflow run/status and remains unverified.
 - **PR #164 CI checkpoint:** Exact-head run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502) has now passed pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, simulator selection, and is currently booting the iPhone Air simulator. Native app build, XCTest, simulator XCTest, and pinned-GGUF smoke remain pending. This is hosted CI; it is not physical-device acceptance.
 - **No merges, PR closures, APEX policy/trust changes, signing, deployment, or physical-device tests occurred.**
+
+
+## 2026-11-16 UTC — PR #164 rerun progress checkpoint
+
+- Exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`, run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502): pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, and simulator selection passed. Simulator boot is in progress. Native app build, XCTest, simulator XCTest, and pinned-GGUF smoke remain pending.
+- Updated the coordination board and traceability matrix to show the old XCTest fixture failure separately from the active corrected-head run. No current-head pass is claimed.
