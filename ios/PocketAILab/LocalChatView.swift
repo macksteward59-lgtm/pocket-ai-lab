@@ -427,6 +427,39 @@ final class LocalChatModel: ObservableObject {
 
     /// Agent Team uses the same model lease and scheduler as native chat.
     /// The returned messages remain untrusted proposals, never approvals or evidence.
+    func updateRoutingCapabilities(_ modelID: String, from text: String) {
+        guard !isBusy, lease == nil else {
+            status = "Unload the active model before changing routing labels."
+            return
+        }
+        let labels = text.split(separator: ",").map { String($0) }
+        do {
+            let snapshot = try modelCatalogStore.updateCapabilities(for: modelID, capabilities: labels)
+            availableModels = snapshot.entries
+            status = "Routing labels saved. They select local model candidates only; they do not grant permissions or prove specialist quality."
+        } catch {
+            status = "Routing labels were not saved: \(error.localizedDescription)"
+        }
+    }
+
+    private func routedProfiles() throws -> [NativeAgentModelProfile] {
+        try availableModels.map { entry in
+            let url = try modelCatalogStore.resolve(entry)
+            let descriptor = ModelDescriptor(
+                id: entry.id,
+                name: entry.name,
+                path: url.path,
+                contextLength: entry.contextLength,
+                quantization: entry.quantization
+            )
+            return NativeAgentModelProfile(
+                model: descriptor,
+                capabilities: Set(entry.capabilities),
+                estimatedMemoryMB: entry.estimatedMemoryMB
+            )
+        }
+    }
+
     func runAgentTeam(
         task: AgentTaskRequest,
         steps: [NativeAgentStep],
@@ -434,10 +467,21 @@ final class LocalChatModel: ObservableObject {
         temperature: Double = 0.2,
         onMessage: (@Sendable (AgentMessageEnvelope) async -> Bool)? = nil
     ) async throws -> NativeAgentRunResult {
-        guard !isBusy, let runtime, let lease else { throw LocalChatError.busy }
+        guard !isBusy, let runtime else { throw LocalChatError.busy }
         isBusy = true
         defer { isBusy = false }
-        let coordinator = runtime.makeAgentCoordinator(for: lease)
+        let coordinator: NativeAgentCoordinator
+        if steps.allSatisfy({ $0.requiredCapabilities.isEmpty }), let lease {
+            // Retain the explicit legacy single-model path for callers that do
+            // not request specialist routing.
+            coordinator = runtime.makeAgentCoordinator(for: lease)
+        } else {
+            let profiles = try routedProfiles()
+            guard !profiles.isEmpty else {
+                throw NativeAgentCoordinatorError.modelRoutingFailed("No imported local model profiles are available.")
+            }
+            coordinator = NativeAgentCoordinator(runtime: runtime, profiles: profiles)
+        }
         return try await coordinator.run(
             task: task,
             steps: steps,
@@ -452,36 +496,42 @@ final class LocalChatModel: ObservableObject {
     func runDefaultAgentTeam(_ objective: String) async {
         let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isBusy, !text.isEmpty else { return }
-        guard lease != nil else {
-            status = "Load the selected local model before running Agent Team."
+        guard !availableModels.isEmpty else {
+            status = "Import at least one local model and assign routing labels before running Agent Team."
             return
         }
 
         let steps = [
             NativeAgentStep(
                 agentId: "reasoner",
+                requiredCapabilities: ["reasoning"],
                 instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work."
             ),
             NativeAgentStep(
                 agentId: "researcher",
+                requiredCapabilities: ["analysis"],
                 instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations."
             ),
             NativeAgentStep(
                 agentId: "engineer",
+                requiredCapabilities: ["engineering"],
                 instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code."
             ),
             NativeAgentStep(
                 agentId: "security-analyst",
+                requiredCapabilities: ["security-review"],
                 instructions: "Review threats, trust boundaries, privacy, misuse, and failure modes. Preserve all APEX/East authorization boundaries.",
                 messageType: .counterargument
             ),
             NativeAgentStep(
                 agentId: "critic",
+                requiredCapabilities: ["critique"],
                 instructions: "Challenge assumptions and earlier proposals. Find contradictions, missing cases, and simpler alternatives.",
                 messageType: .counterargument
             ),
             NativeAgentStep(
                 agentId: "validator",
+                requiredCapabilities: ["validation"],
                 instructions: "Synthesize a concise result. Label unverified claims, list remaining gaps, and propose next steps. Never claim tests or external actions occurred.",
                 messageType: .validation
             )
@@ -559,7 +609,7 @@ final class LocalChatModel: ObservableObject {
                 )
                 agentTaskHistory = try agentTaskHistoryStore.load()
                 agentTaskHistoryStatus = "Agent Team history · saved locally · interrupted tasks are never auto-resumed."
-                status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+                status = "Agent Team completed: \(result.messages.count) sequential logical roles used operator-routed local model profiles through the shared one-model-at-a-time pool. No tools or external actions were run. Runtime trust remains unverified."
             } catch {
                 agentTaskHistoryStatus = "The model run completed, but its task record could not be finalized. It will be marked interrupted on next recovery."
                 status = "Agent Team inference completed, but durable task-history finalization failed. Review the transcript; no external actions were run."
