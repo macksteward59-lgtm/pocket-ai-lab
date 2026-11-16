@@ -145,6 +145,41 @@ struct LocalModelCatalogStore {
         return snapshot
     }
 
+    /// Stores operator-selected routing labels. These labels select candidate
+    /// models only; they do not establish model quality, permissions, or trust.
+    @discardableResult
+    func updateCapabilities(for modelID: String, capabilities: [String]) throws -> LocalModelCatalogSnapshot {
+        var snapshot = try load()
+        guard let index = snapshot.entries.firstIndex(where: { $0.id == modelID }) else {
+            throw StoreError.modelNotFound
+        }
+        let normalized = Array(Set(capabilities.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }.filter { !$0.isEmpty })).sorted()
+        guard !normalized.isEmpty, normalized.count <= 16,
+              normalized.allSatisfy({ $0.utf8.count <= 64 }) else {
+            throw StoreError.invalidEntry
+        }
+        let current = snapshot.entries[index]
+        let updated = LocalModelCatalogEntry(
+            id: current.id,
+            name: current.name,
+            fileName: current.fileName,
+            sha256: current.sha256,
+            byteCount: current.byteCount,
+            contextLength: current.contextLength,
+            quantization: current.quantization,
+            capabilities: normalized,
+            estimatedMemoryMB: current.estimatedMemoryMB,
+            importedAt: current.importedAt
+        )
+        var entries = snapshot.entries
+        entries[index] = updated
+        snapshot = LocalModelCatalogSnapshot(entries: entries, selectedModelID: snapshot.selectedModelID)
+        try write(snapshot)
+        return snapshot
+    }
+
     @discardableResult
     func select(_ modelID: String?) throws -> LocalModelCatalogSnapshot {
         let snapshot = try load()
