@@ -2761,3 +2761,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Newly confirmed success: pinned llama.cpp build for simulator and macOS, fail-closed Swift typecheck, generic iOS device linking, iPhone simulator selection, and simulator boot. Director bridge package-manifest validation is currently `in_progress`; native app build/XCTest, simulator XCTest, repaired GGUF download/path validation, and macOS inference smoke remain pending.
 - No model download, model generation, overall workflow pass, or physical-device acceptance is claimed. No source change or CI cancellation/rerun occurred in this checkpoint.
 - Updated the PR #164 board detail to distinguish current exact-head progress from the prior failed run. PR remains draft/open; PR #160 remains open for separate archive reconciliation.
+
+
+## 2026-11-16 UTC — PR #164 Director bridge manifest passed; app build started
+
+- Rechecked exact-head run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job #133697485358, for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Director bridge package-manifest validation (step 12) completed successfully. Native Pocket AI Lab app generation/build (step 13) is now `in_progress`.
+- Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS device link, simulator selection, and simulator boot remain successful. Native app XCTest, iOS simulator XCTest, repaired GGUF download/path checks, and macOS inference smoke are pending.
+- No repaired model download, model generation, overall workflow pass, or physical-device acceptance is claimed. No source change, workflow rerun/cancellation, PR merge/approval, or APEX trust change occurred.
