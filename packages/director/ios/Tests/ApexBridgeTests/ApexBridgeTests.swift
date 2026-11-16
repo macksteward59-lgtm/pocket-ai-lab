@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 import PocketLlamaEngine
-@testable import ApexBridge
+import ApexBridge
 
 final class BridgeGateTests: XCTestCase {
     func testHTTPSOriginIncludesEffectivePort() {
