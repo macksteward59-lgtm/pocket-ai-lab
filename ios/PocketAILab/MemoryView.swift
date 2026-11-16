@@ -15,11 +15,12 @@ struct MemoryView: View {
         NavigationStack {
             Group {
                 if entries.isEmpty {
-                    ContentUnavailableView(
-                        "No saved memories",
-                        systemImage: "brain",
-                        description: Text("Save information explicitly. Chat messages and agent outputs are never added automatically.")
-                    )
+                    VStack(spacing: 12) {
+                        Image(systemName: "brain").font(.largeTitle).foregroundStyle(.secondary)
+                        Text("No saved memories").font(.headline)
+                        Text("Save information explicitly. Chat messages and agent outputs are never added automatically.")
+                            .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                    }.padding()
                 } else {
                     List {
                         ForEach(entries) { entry in
@@ -54,7 +55,7 @@ struct MemoryView: View {
             }
             .navigationTitle("Memory")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button { beginCreate() } label: { Image(systemName: "plus") }
                         .disabled(isBusy)
                 }
