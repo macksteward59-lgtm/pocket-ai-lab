@@ -40,6 +40,7 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: east_lifecycle_ci_password
       PGDATABASE: east_lifecycle_ci
+      DATABASE_URL: postgres://postgres:east_lifecycle_ci_password@127.0.0.1:5432/east_lifecycle_ci
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -53,3 +54,13 @@ jobs:
         run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/tests/postgres-integration.sql
       - name: Verify concurrent stale writers serialize on the database row lock
         run: bash packages/intelligence/autonomy/tests/postgres-concurrency.sh
+      - name: Set up Node.js for the actual TypeScript adapter test
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install
+      - name: Install temporary PostgreSQL driver
+        run: npm install --no-save --package-lock=false pg
+      - name: Exercise PostgresTaskLifecycleStore against PostgreSQL
+        run: node --import tsx packages/intelligence/autonomy/tests/postgres-adapter-integration.mjs
