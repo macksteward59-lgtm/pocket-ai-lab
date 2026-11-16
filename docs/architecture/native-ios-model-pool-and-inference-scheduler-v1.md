@@ -17,7 +17,7 @@ Provide native resource-accounting primitives for future multi-model and multi-a
 - Idle models remain cached until explicitly unloaded. `unloadIdleModels()` unloads idle entries and leaves leased sessions alone.
 - Returned session IDs must match the requested model ID and must not collide with another pool-owned session.
 
-Memory estimates are admission-control hints, not measured resident memory. The pool does not discover a trustworthy per-model memory estimate itself; the caller must derive it from model metadata and calibrate it on physical devices. The available-memory provider must report current system-available memory. The pool's own budget separately accounts for its active and pending reservations.
+Memory estimates are admission-control hints, not measured resident memory. The pool does not discover a trustworthy per-model memory estimate itself; the caller must derive it from model metadata and calibrate it on physical devices. The available-memory provider must report current system-available memory. The pool's own budget separately accounts for resident, pending, and unloading reservations. When checking the host's current app-allocatable headroom, the pool subtracts only transient reservations: pending loads and native unloads that may not yet be reflected by the OS snapshot. Resident model footprint is already reflected by a fresh `os_proc_available_memory()` reading and is not subtracted a second time. This avoids double-counting resident memory while still protecting against over-admission during in-flight load/unload transitions.
 
 The pool does not currently implement automatic LRU eviction, model download, file hashing, device attestation, or native UI integration.
 
@@ -52,8 +52,3 @@ Next integration gates:
 A pool lease means only that the local engine returned a session for a requested model descriptor. It is not a trusted runtime proof, a device attestation, an authorization grant, or an evidence receipt.
 
 llama.cpp still produces tokens only. APEX/Director retains approval authority; East/e3 retains durable workflow execution; BridgeGate and signed evidence boundaries remain unchanged. No model output can create, renew, or release authorization.
-
-
-## Host-memory admission accounting
-
-Before admitting a new model, `ModelPool` subtracts all existing resident, pending-load, and unloading reservations from the host's reported available-memory snapshot, then preserves the configured minimum-free-memory margin. This is conservative admission control based on estimates and a potentially stale OS snapshot; it is not measured RSS or a substitute for physical-device memory-pressure testing. A deterministic regression test holds the host snapshot constant while a first model reserves memory and verifies that a second model cannot over-admit the remaining budget.
