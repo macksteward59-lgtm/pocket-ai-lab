@@ -112,6 +112,7 @@ CREATE TABLE proofhunt.authorized_targets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (project_id, authorization_record_id, hostname),
   UNIQUE (project_id, authorization_record_id, target_id),
+  UNIQUE (project_id, authorization_record_id, target_id, hostname),
   FOREIGN KEY (project_id, authorization_record_id)
     REFERENCES proofhunt.authorization_records(project_id, record_id)
 );
@@ -182,8 +183,8 @@ CREATE TABLE proofhunt.assessment_jobs (
     REFERENCES proofhunt.authorization_records(project_id, record_id),
   FOREIGN KEY (project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id)
     REFERENCES proofhunt.assessment_policies(project_id, policy_id, policy_version, policy_hash, program_authorization_id, operational_authorization_id),
-  FOREIGN KEY (project_id, operational_authorization_id, authorized_target_id)
-    REFERENCES proofhunt.authorized_targets(project_id, authorization_record_id, target_id),
+  FOREIGN KEY (project_id, operational_authorization_id, authorized_target_id, target_hostname)
+    REFERENCES proofhunt.authorized_targets(project_id, authorization_record_id, target_id, hostname),
   CHECK (program_authorization_id <> operational_authorization_id),
   CHECK (decision <> 'approved_plan' OR authorized_target_id IS NOT NULL)
 );
@@ -330,6 +331,16 @@ BEGIN
       RAISE EXCEPTION 'ProofHunt operational authorization is not active';
     END IF;
 
+    IF EXISTS (
+      SELECT 1
+      FROM proofhunt.excluded_targets excluded
+      WHERE excluded.project_id = NEW.project_id
+        AND excluded.authorization_record_id = NEW.operational_authorization_id
+        AND excluded.hostname = NEW.target_hostname
+    ) THEN
+      RAISE EXCEPTION 'ProofHunt target is explicitly excluded';
+    END IF;
+
     IF NOT EXISTS (
       SELECT 1
       FROM proofhunt.assessment_policies policy
@@ -338,6 +349,9 @@ BEGIN
         AND policy.program_authorization_id = NEW.program_authorization_id
         AND policy.operational_authorization_id = NEW.operational_authorization_id
         AND policy.policy_hash = NEW.policy_hash
+        AND policy.preapproved = TRUE
+        AND NEW.check_type = ANY(policy.allowed_checks)
+        AND policy.stop_on_scope_violation = TRUE
         AND policy.effective_at <= CURRENT_TIMESTAMP
         AND policy.expires_at > CURRENT_TIMESTAMP
     ) THEN
