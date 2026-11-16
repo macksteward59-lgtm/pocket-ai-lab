@@ -2101,3 +2101,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Inspected failed iOS run `43797809538` on PR #124 head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`. The pinned llama.cpp macOS archives compiled and staged successfully, then the workflow stopped because it invoked `build-llama-cpp.sh verify-artifacts` while the PR #124 script did not implement that destination. The error was `unknown destination: verify-artifacts`; downstream typecheck, device link, simulator, app tests, and GGUF smoke were skipped.
 - Updated only `runtime/ios/scripts/build-llama-cpp.sh` on `codex/ios-model-pool-integration-validation`, synchronizing the already-reviewed artifact verification implementation from PR #135. New exact head: `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658` (commit `fix(ios): add pinned llama artifact verification command`).
 - PR #124 remains draft/open. New exact-head CI evidence has not appeared yet. No simulator XCTest, pinned-GGUF inference smoke, or physical-device execution is claimed. Recheck the new exact-head iOS and companion workflows before proceeding.
+
+
+## 2026-11-16 — PR #135 native simulator and GGUF gates passed
+
+- Rechecked PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f`, iOS run `43797547712`. In addition to the previously green pinned llama.cpp build, fail-closed typecheck, device XCFramework link, simulator boot, native app build, and native app XCTest, the LlamaEngine iOS simulator XCTest has now passed.
+- The pinned smoke GGUF download and checksum verification passed, and the macOS smoke test path was configured. The macOS XCTest step is currently in progress; the workflow is not complete and no final runner summary exists yet.
+- PR #124 exact head `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658` has all four companion workflows green. Its iOS run `43799416564` has restored the corrected script and is still building the pinned llama.cpp artifacts; downstream device/simulator/inference gates have not run yet.
+- No physical iPhone execution, device inference, runtime attestation, APEX approval, East authorization, or production readiness is claimed.
