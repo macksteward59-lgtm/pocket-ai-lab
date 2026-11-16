@@ -25,7 +25,7 @@ final class NativeAgentModelRouterTests: XCTestCase {
                         profile("beta", capabilities: ["reasoning"], memory: 600),
                         profile("alpha", capabilities: ["reasoning"], memory: 600)]
         XCTAssertEqual(try NativeAgentModelRouter().route(request, from: profiles).model.id, "alpha")
-        XCTAssertEqual(try NativeAgentModelRouter().route(request, from: profiles.reversed()).model.id, "alpha")
+        XCTAssertEqual(try NativeAgentModelRouter().route(request, from: Array(profiles.reversed())).model.id, "alpha")
     }
 
     func testPartialCapabilityMatchIsRejectedWithoutFallback() {
