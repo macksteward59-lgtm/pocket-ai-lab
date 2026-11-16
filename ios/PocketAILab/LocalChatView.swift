@@ -1067,16 +1067,17 @@ struct LocalChatView: View {
                         .textFieldStyle(.roundedBorder).lineLimit(1...4)
                         Button {
                             let value = prompt
-                            let selectedContext = mode == .agentTeam ? selectedMemoryContext : nil
+                            let selectedMode = mode
+                            let selectedContext = selectedMode == .agentTeam ? selectedMemoryContext : nil
                             let selectedReferences = selectedContext == nil ? [] : selectedMemoryEntries.map(\.id)
                             let selectedPlan = selectedAgentIDs
-                            if mode == .agentTeam {
+                            if selectedMode == .agentTeam {
                                 includeSelectedMemories = false
                                 selectedMemoryIDs.removeAll()
                             }
                             prompt = ""
                             Task {
-                                if mode == .chat {
+                                if selectedMode == .chat {
                                     await model.send(value)
                                 } else {
                                     await model.runDefaultAgentTeam(value, agentIDs: selectedPlan, memoryContext: selectedContext, memoryContextRefs: selectedReferences)
