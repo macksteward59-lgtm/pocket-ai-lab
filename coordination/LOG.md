@@ -1956,3 +1956,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Refreshed PR #135 exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5` and iOS LlamaEngine run `43793269022` (job `133056542073`). The pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device XCFramework link, iPhone simulator selection, and both generic simulator/device native app builds have completed successfully.
 - The `XCTest the native Pocket AI Lab app` step is currently in progress. The iOS simulator XCTest, pinned-GGUF download/inference smoke, macOS XCTest, and runner evidence summary have not started. Job-log retrieval currently returns GitHub `BlobNotFound`, so no assertion-level result is inferred.
 - All four companion workflows passed on the same exact PR #135 head. PR remains draft/open/unmerged. No physical iPhone execution, signed runtime attestation, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Autonomy persisted-state cancellation hardening committed
+
+- Continued the existing ChatGPT ownership claim on `codex/autonomous-task-lifecycle`; no other active agent claim conflicts with this scope.
+- Hardened `validateStoredTask` to reject impossible cancellation snapshots: cancelled tasks must contain cancelled work and cannot conceal failed steps; ready/running tasks cannot contain cancelled steps; cancelled steps cannot retain a result. Added regression tests for forged completed-to-cancelled state, ready-with-cancelled-step, cancelled-step result, and failure concealed by cancellation.
+- Exact PR #94 head is `533341f664618c62a256bc4483c6856b315d2de0`. Exact-head Governance sidecar CI (`43794127649`) and Cursor collaboration plugin CI (`43794127562`) passed. Pocket AI Lab CI push (`43794126392`) and PR (`43794127584`) runs and Consumer prototype CI (`43794127579`) remain in progress. No new-head full CI pass is claimed.
+- Existing APEX/Director, East authorization/evidence semantics, trust/RLS/schema, receipts, native runtime, and production execution boundaries were not changed. PR #94 remains draft/open/unmerged.
