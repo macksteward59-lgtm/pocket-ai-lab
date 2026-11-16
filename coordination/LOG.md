@@ -2796,3 +2796,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Explicit exclusions: PR #164's Director bridge, WorkspaceView, XcodeGen, and iOS workflow; APEX/East trust and authorization boundaries; no ExploitGym execution.
 - Source is PR #160 head `20c5588e6bc6f50629e4683efef1db448926979a`; it is divergent from its base (73 ahead/230 behind), so no wholesale cherry-pick. New branch will start from the exact PR #164 bridge head after current validation/reconciliation; only isolated archive paths will be rebuilt there.
 - Validation target: manifest and snapshot consistency, desktop archive packaging/smoke tests, gitlink/symlink exclusion, and review of provenance claims.
+
+
+## 2026-11-16 UTC — archive slice implementation checkpoint
+
+- Created `codex/archive-restoration-isolated` from PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`, without changing the active bridge branch.
+- Restored Grok historical status snapshot, workspace README, attachment provenance note, and workspace manifest. Snapshot explicitly states it is historical, not live runtime health.
+- Added `.gitmodules` and a Git tree gitlink for ExploitGym pinned to `a8029e47135a29f1c1a6e79109bf86fba379b3f3`. Verified GitHub tree reports mode `160000`, type `commit`, with that exact SHA.
+- Updated desktop archive collection to use `lstat`, include only regular files, and exclude symlinks and directory gitlinks; added a smoke assertion that the submodule path is not listed as an archive file.
+- Current branch head after initial commits: `a970fb6cc91668dba6519da6a7dfdabd104af53f`. No CI workflow was triggered by branch-only pushes. Tests have not yet run; no ExploitGym benchmark/container workload was run.
+- Expanded the claim only for the directly related ExploitGym isolation documentation and a focused unit test. No bridge/APEX/East trust or authorization files touched.
