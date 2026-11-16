@@ -164,6 +164,7 @@ public actor RuntimeController {
             } onCancel: {
                 task.cancel()
             }
+            try Task.checkCancellation()
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw RuntimeControllerError.emptyGeneration
             }
@@ -248,6 +249,8 @@ public actor RuntimeController {
             } onCancel: {
                 task.cancel()
             }
+            if task.isCancelled { throw CancellationError() }
+            try Task.checkCancellation()
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw RuntimeControllerError.emptyGeneration
             }
