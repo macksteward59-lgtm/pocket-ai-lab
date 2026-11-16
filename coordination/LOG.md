@@ -2256,3 +2256,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Then connect operator-configured local catalog capability metadata to per-role `NativeAgentModelProfile` construction and the routed coordinator in `LocalChatView`; the app must not claim specialist routing unless the operator assigns matching labels. Missing routes fail before model load/generation. Preserve the existing single-model chat path, one-model ModelPool memory limit, sequential scheduler, cancellation drain, and transcript-untrusted semantics.
 - Scope overlaps `LocalChatView.swift` with the prior persistence PR only because that PR is already in-review; this claim adds the distinct UI routing integration and compile repair. No other AI agent is registered active. No APEX/East/BridgeGate/Evidence or tool-permission changes.
 - Validation target: new exact-head iOS CI must pass native app build/XCTest, simulator XCTest, pinned GGUF smoke/checksum, and macOS XCTest; no physical iPhone validation is implied.
+
+
+## 2026-11-16 16:50 UTC — Native routed Agent Team app integration submitted for review
+
+- Repaired the exact-head iOS compile failure from run `43891395934`: `AgentTaskRoleResult` now has an explicit initializer plus custom Codable encode/decode, with `decodeIfPresent` for optional linkage fields so legacy v1 records remain readable.
+- Added persistent, normalized operator-configured capability labels to the device-local model catalog and per-model label controls in the iOS UI. The UI states that labels only choose candidate routes; they do not establish model quality, permissions, or runtime attestation.
+- Wired the six Agent Team roles to `NativeAgentModelProfile` and the routed `NativeAgentCoordinator`. The app retains its one-resident-model pool limit and fails closed if a held chat lease conflicts with a role's selected model. The coordinator still preflights every route before loading/generation and roles remain sequential.
+- Added catalog normalization/persistence coverage, updated app tests to configure role labels, and added a missing-specialist-route test asserting no model load or generation.
+- Feature PR #150: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/150 (stacked on the persistence branch). Mainline validation PR #151: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/151. Exact head `1801d9baf5eff3013e1a7f3cff86c11adc0d1986`.
+- Exact-head workflow runs have not yet appeared in the commit workflow query. No local Xcode execution or physical iPhone validation is claimed. PRs remain draft; no merge or mainline code change.
