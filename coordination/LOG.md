@@ -2088,3 +2088,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Copied the exact PR #135 iOS workflow hardening into PR #124: explicit iPhone simulator boot/bootstatus, bounded simulator boot, non-parallel XCTest, and per-suite timeouts. This prevents the validation-only ModelPool branch from using the older unbounded simulator workflow.
 - PR #124 new exact head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`; Pocket AI Lab CI is queued. Companion and iOS workflows have not yet reported on this head. Previous PR #124 iOS run `43797509448` was cancelled by the branch update before it reached simulator tests.
+
+
+## 2026-11-16 — PR #124 refreshed integration checks progressing
+
+- PR #124 exact head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`: Governance sidecar `43797809543` and Cursor plugin `43797809528` passed; Consumer `43797812018` and Pocket AI Lab CI `43797809552` are in progress.
+- iOS LlamaEngine run `43797809538` is building pinned llama.cpp after setup and cache restore. It uses the same explicit simulator boot and bounded XCTest workflow as PR #135. No simulator/package test result yet.
