@@ -2544,3 +2544,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **iOS workflow:** `43952378234` failed at native app build before app XCTest, simulator XCTest, or pinned-GGUF smoke. The concrete Xcode error is `Missing package product 'ApexBridge'`; the resolved package graph lists the local package as `ios: (null)`. llama.cpp build, fail-closed typecheck, and generic iOS device-target link had passed. This is a package-reference/resolution failure, not a physical-device result.
 - **Scope clarification:** the bridge branch may update `ios/project.yml` and only the trusted-origin navigation policy in `ios/PocketAILab/WorkspaceView.swift`; it must not add WebKit action dispatch, change chat/agent UI, or bypass host approval. The full WKScriptMessageHandler/approval flow remains deferred.
 - **Repair attempt:** align the XcodeGen local package alias with the resolved local path identity and add an explicit Swift package manifest preflight. Exact-head CI will decide whether this diagnosis is correct; no pass is claimed yet.
+
+
+## 2026-11-16 — Fresh East runtime checkpoint validation submitted
+
+- **Draft PR #161:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/161
+- **Branch/head:** `codex/east-fresh-runtime-resumption-validation` at `2864451e585c216849a5328418d8eaa2fcb9646b`, stacked on PR #158 exact base `950b7ce2940d83182b6052dd83de3d3f115aa5b9`.
+- Replaced the previous adapter test's same-object `taskExists=false` simulation with a new `createEastPlatform` instance and a new `TaskLifecycleCoordinator`. The test verifies restoration of the complete East task and MessageBus thread from lifecycle checkpoints, and asserts no additional inference calls occur after restart.
+- Updated East readiness/lifecycle docs: checkpoint-based restart is supported at completed lifecycle-step boundaries when the injected store is durable; the in-memory East task map and MessageBus are rehydrated, not independently event-sourced. A provider-success/checkpoint-commit crash window remains; inference stays single-attempt and fail-closed.
+- **Validation:** exact-head CI is pending. The integration test uses the in-memory store interface; no live PostgreSQL deployment or RLS configuration is claimed.
+- No APEX authorization, signer, schema, or production runtime behavior changed.
