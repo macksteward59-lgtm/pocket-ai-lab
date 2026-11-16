@@ -2273,3 +2273,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exact branch head advanced to `b902cd9b178331ec5786ededdf3e0af9c16f8969`. Corrected an accidental duplicate test-file append before requesting CI: `PocketAILabTests.swift` is restored from the branch base and now contains only the intended routed-profile test updates and fail-before-load regression test. Diff against the persistence base is five focused files; the app test file is +29/-1, not a wholesale replacement.
 - Exact-head workflows: Cursor `43911082931` passed; Pocket AI Lab `43911083255`, Consumer `43911083212`, and Governance `43911083067` are in progress; iOS LlamaEngine `43911083206` is queued. This is not a completed validation pass.
 - PR #150 and mainline validation PR #151 automatically track the updated branch head. Both remain draft; no review threads, merge, or physical-device result.
+
+
+## 2026-11-16 17:02 UTC — Routed model eviction safety follow-up
+
+- Found a functional gap: `ModelPool.release` leaves a model cached. With app configuration `maxLoadedModels: 1`, routing the next logical role to a different profile would fail despite the prior role having completed and released its lease.
+- Updated `NativeAgentCoordinator` to retry a routed acquisition after `modelLimitExceeded` or `insufficientMemory` by calling `runtime.unloadIdleModels()`. The pool skips entries with active leases or in-flight uses; the retry still fails closed if no capacity can safely be freed. This retains cache reuse when capacity permits and only evicts under admission pressure.
+- Added tests for two-role/two-model routing with a one-resident pool, plus a separate caller-held lease that must never be evicted. Existing two-resident test remains a cache-reuse check.
+- New exact head: `7fdb54bbedbba8caebdddba911de7c01a1a14b8e`. Feature PR #150 and validation PR #151 track this head. Latest CI: Cursor `43911705044` passed; Pocket AI Lab `43911705129`, Consumer `43911705085`, Governance `43911705012` in progress; iOS LlamaEngine `43911705025` queued. No merge, local Xcode run, or physical-device claim.
