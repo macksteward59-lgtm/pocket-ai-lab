@@ -67,9 +67,27 @@ describe("MessageBus", () => {
     restored.restoreThread("task-1", [second, first]);
 
     expect(restored.getThread("task-1").map(item => item.sequence)).toEqual([0, 1]);
+    expect(Object.isFrozen(restored.getThread("task-1")[0].payload)).toBe(true);
+    expect(() => {
+      (restored.getThread("task-1")[0].payload as { analysis: string }).analysis = "tampered";
+    }).toThrow();
     expect(notifications).toBe(0);
     expect(() => restored.restoreThread("task-1", [first])).toThrow(/existing task messages/);
     expect(() => new MessageBus().restoreThread("task-1", [first, first])).toThrow(/duplicate message/);
+    expect(() => new MessageBus().restoreThread("task-1", [message("analysis", "reasoner", { analysis: "gap" }, 1)]))
+      .toThrow(/contiguous/);
+    const orphan = {
+      ...message("revision", "engineer", { revision: "No parent", addressesMessageIds: [] }, 0),
+      parentMessageId: crypto.randomUUID()
+    };
+    expect(() => new MessageBus().restoreThread("task-1", [orphan])).toThrow(/missing or forward parent/);
+    const anotherTask = new MessageBus();
+    anotherTask.publish(first);
+    expect(() => anotherTask.restoreThread("task-2", [{
+      ...first,
+      taskId: "task-2",
+      conversationId: "task-2"
+    }])).toThrow(/duplicate message/);
   });
 
   it("delivers broadcast messages and supports unsubscribe", () => {
