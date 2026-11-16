@@ -164,7 +164,7 @@ struct MemoryView: View {
             let loaded = try await store.load()
             entries = loaded.sorted { $0.createdAt > $1.createdAt }
             status = entries.isEmpty
-                ? "No saved memories · first save creates an encrypted on-device vault"
+                ? "No saved memories · nothing is stored automatically"
                 : "Encrypted on this device · \(entries.count) saved · no automatic capture"
         } catch NativeMemoryVaultError.keyUnavailable {
             status = "The Keychain key is unavailable. Unlock the device or restore the original key; existing encrypted data was not replaced."
