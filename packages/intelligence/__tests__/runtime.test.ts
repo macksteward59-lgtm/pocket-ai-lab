@@ -42,6 +42,13 @@ describe("MessageBus", () => {
       .toThrow();
   });
 
+  it("rejects unknown top-level message envelope fields", () => {
+    expect(() => AgentMessageSchema.parse({
+      ...message("analysis", "reasoner", { analysis: "Known payload" }, 0),
+      authorized: true
+    })).toThrow();
+  });
+
   it("deep-freezes published messages and nested payloads", () => {
     const bus = new MessageBus();
     const published = bus.publish(message(
