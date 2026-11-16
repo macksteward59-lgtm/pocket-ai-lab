@@ -258,6 +258,19 @@ describe("TaskLifecycleCoordinator", () => {
     expect((await restarted.claimNextStep("task-1"))?.attemptNumber).toBe(2);
   });
 
+  it("rejects malformed persisted worker owner identities", async () => {
+    const h = harness();
+    await h.coordinator.init();
+    await h.create();
+    await h.coordinator.claimNextStep("task-1");
+    const persisted = await h.store.load();
+    persisted[0].steps[0].currentAttempt!.ownerId = "x".repeat(257);
+    await h.store.save(persisted);
+
+    const restarted = new TaskLifecycleCoordinator({ store: h.store, now: h.now, workerId: "worker-validated" });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
   it("persists state across coordinator recreation and recovers exhausted leases as failure", async () => {
     let milliseconds = Date.parse("2026-11-15T12:00:00.000Z");
     let id = 0;
