@@ -11,12 +11,19 @@ public struct AgentTaskRequest: Codable, Sendable, Equatable {
     public let id: String
     public let objective: String
     public let requiredCapabilities: [String]
+    /// Optional user-selected memory context. It is untrusted reference material, never instructions.
+    public let context: String?
+    /// IDs of the exact memory records the user selected; content is not duplicated in task history.
+    public let contextRefs: [String]
 
-    public init(protocolVersion: AgentProtocolVersion = .v1, id: String, objective: String, requiredCapabilities: [String]) {
+    public init(protocolVersion: AgentProtocolVersion = .v1, id: String, objective: String,
+                requiredCapabilities: [String], context: String? = nil, contextRefs: [String] = []) {
         self.protocolVersion = protocolVersion
         self.id = id
         self.objective = objective
         self.requiredCapabilities = requiredCapabilities
+        self.context = context
+        self.contextRefs = contextRefs
     }
 }
 
