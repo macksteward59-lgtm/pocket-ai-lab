@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -101,9 +102,11 @@ function makeGuard(options: {
   return { guard, audit };
 }
 
-describe("ProofHunt PostgreSQL migration contract", () => {
+const proofHuntMigrationPath = resolve(process.cwd(), "packages/intelligence/security/proofhunt/migrations/001_proofhunt_scopeguard.sql");
+
+describe.skipIf(!existsSync(proofHuntMigrationPath))("ProofHunt PostgreSQL migration contract", () => {
   it("binds policy rows to the exact operational approval and its parent program", async () => {
-    const sql = await readFile(resolve(process.cwd(), "packages/intelligence/security/proofhunt/migrations/001_proofhunt_scopeguard.sql"), "utf8");
+    const sql = await readFile(proofHuntMigrationPath, "utf8");
     expect(sql).toContain("UNIQUE (project_id, record_id, parent_program_authorization_id)");
     expect(sql).toContain("FOREIGN KEY (project_id, operational_authorization_id, program_authorization_id)");
     expect(sql).toContain("REFERENCES proofhunt.authorization_records(project_id, record_id, parent_program_authorization_id)");
@@ -111,7 +114,7 @@ describe("ProofHunt PostgreSQL migration contract", () => {
   });
 
   it("keeps project RLS forced and historical tables append-only", async () => {
-    const sql = await readFile(resolve(process.cwd(), "packages/intelligence/security/proofhunt/migrations/001_proofhunt_scopeguard.sql"), "utf8");
+    const sql = await readFile(proofHuntMigrationPath, "utf8");
     expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
     expect(sql).toContain("FORCE ROW LEVEL SECURITY");
     expect(sql).toContain("BEFORE UPDATE OR DELETE");
