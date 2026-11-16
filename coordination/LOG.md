@@ -2202,3 +2202,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #132 latest docs head `60a9fa6e5fa99b72dc45c6a2d2c2590c0776f896`: all five standard workflows plus East PostgreSQL integration passed. The integration uses PostgreSQL 16 and node-postgres against the actual `PostgresTaskLifecycleStore`, including independent-store races, stale-writer conflict/reload, namespace isolation, and rollback. Remaining lifecycle limits are full East worker restart/crash/cancellation and production deployment.
 - PR #139 exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2`: all five standard workflows plus PostgreSQL 16 integration passed. Both #132 and #139 are now marked `in-review`, not merged.
 - PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` still has all five workflows, including iOS LlamaEngine CI, passed; moved its validation-only board claim to `in-review`. Physical iPhone inference/thermal/memory testing remains outstanding.
+
+
+## 2026-11-16 — Native iOS validation reconciliation and review handoff
+
+- Rechecked PR #124 exact head `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658`: all five workflows completed successfully. iOS LlamaEngine run `43799416564` completed pinned llama.cpp artifact verification, XCFramework assembly and physical-iOS-target link, fail-closed typecheck, simulator boot, native app build/XCTest, LlamaEngine simulator XCTest, pinned GGUF download/checksum, macOS XCTest, and evidence recording.
+- Rechecked PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f`: all five workflows completed successfully. iOS LlamaEngine run `43797547712` completed the corresponding native app, simulator, pinned-GGUF, and macOS gates.
+- Compared PR #122 against the validated PR #124 aggregate: `ModelPool.swift` and `ModelPoolTests.swift` are byte-identical (matching blob SHAs `b3be3e0160339e80076fac6584a6cfbd0e1188c7` and `70419bf257e258cca82f1a2ff7ef91de0e17b73b`). This provides source/test equivalence evidence for #122's native memory-accounting change, while its own branch remains stacked on #86.
+- Updated `coordination/BOARD.md`: PR #122, #124, and #135 validation claims moved to `in-review`. No application code or trust boundary changed in this coordination update.
+- PR #140 remains in progress: its current head has no new exact-head workflow after the documentation correction; its functional implementation is covered by #135, but that does not substitute for a current-head check of #140. PR #115's recorded iOS run `43771097290` is cancelled.
+- No physical iPhone inference, memory/thermal/battery measurement, device attestation, production deployment, or merge is claimed. All reviewed PRs remain open/draft; `main` untouched.
