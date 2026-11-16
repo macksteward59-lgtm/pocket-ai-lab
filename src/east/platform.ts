@@ -426,14 +426,25 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       };
     },
     restoreTask(checkpoint) {
-      if (!checkpoint || checkpoint.version !== 1 || !checkpoint.task ||
-          typeof checkpoint.task.id !== "string" || !checkpoint.task.id.trim() ||
-          typeof checkpoint.task.objective !== "string" || !checkpoint.task.objective.trim() ||
-          checkpoint.task.authorized !== false || !Array.isArray(checkpoint.messages) ||
+      if (!isRecord(checkpoint) ||
+          Object.keys(checkpoint).length !== 4 ||
+          checkpoint.version !== 1 ||
+          !isEastTaskRecord(checkpoint.task) ||
+          !Array.isArray(checkpoint.messages) ||
           typeof checkpoint.evidenceMemoryCommitted !== "boolean") {
         throw new EastPlatformError("unknown_task", "Invalid East runtime checkpoint");
       }
       const taskId = checkpoint.task.id;
+      const assignmentIDs = new Set<string>();
+      const agentIDs = new Set<string>();
+      for (const assignment of checkpoint.task.assignments) {
+        const agent = orchestrator.agents.getAgent(assignment.agentId);
+        if (!agent || !agent.permanent || assignmentIDs.has(assignment.id) || agentIDs.has(assignment.agentId)) {
+          throw new EastPlatformError("unknown_task", "East checkpoint contains an invalid or duplicate agent assignment");
+        }
+        assignmentIDs.add(assignment.id);
+        agentIDs.add(assignment.agentId);
+      }
       const existing = tasks.get(taskId);
       if (existing) {
         const sameTask = JSON.stringify(snapshot(existing)) === JSON.stringify(checkpoint.task);
@@ -532,6 +543,66 @@ function normalizeModel(model: EastModelBinding): EastModelBinding {
     capabilities: model.capabilities.map(item => item.trim()),
     memoryEstimateMB: model.memoryEstimateMB
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isDigest(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+
+function isEastTaskRecord(value: unknown): value is EastTaskRecord {
+  if (!isRecord(value)) return false;
+  const taskKeys = ["id", "objective", "assignments", "synthesis", "evidenceRefs", "evidenceGate", "apexDecision", "authorized"];
+  if (Object.keys(value).length !== taskKeys.length || taskKeys.some(key => !(key in value))) return false;
+  if (typeof value.id !== "string" || !value.id.trim() || value.id.length > 256 ||
+      typeof value.objective !== "string" || !value.objective.trim() || value.objective.length > MAX_OBJECTIVE_LENGTH ||
+      (value.synthesis !== null && typeof value.synthesis !== "string") ||
+      value.authorized !== false || !Array.isArray(value.assignments) ||
+      !Array.isArray(value.evidenceRefs) ||
+      !value.evidenceRefs.every(ref => typeof ref === "string" && ref.length > 0 && ref.length <= 512)) return false;
+
+  const assignmentIDs = new Set<string>();
+  const agentIDs = new Set<string>();
+  for (const item of value.assignments) {
+    if (!isRecord(item) || Object.keys(item).length !== 2 ||
+        typeof item.id !== "string" || !item.id.trim() ||
+        typeof item.agentId !== "string" || !item.agentId.trim() ||
+        assignmentIDs.has(item.id) || agentIDs.has(item.agentId)) return false;
+    assignmentIDs.add(item.id);
+    agentIDs.add(item.agentId);
+  }
+
+  if (!isRecord(value.evidenceGate)) return false;
+  const gate = value.evidenceGate;
+  if (gate.status === "not_submitted") {
+    if (Object.keys(gate).length !== 1) return false;
+  } else if (gate.status === "candidate_only") {
+    if (Object.keys(gate).length !== 1) return false;
+  } else if (gate.status === "rejected") {
+    if (Object.keys(gate).length !== 2 ||
+        !["invalid_shape", "attempt_mismatch", "nonce_reuse"].includes(String(gate.reason))) return false;
+  } else {
+    return false;
+  }
+
+  if (!isRecord(value.apexDecision)) return false;
+  const decision = value.apexDecision;
+  if (decision.status === "unread") return Object.keys(decision).length === 1;
+  if (decision.status === "closed") {
+    return Object.keys(decision).length === 3 &&
+      ["missing", "malformed", "forged", "shape_mismatch", "stale", "unreachable", "timeout"].includes(String(decision.reason)) &&
+      isDigest(decision.proposalDigest);
+  }
+  if (decision.status === "pending") {
+    return Object.keys(decision).length === 6 &&
+      decision.rule === "pending" && decision.patch === "pending" &&
+      decision.release === "pending" && decision.trust === "unavailable" &&
+      isDigest(decision.proposalDigest);
+  }
+  return false;
 }
 
 function snapshot(task: EastTaskRecord): EastTaskRecord {
