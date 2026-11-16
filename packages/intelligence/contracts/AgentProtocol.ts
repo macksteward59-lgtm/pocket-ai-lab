@@ -10,9 +10,23 @@ export const AgentTaskRequestSchema = z.object({
   id: z.string().min(1),
   objective: z.string().min(1),
   requiredCapabilities: z.array(z.string().min(1)),
-  context: z.string().max(2_000).optional(),
+  context: z.string().min(1).max(2_000).optional(),
   contextRefs: z.array(z.string().min(1).max(128)).max(32).optional()
-}).strict();
+}).strict().superRefine((task, context) => {
+  const refs = task.contextRefs ?? [];
+  if ((task.context === undefined) !== (refs.length === 0)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Memory context and its selected record references must be supplied together"
+    });
+  }
+  if (new Set(refs).size !== refs.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Memory context references must be unique"
+    });
+  }
+});
 export type AgentTaskRequest = z.infer<typeof AgentTaskRequestSchema>;
 
 export const AgentMessageTypeSchema = z.enum([
