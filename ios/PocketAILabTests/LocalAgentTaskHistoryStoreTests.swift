@@ -181,7 +181,11 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         let store = LocalAgentTaskHistoryStore(fileURL: root.appendingPathComponent("tasks.json"))
         try store.begin(id: "journal-task", objective: "Journal role outputs")
         let first = AgentTaskRoleResult(id: "message-0", role: "reasoner", sequence: 0, text: "first", createdAt: Date())
-        let second = AgentTaskRoleResult(id: "message-1", role: "critic", sequence: 1, text: "second", createdAt: Date())
+        let second = AgentTaskRoleResult(
+            id: "message-1", role: "critic", sequence: 1, text: "second", createdAt: Date(),
+            conversationID: "conversation-1", recipientAgentID: "user",
+            messageType: "completion", parentMessageID: "message-0"
+        )
 
         try store.appendRoleResult(taskID: "journal-task", result: first)
         XCTAssertThrowsError(try store.appendRoleResult(taskID: "journal-task", result: AgentTaskRoleResult(id: second.id, role: second.role, sequence: 2, text: second.text, createdAt: second.createdAt))) { error in
@@ -195,6 +199,10 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         let restored = try store.load().first
         XCTAssertEqual(restored?.roleResults.map(\.sequence), [0, 1])
         XCTAssertEqual(restored?.roleResults.map(\.id), ["message-0", "message-1"])
+        XCTAssertEqual(restored?.roleResults.last?.parentMessageID, "message-0")
+        XCTAssertEqual(restored?.roleResults.last?.conversationID, "conversation-1")
+        XCTAssertEqual(restored?.roleResults.last?.recipientAgentID, "user")
+        XCTAssertEqual(restored?.roleResults.last?.messageType, "completion")
     }
 
     func testInterruptedRecoveryPreservesPreviouslyJournaledRoleOutputs() throws {
