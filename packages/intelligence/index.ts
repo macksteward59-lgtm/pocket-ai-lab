@@ -89,7 +89,7 @@ export type { PermissionEffect, OwnershipRequirement, AuthorizationInvariantKind
 export { normalizeProgramPolicy, ProgramPolicyError, evaluateTargetScope, evaluateProgramAction } from "./bug-bounty";
 export {
   ScopeGuard, ScopeGuardError, normalizeTargetHostname, hashNormalizedProgramPolicy,
-  hashAssessmentPolicy, PROOFHUNT_SAFE_CHECKS
+  hashAssessmentPolicy, hashAssessmentScope, PROOFHUNT_SAFE_CHECKS
 } from "./security/proofhunt";
 export type {
   AuthorizationRecordKind, EmergencyStopProvider, ExplicitTarget, OperationalApprovalVerifier,
