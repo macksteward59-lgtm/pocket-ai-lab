@@ -124,7 +124,7 @@ public actor RuntimeController {
             guard sessions[lease.session.id] == nil else { throw RuntimeControllerError.duplicateSession }
             sessions[lease.session.id] = ActiveSession(
                 lease: lease,
-                fileHash: hash,
+                fileHash: afterHash,
                 fileIdentity: afterHashIdentity,
                 readiness: nil,
                 readinessTaskId: nil,
