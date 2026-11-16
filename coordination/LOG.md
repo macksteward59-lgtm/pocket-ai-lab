@@ -2690,3 +2690,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Reviewed PR #164 bridge sources and tests. Confirmed the bridge is deliberately not yet connected to a `WKScriptMessageHandler`; challenge issuance/consumption is a host-side primitive only; `BridgeGate.parse` is schema/origin validation, not proof of challenge consumption or host approval. Consequential import/load/unload still require a host-supplied authorization decision. The PR documentation correctly states runtime-control messages remain unavailable until an approval coordinator and handler are implemented.
 - The current change is therefore a bridge foundation and navigation boundary, not a completed web-to-native control bridge. Do not describe it as end-to-end WebKit-to-runtime integration or treat a simulator boot as product acceptance.
 - No workflow cancellation/rerun was requested or performed. No source changes, PR approval/merge/closure, APEX policy changes, or physical-device tests occurred in this checkpoint.
+
+
+## 2026-11-16 UTC — PR #164 native app build gate advanced
+
+- Re-fetched exact-head workflow run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for PR #164 head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- Newly completed successfully: selected iPhone simulator boot and restored Director bridge package-manifest validation. The native Pocket AI Lab app generation/build step is now `in_progress`; native app XCTest, simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest remain pending. The workflow/job remains `in_progress`; no overall pass is claimed.
+- The job-log endpoint returned `BlobNotFound`, so no app-build diagnosis or compiler error can be established from logs at this checkpoint.
+- Exact-head checks for PR #162 (`1db0345938ac029c3742a391c51ad7027d57e3bc`) and PR #163 (`cddb43103384711707c6474c1f99dab5e33c6dd3`) were rechecked: no PR-triggered workflow runs and no combined commit statuses were returned for either head. Their validation remains unverified.
+- Updated `coordination/BOARD.md` commit `d04c5cdc374209c09c8bc37f8a23325306d797e8` to replace the stale simulator-boot status with the observed current gate state.
+- No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
