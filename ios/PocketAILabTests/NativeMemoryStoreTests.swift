@@ -97,13 +97,16 @@ final class NativeMemoryStoreTests: XCTestCase {
             keyProvider: FixedNativeMemoryKeyProvider(material: Data(repeating: 6, count: 32), mayCreate: true)
         )
         let id = try await store.insert(layer: .procedural, content: "Initial note", agentId: "user")
-        XCTAssertTrue(try await store.update(id: id, content: "Edited note", sourceRefs: ["manual:1"]))
+        let updated = try await store.update(id: id, content: "Edited note", sourceRefs: ["manual:1"])
+        XCTAssertTrue(updated)
         let edited = try await store.load()
         XCTAssertEqual(edited.first?.content, "Edited note")
         XCTAssertEqual(edited.first?.provenance.sourceRefs, ["manual:1"])
         XCTAssertFalse(edited.first?.provenance.verified ?? true)
-        XCTAssertTrue(try await store.delete(id: id))
-        XCTAssertTrue(try await store.load().isEmpty)
+        let deleted = try await store.delete(id: id)
+        let afterDelete = try await store.load()
+        XCTAssertTrue(deleted)
+        XCTAssertTrue(afterDelete.isEmpty)
     }
 
     func testEmptyReadDoesNotCreateKeyOrVault() async throws {
@@ -114,7 +117,8 @@ final class NativeMemoryStoreTests: XCTestCase {
             fileURL: file,
             keyProvider: FixedNativeMemoryKeyProvider(material: nil, mayCreate: false)
         )
-        XCTAssertTrue(try await store.load().isEmpty)
+        let entries = try await store.load()
+        XCTAssertTrue(entries.isEmpty)
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
     }
 }
