@@ -7,7 +7,7 @@ import {
   type ApexEvidenceReplayStore,
   type ApexSignedEvidenceV2,
   type ApexTrustedEvidenceKey
-} from "../../director/src/lib/apex/trust";
+} from "../../director/src/lib/apex/SignedEvidenceVerifierV2";
 
 class MemoryReplayStore implements ApexEvidenceReplayStore {
   readonly accepted = new Set<string>();
