@@ -2477,3 +2477,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #156:** `codex/native-product-experience-integration`, exact head `09207c1c2a9ea94ff351eb7e6ed999a91a8a7d07`, iOS run `43923737970` failed during the native app build. The retrieved log shows four failed SwiftCompile build commands across app source batches but contains no actual compiler diagnostic, no `error:` line, and no explicit signal/OOM evidence. Treat root cause as unknown; do not attribute it to a particular Swift file yet.
 - **PR #150:** exact head `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`, iOS run `43927798508`: native app build and app XCTest passed. The later PocketLlamaEngine simulator XCTest failed 2/74 tests because `RecordingInferenceEngine` test fixture used escaped Swift interpolation in generated session IDs. Production coordinator code is not implicated by the observed failures.
 - **Actions:** corrected the test-fixture interpolation on branch `codex/ios-routed-agent-app-integration` (commit `20ea14d4a7b4625e1ff7dde300bfa7f037485498`). Next, reduce xcodebuild parallelism and preserve complete build diagnostics on PR #156, then rerun exact-head CI. No merge or physical-device acceptance claimed.
+
+
+## 2026-11-16 — Unified native app capability type error fixed across stacked branches
+
+- **Root cause:** iOS run `43925617238` for PR #157 reported `ios/PocketAILab/LocalChatView.swift:544:35: cannot convert value of type 'Set<String>' to expected argument type '[String]'`. The task initializer expects an array; the code collected a Set from role capabilities.
+- **Fix:** pass `requiredCapabilities.sorted()` to `AgentTaskRequest` so the type matches and capability order is deterministic.
+- **Applied to:** PR #157 branch `codex/whole-product-execution-integration` commit `1c1cce65ffa0553ac610dfb30cd13a6e3b5040e8`; PR #156 branch `codex/native-product-experience-integration` commit `fc3bbaa83ad32d922f8daadee1c373218da32b44`; PR #159 branch `codex/apex-signed-evidence-verification-v2` commit `9694af8cbade5391bd72cdf4d835c99d05f826e9`.
+- **Validation:** exact-head workflows are pending. PR #156's iOS workflow also received a bounded `-jobs 2` build/test setting and retained build logs to reduce peak compiler pressure and improve diagnostics; that workflow change is on the same branch.
+- **No merge, production deployment, authorization grant, or physical iPhone Air acceptance claimed.**
