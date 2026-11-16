@@ -69,6 +69,7 @@ public actor NativeAgentCoordinator {
     private var activeTaskId: String?
     private var activeRequestId: String?
     private var activeSessionId: String?
+    private var cancelRequested = false
 
     /// Internal direct-engine initializer retained for package-level tests.
     /// Production callers must use the shared runtime/lease initializer.
@@ -158,10 +159,12 @@ public actor NativeAgentCoordinator {
         }
         guard activeTaskId == nil else { throw NativeAgentCoordinatorError.busy }
         activeTaskId = task.id
+        cancelRequested = false
         defer {
             activeTaskId = nil
             activeRequestId = nil
             activeSessionId = nil
+            cancelRequested = false
         }
 
         var messages: [AgentMessageEnvelope] = []
@@ -185,6 +188,11 @@ public actor NativeAgentCoordinator {
                     estimatedMemoryMB: route.estimatedMemoryMB
                 )
                 activeSessionId = routedLease.session.id
+                if cancelRequested || Task.isCancelled {
+                    _ = await runtime.release(routedLease)
+                    activeSessionId = nil
+                    throw CancellationError()
+                }
                 do {
                     let generated = try await runtime.generate(
                         lease: routedLease,
@@ -262,8 +270,13 @@ public actor NativeAgentCoordinator {
 
     /// Cancels only the currently active request; it cannot authorize or mutate external work.
     public func cancelCurrentTask() async {
-        guard let requestId = activeRequestId,
-              let sessionId = activeSessionId ?? session?.id else { return }
+        guard let requestId = activeRequestId else { return }
+        guard let sessionId = activeSessionId ?? session?.id else {
+            // A routed model may still be loading. Defer cancellation until the
+            // exact lease arrives, then release it without starting generation.
+            cancelRequested = true
+            return
+        }
         await engine.cancelAndWait(sessionId: sessionId, requestId: requestId)
     }
 
