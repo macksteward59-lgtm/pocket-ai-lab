@@ -2443,3 +2443,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **ExploitGym pin:** upstream main commit `a8029e47135a29f1c1a6e79109bf86fba379b3f3` (2026-11-09). The archived ZIP does not contain its original Git commit metadata, so the selected pin is explicitly documented as a later upstream revision, not an exact archive match.
 - **CI:** Pocket AI Lab push run `43927028410` in progress; iOS PR workflow not yet surfaced. No test pass claimed yet.
 - **Deferred:** full Director web source archive reconciliation (169 files), WKScriptMessageHandler action dispatch, isolated ExploitGym worker adapter, Grok artifact persistence, and physical iPhone Air acceptance.
+
+
+## 2026-11-16 — Bridge restoration exact-head checkpoint
+
+- **PR #160:** open, draft, mergeable, not merged.
+- **Exact head:** `aa7252d46d8593b4076178dec2fdd6ce501ae488`.
+- **Exact-head PR workflows queued:** Pocket AI Lab `43927603726`, Consumer prototype `43927603940`, Governance sidecar `43927603754`, iOS LlamaEngine `43927603952`, Cursor collaboration `43927604119`. Pocket AI Lab push workflow `43927589882` also queued.
+- **Additional hardening:** RuntimeController now requires the host's expected catalog SHA-256, compares it to a streaming hash of the loaded artifact, invalidates readiness on file changes, serializes readiness probes, prevents new generation during unload, and waits for native cancellation drain. BridgeGate no longer accepts memory estimates from web messages; the host resolves memory/hash from its catalog.
+- **No validation result claimed yet.** iOS app build and XCTest are pending on exact head.
