@@ -36,8 +36,10 @@ export const EAST_DELIBERATION_AGENTS = [
   "reasoner",
   "researcher",
   "engineer",
+  "security",
   "critic",
-  "validator"
+  "validator",
+  "archivist"
 ] as const;
 
 const MAX_OBJECTIVE_LENGTH = 8_000;
