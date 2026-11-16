@@ -2302,3 +2302,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Code review found that the native model catalog accepted operator label assignment but rejected an empty list, so the UI had no way to clear a mistaken capability assignment.
 - Updated `LocalModelCatalogStore.updateCapabilities` to allow an empty normalized label set while retaining the 16-label and 64-byte per-label bounds. Added a persistence assertion that clearing labels remains empty after reloading the catalog.
 - Commits: `ea1184b712b7a92450b578bcadf219267031bb7b` (implementation), `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5` (test). Exact-head CI pending. No route permission or trust semantics changed; an empty set simply cannot satisfy specialist routing requirements.
+
+
+## 2026-11-16 — ChatGPT
+
+- **Claim:** Consumer cloud-provider consent and server-side credential boundary.
+- **Branch:** `codex/consumer-cloud-provider-consent`, based on `main`.
+- **Scope:** `apps/web/`, focused tests, and consumer implementation docs only. Implement an opt-in, explicit per-request remote-inference path for the loopback consumer app; preserve local-first behavior, keep provider credentials server-side, disclose remote transmission in the UI, and fail closed when configuration or consent is missing.
+- **Exclusions:** No public/network deployment, no claim of authentication/session security, no APEX/East trust or authorization changes, and no native iOS runtime changes. Existing loopback-only bind and request guards remain mandatory.
+- **Validation plan:** Unit/integration tests for default-local behavior, remote configuration absence, missing consent, remote consent, credential non-disclosure, provider failures/timeouts, and regression coverage for loopback guards; run exact-head CI before review.
+- **Status:** `claimed`; no application files changed yet.
