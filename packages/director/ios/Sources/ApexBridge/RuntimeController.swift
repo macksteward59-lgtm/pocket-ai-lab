@@ -65,6 +65,8 @@ public actor RuntimeController {
         let fileHash: String
         let fileIdentity: ModelFileIdentity
         var readiness: Readiness?
+        var readinessTaskId: String?
+        var readinessTask: Task<String, Error>?
         var generations: [String: Task<String, Error>]
     }
 
@@ -117,6 +119,8 @@ public actor RuntimeController {
                 fileHash: hash,
                 fileIdentity: afterHash,
                 readiness: nil,
+                readinessTaskId: nil,
+                readinessTask: nil,
                 generations: [:]
             )
             return report(for: lease.session.id, now: clock())
@@ -133,7 +137,7 @@ public actor RuntimeController {
     public func readiness(sessionId: String) async throws -> ModelReport {
         guard !unloadingSessions.contains(sessionId),
               var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
-        let now = clock()
+        guard active.readinessTaskId == nil else { throw RuntimeControllerError.duplicateRequest }
         do { try verifyFile(active) }
         catch {
             active.readiness = nil
@@ -141,24 +145,52 @@ public actor RuntimeController {
             throw error
         }
         active.readiness = nil
-        sessions[sessionId] = active
+        let token = UUID().uuidString
+        let lease = active.lease
+        let runtime = self.runtime
         let request = GenerationRequest(
             prompt: "Pocket AI Lab native runtime readiness probe. Return one token.",
             maxTokens: 1,
             temperature: 0
         )
-        let output = try await runtime.generate(lease: active.lease, request: request, maxOutputBytes: 256)
-        guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw RuntimeControllerError.emptyGeneration
-        }
-        let check = Readiness(
-            healthCheckId: UUID().uuidString,
-            checkedAt: now,
-            expiresAt: now.addingTimeInterval(readinessTTL)
-        )
-        active.readiness = check
+        let task = Task { try await runtime.generate(lease: lease, request: request, maxOutputBytes: 256) }
+        active.readinessTaskId = token
+        active.readinessTask = task
         sessions[sessionId] = active
-        return report(for: sessionId, now: now)
+
+        do {
+            let output = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw RuntimeControllerError.emptyGeneration
+            }
+            guard !unloadingSessions.contains(sessionId),
+                  var latest = sessions[sessionId],
+                  latest.readinessTaskId == token else {
+                throw RuntimeControllerError.unknownSession
+            }
+            let checkedAt = clock()
+            latest.readiness = Readiness(
+                healthCheckId: UUID().uuidString,
+                checkedAt: checkedAt,
+                expiresAt: checkedAt.addingTimeInterval(readinessTTL)
+            )
+            latest.readinessTaskId = nil
+            latest.readinessTask = nil
+            sessions[sessionId] = latest
+            return report(for: sessionId, now: checkedAt)
+        } catch {
+            if var latest = sessions[sessionId], latest.readinessTaskId == token {
+                latest.readinessTaskId = nil
+                latest.readinessTask = nil
+                latest.readiness = nil
+                sessions[sessionId] = latest
+            }
+            throw error
+        }
     }
 
     public func generate(
@@ -219,6 +251,9 @@ public actor RuntimeController {
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw RuntimeControllerError.emptyGeneration
             }
+            guard !unloadingSessions.contains(sessionId), sessions[sessionId] != nil else {
+                throw RuntimeControllerError.unknownSession
+            }
             clearGeneration(sessionId: sessionId, requestId: requestId)
             return RuntimeGenerationRecord(
                 requestId: requestId,
@@ -255,9 +290,14 @@ public actor RuntimeController {
     /// Releases one exact session lease. Other consumers' leases are never evicted.
     @discardableResult
     public func unload(sessionId: String) async -> Bool {
-        guard let active = sessions[sessionId], unloadingSessions.insert(sessionId).inserted else { return false }
+        guard sessions[sessionId] != nil, unloadingSessions.insert(sessionId).inserted else { return false }
         defer { unloadingSessions.remove(sessionId) }
-        for requestId in Array(active.generations.keys) {
+        if let readinessTask = sessions[sessionId]?.readinessTask {
+            readinessTask.cancel()
+            _ = try? await readinessTask.value
+        }
+        let requestIDs = Array(sessions[sessionId]?.generations.keys ?? Dictionary<String, Task<String, Error>>().keys)
+        for requestId in requestIDs {
             _ = await cancelGeneration(sessionId: sessionId, requestId: requestId)
         }
         guard let removed = sessions.removeValue(forKey: sessionId) else { return false }
