@@ -96,7 +96,7 @@ describe("APEX signed evidence v2", () => {
 
   it("rejects tampering of every signed claim", async () => {
     const original = signedEvidence();
-    const tampered = { ...original, runtimeVersion: "llama-runtime-9.9.9" };
+    const tampered = { ...original, generationResultHash: digest("tampered generated output") };
     const result = await verifier().verify(tampered, expected);
     expect(result).toEqual({ ok: false, status: "rejected", reason: "invalid_signature" });
   });
