@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct MemoryView: View {
     @State private var store = NativeMemoryStore.applicationDefault()
     @State private var entries: [NativeMemoryEntry] = []
@@ -29,7 +30,7 @@ struct MemoryView: View {
                                     Text(entry.layer.title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                                     Spacer()
                                     Text(entry.provenance.verified ? "Verified" : "Unverified")
-                                        .font(.caption2).foregroundStyle(entry.provenance.verified ? .green : .secondary)
+                                        .font(.caption2).foregroundStyle(entry.provenance.verified ? Color.green : Color.secondary)
                                 }
                                 Text(entry.content).textSelection(.enabled)
                                 HStack(spacing: 8) {
