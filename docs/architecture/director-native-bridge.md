@@ -21,7 +21,7 @@ The package depends on the shared runtime/ios PocketLlamaEngine package. It does
 - Is an actor and owns exact ModelPool leases.
 - Delegates all load/generation work to the shared NativeInferenceRuntime and its InferenceScheduler.
 - Stores only session/metadata, never a full GGUF byte copy.
-- Computes a streaming SHA-256 model-file hash, compares it with the expected hash supplied by the host's local model catalog, and binds it to the loaded runtime session. The WebKit message carries only a model ID; the host resolves the expected hash itself.
+- Computes a streaming SHA-256 model-file hash, compares it with the expected hash supplied by the host's local model catalog, and binds it to the loaded runtime session. The WebKit message carries only a model ID; the host resolves both the expected hash and memory estimate from the local catalog.
 - Requires a real bounded one-token generation probe before reporting readiness; readiness expires.
 - Checks the model file identity before readiness and generation. File changes invalidate readiness and fail closed.
 - Tracks generation tasks, supports cancellation, and waits for the runtime cancellation-drain path before releasing a session.
