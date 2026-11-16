@@ -6,11 +6,17 @@ public struct NativeAgentStep: Sendable, Equatable {
     public let agentId: String
     public let instructions: String
     public let messageType: AgentMessageType
+    /// Routing labels only; they never grant tool or action permissions.
+    public let requiredCapabilities: Set<String>
 
-    public init(agentId: String, instructions: String, messageType: AgentMessageType = .analysis) {
+    public init(agentId: String, instructions: String, messageType: AgentMessageType = .analysis,
+                requiredCapabilities: Set<String> = []) {
         self.agentId = agentId
         self.instructions = instructions
         self.messageType = messageType
+        self.requiredCapabilities = Set(requiredCapabilities.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        })
     }
 }
 
@@ -36,6 +42,7 @@ public enum NativeAgentCoordinatorError: Error, Equatable, Sendable {
     case emptyModelResponse
     case responseTooLarge
     case messageSinkRejected
+    case modelRoutingFailed(String)
 }
 
 /// Native, sequential multi-role orchestration over an injected inference runtime.
@@ -54,11 +61,14 @@ public actor NativeAgentCoordinator {
     private static let maxOutputBytes = 8_000
     private static let maxTokensPerStep = 512
     private let engine: any LlamaEngine
-    private let session: RuntimeSession
+    private let session: RuntimeSession?
     private let lease: ModelPoolLease?
     private let runtime: NativeInferenceRuntime?
+    private let routedProfiles: [NativeAgentModelProfile]?
+    private let router: NativeAgentModelRouter
     private var activeTaskId: String?
     private var activeRequestId: String?
+    private var activeSessionId: String?
 
     /// Internal direct-engine initializer retained for package-level tests.
     /// Production callers must use the shared runtime/lease initializer.
@@ -67,6 +77,8 @@ public actor NativeAgentCoordinator {
         self.session = session
         self.lease = nil
         self.runtime = nil
+        self.routedProfiles = nil
+        self.router = NativeAgentModelRouter()
     }
 
     /// Uses the shared ModelPool/InferenceScheduler composition root. The caller
@@ -76,6 +88,21 @@ public actor NativeAgentCoordinator {
         self.session = lease.session
         self.lease = lease
         self.runtime = runtime
+        self.routedProfiles = nil
+        self.router = NativeAgentModelRouter()
+    }
+
+    /// Routes each logical role independently and acquires/releases the exact
+    /// selected ModelPool lease around that role's complete generation.
+    /// The shared NativeInferenceRuntime still serializes admission through its scheduler.
+    public init(runtime: NativeInferenceRuntime, profiles: [NativeAgentModelProfile],
+                router: NativeAgentModelRouter = NativeAgentModelRouter()) {
+        self.engine = runtime.engine
+        self.session = nil
+        self.lease = nil
+        self.runtime = runtime
+        self.routedProfiles = profiles
+        self.router = router
     }
 
     public func run(task: AgentTaskRequest, conversationId: String = UUID().uuidString,
@@ -98,6 +125,10 @@ public actor NativeAgentCoordinator {
                   !$0.agentId.isEmpty && $0.agentId.utf8.count <= Self.maxAgentIdBytes &&
                   !$0.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                   $0.instructions.utf8.count <= Self.maxInstructionBytes &&
+                  $0.requiredCapabilities.count <= Self.maxCapabilities &&
+                  $0.requiredCapabilities.allSatisfy({
+                      !$0.isEmpty && $0.utf8.count <= Self.maxCapabilityBytes
+                  }) &&
                   Self.supportsWirePayload($0.messageType)
               }),
               Set(steps.map(\.agentId)).count == steps.count,
@@ -105,11 +136,32 @@ public actor NativeAgentCoordinator {
               temperature.isFinite, (0...2).contains(temperature) else {
             throw NativeAgentCoordinatorError.invalidPlan
         }
+        // Resolve every route before the first model load or generation. A missing
+        // specialist must fail the whole plan before partial work is performed.
+        let routes: [NativeAgentModelRoute]?
+        if let routedProfiles {
+            do {
+                routes = try steps.map { step in
+                    let capabilities = step.requiredCapabilities.isEmpty
+                        ? Set(task.requiredCapabilities)
+                        : step.requiredCapabilities
+                    return try router.route(
+                        NativeAgentRouteRequest(agentId: step.agentId, requiredCapabilities: capabilities),
+                        from: routedProfiles
+                    )
+                }
+            } catch {
+                throw NativeAgentCoordinatorError.modelRoutingFailed(String(describing: error))
+            }
+        } else {
+            routes = nil
+        }
         guard activeTaskId == nil else { throw NativeAgentCoordinatorError.busy }
         activeTaskId = task.id
         defer {
             activeTaskId = nil
             activeRequestId = nil
+            activeSessionId = nil
         }
 
         var messages: [AgentMessageEnvelope] = []
@@ -126,13 +178,39 @@ public actor NativeAgentCoordinator {
             )
             activeRequestId = request.requestId
             let output: String
-            if let runtime, let lease {
+            if let runtime, let routes {
+                let route = routes[index]
+                let routedLease = try await runtime.acquire(
+                    model: route.model,
+                    estimatedMemoryMB: route.estimatedMemoryMB
+                )
+                activeSessionId = routedLease.session.id
+                do {
+                    let generated = try await runtime.generate(
+                        lease: routedLease,
+                        request: request,
+                        maxOutputBytes: Self.maxOutputBytes
+                    )
+                    _ = await runtime.release(routedLease)
+                    activeSessionId = nil
+                    output = generated
+                } catch {
+                    // NativeInferenceRuntime.generate drains cancellation before returning.
+                    _ = await runtime.release(routedLease)
+                    activeSessionId = nil
+                    throw error
+                }
+            } else if let runtime, let lease {
+                activeSessionId = lease.session.id
                 output = try await runtime.generate(
                     lease: lease,
                     request: request,
                     maxOutputBytes: Self.maxOutputBytes
                 )
+                activeSessionId = nil
             } else {
+                guard let session else { throw NativeAgentCoordinatorError.invalidPlan }
+                activeSessionId = session.id
                 let stream = try await engine.generate(session: session, request: request)
                 var collected = ""
                 do {
@@ -146,8 +224,10 @@ public actor NativeAgentCoordinator {
                     }
                 } catch {
                     await engine.cancelAndWait(sessionId: session.id, requestId: request.requestId)
+                    activeSessionId = nil
                     throw error
                 }
+                activeSessionId = nil
                 output = collected
             }
             activeRequestId = nil
@@ -182,8 +262,9 @@ public actor NativeAgentCoordinator {
 
     /// Cancels only the currently active request; it cannot authorize or mutate external work.
     public func cancelCurrentTask() async {
-        guard let requestId = activeRequestId else { return }
-        await engine.cancelAndWait(sessionId: session.id, requestId: requestId)
+        guard let requestId = activeRequestId,
+              let sessionId = activeSessionId ?? session?.id else { return }
+        await engine.cancelAndWait(sessionId: sessionId, requestId: requestId)
     }
 
     private static func supportsWirePayload(_ type: AgentMessageType) -> Bool {
