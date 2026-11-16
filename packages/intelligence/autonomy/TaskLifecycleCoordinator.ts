@@ -16,6 +16,8 @@ export interface TaskStepDefinition {
   dependsOn?: readonly string[];
   /** Total attempts, including the first attempt. Range: 1..5. */
   maxAttempts?: number;
+  /** Expiry/failure is ambiguous and must not be replayed; defaults true for single-attempt steps. */
+  uncertainOnExpiredLease?: boolean;
 }
 
 export interface TaskDefinition {
@@ -51,6 +53,10 @@ export interface TaskStepRecord {
   result: string | null;
   evidenceRefs: string[];
   lastError: string | null;
+  /** Conservative marker when an external side effect may have completed without a durable checkpoint. */
+  uncertain?: boolean;
+  /** Expired leases for these steps are not safe to retry automatically. */
+  uncertainOnExpiredLease?: boolean;
 }
 
 export interface TaskRecord {
@@ -293,6 +299,7 @@ export class TaskLifecycleCoordinator {
       if (!Array.isArray(refs) || refs.length > 100 || refs.some(ref => typeof ref !== "string" || !ref.trim())) {
         throw new TaskLifecycleError("invalid_evidence_refs", "At most 100 non-empty evidence references are allowed");
       }
+      step.uncertain = false;
       step.status = "succeeded";
       step.result = input.result.trim();
       step.evidenceRefs = [...new Set(refs)];
@@ -320,9 +327,16 @@ export class TaskLifecycleCoordinator {
       if (typeof input.error !== "string" || !input.error.trim() || (input.retryable !== undefined && typeof input.retryable !== "boolean")) {
         throw new TaskLifecycleError("invalid_error", "A failure reason and boolean retryable flag are required");
       }
-      step.lastError = input.error.trim().slice(0, 2_000);
+      const outcomeUncertain = step.uncertainOnExpiredLease === true;
+      const normalizedError = input.error.trim().slice(0, 2_000);
+      step.lastError = outcomeUncertain
+        ? "Provider outcome may be uncertain; operator reconciliation required: " + normalizedError.slice(0, 1_900)
+        : normalizedError;
       step.currentAttempt = null;
-      step.status = input.retryable === true && step.attempts < step.maxAttempts ? "pending" : "failed";
+      step.uncertain = outcomeUncertain;
+      step.status = !outcomeUncertain && input.retryable === true && step.attempts < step.maxAttempts
+        ? "pending"
+        : "failed";
       const final = refreshTaskStatus(updated, now);
       await this.replaceTask(final);
       return cloneTask(final);
@@ -368,9 +382,13 @@ export class TaskLifecycleCoordinator {
         for (const step of updated.steps) {
           if (step.status !== "running" || !step.currentAttempt) continue;
           if (Date.parse(step.currentAttempt.leaseExpiresAt) > now.getTime()) continue;
-          step.lastError = "Execution lease expired before completion";
+          const outcomeUncertain = step.uncertainOnExpiredLease === true;
+          step.lastError = outcomeUncertain
+            ? "Execution lease expired before completion; provider outcome is uncertain and requires operator reconciliation"
+            : "Execution lease expired before completion";
           step.currentAttempt = null;
-          step.status = step.attempts < step.maxAttempts ? "pending" : "failed";
+          step.uncertain = outcomeUncertain;
+          step.status = !outcomeUncertain && step.attempts < step.maxAttempts ? "pending" : "failed";
           recovered += 1;
           changed = true;
         }
@@ -451,6 +469,10 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     if (ids.has(step.id)) throw new TaskLifecycleError("duplicate_step", "Duplicate step id");
     ids.add(step.id);
     const maxAttempts = step.maxAttempts ?? 2;
+    if (step.uncertainOnExpiredLease !== undefined && typeof step.uncertainOnExpiredLease !== "boolean") {
+      throw new TaskLifecycleError("invalid_step", "uncertainOnExpiredLease must be a boolean");
+    }
+    const uncertainOnExpiredLease = step.uncertainOnExpiredLease ?? (maxAttempts === 1);
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) {
       throw new TaskLifecycleError("invalid_attempt_limit", "Step maxAttempts must be from 1 to 5");
     }
@@ -464,7 +486,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     return {
       id: step.id, description: step.description.trim(), dependsOn, maxAttempts,
       attempts: 0, attemptIds: [], status: "pending", currentAttempt: null, completedAt: null,
-      result: null, evidenceRefs: [], lastError: null
+      result: null, evidenceRefs: [], lastError: null, uncertain: false, uncertainOnExpiredLease
     };
   });
   for (const step of steps) {
@@ -554,6 +576,9 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     if (!step || typeof step.id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(step.id) ||
         ids.has(step.id) || typeof step.description !== "string" || !step.description.trim() ||
         !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
+        (step.uncertain !== undefined && typeof step.uncertain !== "boolean") ||
+        (step.uncertainOnExpiredLease !== undefined && typeof step.uncertainOnExpiredLease !== "boolean") ||
+        (step.uncertain === true && (step.status !== "failed" || !step.lastError)) ||
         !Array.isArray(step.dependsOn) ||
         step.dependsOn.some(id => typeof id !== "string" || !id.trim() || id === step.id) ||
         new Set(step.dependsOn).size !== step.dependsOn.length ||
@@ -620,7 +645,14 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
   }
 
   assertAcyclic(task.steps);
-  return cloneTask(task);
+  return cloneTask({
+    ...task,
+    steps: task.steps.map(step => ({
+      ...step,
+      uncertain: step.uncertain ?? false,
+      uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? (step.maxAttempts === 1)
+    }))
+  });
 }
 
 function isTerminal(status: TaskStatus): boolean {
