@@ -199,25 +199,34 @@ jobs:
 
       - name: Generate and build the native Pocket AI Lab app
         run: |
+          set -o pipefail
           rm -rf ios/PocketAILab.xcodeproj
           xcodegen generate --spec ios/project.yml --project ios
+          # Limit concurrent Swift compiler jobs on the Intel hosted runner. The
+          # unified native target includes the full app, agent catalogue, and vault;
+          # lower parallelism reduces peak compiler memory and keeps diagnostics.
           xcodebuild build \
+            -jobs 2 \
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath /tmp/pocket-app-derived \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/pocket-app-simulator-build.log
           xcodebuild build \
+            -jobs 2 \
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
             -destination 'generic/platform=iOS' \
             -derivedDataPath /tmp/pocket-app-device-derived \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/pocket-app-device-build.log
 
       - name: XCTest the native Pocket AI Lab app
         timeout-minutes: 20
         run: |
           xcodebuild test \
+            -jobs 2 \
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
