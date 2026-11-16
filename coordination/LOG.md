@@ -2016,3 +2016,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - Claimed the existing PR #103 branch `codex/east-lifecycle-resumption-mainline` for a bounded reconciliation of the lifecycle kernel with PR #94's hardened validator and the PostgreSQL/East adapter interfaces. Scope is limited to the coordinator, its focused autonomy tests, and lifecycle docs; the East adapter implementation and authorization/evidence contracts remain untouched.
 - Reason: PR #103 is the integration aggregate for PR #94 + #102; PR #131 is stacked on #103 and introduces PostgreSQL persistence, while PR #132 validates the PostgreSQL/East adapter stack against main. Their coordinator copies currently diverge. The goal is one consistent coordinator contract before merge review, not a merge or production readiness claim.
+
+
+## 2026-11-16 — East lifecycle resumption aggregate reconciled and CI green
+
+- PR #103 exact head `752b79b5d7a9e65c1a0e78b722e0574fafea7dc9` passed all five workflows: Pocket AI Lab push `43795650394` and PR `43795660411`, Consumer `43795660407`, Governance `43795660375`, Cursor `43795660394`.
+- The aggregate coordinator and focused autonomy tests now match PR #94's hardened implementation: 19/19 autonomy tests pass; 72 intelligence test files pass; 28 workspace files pass. Consumer and sidecar/plugin checks also pass. The East six-agent adapter and its idempotent resumption tests remain present; `authorized=false` and non-authorizing evidence semantics are preserved.
+- PR #103 remains draft/open/unmerged. PR #131 remains stacked on #103; its coordinator/test/docs are being aligned to the updated base so the persistence PR can narrow to PostgreSQL implementation. PR #132 is the separate mainline validation aggregate.
