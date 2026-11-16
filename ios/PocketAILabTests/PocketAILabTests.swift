@@ -290,7 +290,8 @@ final class PocketAILabTests: XCTestCase {
 
         let roleMessages = model.messages.filter { $0.role.hasPrefix("Agent Team ·") }
         XCTAssertEqual(roleMessages.count, 8)
-        XCTAssertTrue(roleMessages[0].role.contains("reasoner"))
+        XCTAssertTrue(roleMessages[0].role.contains("director"))
+        XCTAssertTrue(roleMessages[1].role.contains("reasoner"))
         XCTAssertTrue(roleMessages[5].role.contains("critic"))
         XCTAssertTrue(roleMessages[6].role.contains("validator"))
         XCTAssertTrue(roleMessages[7].role.contains("archivist"))
