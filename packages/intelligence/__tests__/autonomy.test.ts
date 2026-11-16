@@ -349,6 +349,28 @@ describe("TaskLifecycleCoordinator", () => {
     chronologyStore.save(completed);
     const restartedAfterChronologyTamper = new TaskLifecycleCoordinator({ store: chronologyStore });
     await expect(restartedAfterChronologyTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
+
+    const stepChronologyStore = new InMemoryTaskLifecycleStore();
+    const stepChronologyCoordinator = new TaskLifecycleCoordinator({
+      store: stepChronologyStore, createId: () => "step-chronology-attempt"
+    });
+    await stepChronologyCoordinator.init();
+    await stepChronologyCoordinator.createTask({
+      id: "completion-before-step", objective: "Task completion cannot predate its final step",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    const stepClaim = await stepChronologyCoordinator.claimNextStep("completion-before-step");
+    await stepChronologyCoordinator.completeStep({
+      taskId: "completion-before-step", stepId: "one", attemptId: stepClaim!.attemptId,
+      result: "Completed"
+    });
+    const stepChronology = stepChronologyStore.load();
+    stepChronology[0].completedAt = new Date(
+      Date.parse(stepChronology[0].steps[0].completedAt!) - 1
+    ).toISOString();
+    stepChronologyStore.save(stepChronology);
+    await expect(new TaskLifecycleCoordinator({ store: stepChronologyStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
   });
 
   it("rejects persisted cancellation states that the coordinator cannot produce", async () => {
