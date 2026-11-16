@@ -254,7 +254,7 @@ final class PocketAILabTests: XCTestCase {
         try await model.importModel(from: source)
         model.updateRoutingCapabilities(
             try XCTUnwrap(model.selectedModelID),
-            from: "reasoning, analysis, engineering, security-review, critique, validation"
+            from: "planning, reasoning, analysis, engineering, security-review, critique, validation, documentation"
         )
         await model.loadModel()
 
@@ -262,7 +262,7 @@ final class PocketAILabTests: XCTestCase {
         await model.send("Continue ordinary chat")
 
         let prompts = await engine.recordedPrompts()
-        XCTAssertEqual(prompts.count, 7)
+        XCTAssertEqual(prompts.count, 9)
         let chatPrompt = try XCTUnwrap(prompts.last)
         XCTAssertTrue(chatPrompt.contains("You: Continue ordinary chat"))
         XCTAssertFalse(chatPrompt.contains("Sensitive Agent Team-only objective"))
@@ -271,7 +271,7 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
-    func testDefaultAgentTeamRoutesSixRolesThroughConfiguredLocalProfile() async throws {
+    func testDefaultAgentTeamRoutesEightRolesThroughConfiguredLocalProfile() async throws {
         let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
@@ -281,7 +281,7 @@ final class PocketAILabTests: XCTestCase {
         try await model.importModel(from: source)
         model.updateRoutingCapabilities(
             try XCTUnwrap(model.selectedModelID),
-            from: "reasoning, analysis, engineering, security-review, critique, validation"
+            from: "planning, reasoning, analysis, engineering, security-review, critique, validation, documentation"
         )
         await model.loadModel()
         XCTAssertTrue(model.isModelLoaded)
@@ -289,11 +289,38 @@ final class PocketAILabTests: XCTestCase {
         await model.runDefaultAgentTeam("Review the shared native inference architecture")
 
         let roleMessages = model.messages.filter { $0.role.hasPrefix("Agent Team ·") }
-        XCTAssertEqual(roleMessages.count, 6)
+        XCTAssertEqual(roleMessages.count, 8)
         XCTAssertTrue(roleMessages[0].role.contains("reasoner"))
-        XCTAssertTrue(roleMessages[5].role.contains("validator"))
-        XCTAssertTrue(model.status.contains("6 sequential logical roles"))
+        XCTAssertTrue(roleMessages[5].role.contains("critic"))
+        XCTAssertTrue(roleMessages[6].role.contains("validator"))
+        XCTAssertTrue(roleMessages[7].role.contains("archivist"))
+        XCTAssertTrue(model.status.contains("8 sequential logical roles"))
         XCTAssertTrue(model.isModelLoaded, "Agent Team must retain the shared model lease.")
+    }
+
+    @MainActor
+    func testAgentTeamCanReplaceCoreRoleWithExplicitSpecialistTemplate() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = makeLocalChatModel(engine: engine, root: root)
+        try await model.importModel(from: source)
+        model.updateRoutingCapabilities(
+            try XCTUnwrap(model.selectedModelID),
+            from: "planning, reasoning, analysis, engineering, security-review, critique, validation, documentation, swift, ios"
+        )
+        await model.loadModel()
+
+        let plan = ["director", "reasoner", "researcher", "swift-ios", "security-analyst", "critic", "validator", "archivist"]
+        await model.runDefaultAgentTeam("Review the Swift runtime", agentIDs: plan)
+
+        let roleMessages = model.messages.filter { $0.role.hasPrefix("Agent Team ·") }
+        XCTAssertEqual(roleMessages.count, 8)
+        XCTAssertTrue(roleMessages[3].role.contains("swift-ios"))
+        XCTAssertTrue(model.status.contains("8 sequential logical roles"))
+        await model.unloadModel()
     }
 
     @MainActor
