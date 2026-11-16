@@ -13,6 +13,11 @@ test("extracted archive launcher, build, and tests work outside the repository",
   const extractDir = await mkdtemp(path.join(tmpdir(), "pocket-unpack-"));
   const home = await mkdtemp(path.join(tmpdir(), "pocket-home-"));
   const built = await buildArchive({ destDir: buildDir });
+  assert.equal(
+    built.manifest.files.some(file => file.path === "packages/exploitgym"),
+    false,
+    "A submodule gitlink is not a regular archive file."
+  );
   const unzip = spawnSync("unzip", ["-q", built.archivePath, "-d", extractDir], { encoding: "utf8" });
   assert.equal(unzip.status, 0, unzip.stderr);
   const root = path.join(extractDir, "pocket-ai-lab");
