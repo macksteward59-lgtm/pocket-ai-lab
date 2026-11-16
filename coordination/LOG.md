@@ -2139,3 +2139,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added static migration-contract tests for the composite parent binding, required `target_scope_hash`, forced project RLS, and append-only history triggers. These tests validate expected SQL structure only; they do not execute the migration or prove PostgreSQL behavior.
 - Commits on `codex/proofhunt-1.1-mainline-foundation`: `b755f9ebbac8e674c9b1aa827b91fe4ce11d8424` (composite FK), `fe1182f35331c24e9d24c3d118d6572e772cfa9d` (migration contract tests). Exact-head workflows are queued/running; previous head `877f8f4c24f15fc8e2fedf821a2e626a5cec5636` passed all five configured workflows.
 - PostgreSQL migration execution, role/grant validation, tenant-isolation integration tests, and live assessment execution remain unverified. No scanner runtime added. No merge; `main` untouched.
+
+
+## 2026-11-16 — ProofHunt migration-test packaging correction
+
+- The #139 exact-head workflow at `fe1182f35331c24e9d24c3d118d6572e772cfa9d` built and type-checked, but the intelligence test suite failed 2 newly added migration-contract tests (656 passed, 2 failed): the tests resolved the SQL file relative to compiled `dist`, where the source migration is not copied. The consumer archive smoke also failed because its packaged runtime omits source migrations and runs the same compiled tests.
+- Fixed the test to resolve the migration from repository-root `process.cwd()` and to skip only this source-migration contract suite when the migration file is absent from a runtime-only archive. In the full source repository, both SQL contract tests still run. Latest branch head `07293cfc81940bb88e5f823f3038f73af4095e86`; exact-head workflows are running. Do not mark green until results complete.
+- No SQL runtime execution has occurred. The migration contract tests are static source checks, not PostgreSQL integration. No merge; `main` untouched.
