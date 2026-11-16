@@ -22,8 +22,8 @@ export const LAB_DISCLAIMER =
   "These are untrusted model proposals. They are not permission, approval, or an APEX receipt.";
 
 const STAGE_PLAN: Record<DeliberationStage, readonly string[]> = {
-  independent: ["reasoner", "researcher", "engineer"],
-  "cross-review": ["critic", "validator"],
+  independent: ["reasoner", "researcher", "engineer", "archivist"],
+  "cross-review": ["security", "critic", "validator"],
   challenge: ["critic"],
   revision: ["reasoner", "engineer"],
   verification: ["validator"],
