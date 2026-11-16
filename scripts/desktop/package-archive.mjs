@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
-import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -22,10 +22,23 @@ export function isForbiddenRelative(relative) {
 
 export async function collectFiles(root) {
   const { stdout } = await execFileAsync("git", ["ls-files", "-z"], { cwd: root });
-  const files = stdout.split("\0").filter(Boolean)
+  const candidates = stdout.split("\0").filter(Boolean)
     .map(file => file.split(path.sep).join("/"))
-    .filter(file => !isForbiddenRelative(file))
-    .sort();
+    .filter(file => !isForbiddenRelative(file));
+  const files = [];
+  for (const relative of candidates) {
+    try {
+      const info = await lstat(path.join(root, relative));
+      // Git submodules appear in the parent index as directory gitlinks. They
+      // are not standalone files and must not be read or copied into this
+      // portable source archive. Symlinks are also excluded to avoid following
+      // paths outside the repository during secret scanning or packaging.
+      if (info.isFile() && !info.isSymbolicLink()) files.push(relative);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  }
+  files.sort();
   for (const required of ["scripts/local-gguf/lib.mjs", "scripts/desktop/launcher-lib.mjs", "tsconfig.json", "package.json"]) {
     if (!files.includes(required)) throw new Error("Archive is missing " + required);
   }
