@@ -2769,3 +2769,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Director bridge package-manifest validation (step 12) completed successfully. Native Pocket AI Lab app generation/build (step 13) is now `in_progress`.
 - Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS device link, simulator selection, and simulator boot remain successful. Native app XCTest, iOS simulator XCTest, repaired GGUF download/path checks, and macOS inference smoke are pending.
 - No repaired model download, model generation, overall workflow pass, or physical-device acceptance is claimed. No source change, workflow rerun/cancellation, PR merge/approval, or APEX trust change occurred.
+
+
+## 2026-11-16 UTC — PR #164 companion Intelligence CI passed; iOS build still pending
+
+- Queried exact current PR #164 head `6661bf655edef85e94fa1f363fcf54a33f20233c` and both workflow runs.
+- Companion Pocket AI Lab Intelligence CI [#43981072947](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981072947) completed with conclusion `success`; dependency setup/advisory steps, JavaScript syntax, type-check/build, and test steps all succeeded on the exact PR head.
+- iOS LlamaEngine CI [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474) remains `in_progress` at native app generation/build (step 13). All prior steps through Director bridge manifest validation (step 12) succeeded. Native app XCTest, simulator XCTest, repaired GGUF download/path validation, and macOS inference smoke have not started.
+- Re-polled iOS job #133697485358; no step transition since the prior checkpoint. Job log retrieval returns GitHub `BlobNotFound`, and no artifacts are published. Therefore the reason for the long-running app-build step cannot be established. No cancellation or rerun was issued.
+- PR #164 remains draft/open; PR #156 remains open/unmerged. No model download/generation, overall iOS workflow pass, physical iPhone Air test, signing, or deployment is claimed.
+- Updated BOARD and PR #164 validation summary with the companion CI success and the iOS job's unresolved state. No source code or APEX trust-boundary change.
