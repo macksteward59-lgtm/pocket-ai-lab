@@ -32,6 +32,45 @@ function harness(options: { leaseMs?: number; maxConcurrentSteps?: number } = {}
 }
 
 describe("TaskLifecycleCoordinator", () => {
+  it("reloads the authoritative snapshot after a durable store conflict", async () => {
+    const backing = new InMemoryTaskLifecycleStore();
+    let conflictNextSave = false;
+    const store: TaskLifecycleStore = {
+      load: () => backing.load(),
+      save: records => {
+        if (conflictNextSave) {
+          conflictNextSave = false;
+          throw new TaskLifecycleError("store_conflict", "A concurrent writer advanced the snapshot");
+        }
+        backing.save(records);
+      }
+    };
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    await coordinator.init();
+
+    const concurrentWriter = new TaskLifecycleCoordinator({ store: backing });
+    await concurrentWriter.init();
+    await concurrentWriter.createTask({
+      id: "remote-task", objective: "Written by another coordinator",
+      steps: [{ id: "one", description: "Remote work" }]
+    });
+
+    conflictNextSave = true;
+    await expect(coordinator.createTask({
+      id: "local-task", objective: "Must not overwrite the concurrent writer",
+      steps: [{ id: "one", description: "Local work" }]
+    })).rejects.toMatchObject({ code: "store_conflict" });
+    expect(coordinator.listTasks()).toHaveLength(0);
+
+    await coordinator.reload();
+    expect(coordinator.listTasks().map(task => task.id)).toEqual(["remote-task"]);
+    await coordinator.createTask({
+      id: "local-task", objective: "Retry after reconciling the latest snapshot",
+      steps: [{ id: "one", description: "Local work" }]
+    });
+    expect(coordinator.listTasks().map(task => task.id).sort()).toEqual(["local-task", "remote-task"]);
+  });
+
   it("requires initialization and validates dependency graphs before persisting", async () => {
     const store = new InMemoryTaskLifecycleStore();
     const coordinator = new TaskLifecycleCoordinator({ store });
@@ -144,31 +183,6 @@ describe("TaskLifecycleCoordinator", () => {
     })).rejects.toMatchObject({ code: "stale_attempt" });
   });
 
-  it("can recover expired leases for one task without mutating another task", async () => {
-    const h = harness({ leaseMs: 1_000 });
-    await h.coordinator.init();
-    await h.create();
-    await h.coordinator.createTask({
-      id: "unrelated-task",
-      objective: "Do not recover this task yet",
-      leaseMs: 1_000,
-      steps: [{ id: "unrelated", description: "Unrelated leased work" }]
-    });
-    const targetClaim = await h.coordinator.claimNextStep("task-1");
-    const unrelatedClaim = await h.coordinator.claimNextStep("unrelated-task");
-    expect(targetClaim).not.toBeNull();
-    expect(unrelatedClaim).not.toBeNull();
-
-    h.advance(1_001);
-    expect(await h.coordinator.recoverExpiredLeases("task-1")).toBe(1);
-    expect(h.coordinator.getTask("task-1").steps[0].status).toBe("pending");
-    expect(h.coordinator.getTask("unrelated-task").steps[0].status).toBe("running");
-    expect(await h.coordinator.recoverExpiredLeases("unrelated-task")).toBe(1);
-    expect(h.coordinator.getTask("unrelated-task").steps[0].status).toBe("pending");
-    await expect(h.coordinator.recoverExpiredLeases("missing-task"))
-      .rejects.toMatchObject({ code: "unknown_task" });
-  });
-
   it("persists state across coordinator recreation and recovers exhausted leases as failure", async () => {
     let milliseconds = Date.parse("2026-11-15T12:00:00.000Z");
     let id = 0;
@@ -186,6 +200,36 @@ describe("TaskLifecycleCoordinator", () => {
     await restarted.init();
     expect(await restarted.recoverExpiredLeases()).toBe(1);
     expect(restarted.getTask("persisted").status).toBe("failed");
+  });
+
+  it("recovers only the requested task when scoped lease recovery is used", async () => {
+    let milliseconds = Date.parse("2026-11-16T00:00:00.000Z");
+    let nextId = 0;
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({
+      store,
+      now: () => new Date(milliseconds),
+      createId: () => "scoped-attempt-" + (++nextId)
+    });
+    await coordinator.init();
+    for (const id of ["task-one", "task-two"]) {
+      await coordinator.createTask({
+        id, objective: "Recover one task without disturbing another",
+        leaseMs: 1_000,
+        steps: [{ id: "work", description: "Work", maxAttempts: 2 }]
+      });
+      await coordinator.claimNextStep(id);
+    }
+    milliseconds += 1_001;
+
+    expect(await coordinator.recoverExpiredLeases("task-one")).toBe(1);
+    expect(coordinator.getTask("task-one").steps[0].status).toBe("pending");
+    expect(coordinator.getTask("task-two").steps[0].status).toBe("running");
+
+    expect(await coordinator.recoverExpiredLeases()).toBe(1);
+    expect(coordinator.getTask("task-two").steps[0].status).toBe("pending");
+    await expect(coordinator.recoverExpiredLeases("missing-task"))
+      .rejects.toMatchObject({ code: "unknown_task" });
   });
 
   it("cancels live leases and ignores late worker results", async () => {
@@ -257,6 +301,215 @@ describe("TaskLifecycleCoordinator", () => {
     expect(coordinator.getTask("atomic-claim").steps[0]).toMatchObject({
       status: "pending", attempts: 0, attemptIds: [], currentAttempt: null
     });
+  });
+
+  it("preserves retry history when a pending task is restored", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "retry-attempt" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "retry-restore", objective: "Restore a retryable failure",
+      steps: [{ id: "one", description: "One step", maxAttempts: 2 }]
+    });
+    const claim = await coordinator.claimNextStep("retry-restore");
+    await coordinator.failStep({
+      taskId: "retry-restore", stepId: "one", attemptId: claim!.attemptId,
+      error: "Transient failure", retryable: true
+    });
+
+    const restarted = new TaskLifecycleCoordinator({ store, createId: () => "retry-attempt-2" });
+    await restarted.init();
+    expect(restarted.getTask("retry-restore").steps[0]).toMatchObject({
+      status: "pending", attempts: 1, lastError: "Transient failure"
+    });
+    expect((await restarted.claimNextStep("retry-restore"))?.attemptNumber).toBe(2);
+  });
+
+  it("rejects a persisted active attempt whose id is not the latest issued id", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "issued-attempt" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "tampered-attempt", objective: "Reject forged persisted lease identity",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    await coordinator.claimNextStep("tampered-attempt");
+
+    const snapshot = store.load();
+    snapshot[0].steps[0].currentAttempt!.id = "forged-attempt";
+    store.save(snapshot);
+
+    const restarted = new TaskLifecycleCoordinator({ store });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+  it("rejects duplicate attempt identities across persisted tasks", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    let nextAttempt = 0;
+    const coordinator = new TaskLifecycleCoordinator({
+      store, createId: () => "unique-attempt-" + (++nextAttempt)
+    });
+    await coordinator.init();
+    for (const id of ["first-task", "second-task"]) {
+      await coordinator.createTask({
+        id, objective: "Create independent task " + id,
+        steps: [{ id: "one", description: "One step" }]
+      });
+      await coordinator.claimNextStep(id);
+    }
+
+    const snapshot = store.load();
+    snapshot[1].steps[0].attemptIds[0] = snapshot[0].steps[0].attemptIds[0];
+    snapshot[1].steps[0].currentAttempt!.id = snapshot[0].steps[0].attemptIds[0];
+    store.save(snapshot);
+
+    const restarted = new TaskLifecycleCoordinator({ store });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+  it("rejects malformed persisted timestamps and evidence references", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "bad-record", objective: "Reject malformed persisted data",
+      steps: [{ id: "one", description: "One step" }]
+    });
+
+    const snapshot = store.load();
+    snapshot[0].createdAt = "not-a-timestamp";
+    snapshot[0].steps[0].evidenceRefs = [""];
+    store.save(snapshot);
+
+    const restarted = new TaskLifecycleCoordinator({ store });
+    await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+  it("rejects persisted attempt budgets exhausted while pending and impossible task completion chronology", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "chronology-attempt" });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "invalid-pending-budget", objective: "Reject exhausted pending work",
+      steps: [{ id: "one", description: "One step", maxAttempts: 2 }]
+    });
+
+    const exhausted = store.load();
+    exhausted[0].steps[0].attempts = 2;
+    exhausted[0].steps[0].attemptIds = ["attempt-one", "attempt-two"];
+    store.save(exhausted);
+    const restartedAfterBudgetTamper = new TaskLifecycleCoordinator({ store });
+    await expect(restartedAfterBudgetTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
+
+    const chronologyStore = new InMemoryTaskLifecycleStore();
+    const valid = new TaskLifecycleCoordinator({ store: chronologyStore, createId: () => "chronology-success" });
+    await valid.init();
+    await valid.createTask({
+      id: "invalid-completion-time", objective: "Reject impossible completion chronology",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    const claim = await valid.claimNextStep("invalid-completion-time");
+    await valid.completeStep({
+      taskId: "invalid-completion-time", stepId: "one", attemptId: claim!.attemptId,
+      result: "Completed"
+    });
+    const completed = chronologyStore.load();
+    completed[0].completedAt = new Date(Date.parse(completed[0].createdAt) - 1).toISOString();
+    chronologyStore.save(completed);
+    const restartedAfterChronologyTamper = new TaskLifecycleCoordinator({ store: chronologyStore });
+    await expect(restartedAfterChronologyTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
+
+    const stepChronologyStore = new InMemoryTaskLifecycleStore();
+    const stepChronologyCoordinator = new TaskLifecycleCoordinator({
+      store: stepChronologyStore, createId: () => "step-chronology-attempt"
+    });
+    await stepChronologyCoordinator.init();
+    await stepChronologyCoordinator.createTask({
+      id: "completion-before-step", objective: "Task completion cannot predate its final step",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    const stepClaim = await stepChronologyCoordinator.claimNextStep("completion-before-step");
+    await stepChronologyCoordinator.completeStep({
+      taskId: "completion-before-step", stepId: "one", attemptId: stepClaim!.attemptId,
+      result: "Completed"
+    });
+    const stepChronology = stepChronologyStore.load();
+    stepChronology[0].completedAt = new Date(
+      Date.parse(stepChronology[0].steps[0].completedAt!) - 1
+    ).toISOString();
+    stepChronologyStore.save(stepChronology);
+    await expect(new TaskLifecycleCoordinator({ store: stepChronologyStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+  it("rejects persisted cancellation states that the coordinator cannot produce", async () => {
+    const completedStore = new InMemoryTaskLifecycleStore();
+    const completedCoordinator = new TaskLifecycleCoordinator({ store: completedStore });
+    await completedCoordinator.init();
+    await completedCoordinator.createTask({
+      id: "completed-then-cancelled", objective: "A completed task cannot become cancelled",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    const completedClaim = await completedCoordinator.claimNextStep("completed-then-cancelled");
+    await completedCoordinator.completeStep({
+      taskId: "completed-then-cancelled", stepId: "one",
+      attemptId: completedClaim!.attemptId, result: "Done"
+    });
+    const completedSnapshot = completedStore.load();
+    completedSnapshot[0].status = "cancelled";
+    completedStore.save(completedSnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: completedStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+
+    const readyStore = new InMemoryTaskLifecycleStore();
+    const readyCoordinator = new TaskLifecycleCoordinator({ store: readyStore });
+    await readyCoordinator.init();
+    await readyCoordinator.createTask({
+      id: "ready-with-cancelled-step", objective: "Ready work cannot contain cancelled steps",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    await readyCoordinator.cancelTask("ready-with-cancelled-step");
+    const readySnapshot = readyStore.load();
+    readySnapshot[0].status = "ready";
+    readySnapshot[0].completedAt = null;
+    readyStore.save(readySnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: readyStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+
+    const mixedStore = new InMemoryTaskLifecycleStore();
+    const mixedCoordinator = new TaskLifecycleCoordinator({ store: mixedStore, createId: () => "mixed-attempt" });
+    await mixedCoordinator.init();
+    await mixedCoordinator.createTask({
+      id: "cancelled-with-failure", objective: "Cancellation cannot conceal a failed step",
+      steps: [
+        { id: "first", description: "First step" },
+        { id: "second", description: "Second step" }
+      ]
+    });
+    const active = await mixedCoordinator.claimNextStep("cancelled-with-failure");
+    await mixedCoordinator.cancelTask("cancelled-with-failure");
+    const mixedSnapshot = mixedStore.load();
+    mixedSnapshot[0].steps[0].status = "failed";
+    mixedSnapshot[0].steps[0].lastError = "Forged failure";
+    mixedSnapshot[0].steps[0].attempts = 1;
+    mixedSnapshot[0].steps[0].attemptIds = [active!.attemptId];
+    mixedStore.save(mixedSnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: mixedStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+
+    const resultStore = new InMemoryTaskLifecycleStore();
+    const resultCoordinator = new TaskLifecycleCoordinator({ store: resultStore });
+    await resultCoordinator.init();
+    await resultCoordinator.createTask({
+      id: "cancelled-with-result", objective: "Cancelled steps cannot claim a result",
+      steps: [{ id: "one", description: "One step" }]
+    });
+    await resultCoordinator.cancelTask("cancelled-with-result");
+    const resultSnapshot = resultStore.load();
+    resultSnapshot[0].steps[0].result = "Forged completion";
+    resultStore.save(resultSnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: resultStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
   });
 
   it("rejects unknown and duplicate dependencies and out-of-range controls", async () => {
