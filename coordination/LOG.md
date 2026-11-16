@@ -2753,3 +2753,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - GitHub Actions automatically started exact-head iOS workflow [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474) for `6661bf655edef85e94fa1f363fcf54a33f20233c` after the workflow-only smoke handoff repair.
 - Job #133697485358 is `in_progress`; setup, checkout, Xcode discovery, and CMake/Ninja install passed. Pinned build-cache restore is currently in progress; later gates are pending. No repaired smoke path or model generation has been validated yet.
 - Updated the board and PR #164 validation summary. No merge, approval, workflow cancellation, APEX trust change, or physical-device test.
+
+
+## 2026-11-16 UTC — PR #164 repaired-head build gates advanced
+
+- Rechecked exact-head run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job #133697485358, for head `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Newly confirmed success: pinned llama.cpp build for simulator and macOS, fail-closed Swift typecheck, generic iOS device linking, iPhone simulator selection, and simulator boot. Director bridge package-manifest validation is currently `in_progress`; native app build/XCTest, simulator XCTest, repaired GGUF download/path validation, and macOS inference smoke remain pending.
+- No model download, model generation, overall workflow pass, or physical-device acceptance is claimed. No source change or CI cancellation/rerun occurred in this checkpoint.
+- Updated the PR #164 board detail to distinguish current exact-head progress from the prior failed run. PR remains draft/open; PR #160 remains open for separate archive reconciliation.
