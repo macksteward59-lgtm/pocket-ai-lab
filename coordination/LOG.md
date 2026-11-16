@@ -2738,3 +2738,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - ChatGPT claims a narrow repair on existing branch codex/bridge-native-runtime-integration: .github/workflows/ios-llamaengine-ci.yml smoke-download step only. Add pipeline failure propagation and explicit validation that exactly one absolute existing GGUF path is passed to the smoke test. No changes to inference runtime, model parser, tests, pin values, or APEX trust boundaries.
 - This workflow file overlaps the earlier CI-cache PR #128 review area; current repair is confined to the later smoke-download handoff and will preserve cache logic verbatim. No other active in-progress owner claim on this exact smoke handoff was found.
 - Do not rerun/cancel the prior workflow; its evidence remains failed at the macOS smoke stage. Fresh exact-head CI is required after the workflow fix. No physical-device validation.
+
+
+## 2026-11-16 UTC — PR #164 CI smoke-path handoff repaired
+
+- Diagnosed prior exact-head macOS failure from recovered job logs: the fetch-gguf Python download failed with DNS resolution error. The workflow omitted `set -o pipefail` on the fetch-to-tee pipeline, so the shell step appeared successful. It then treated the script's stdout pin-verification banner as the model path and wrote it into the temporary SmokePath.swift; metadata and inference tests failed because it was not a readable file.
+- On branch `codex/bridge-native-runtime-integration`, changed only `.github/workflows/ios-llamaengine-ci.yml`. Added `set -o pipefail`; collect fetch output separately; accept exactly one existing absolute `.gguf` path; persist it with a newline; and recheck absolute suffix and file existence before invoking write-smoke-path.
+- Workflow file commit `f765562bcc16767548e4948ee5acb95a294f304c`; newline correction commit `6661bf655edef85e94fa1f363fcf54a33f20233c`. Current branch/PR #164 head is `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- No inference/runtime/model parser/test/pin or APEX/East trust code changed. No CI rerun/cancellation, merge/approval/closure, signing, or physical iPhone Air test. Fresh exact-head CI evidence is still required; prior run #43976612502 remains failed and cannot validate the fix.
