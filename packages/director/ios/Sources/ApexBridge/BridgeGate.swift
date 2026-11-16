@@ -28,7 +28,7 @@ public enum BridgeGate {
         "listModels": ["id", "action"],
         "importModel": ["id", "action", "model", "artifactId"],
         "validateModel": ["id", "action", "model"],
-        "loadModel": ["id", "action", "model", "estimatedMemoryMB"],
+        "loadModel": ["id", "action", "model"],
         "checkReadiness": ["id", "action", "sessionId"],
         "generate": ["id", "action", "sessionId", "prompt", "requestId", "conversationRequestId", "attemptId", "challengeNonce"],
         "cancelGeneration": ["id", "action", "sessionId", "requestId"],
