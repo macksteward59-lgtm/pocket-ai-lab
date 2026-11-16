@@ -2400,3 +2400,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Scope:** Reconcile the task lifecycle kernel, East six-agent adapter, and transactional PostgreSQL snapshot store from #103/#131 into the same mainline candidate; retain their focused tests and migration; add a cross-layer acceptance test where supported.
 - **Boundary:** A PostgreSQL lifecycle snapshot is workflow state, not an authorization receipt. No APEX grants, RLS policy, credentials, database deployment, or consequential provider execution is introduced.
 - **Validation:** Exact-head CI and fault/restart/transaction tests required. No production database or device acceptance claimed.
+
+
+## 2026-11-16 — Native memory UI and archive refinements
+
+- Memory screen now distinguishes an unavailable encrypted vault from a genuinely empty vault, provides a retry action after unlocking/restoring access, and disables new writes while an existing vault cannot be read.
+- Editing now persists the selected memory layer as well as content/source references; identity and creation timestamp remain stable and verification resets to false.
+- Added unique memory-ID validation, excluded the dedicated device-bound vault directory from backup, and moved key-byte clearing into a defer that covers Keychain duplicate/error exits.
+- Latest PR #153 head `f1dda415a1808d1e9fdead5812136339f2d1a1b6`. Exact-head CI: Pocket AI Lab push in progress; PR iOS workflow queued; Consumer/Governance/Cursor workflows in progress. Native build/XCTest results are pending.
