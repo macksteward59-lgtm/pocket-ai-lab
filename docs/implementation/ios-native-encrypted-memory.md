@@ -12,7 +12,7 @@ Each entry records a layer (working, episodic, semantic, or procedural), content
 - A versioned magic prefix and fixed additional authenticated data bind the ciphertext to this format.
 - The 256-bit random key is stored as a generic-password item in iOS Keychain under a stable service/account.
 - The Keychain item uses kSecAttrAccessibleWhenUnlockedThisDeviceOnly: unavailable while the device is locked and not migrated to another device through backup.
-- The encrypted file is stored in the app's private Application Support directory with complete file protection.
+- The encrypted file is stored in the app's private Application Support directory with complete file protection; the dedicated memory directory is excluded from device backup because the key is device-only.
 - Tampered, malformed, oversized, or unauthenticated vault content fails closed. No plaintext fallback exists.
 - An empty read does not create a key. A key is created only when the first explicit write occurs.
 - If a vault file exists but its Keychain key is missing or inaccessible, reads and writes fail closed; the app does not generate a replacement key that would strand or overwrite existing data.
