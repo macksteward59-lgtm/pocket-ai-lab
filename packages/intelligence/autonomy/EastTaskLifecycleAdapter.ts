@@ -63,13 +63,18 @@ function decodeCheckpoint(value: string | null): EastRuntimeCheckpoint | null {
 }
 
 function latestCheckpoint(task: TaskRecord): EastRuntimeCheckpoint | null {
-  let latest: EastRuntimeCheckpoint | null = null;
+  let latestTask: EastRuntimeCheckpoint["task"] | null = null;
+  const messages: EastRuntimeCheckpoint["messages"][number][] = [];
+  let evidenceMemoryCommitted = false;
   for (const step of task.steps) {
     if (step.status !== "succeeded") continue;
     const checkpoint = decodeCheckpoint(step.result);
-    if (checkpoint) latest = checkpoint;
+    if (!checkpoint) continue;
+    latestTask = checkpoint.task;
+    messages.push(...checkpoint.messages);
+    evidenceMemoryCommitted = checkpoint.evidenceMemoryCommitted;
   }
-  return latest;
+  return latestTask ? { version: 1, task: latestTask, messages, evidenceMemoryCommitted } : null;
 }
 
 function buildSteps(): TaskStepDefinition[] {
