@@ -219,6 +219,57 @@ describe("PostgresTaskLifecycleStore", () => {
     expect(completed.status).toBe("completed");
   });
 
+  it("admits one worker for a concurrent claim and fences the other worker from completion", async () => {
+    const database = new FakePostgresDatabase();
+    const owner = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, "workspace-claim-race"),
+      workerId: "worker-a"
+    });
+    const contender = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, "workspace-claim-race"),
+      workerId: "worker-b"
+    });
+    await owner.init();
+    await contender.init();
+    await owner.createTask(definition("task-claim-race"));
+    await contender.reload();
+
+    const [ownerResult, contenderResult] = await Promise.allSettled([
+      owner.claimNextStep("task-claim-race"),
+      contender.claimNextStep("task-claim-race")
+    ]);
+    expect([ownerResult, contenderResult].filter(result => result.status === "fulfilled")).toHaveLength(1);
+
+    const ownerWon = ownerResult.status === "fulfilled";
+    const winningResult = ownerWon ? ownerResult : contenderResult;
+    const losingResult = ownerWon ? contenderResult : ownerResult;
+    const winner = ownerWon ? owner : contender;
+    const loser = ownerWon ? contender : owner;
+    expect(losingResult).toMatchObject({
+      status: "rejected",
+      reason: { code: "store_conflict" }
+    });
+    const claim = winningResult.status === "fulfilled" ? winningResult.value : null;
+    expect(claim).not.toBeNull();
+    expect(claim?.ownerId).toBe(ownerWon ? "worker-a" : "worker-b");
+
+    await loser.reload();
+    await expect(loser.completeStep({
+      taskId: "task-claim-race",
+      stepId: claim!.stepId,
+      attemptId: claim!.attemptId,
+      result: "foreign worker completion"
+    })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
+
+    const completed = await winner.completeStep({
+      taskId: "task-claim-race",
+      stepId: claim!.stepId,
+      attemptId: claim!.attemptId,
+      result: "claim owner completion"
+    });
+    expect(completed.status).toBe("completed");
+  });
+
   it("isolates namespaces", async () => {
     const database = new FakePostgresDatabase();
     const first = new PostgresTaskLifecycleStore(database, "workspace-one");
