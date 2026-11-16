@@ -73,14 +73,17 @@ public actor RuntimeController {
     public let deviceId: String
     public let runtimeIdentity: String
     private let readinessTTL: TimeInterval
+    private let clock: @Sendable () -> Date
     private var sessions: [String: ActiveSession] = [:]
+    private var unloadingSessions: Set<String> = []
 
     public init(
         runtime: NativeInferenceRuntime,
         deviceId: String,
         runtimeIdentity: String,
         runtimeVersion: String = "pocket-ai-lab-native/1",
-        readinessTTL: TimeInterval = 120
+        readinessTTL: TimeInterval = 120,
+        clock: @escaping @Sendable () -> Date = { Date() }
     ) throws {
         guard !deviceId.isEmpty, deviceId.utf8.count <= 128,
               !runtimeIdentity.isEmpty, runtimeIdentity.utf8.count <= 128,
@@ -93,6 +96,7 @@ public actor RuntimeController {
         self.runtimeIdentity = runtimeIdentity
         self.runtimeVersion = runtimeVersion
         self.readinessTTL = readinessTTL
+        self.clock = clock
     }
 
     @discardableResult
@@ -115,7 +119,7 @@ public actor RuntimeController {
                 readiness: nil,
                 generations: [:]
             )
-            return report(for: lease.session.id, now: Date())
+            return report(for: lease.session.id, now: clock())
         } catch {
             _ = await runtime.release(lease)
             _ = await runtime.unloadIdleModels()
@@ -126,9 +130,16 @@ public actor RuntimeController {
     /// Performs a real one-token generation through the exact loaded lease.
     /// A successful file import, model load, or health endpoint alone is not readiness.
     @discardableResult
-    public func readiness(sessionId: String, now: Date = Date()) async throws -> ModelReport {
-        guard var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
-        try verifyFile(active)
+    public func readiness(sessionId: String) async throws -> ModelReport {
+        guard !unloadingSessions.contains(sessionId),
+              var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
+        let now = clock()
+        do { try verifyFile(active) }
+        catch {
+            active.readiness = nil
+            sessions[sessionId] = active
+            throw error
+        }
         let request = GenerationRequest(
             prompt: "Pocket AI Lab native runtime readiness probe. Return one token.",
             maxTokens: 1,
@@ -157,10 +168,11 @@ public actor RuntimeController {
         challengeNonce: String,
         maxTokens: Int = 512,
         temperature: Double = 0.2,
-        maxOutputBytes: Int = 64_000,
-        now: Date = Date()
+        maxOutputBytes: Int = 64_000
     ) async throws -> RuntimeGenerationRecord {
-        guard var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
+        guard !unloadingSessions.contains(sessionId),
+              var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
+        let now = clock()
         guard let readiness = active.readiness, readiness.expiresAt > now else {
             throw RuntimeControllerError.notReady
         }
@@ -172,8 +184,13 @@ public actor RuntimeController {
               prompt.utf8.count <= 32_768 else {
             throw RuntimeControllerError.invalidRequest
         }
-        try verifyFile(active)
-        guard active.generations[requestId] == nil else {
+        do { try verifyFile(active) }
+        catch {
+            active.readiness = nil
+            sessions[sessionId] = active
+            throw error
+        }
+        guard maxOutputBytes > 0, active.generations[requestId] == nil else {
             throw RuntimeControllerError.duplicateRequest
         }
         let request = GenerationRequest(
@@ -236,7 +253,8 @@ public actor RuntimeController {
     /// Releases one exact session lease. Other consumers' leases are never evicted.
     @discardableResult
     public func unload(sessionId: String) async -> Bool {
-        guard let active = sessions[sessionId] else { return false }
+        guard let active = sessions[sessionId], unloadingSessions.insert(sessionId).inserted else { return false }
+        defer { unloadingSessions.remove(sessionId) }
         for requestId in Array(active.generations.keys) {
             _ = await cancelGeneration(sessionId: sessionId, requestId: requestId)
         }
@@ -253,8 +271,9 @@ public actor RuntimeController {
         _ = await runtime.unloadIdleModels()
     }
 
-    public func reports(now: Date = Date()) -> [ModelReport] {
-        sessions.keys.sorted().map { report(for: $0, now: now) }
+    public func reports() -> [ModelReport] {
+        let now = clock()
+        return sessions.keys.sorted().map { report(for: $0, now: now) }
     }
 
     private func clearGeneration(sessionId: String, requestId: String) {
