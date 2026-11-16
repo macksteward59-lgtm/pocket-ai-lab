@@ -11,7 +11,11 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
             role: "reasoner",
             sequence: 0,
             text: "Analyze dependencies",
-            createdAt: Date()
+            createdAt: Date(),
+            conversationID: "conversation-1",
+            recipientAgentID: "researcher",
+            messageType: "analysis",
+            parentMessageID: nil
         )
 
         try store.begin(id: "task-1", objective: "Review architecture")
@@ -28,6 +32,10 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         XCTAssertEqual(restoredRole.role, role.role)
         XCTAssertEqual(restoredRole.sequence, role.sequence)
         XCTAssertEqual(restoredRole.text, role.text)
+        XCTAssertEqual(restoredRole.conversationID, "conversation-1")
+        XCTAssertEqual(restoredRole.recipientAgentID, "researcher")
+        XCTAssertEqual(restoredRole.messageType, "analysis")
+        XCTAssertNil(restoredRole.parentMessageID)
         // JSONEncoder's ISO-8601 strategy persists whole seconds. Compare
         // within that documented precision instead of Equatable Date equality.
         XCTAssertEqual(
@@ -37,6 +45,47 @@ final class LocalAgentTaskHistoryStoreTests: XCTestCase {
         )
         XCTAssertEqual(restored[0].finalResponse, "Review complete")
         XCTAssertNil(restored[0].failureSummary)
+    }
+
+    func testLegacyRoleJournalDecodesWithoutProtocolLinkageFields() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("tasks.json")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let legacy = Data("""
+        {
+          "version": 1,
+          "savedAt": "2026-11-16T00:00:00Z",
+          "tasks": [{
+            "id": "legacy-task",
+            "objective": "Legacy archive",
+            "createdAt": "2026-11-16T00:00:00Z",
+            "updatedAt": "2026-11-16T00:00:00Z",
+            "status": "completed",
+            "roleResults": [{
+              "id": "legacy-message",
+              "role": "reasoner",
+              "sequence": 0,
+              "text": "Existing result",
+              "createdAt": "2026-11-16T00:00:00Z"
+            }],
+            "finalResponse": "Legacy complete",
+            "failureSummary": null
+          }]
+        }
+        """.utf8)
+        try legacy.write(to: file)
+        let store = LocalAgentTaskHistoryStore(fileURL: file)
+
+        let restored = try XCTUnwrap(store.load().first)
+        let role = try XCTUnwrap(restored.roleResults.first)
+        XCTAssertEqual(role.id, "legacy-message")
+        XCTAssertNil(role.conversationID)
+        XCTAssertNil(role.recipientAgentID)
+        XCTAssertNil(role.messageType)
+        XCTAssertNil(role.parentMessageID)
+        XCTAssertEqual(restored.finalResponse, "Legacy complete")
+        XCTAssertEqual(try Data(contentsOf: file), legacy)
     }
 
     func testRunningTaskIsMarkedInterruptedOnRecoveryAndNeverResumed() throws {
