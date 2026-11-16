@@ -25,10 +25,63 @@ struct AgentTaskRoleResult: Codable, Equatable, Identifiable {
     let text: String
     let createdAt: Date
     /// Optional protocol linkage fields; absent in legacy v1 archives.
-    let conversationID: String? = nil
-    let recipientAgentID: String? = nil
-    let messageType: String? = nil
-    let parentMessageID: String? = nil
+    let conversationID: String?
+    let recipientAgentID: String?
+    let messageType: String?
+    let parentMessageID: String?
+
+    init(
+        id: String,
+        role: String,
+        sequence: Int,
+        text: String,
+        createdAt: Date,
+        conversationID: String? = nil,
+        recipientAgentID: String? = nil,
+        messageType: String? = nil,
+        parentMessageID: String? = nil
+    ) {
+        self.id = id
+        self.role = role
+        self.sequence = sequence
+        self.text = text
+        self.createdAt = createdAt
+        self.conversationID = conversationID
+        self.recipientAgentID = recipientAgentID
+        self.messageType = messageType
+        self.parentMessageID = parentMessageID
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, role, sequence, text, createdAt
+        case conversationID, recipientAgentID, messageType, parentMessageID
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        role = try values.decode(String.self, forKey: .role)
+        sequence = try values.decode(Int.self, forKey: .sequence)
+        text = try values.decode(String.self, forKey: .text)
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        conversationID = try values.decodeIfPresent(String.self, forKey: .conversationID)
+        recipientAgentID = try values.decodeIfPresent(String.self, forKey: .recipientAgentID)
+        messageType = try values.decodeIfPresent(String.self, forKey: .messageType)
+        parentMessageID = try values.decodeIfPresent(String.self, forKey: .parentMessageID)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(role, forKey: .role)
+        try values.encode(sequence, forKey: .sequence)
+        try values.encode(text, forKey: .text)
+        try values.encode(createdAt, forKey: .createdAt)
+        try values.encodeIfPresent(conversationID, forKey: .conversationID)
+        try values.encodeIfPresent(recipientAgentID, forKey: .recipientAgentID)
+        try values.encodeIfPresent(messageType, forKey: .messageType)
+        try values.encodeIfPresent(parentMessageID, forKey: .parentMessageID)
+    }
 }
 
 /// A bounded local audit trail for Agent Team UI tasks. It is not an execution

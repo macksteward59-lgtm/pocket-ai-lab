@@ -252,6 +252,10 @@ final class PocketAILabTests: XCTestCase {
         let engine = FingerprintTestEngine()
         let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
+        model.updateRoutingCapabilities(
+            try XCTUnwrap(model.selectedModelID),
+            from: "reasoning, analysis, engineering, security-review, critique, validation"
+        )
         await model.loadModel()
 
         await model.runDefaultAgentTeam("Sensitive Agent Team-only objective")
@@ -267,7 +271,7 @@ final class PocketAILabTests: XCTestCase {
     }
 
     @MainActor
-    func testDefaultAgentTeamRunsSixLogicalRolesThroughSharedLease() async throws {
+    func testDefaultAgentTeamRoutesSixRolesThroughConfiguredLocalProfile() async throws {
         let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("model.gguf")
@@ -275,6 +279,10 @@ final class PocketAILabTests: XCTestCase {
         let engine = FingerprintTestEngine()
         let model = makeLocalChatModel(engine: engine, root: root)
         try await model.importModel(from: source)
+        model.updateRoutingCapabilities(
+            try XCTUnwrap(model.selectedModelID),
+            from: "reasoning, analysis, engineering, security-review, critique, validation"
+        )
         await model.loadModel()
         XCTAssertTrue(model.isModelLoaded)
 
@@ -286,6 +294,26 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertTrue(roleMessages[5].role.contains("validator"))
         XCTAssertTrue(model.status.contains("6 sequential logical roles"))
         XCTAssertTrue(model.isModelLoaded, "Agent Team must retain the shared model lease.")
+    }
+
+    @MainActor
+    func testAgentTeamMissingSpecialistRouteFailsBeforeModelLoad() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = makeLocalChatModel(engine: engine, root: root)
+        try await model.importModel(from: source)
+
+        await model.runDefaultAgentTeam("Attempt a specialist run without configured labels")
+
+        XCTAssertTrue(model.status.contains("did not complete") || model.status.contains("failed"))
+        XCTAssertFalse(model.isModelLoaded)
+        let loadedModelIDs = await engine.loadedModelIDs()
+        let prompts = await engine.recordedPrompts()
+        XCTAssertEqual(loadedModelIDs, [])
+        XCTAssertEqual(prompts.count, 0)
     }
 
     @MainActor

@@ -106,6 +106,33 @@ public actor NativeAgentCoordinator {
         self.router = router
     }
 
+    /// Retry a routed acquisition after evicting idle cached sessions when the
+    /// pool is full or under memory pressure. Active leases/uses remain pinned:
+    /// unloadIdleModels skips them, and the retry still fails closed if capacity
+    /// cannot safely be made available.
+    private func acquireRoutedLease(
+        runtime: NativeInferenceRuntime,
+        route: NativeAgentModelRoute
+    ) async throws -> ModelPoolLease {
+        do {
+            return try await runtime.acquire(
+                model: route.model,
+                estimatedMemoryMB: route.estimatedMemoryMB
+            )
+        } catch let error as ModelPoolError {
+            switch error {
+            case .modelLimitExceeded, .insufficientMemory:
+                _ = await runtime.unloadIdleModels()
+                return try await runtime.acquire(
+                    model: route.model,
+                    estimatedMemoryMB: route.estimatedMemoryMB
+                )
+            default:
+                throw error
+            }
+        }
+    }
+
     public func run(task: AgentTaskRequest, conversationId: String = UUID().uuidString,
                     steps: [NativeAgentStep], maxTokens: Int = 512,
                     temperature: Double = 0.2,
@@ -183,9 +210,9 @@ public actor NativeAgentCoordinator {
             let output: String
             if let runtime, let routes {
                 let route = routes[index]
-                let routedLease = try await runtime.acquire(
-                    model: route.model,
-                    estimatedMemoryMB: route.estimatedMemoryMB
+                let routedLease = try await acquireRoutedLease(
+                    runtime: runtime,
+                    route: route
                 )
                 activeSessionId = routedLease.session.id
                 if cancelRequested || Task.isCancelled {

@@ -427,6 +427,39 @@ final class LocalChatModel: ObservableObject {
 
     /// Agent Team uses the same model lease and scheduler as native chat.
     /// The returned messages remain untrusted proposals, never approvals or evidence.
+    func updateRoutingCapabilities(_ modelID: String, from text: String) {
+        guard !isBusy, lease == nil else {
+            status = "Unload the active model before changing routing labels."
+            return
+        }
+        let labels = text.split(separator: ",").map { String($0) }
+        do {
+            let snapshot = try modelCatalogStore.updateCapabilities(for: modelID, capabilities: labels)
+            availableModels = snapshot.entries
+            status = "Routing labels saved. They select local model candidates only; they do not grant permissions or prove specialist quality."
+        } catch {
+            status = "Routing labels were not saved: \(error.localizedDescription)"
+        }
+    }
+
+    private func routedProfiles() throws -> [NativeAgentModelProfile] {
+        try availableModels.map { entry in
+            let url = try modelCatalogStore.resolve(entry)
+            let descriptor = ModelDescriptor(
+                id: entry.id,
+                name: entry.name,
+                path: url.path,
+                contextLength: entry.contextLength,
+                quantization: entry.quantization
+            )
+            return NativeAgentModelProfile(
+                model: descriptor,
+                capabilities: Set(entry.capabilities),
+                estimatedMemoryMB: entry.estimatedMemoryMB
+            )
+        }
+    }
+
     func runAgentTeam(
         task: AgentTaskRequest,
         steps: [NativeAgentStep],
@@ -434,10 +467,43 @@ final class LocalChatModel: ObservableObject {
         temperature: Double = 0.2,
         onMessage: (@Sendable (AgentMessageEnvelope) async -> Bool)? = nil
     ) async throws -> NativeAgentRunResult {
-        guard !isBusy, let runtime, let lease else { throw LocalChatError.busy }
+        guard !isBusy, let runtime else { throw LocalChatError.busy }
         isBusy = true
         defer { isBusy = false }
-        let coordinator = runtime.makeAgentCoordinator(for: lease)
+        let coordinator: NativeAgentCoordinator
+        if steps.allSatisfy({ $0.requiredCapabilities.isEmpty }), let lease {
+            // Retain the explicit legacy single-model path for callers that do
+            // not request specialist routing.
+            coordinator = runtime.makeAgentCoordinator(for: lease)
+        } else {
+            let profiles = try routedProfiles()
+            guard !profiles.isEmpty else {
+                throw NativeAgentCoordinatorError.modelRoutingFailed("No imported local model profiles are available.")
+            }
+            // The app intentionally caps the pool at one resident model. If a
+            // chat lease is still held, do not pretend a different specialist
+            // profile can be loaded beside it or silently route to that model.
+            if let lease {
+                let router = NativeAgentModelRouter()
+                let routes = try steps.map { step in
+                    try router.route(
+                        NativeAgentRouteRequest(
+                            agentId: step.agentId,
+                            requiredCapabilities: step.requiredCapabilities.isEmpty
+                                ? Set(task.requiredCapabilities)
+                                : step.requiredCapabilities
+                        ),
+                        from: profiles
+                    )
+                }
+                guard routes.allSatisfy({ $0.model.id == lease.model.id }) else {
+                    throw NativeAgentCoordinatorError.modelRoutingFailed(
+                        "Unload the chat model before running a team that routes any role to a different model. The app keeps only one model resident at a time."
+                    )
+                }
+            }
+            coordinator = NativeAgentCoordinator(runtime: runtime, profiles: profiles)
+        }
         return try await coordinator.run(
             task: task,
             steps: steps,
@@ -447,43 +513,50 @@ final class LocalChatModel: ObservableObject {
         )
     }
 
-    /// Runs the bounded six-role plan through the same ModelPool lease and
-    /// InferenceScheduler as single-model chat. Every role result is untrusted.
+    /// Runs the bounded six-role plan through the shared ModelPool and
+    /// InferenceScheduler. Routed roles may use different models sequentially;
+    /// the one-resident-model limit is preserved. Every role result is untrusted.
     func runDefaultAgentTeam(_ objective: String) async {
         let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isBusy, !text.isEmpty else { return }
-        guard lease != nil else {
-            status = "Load the selected local model before running Agent Team."
+        guard !availableModels.isEmpty else {
+            status = "Import at least one local model and assign routing labels before running Agent Team."
             return
         }
 
         let steps = [
             NativeAgentStep(
                 agentId: "reasoner",
-                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work."
+                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work.",
+                requiredCapabilities: ["reasoning"]
             ),
             NativeAgentStep(
                 agentId: "researcher",
-                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations."
+                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations.",
+                requiredCapabilities: ["analysis"]
             ),
             NativeAgentStep(
                 agentId: "engineer",
-                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code."
+                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code.",
+                requiredCapabilities: ["engineering"]
             ),
             NativeAgentStep(
                 agentId: "security-analyst",
                 instructions: "Review threats, trust boundaries, privacy, misuse, and failure modes. Preserve all APEX/East authorization boundaries.",
-                messageType: .counterargument
+                messageType: .counterargument,
+                requiredCapabilities: ["security-review"]
             ),
             NativeAgentStep(
                 agentId: "critic",
                 instructions: "Challenge assumptions and earlier proposals. Find contradictions, missing cases, and simpler alternatives.",
-                messageType: .counterargument
+                messageType: .counterargument,
+                requiredCapabilities: ["critique"]
             ),
             NativeAgentStep(
                 agentId: "validator",
                 instructions: "Synthesize a concise result. Label unverified claims, list remaining gaps, and propose next steps. Never claim tests or external actions occurred.",
-                messageType: .validation
+                messageType: .validation,
+                requiredCapabilities: ["validation"]
             )
         ]
         let task = AgentTaskRequest(
@@ -559,7 +632,7 @@ final class LocalChatModel: ObservableObject {
                 )
                 agentTaskHistory = try agentTaskHistoryStore.load()
                 agentTaskHistoryStatus = "Agent Team history · saved locally · interrupted tasks are never auto-resumed."
-                status = "Agent Team completed: \(result.messages.count) sequential logical roles shared one local model session. No tools or external actions were run. Runtime trust remains unverified."
+                status = "Agent Team completed: \(result.messages.count) sequential logical roles used operator-routed local model profiles through the shared one-model-at-a-time pool. No tools or external actions were run. Runtime trust remains unverified."
             } catch {
                 agentTaskHistoryStatus = "The model run completed, but its task record could not be finalized. It will be marked interrupted on next recovery."
                 status = "Agent Team inference completed, but durable task-history finalization failed. Review the transcript; no external actions were run."
@@ -739,6 +812,7 @@ struct LocalChatView: View {
     @State private var importError: String?
     @State private var showClearHistoryConfirmation = false
     @State private var showEvaluationHistory = false
+    @State private var capabilityDrafts: [String: String] = [:]
 
     var body: some View {
         NavigationStack {
@@ -759,6 +833,37 @@ struct LocalChatView: View {
                         .disabled(model.isBusy || model.isModelLoaded)
                         Text("\(model.availableModels.count) imported models · one native model loaded at a time")
                             .font(.caption2).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Agent routing labels")
+                                .font(.subheadline.bold())
+                            Text("Assign comma-separated labels to each local model. Labels control candidate routing only; they are not permissions, quality scores, or runtime attestation.")
+                                .font(.caption2).foregroundStyle(.secondary)
+                            ForEach(model.availableModels) { entry in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(entry.name).font(.caption.bold())
+                                    HStack {
+                                        TextField(
+                                            "reasoning, analysis, engineering…",
+                                            text: Binding(
+                                                get: { capabilityDrafts[entry.id] ?? entry.capabilities.joined(separator: ", ") },
+                                                set: { capabilityDrafts[entry.id] = $0 }
+                                            )
+                                        )
+                                        .textFieldStyle(.roundedBorder)
+                                        .autocorrectionDisabled()
+                                        Button("Save") {
+                                            model.updateRoutingCapabilities(
+                                                entry.id,
+                                                from: capabilityDrafts[entry.id] ?? entry.capabilities.joined(separator: ", ")
+                                            )
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .disabled(model.isBusy || model.isModelLoaded)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 6)
                     }
                     Text(model.modelFingerprintSummary).font(.caption2).foregroundStyle(.secondary)
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
@@ -837,7 +942,7 @@ struct LocalChatView: View {
                     }
                     .pickerStyle(.segmented)
                     if mode == .agentTeam {
-                        Text("Six sequential logical roles share one loaded local model. They are not six independent models and cannot run tools.")
+                        Text("Six sequential logical roles are routed to operator-labeled local models. Only one model is loaded at a time; missing specialist routes fail before generation. Roles cannot run tools.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                     HStack(alignment: .bottom) {

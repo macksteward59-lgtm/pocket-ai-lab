@@ -308,6 +308,96 @@ final class NativeAgentCoordinatorTests: XCTestCase {
     }
 
 
+    func testRoutedRolesSwitchModelsWithSingleResidentPoolByEvictingOnlyIdleProfile() async throws {
+        let engine = RoutingRecordingEngine(responses: ["reasoned", "secured"])
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 1_024,
+                maxLoadedModels: 1,
+                minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 2_048 }
+        )
+        let profiles = [
+            NativeAgentModelProfile(
+                model: ModelDescriptor(id: "reasoning-model", name: "Reasoning", path: "/models/reasoning.gguf", contextLength: 4_096),
+                capabilities: ["reasoning"], estimatedMemoryMB: 512
+            ),
+            NativeAgentModelProfile(
+                model: ModelDescriptor(id: "security-model", name: "Security", path: "/models/security.gguf", contextLength: 4_096),
+                capabilities: ["security"], estimatedMemoryMB: 512
+            )
+        ]
+        let coordinator = NativeAgentCoordinator(runtime: runtime, profiles: profiles)
+
+        let result = try await coordinator.run(
+            task: AgentTaskRequest(id: "single-resident-route", objective: "Review safely", requiredCapabilities: []),
+            steps: [
+                NativeAgentStep(agentId: "reasoner", instructions: "Reason", requiredCapabilities: ["reasoning"]),
+                NativeAgentStep(agentId: "security-analyst", instructions: "Review", requiredCapabilities: ["security"])
+            ]
+        )
+
+        XCTAssertEqual(result.messages.count, 2)
+        let generated = await engine.generatedModelIDs
+        let loaded = await engine.loadedModelIDs
+        let unloaded = await engine.unloadedSessionIDs
+        XCTAssertEqual(generated, ["reasoning-model", "security-model"])
+        XCTAssertEqual(loaded, ["reasoning-model", "security-model"])
+        XCTAssertEqual(unloaded, ["session-reasoning-model"])
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.loadedModelIDs, ["security-model"])
+        XCTAssertEqual(snapshot.activeLeaseCount, 0)
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        XCTAssertEqual(snapshot.reservedMemoryMB, 512)
+    }
+
+    func testRoutedModelSwitchNeverEvictsAnotherCallersActiveLease() async throws {
+        let engine = RoutingRecordingEngine(responses: ["should-not-run"])
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 1_024,
+                maxLoadedModels: 1,
+                minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 2_048 }
+        )
+        let held = try await runtime.acquire(
+            model: ModelDescriptor(id: "held-model", name: "Held", path: "/models/held.gguf", contextLength: 4_096),
+            estimatedMemoryMB: 512
+        )
+        let profile = NativeAgentModelProfile(
+            model: ModelDescriptor(id: "specialist-model", name: "Specialist", path: "/models/specialist.gguf", contextLength: 4_096),
+            capabilities: ["specialist"], estimatedMemoryMB: 512
+        )
+        let coordinator = NativeAgentCoordinator(runtime: runtime, profiles: [profile])
+
+        do {
+            _ = try await coordinator.run(
+                task: AgentTaskRequest(id: "held-lease", objective: "Do not evict", requiredCapabilities: []),
+                steps: [NativeAgentStep(agentId: "specialist", instructions: "Review", requiredCapabilities: ["specialist"])]
+            )
+            XCTFail("a caller-owned active lease must prevent model eviction")
+        } catch ModelPoolError.modelLimitExceeded {
+        } catch {
+            XCTFail("unexpected error: \\(error)")
+        }
+
+        let loaded = await engine.loadedModelIDs
+        let generated = await engine.generatedModelIDs
+        let unloaded = await engine.unloadedSessionIDs
+        XCTAssertEqual(loaded, ["held-model"])
+        XCTAssertTrue(generated.isEmpty)
+        XCTAssertTrue(unloaded.isEmpty)
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeLeaseCount, 1)
+        XCTAssertEqual(snapshot.loadedModelIDs, ["held-model"])
+        _ = await runtime.release(held)
+        try await runtime.unload(modelId: "held-model")
+    }
+
     func testCancellationDuringRoutedModelLoadReleasesLeaseWithoutGeneration() async throws {
         let engine = BlockingLoadInferenceEngine()
         let runtime = try NativeInferenceRuntime(
@@ -427,12 +517,13 @@ private actor RoutingRecordingEngine: LlamaEngine {
     private var responses: [String]
     private(set) var loadedModelIDs: [String] = []
     private(set) var generatedModelIDs: [String] = []
+    private(set) var unloadedSessionIDs: [String] = []
 
     init(responses: [String]) { self.responses = responses }
 
     func load(model: ModelDescriptor) async throws -> RuntimeSession {
         loadedModelIDs.append(model.id)
-        return RuntimeSession(id: "session-\\(model.id)", modelId: model.id)
+        return RuntimeSession(id: "session-\(model.id)", modelId: model.id)
     }
 
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
@@ -446,7 +537,7 @@ private actor RoutingRecordingEngine: LlamaEngine {
 
     func cancel(sessionId: String, requestId: String) async {}
     func cancelAndWait(sessionId: String, requestId: String) async {}
-    func unload(sessionId: String) async {}
+    func unload(sessionId: String) async { unloadedSessionIDs.append(sessionId) }
 }
 
 
@@ -473,7 +564,7 @@ private actor BlockingLoadInferenceEngine: LlamaEngine {
     }
 
     func completeLoad(modelId: String) {
-        loadContinuation?.resume(returning: RuntimeSession(id: "session-\\(modelId)", modelId: modelId))
+        loadContinuation?.resume(returning: RuntimeSession(id: "session-\(modelId)", modelId: modelId))
         loadContinuation = nil
     }
 
