@@ -336,7 +336,13 @@ BEGIN
       FROM proofhunt.excluded_targets excluded
       WHERE excluded.project_id = NEW.project_id
         AND excluded.authorization_record_id = NEW.operational_authorization_id
-        AND excluded.hostname = NEW.target_hostname
+        AND (
+          excluded.hostname = NEW.target_hostname
+          OR (
+            excluded.include_subdomains = TRUE
+            AND right(NEW.target_hostname, length(excluded.hostname) + 1) = '.' || excluded.hostname
+          )
+        )
     ) THEN
       RAISE EXCEPTION 'ProofHunt target is explicitly excluded';
     END IF;
