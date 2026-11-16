@@ -2343,3 +2343,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Diagnosis:** the downloaded job log shows the failed SwiftCompile target but no surfaced source diagnostic in the available output. Do not invent a compiler error; reproduce or improve diagnostic capture before applying a fix.
 - **Device acceptance:** iPhone Air, 256 GB is the sole physical target. Hosted simulator remains CI-only. No physical iPhone test is claimed.
 - **Status:** PR #150 remains open/draft; the integration claim is returned to `in-progress` until the native app build is repaired and exact-head CI passes.
+
+
+## 2026-11-16 — Native iOS encrypted memory claimed
+
+- **Branch:** `codex/ios-native-encrypted-memory`, based on `main` at `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`.
+- **Scope:** Add an iOS-native Keychain key provider and AES-GCM encrypted local memory vault, explicit CRUD/provenance UI, focused tests, and implementation documentation. Integrate a Memory tab without modifying `LocalChatView.swift` or the existing TypeScript memory path.
+- **Privacy contract:** No chat auto-save, no model-driven verification, all new records start `verified=false`, no plaintext fallback, no silent key regeneration or plaintext migration. Key loss/tampering must fail closed with recovery guidance.
+- **Dependencies:** iOS 16+, CryptoKit, Security/Keychain. XcodeGen auto-includes app/test source directories.
+- **Validation:** Exact-head iOS CI (app build, app XCTest, simulator XCTest, package tests); no physical iPhone Air acceptance claimed until installed-device test.
