@@ -15,6 +15,14 @@ export {
 export { ModelRouter } from "./model-router/ModelRouter";
 export { DeliberationEngine } from "./deliberation/DeliberationEngine";
 export { MemoryManager } from "./memory/MemoryManager";
+export { TaskLifecycleCoordinator, InMemoryTaskLifecycleStore, TaskLifecycleError, type TaskDefinition, type TaskStepDefinition, type TaskRecord, type TaskStepRecord, type TaskStatus, type StepStatus, type StepClaim, type StepAttempt, type TaskLifecycleStore } from "./autonomy/TaskLifecycleCoordinator";
+export {
+  PostgresTaskLifecycleStore,
+  type TaskLifecycleSqlDatabase,
+  type TaskLifecycleSqlTransaction,
+  type TaskLifecycleSqlResult
+} from "./autonomy/PostgresTaskLifecycleStore";
+
 export { Orchestrator } from "./orchestrator/Orchestrator";
 export { routeSecurityTask, type SecurityRoute, type SpecialistMatch } from "./security/routing";
 export { DelegationGate, type DelegationVoucher, type VoucherVerifier, type DelegationDecision } from "./security/delegation";
@@ -64,6 +72,12 @@ export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type 
 
 export { createDirectorTaskRuntime, type DirectorTaskRuntime, type DirectorTaskRuntimeOptions } from "./director/createDirectorTaskRuntime";
 export { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskHistoryEntry, type DirectorTaskRunnerOptions } from "./director/DirectorTaskRunner";
+
+export {
+  runEastTaskWithLifecycle,
+  type EastLifecycleRunOptions, type EastLifecycleRunResult
+} from "./autonomy/EastTaskLifecycleAdapter";
+
 
 export {
   SecurityWorldModel, checkTenantIsolation, generateHypotheses, planExperiments, runResearchPoc,
