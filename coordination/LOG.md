@@ -2719,3 +2719,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - No model-generation smoke result or overall workflow success is claimed yet.
 - Updated `coordination/BOARD.md` commit `e01efc4ac4481403d742358a07d3ac1156652d21` and the PR #164 validation summary to reflect the native app XCTest pass and active simulator XCTest.
 - No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 simulator pass; macOS XCTest failure surfaced
+
+- Re-fetched exact PR #164 head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda` and workflow [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392.
+- Newly confirmed successful: iOS simulator XCTest (step 15), pinned smoke GGUF download (step 16), and smoke-path setup (step 17). Earlier pinned llama.cpp build, Swift typecheck, generic iOS device link, simulator boot, bridge manifest validation, native app build, and native app XCTest also remain successful.
+- **macOS XCTest step 18 failed.** The runner-evidence step 19 completed successfully, but the job's “Complete job” step remains in progress and workflow metadata still reports `in_progress`. Therefore no overall workflow conclusion is recorded yet.
+- Attempted to retrieve the failing job log; GitHub's log endpoint returned `BlobNotFound`. The run published no artifacts. The failure's test name, assertion, and diagnostic are therefore unavailable; no root cause is inferred. Successful GGUF download is not evidence that model generation passed.
+- Inspected the exact-head CI workflow and build script. The macOS gate copies the iOS runtime package into `/tmp/pocket-host` and runs the same `PocketLlamaEngine` XCTest scheme against a macOS destination. This identifies the failing gate's execution path, not the underlying failure.
+- PR #164 remains draft/open. No source edits, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust changes, signing/deployment, or physical iPhone Air tests occurred.
