@@ -36,8 +36,10 @@ export const EAST_DELIBERATION_AGENTS = [
   "reasoner",
   "researcher",
   "engineer",
+  "security",
   "critic",
-  "validator"
+  "validator",
+  "archivist"
 ] as const;
 
 const MAX_OBJECTIVE_LENGTH = 8_000;
@@ -123,6 +125,13 @@ export interface EastTaskRecord {
   readonly authorized: false;
 }
 
+export interface EastRuntimeCheckpoint {
+  readonly version: 1;
+  readonly task: EastTaskRecord;
+  readonly messages: readonly AgentMessage[];
+  readonly evidenceMemoryCommitted: boolean;
+}
+
 export interface EastPlatformDependencies {
   inference: InferenceProvider;
   getResources: () => { availableMemoryMB: number; loadedModels: string[] };
@@ -165,6 +174,8 @@ export interface EastPlatformRuntime {
   /** Reads the APEX decision for this task and stores it. Never grants. */
   readApexDecision(taskId: string): Promise<EastApexDecision>;
   getTask(taskId: string): EastTaskRecord;
+  checkpointTask(taskId: string): EastRuntimeCheckpoint;
+  restoreTask(checkpoint: EastRuntimeCheckpoint): void;
 }
 
 export function createEastPlatform(deps: EastPlatformDependencies): EastPlatformRuntime {
@@ -404,6 +415,35 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
     },
     getTask(taskId) {
       return snapshot(requireTask(taskId));
+    },
+    checkpointTask(taskId) {
+      const task = snapshot(requireTask(taskId));
+      return {
+        version: 1,
+        task,
+        messages: [...orchestrator.bus.getThread(taskId)],
+        evidenceMemoryCommitted: evidenceCommitted.has(taskId)
+      };
+    },
+    restoreTask(checkpoint) {
+      if (!checkpoint || checkpoint.version !== 1 || !checkpoint.task ||
+          typeof checkpoint.task.id !== "string" || !checkpoint.task.id.trim() ||
+          typeof checkpoint.task.objective !== "string" || !checkpoint.task.objective.trim() ||
+          checkpoint.task.authorized !== false || !Array.isArray(checkpoint.messages) ||
+          typeof checkpoint.evidenceMemoryCommitted !== "boolean") {
+        throw new EastPlatformError("unknown_task", "Invalid East runtime checkpoint");
+      }
+      const taskId = checkpoint.task.id;
+      const existing = tasks.get(taskId);
+      if (existing) {
+        const sameTask = JSON.stringify(snapshot(existing)) === JSON.stringify(checkpoint.task);
+        const sameMessages = JSON.stringify(orchestrator.bus.getThread(taskId)) === JSON.stringify(checkpoint.messages);
+        if (sameTask && sameMessages) return;
+        throw new EastPlatformError("unknown_task", "Cannot overwrite an existing East task during restoration");
+      }
+      orchestrator.bus.restoreThread(taskId, checkpoint.messages);
+      put({ ...checkpoint.task, authorized: false });
+      if (checkpoint.evidenceMemoryCommitted) evidenceCommitted.add(taskId);
     }
   };
 
