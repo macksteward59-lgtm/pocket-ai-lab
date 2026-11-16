@@ -128,9 +128,18 @@ export class TaskLifecycleCoordinator {
       if (this.initialized) return;
       const loaded = await this.store.load();
       const next = new Map<string, TaskRecord>();
+      const issuedAttemptIds = new Set<string>();
       for (const raw of loaded) {
         const task = validateStoredTask(raw);
-        if (next.has(task.id)) throw new TaskLifecycleError("duplicate_task", "Duplicate task id in store");
+        if (next.has(task.id)) throw new TaskLifecycleError("corrupt_store", "Duplicate task id in store");
+        for (const step of task.steps) {
+          for (const attemptId of step.attemptIds) {
+            if (issuedAttemptIds.has(attemptId)) {
+              throw new TaskLifecycleError("corrupt_store", "Attempt id is duplicated across stored tasks");
+            }
+            issuedAttemptIds.add(attemptId);
+          }
+        }
         next.set(task.id, task);
       }
       this.records = next;
@@ -473,39 +482,81 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
 }
 
 function validateStoredTask(task: TaskRecord): TaskRecord {
+  const validTimestamp = (value: unknown): value is string =>
+    typeof value === "string" && Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value;
+
   if (!task || typeof task.id !== "string" || !task.id.trim() ||
       typeof task.objective !== "string" || !task.objective.trim() ||
-      !Array.isArray(task.steps) || task.steps.length < 1 ||
+      !Array.isArray(task.steps) || task.steps.length < 1 || task.steps.length > 100 ||
       !["ready", "running", "completed", "failed", "cancelled"].includes(task.status) ||
       !Number.isInteger(task.maxConcurrentSteps) || task.maxConcurrentSteps < 1 || task.maxConcurrentSteps > 8 ||
       !Number.isInteger(task.leaseMs) || task.leaseMs < 1_000 || task.leaseMs > 900_000 ||
-      !task.metadata || typeof task.metadata !== "object" || Array.isArray(task.metadata)) {
+      !task.metadata || typeof task.metadata !== "object" || Array.isArray(task.metadata) ||
+      Object.entries(task.metadata).some(([key, value]) => !key.trim() || typeof value !== "string") ||
+      !validTimestamp(task.createdAt) || !validTimestamp(task.updatedAt) ||
+      Date.parse(task.updatedAt) < Date.parse(task.createdAt) ||
+      (task.completedAt !== null && !validTimestamp(task.completedAt))) {
     throw new TaskLifecycleError("corrupt_store", "Stored task record is invalid");
   }
-  const ids = new Set(task.steps.map(step => step?.id));
-  if (ids.size !== task.steps.length || task.steps.some(step =>
-    !step || typeof step.id !== "string" || !step.id.trim() ||
-    typeof step.description !== "string" || !step.description.trim() ||
-    !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
-    !Array.isArray(step.dependsOn) || step.dependsOn.some(id => !ids.has(id)) ||
-    !Number.isInteger(step.attempts) || step.attempts < 0 ||
-    !Array.isArray(step.attemptIds) || step.attemptIds.length !== step.attempts ||
-    step.attemptIds.some(id => typeof id !== "string" || !id.trim()) || new Set(step.attemptIds).size !== step.attemptIds.length ||
-    !Number.isInteger(step.maxAttempts) || step.maxAttempts < 1 || step.maxAttempts > 5 ||
-    !Array.isArray(step.evidenceRefs) ||
-    (step.status === "running") !== (step.currentAttempt !== null) ||
-    (step.currentAttempt !== null && (!step.currentAttempt ||
-      typeof step.currentAttempt.id !== "string" || !step.currentAttempt.id.trim() ||
-      !Number.isFinite(Date.parse(step.currentAttempt.leaseExpiresAt)) ||
-      !Number.isFinite(Date.parse(step.currentAttempt.startedAt))))
-  )) throw new TaskLifecycleError("corrupt_store", "Stored task step is invalid");
-  if (task.status === "completed" && task.steps.some(step => step.status !== "succeeded")) {
-    throw new TaskLifecycleError("corrupt_store", "Completed task contains unfinished steps");
+
+  const ids = new Set<string>();
+  for (const step of task.steps) {
+    if (!step || typeof step.id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(step.id) ||
+        ids.has(step.id) || typeof step.description !== "string" || !step.description.trim() ||
+        !["pending", "running", "succeeded", "failed", "cancelled"].includes(step.status) ||
+        !Array.isArray(step.dependsOn) ||
+        step.dependsOn.some(id => typeof id !== "string" || !id.trim() || id === step.id) ||
+        new Set(step.dependsOn).size !== step.dependsOn.length ||
+        !Number.isInteger(step.attempts) || step.attempts < 0 ||
+        !Array.isArray(step.attemptIds) || step.attemptIds.length !== step.attempts ||
+        step.attemptIds.some(id => typeof id !== "string" || !id.trim() || id.length > 256) ||
+        new Set(step.attemptIds).size !== step.attemptIds.length ||
+        !Number.isInteger(step.maxAttempts) || step.maxAttempts < 1 || step.maxAttempts > 5 ||
+        step.attempts > step.maxAttempts ||
+        !Array.isArray(step.evidenceRefs) || step.evidenceRefs.length > 100 ||
+        step.evidenceRefs.some(ref => typeof ref !== "string" || !ref.trim()) ||
+        (step.result !== null && (typeof step.result !== "string" || !step.result.trim() || step.result.length > 16_000)) ||
+        (step.lastError !== null && (typeof step.lastError !== "string" || !step.lastError.trim() || step.lastError.length > 2_000)) ||
+        (step.completedAt !== null && !validTimestamp(step.completedAt)) ||
+        (step.status === "running") !== (step.currentAttempt !== null) ||
+        (step.status === "succeeded" && (!step.result || !validTimestamp(step.completedAt))) ||
+        (step.status !== "succeeded" && step.completedAt !== null) ||
+        (step.status === "failed" && !step.lastError) ||
+        (step.status === "pending" && (step.result !== null || step.lastError !== null)) ||
+        (step.currentAttempt !== null && (!step.currentAttempt ||
+          typeof step.currentAttempt.id !== "string" || !step.currentAttempt.id.trim() ||
+          step.currentAttempt.id !== step.attemptIds[step.attemptIds.length - 1] ||
+          !validTimestamp(step.currentAttempt.leaseExpiresAt) ||
+          !validTimestamp(step.currentAttempt.startedAt) ||
+          Date.parse(step.currentAttempt.leaseExpiresAt) <= Date.parse(step.currentAttempt.startedAt) ||
+          Date.parse(step.currentAttempt.leaseExpiresAt) - Date.parse(step.currentAttempt.startedAt) > task.leaseMs))) {
+      throw new TaskLifecycleError("corrupt_store", "Stored task step is invalid");
+    }
+    ids.add(step.id);
   }
-  if ((task.status === "failed" || task.status === "cancelled") &&
-      task.steps.some(step => step.status === "running" || step.status === "pending")) {
-    throw new TaskLifecycleError("corrupt_store", "Terminal task contains runnable steps");
+
+  for (const step of task.steps) {
+    if (step.dependsOn.some(id => !ids.has(id))) {
+      throw new TaskLifecycleError("corrupt_store", "Stored task contains an unknown dependency");
+    }
   }
+  const runningCount = task.steps.filter(step => step.status === "running").length;
+  const hasFailed = task.steps.some(step => step.status === "failed");
+  const allSucceeded = task.steps.every(step => step.status === "succeeded");
+  if (runningCount > task.maxConcurrentSteps ||
+      task.steps.some(step => step.status === "running" &&
+        step.dependsOn.some(id => task.steps.find(dep => dep.id === id)?.status !== "succeeded")) ||
+      (task.status === "ready" && (runningCount > 0 || hasFailed || allSucceeded || task.completedAt !== null)) ||
+      (task.status === "running" && (runningCount === 0 || hasFailed || task.completedAt !== null)) ||
+      (task.status === "completed" && (!allSucceeded || !validTimestamp(task.completedAt))) ||
+      (task.status === "failed" && (!hasFailed || runningCount > 0 ||
+        task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
+      (task.status === "cancelled" && (runningCount > 0 ||
+        task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt)))) {
+    throw new TaskLifecycleError("corrupt_store", "Stored task state is inconsistent");
+  }
+
   assertAcyclic(task.steps);
   return cloneTask(task);
 }
