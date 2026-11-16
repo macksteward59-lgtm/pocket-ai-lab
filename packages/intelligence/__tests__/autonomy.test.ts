@@ -202,6 +202,36 @@ describe("TaskLifecycleCoordinator", () => {
     expect(restarted.getTask("persisted").status).toBe("failed");
   });
 
+  it("recovers only the requested task when scoped lease recovery is used", async () => {
+    let milliseconds = Date.parse("2026-11-16T00:00:00.000Z");
+    let nextId = 0;
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({
+      store,
+      now: () => new Date(milliseconds),
+      createId: () => "scoped-attempt-" + (++nextId)
+    });
+    await coordinator.init();
+    for (const id of ["task-one", "task-two"]) {
+      await coordinator.createTask({
+        id, objective: "Recover one task without disturbing another",
+        leaseMs: 1_000,
+        steps: [{ id: "work", description: "Work", maxAttempts: 2 }]
+      });
+      await coordinator.claimNextStep(id);
+    }
+    milliseconds += 1_001;
+
+    expect(await coordinator.recoverExpiredLeases("task-one")).toBe(1);
+    expect(coordinator.getTask("task-one").steps[0].status).toBe("pending");
+    expect(coordinator.getTask("task-two").steps[0].status).toBe("running");
+
+    expect(await coordinator.recoverExpiredLeases()).toBe(1);
+    expect(coordinator.getTask("task-two").steps[0].status).toBe("pending");
+    await expect(coordinator.recoverExpiredLeases("missing-task"))
+      .rejects.toMatchObject({ code: "unknown_task" });
+  });
+
   it("cancels live leases and ignores late worker results", async () => {
     const h = harness();
     await h.coordinator.init();
