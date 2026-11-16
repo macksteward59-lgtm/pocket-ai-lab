@@ -42,13 +42,19 @@ function encodeCheckpoint(kind: string, checkpoint: EastRuntimeCheckpoint): stri
   return CHECKPOINT_PREFIX + JSON.stringify({ kind, checkpoint });
 }
 
-function decodeCheckpoint(value: string | null): EastRuntimeCheckpoint | null {
-  if (!value || !value.startsWith(CHECKPOINT_PREFIX)) return null;
+function decodeCheckpoint(value: string | null, expectedKind: string): EastRuntimeCheckpoint {
+  if (!value || !value.startsWith(CHECKPOINT_PREFIX)) {
+    throw new Error("Stored East runtime checkpoint is missing; refusing to regenerate completed work");
+  }
   try {
     const parsed = JSON.parse(value.slice(CHECKPOINT_PREFIX.length)) as {
+      kind?: unknown;
       checkpoint?: EastRuntimeCheckpoint;
     };
-    return parsed.checkpoint ?? null;
+    if (parsed.kind !== expectedKind || !parsed.checkpoint) {
+      throw new Error("Stored East runtime checkpoint does not match its completed lifecycle step");
+    }
+    return parsed.checkpoint;
   } catch {
     throw new Error("Stored East runtime checkpoint is corrupt; refusing to regenerate completed work");
   }
@@ -58,8 +64,8 @@ function latestCheckpoint(task: TaskRecord): EastRuntimeCheckpoint | null {
   let latest: EastRuntimeCheckpoint | null = null;
   for (const step of task.steps) {
     if (step.status !== "succeeded") continue;
-    const checkpoint = decodeCheckpoint(step.result);
-    if (checkpoint) latest = checkpoint;
+    latest = decodeCheckpoint(step.result, step.id);
+    
   }
   return latest;
 }
@@ -188,7 +194,7 @@ export async function runEastTaskWithLifecycle(
   let evidenceRefs: string[] = [];
   const completedDeliberation = lifecycle.steps.find(step => step.id === "deliberate");
   if (completedDeliberation?.status === "succeeded") {
-    const checkpoint = decodeCheckpoint(completedDeliberation.result);
+    const checkpoint = decodeCheckpoint(completedDeliberation.result, "deliberate");
     synthesis = checkpoint?.task.synthesis ?? "";
     evidenceRefs = [...(checkpoint?.task.evidenceRefs ?? completedDeliberation.evidenceRefs)];
     if (!synthesis.trim()) {
