@@ -111,6 +111,11 @@ jobs:
           print(f"name={chosen['name']}")
           PY
 
+      - name: Validate restored Director bridge package manifest
+        run: |
+          test -f packages/director/ios/Package.swift
+          swift package --package-path packages/director/ios describe
+
       - name: Generate and build the native Pocket AI Lab app
         run: |
           rm -rf ios/PocketAILab.xcodeproj
