@@ -2424,3 +2424,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Branch:** `codex/apex-signed-evidence-verification-v2`; latest recorded head `2ed9d16944ddf88fa24953029c91f467e773ab88` after adding the product status-register entry.
 - **Implementation:** Replaced the placeholder trust source with an injected Ed25519 verifier using domain-separated length-prefixed v2 canonicalization, exact attempt binding, runtime allowlists, key validity/revocation, freshness, and fail-closed replay-store acceptance. Added deterministic tests.
 - **Boundary:** Success is `verified_candidate` only. No action authorization, receipt, RLS/schema, production key registry, durable replay store, or East dispatch wiring. Exact-head CI pending.
+
+
+## 2026-11-16 — Original archive restoration claimed
+
+- **Source:** User Library archive `east-unified.zip` (Nov 2 snapshot), with the original Director/APEX iOS bridge files, ExploitGym source archive, and Grok Workspace status/attachments.
+- **Repository gap:** current main contains only `Evidence.swift` under `packages/director/ios`; `BridgeGate.swift`, `RuntimeController.swift`, and `LlamaEngine.swift` are absent. `packages/exploitgym` and `packages/grok` are absent.
+- **Plan:** restore the bridge as a package backed by the current PocketLlamaEngine runtime, harden origin/port/action validation, avoid runtime-held Director signing keys, and return unsigned evidence candidates. Pin ExploitGym to the exact archived upstream commit as a submodule; document isolated host-only use. Preserve Grok Workspace as a workspace manifest/snapshot, not a fake live service.
+- **Boundaries:** no edits to the active APEX trust verifier PR (#159), RLS/schema, East integration PR #157, or native app UI. Do not blindly restore the original RuntimeController/ShellView implementation because it stores GGUF bytes in memory and accepts a signing key from the caller.
