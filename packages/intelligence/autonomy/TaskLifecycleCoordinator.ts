@@ -525,6 +525,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
         (step.status === "succeeded" && (step.attempts < 1 || !step.result || !validTimestamp(step.completedAt))) ||
         (step.status !== "succeeded" && step.completedAt !== null) ||
         (step.status === "failed" && (step.attempts < 1 || !step.lastError || step.result !== null)) ||
+        (step.status === "cancelled" && step.result !== null) ||
         (step.status === "pending" && step.result !== null) ||
         (step.completedAt !== null && (Date.parse(step.completedAt) < Date.parse(task.createdAt) ||
           Date.parse(step.completedAt) > Date.parse(task.updatedAt))) ||
@@ -549,16 +550,17 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
   }
   const runningCount = task.steps.filter(step => step.status === "running").length;
   const hasFailed = task.steps.some(step => step.status === "failed");
+  const hasCancelled = task.steps.some(step => step.status === "cancelled");
   const allSucceeded = task.steps.every(step => step.status === "succeeded");
   if (runningCount > task.maxConcurrentSteps ||
       task.steps.some(step => step.status === "running" &&
         step.dependsOn.some(id => task.steps.find(dep => dep.id === id)?.status !== "succeeded")) ||
-      (task.status === "ready" && (runningCount > 0 || hasFailed || allSucceeded || task.completedAt !== null)) ||
-      (task.status === "running" && (runningCount === 0 || hasFailed || task.completedAt !== null)) ||
+      (task.status === "ready" && (runningCount > 0 || hasFailed || hasCancelled || allSucceeded || task.completedAt !== null)) ||
+      (task.status === "running" && (runningCount === 0 || hasFailed || hasCancelled || task.completedAt !== null)) ||
       (task.status === "completed" && (!allSucceeded || !validTimestamp(task.completedAt))) ||
       (task.status === "failed" && (!hasFailed || runningCount > 0 ||
         task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
-      (task.status === "cancelled" && (runningCount > 0 ||
+      (task.status === "cancelled" && (!hasCancelled || runningCount > 0 ||
         task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
       (task.completedAt !== null && (Date.parse(task.completedAt) < Date.parse(task.createdAt) ||
         Date.parse(task.completedAt) > Date.parse(task.updatedAt)))) {
