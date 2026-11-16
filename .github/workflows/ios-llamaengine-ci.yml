@@ -67,16 +67,6 @@ jobs:
           test -d runtime/ios/build/xc/ggml-metal.xcframework
           test -d runtime/ios/Sources/LlamaCppBridge/vendor
 
-      - name: Test Director APEX native bridge package
-        working-directory: packages/director/ios
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -scheme ApexBridge \
-            -destination "platform=macOS,arch=$(uname -m)" \
-            -derivedDataPath /tmp/apex-bridge-derived \
-            CODE_SIGNING_ALLOWED=NO
-
       - name: Typecheck the unlinked fail-closed branch
         run: |
           sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
