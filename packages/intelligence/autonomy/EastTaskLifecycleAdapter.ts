@@ -38,8 +38,16 @@ export interface EastLifecycleRunResult {
 
 const CHECKPOINT_PREFIX = "east-runtime-checkpoint:v1:";
 
-function encodeCheckpoint(kind: string, checkpoint: EastRuntimeCheckpoint): string {
-  return CHECKPOINT_PREFIX + JSON.stringify({ kind, checkpoint });
+function encodeCheckpoint(kind: string, checkpoint: EastRuntimeCheckpoint, messageOffset: number): string {
+  if (!Number.isInteger(messageOffset) || messageOffset < 0 || messageOffset > checkpoint.messages.length) {
+    throw new Error("Invalid East checkpoint message offset");
+  }
+  const delta = { ...checkpoint, messages: checkpoint.messages.slice(messageOffset) };
+  const encoded = CHECKPOINT_PREFIX + JSON.stringify({ kind, checkpoint: delta });
+  if (encoded.length > 1_000_000) {
+    throw new Error("East checkpoint exceeds the 1 MB per-step persistence bound");
+  }
+  return encoded;
 }
 
 function decodeCheckpoint(value: string | null): EastRuntimeCheckpoint | null {
