@@ -1,0 +1,53 @@
+name: East PostgreSQL Lifecycle Integration
+
+on:
+  push:
+    branches:
+      - "codex/**"
+    paths:
+      - "packages/intelligence/autonomy/**"
+      - ".github/workflows/east-postgres-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/intelligence/autonomy/**"
+      - ".github/workflows/east-postgres-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  east-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: east_lifecycle_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: east_lifecycle_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d east_lifecycle_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: east_lifecycle_ci_password
+      PGDATABASE: east_lifecycle_ci
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Apply East lifecycle migration to PostgreSQL 16
+        run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/migrations/001_task_lifecycle_snapshots.sql
+      - name: Verify row locking, compare-and-swap, namespace isolation, and rollback
+        run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/tests/postgres-integration.sql
