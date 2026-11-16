@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import XCTest
 import PocketLlamaEngine
 import ApexBridge
@@ -151,7 +152,7 @@ private actor SlowLlamaEngine: ApexBridge.LlamaEngine {
 }
 
 final class RuntimeControllerTests: XCTestCase {
-    private func makeFixture(clock: TestClock, readinessTTL: TimeInterval = 120) throws -> (RuntimeController, NativeInferenceRuntime, URL, ModelDescriptor) {
+    private func makeFixture(clock: TestClock, readinessTTL: TimeInterval = 120) throws -> (RuntimeController, NativeInferenceRuntime, URL, ModelDescriptor, String) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let modelURL = directory.appendingPathComponent("model.gguf")
@@ -175,15 +176,20 @@ final class RuntimeControllerTests: XCTestCase {
             readinessTTL: readinessTTL,
             clock: { clock.now() }
         )
-        return (controller, runtime, modelURL, descriptor)
+        return (controller, runtime, modelURL, descriptor, Self.sha256(modelURL))
+    }
+
+    private static func sha256(_ url: URL) -> String {
+        let data = (try? Data(contentsOf: url)) ?? Data()
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     func testLoadRequiresRealReadinessBeforeGenerationAndReturnsUnsignedCandidate() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_000))
-        let (controller, runtime, modelURL, descriptor) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
 
-        let loaded = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
+        let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         XCTAssertEqual(loaded.phase, "loaded")
         XCTAssertFalse(loaded.canGenerate)
         do {
@@ -224,9 +230,9 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testReadinessExpiresAndCannotBeReused() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 2_000))
-        let (controller, _, modelURL, descriptor) = try makeFixture(clock: clock, readinessTTL: 30)
+        let (controller, _, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock, readinessTTL: 30)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
-        let loaded = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
+        let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
         clock.advance(31)
         do {
@@ -243,7 +249,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testModelFileChangeInvalidatesReadinessAndGeneration() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 3_000))
-        let (controller, _, modelURL, descriptor) = try makeFixture(clock: clock)
+        let (controller, _, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         let loaded = try await controller.load(model: descriptor, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
@@ -271,6 +277,7 @@ final class RuntimeControllerTests: XCTestCase {
         try Data("GGUF-slow-fixture".utf8).write(to: modelURL)
         defer { try? FileManager.default.removeItem(at: directory) }
         let descriptor = ModelDescriptor(id: "slow-model", name: "Slow model", path: modelURL.path, contextLength: 1024)
+        let expectedHash = Self.sha256(modelURL)
         let engine = SlowLlamaEngine()
         let runtime = try NativeInferenceRuntime(
             engine: engine,
