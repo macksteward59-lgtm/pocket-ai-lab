@@ -32,6 +32,45 @@ function harness(options: { leaseMs?: number; maxConcurrentSteps?: number } = {}
 }
 
 describe("TaskLifecycleCoordinator", () => {
+  it("reloads the authoritative snapshot after a durable store conflict", async () => {
+    const backing = new InMemoryTaskLifecycleStore();
+    let conflictNextSave = false;
+    const store: TaskLifecycleStore = {
+      load: () => backing.load(),
+      save: records => {
+        if (conflictNextSave) {
+          conflictNextSave = false;
+          throw new TaskLifecycleError("store_conflict", "A concurrent writer advanced the snapshot");
+        }
+        backing.save(records);
+      }
+    };
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    await coordinator.init();
+
+    const concurrentWriter = new TaskLifecycleCoordinator({ store: backing });
+    await concurrentWriter.init();
+    await concurrentWriter.createTask({
+      id: "remote-task", objective: "Written by another coordinator",
+      steps: [{ id: "one", description: "Remote work" }]
+    });
+
+    conflictNextSave = true;
+    await expect(coordinator.createTask({
+      id: "local-task", objective: "Must not overwrite the concurrent writer",
+      steps: [{ id: "one", description: "Local work" }]
+    })).rejects.toMatchObject({ code: "store_conflict" });
+    expect(coordinator.listTasks()).toHaveLength(0);
+
+    await coordinator.reload();
+    expect(coordinator.listTasks().map(task => task.id)).toEqual(["remote-task"]);
+    await coordinator.createTask({
+      id: "local-task", objective: "Retry after reconciling the latest snapshot",
+      steps: [{ id: "one", description: "Local work" }]
+    });
+    expect(coordinator.listTasks().map(task => task.id).sort()).toEqual(["local-task", "remote-task"]);
+  });
+
   it("requires initialization and validates dependency graphs before persisting", async () => {
     const store = new InMemoryTaskLifecycleStore();
     const coordinator = new TaskLifecycleCoordinator({ store });
