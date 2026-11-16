@@ -323,7 +323,7 @@ export function hashAssessmentScope(
   const normalize = (entries: readonly ExplicitTarget[]) => entries.map(entry => ({
     hostname: normalizeTargetHostname(entry.hostname),
     includeSubdomains: entry.includeSubdomains === true
-  })).sort((a, b) => a.hostname.localeCompare(b.hostname) || Number(a.includeSubdomains) - Number(b.includeSubdomains));
+  })).sort((a, b) => (a.hostname < b.hostname ? -1 : a.hostname > b.hostname ? 1 : 0) || Number(a.includeSubdomains) - Number(b.includeSubdomains));
   return createHash("sha256").update(canonicalize({
     targets: normalize(targets),
     excludedTargets: normalize(excludedTargets)
