@@ -2452,3 +2452,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Exact-head PR workflows queued:** Pocket AI Lab `43927603726`, Consumer prototype `43927603940`, Governance sidecar `43927603754`, iOS LlamaEngine `43927603952`, Cursor collaboration `43927604119`. Pocket AI Lab push workflow `43927589882` also queued.
 - **Additional hardening:** RuntimeController now requires the host's expected catalog SHA-256, compares it to a streaming hash of the loaded artifact, invalidates readiness on file changes, serializes readiness probes, prevents new generation during unload, and waits for native cancellation drain. BridgeGate no longer accepts memory estimates from web messages; the host resolves memory/hash from its catalog.
 - **No validation result claimed yet.** iOS app build and XCTest are pending on exact head.
+
+
+## 2026-11-16 — Native iOS catalog test diagnosis and repair
+
+- **PRs:** #150 and #151, branch `codex/ios-routed-agent-app-integration`.
+- **Failed exact-head run:** iOS workflow `43922697190`, job `133493861248`.
+- **Progress:** native app build passed; 53/54 app XCTest cases passed. The sole failure was `LocalModelCatalogTests.testOperatorRoutingCapabilitiesPersistAndNormalize` on reload after clearing labels.
+- **Root cause:** `updateCapabilities` correctly persisted an empty list, but `isValid` still rejected entries whose capability list was empty. This contradicted the operator's ability to remove routing labels.
+- **Fix:** removed the non-empty capability requirement; maximum count and per-label validation remain. Commit `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`.
+- **Status:** exact-head push and companion CI reruns are queued; iOS PR workflow pending appearance. No new pass claimed yet.
