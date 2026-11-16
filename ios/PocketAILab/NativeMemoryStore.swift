@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import Security
+import CoreFoundation
 
 public enum NativeMemoryLayer: String, Codable, CaseIterable, Identifiable, Sendable {
     case working, episodic, semantic, procedural
@@ -24,7 +25,7 @@ public struct NativeMemoryProvenance: Codable, Equatable, Sendable {
 
 public struct NativeMemoryEntry: Codable, Equatable, Identifiable, Sendable {
     public let id: String
-    public let layer: NativeMemoryLayer
+    public var layer: NativeMemoryLayer
     public var content: String
     public var provenance: NativeMemoryProvenance
     public let createdAt: Date
@@ -94,13 +95,16 @@ public actor NativeMemoryStore {
         let box: AES.GCM.SealedBox
         do { box = try AES.GCM.SealedBox(combined: combined) }
         catch { throw NativeMemoryVaultError.integrityFailure }
-        let plaintext: Data
+        var plaintext: Data
         do { plaintext = try AES.GCM.open(box, using: key, authenticating: Self.aad) }
         catch { throw NativeMemoryVaultError.integrityFailure }
+        defer { plaintext.resetBytes(in: 0..<plaintext.count) }
         let entries: [NativeMemoryEntry]
         do { entries = try JSONDecoder().decode([NativeMemoryEntry].self, from: plaintext) }
         catch { throw NativeMemoryVaultError.integrityFailure }
-        guard entries.count <= Self.maximumEntries, entries.allSatisfy(Self.isValid) else {
+        guard entries.count <= Self.maximumEntries,
+              entries.allSatisfy(Self.isValid),
+              Set(entries.map(\.id)).count == entries.count else {
             throw NativeMemoryVaultError.integrityFailure
         }
         return entries
@@ -129,7 +133,7 @@ public actor NativeMemoryStore {
     }
 
     @discardableResult
-    public func update(id: String, content: String, sourceRefs: [String]? = nil) throws -> Bool {
+    public func update(id: String, layer: NativeMemoryLayer? = nil, content: String, sourceRefs: [String]? = nil) throws -> Bool {
         let normalized = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty, normalized.utf8.count <= Self.maximumContentBytes,
               sourceRefs == nil || (sourceRefs!.count <= 32 && sourceRefs!.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 512 })) else {
@@ -138,6 +142,7 @@ public actor NativeMemoryStore {
         var entries = try load()
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return false }
         entries[index].content = normalized
+        if let layer { entries[index].layer = layer }
         if let sourceRefs { entries[index].provenance.sourceRefs = sourceRefs }
         entries[index].provenance.verified = false
         try persist(entries)
@@ -154,11 +159,14 @@ public actor NativeMemoryStore {
     }
 
     private func persist(_ entries: [NativeMemoryEntry]) throws {
-        guard entries.count <= Self.maximumEntries, entries.allSatisfy(Self.isValid) else {
+        guard entries.count <= Self.maximumEntries,
+              entries.allSatisfy(Self.isValid),
+              Set(entries.map(\.id)).count == entries.count else {
             throw NativeMemoryVaultError.invalidEntry
         }
         do {
-            let plaintext = try JSONEncoder().encode(entries)
+            var plaintext = try JSONEncoder().encode(entries)
+            defer { plaintext.resetBytes(in: 0..<plaintext.count) }
             let key = try keyProvider.getOrCreateKey()
             let sealed = try AES.GCM.seal(plaintext, using: key, authenticating: Self.aad)
             guard let combined = sealed.combined else { throw NativeMemoryVaultError.storageUnavailable }
@@ -172,6 +180,10 @@ public actor NativeMemoryStore {
                 attributes: [.protectionKey: FileProtectionType.complete]
             )
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
+            var directoryValues = URLResourceValues()
+            directoryValues.isExcludedFromBackup = true
+            var protectedDirectory = directory
+            try protectedDirectory.setResourceValues(directoryValues)
             try output.write(to: fileURL, options: [.atomic, .completeFileProtection])
         } catch let error as NativeMemoryVaultError {
             throw error
@@ -209,7 +221,9 @@ public struct KeychainNativeMemoryKeyProvider: NativeMemoryKeyProvider {
         guard status == errSecSuccess, let data = result as? Data, data.count == 32 else {
             throw NativeMemoryVaultError.keyUnavailable
         }
-        return SymmetricKey(data: data)
+        var keyBytes = data
+        defer { keyBytes.resetBytes(in: 0..<keyBytes.count) }
+        return SymmetricKey(data: keyBytes)
     }
 
     public func getOrCreateKey() throws -> SymmetricKey {
@@ -219,6 +233,7 @@ public struct KeychainNativeMemoryKeyProvider: NativeMemoryKeyProvider {
             SecRandomCopyBytes(kSecRandomDefault, 32, buffer.baseAddress!)
         }
         guard status == errSecSuccess else { throw NativeMemoryVaultError.keyUnavailable }
+        defer { bytes.resetBytes(in: 0..<bytes.count) }
         var query = baseQuery()
         query[kSecValueData as String] = bytes
         query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
