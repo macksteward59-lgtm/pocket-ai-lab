@@ -147,6 +147,33 @@ export class TaskLifecycleCoordinator {
     });
   }
 
+  /**
+   * Reloads the authoritative snapshot after a store_conflict. The caller must
+   * reconcile its intent against the newly loaded records before retrying.
+   */
+  async reload(): Promise<void> {
+    await this.mutate(async () => {
+      const loaded = await this.store.load();
+      const next = new Map<string, TaskRecord>();
+      const issuedAttemptIds = new Set<string>();
+      for (const raw of loaded) {
+        const task = validateStoredTask(raw);
+        if (next.has(task.id)) throw new TaskLifecycleError("corrupt_store", "Duplicate task id in store");
+        for (const step of task.steps) {
+          for (const attemptId of step.attemptIds) {
+            if (issuedAttemptIds.has(attemptId)) {
+              throw new TaskLifecycleError("corrupt_store", "Attempt id is duplicated across stored tasks");
+            }
+            issuedAttemptIds.add(attemptId);
+          }
+        }
+        next.set(task.id, task);
+      }
+      this.records = next;
+      this.initialized = true;
+    });
+  }
+
   async createTask(definition: TaskDefinition): Promise<TaskRecord> {
     return this.mutate(async () => {
       this.requireInitialized();
