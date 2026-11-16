@@ -1949,3 +1949,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 companion workflows remain green at exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5`.
 - PR #129 iOS workflow `43771100673` is now reported cancelled. Its earlier completed stages are not counted as a complete validation result; #135 remains the consolidated mainline native validation candidate.
 - No merge performed. No physical-device run, runtime attestation, pinned-GGUF smoke, or macOS XCTest pass claimed.
+
+
+## 2026-11-16 — Native app build passed; app XCTest running
+
+- Refreshed PR #135 exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5` and iOS LlamaEngine run `43793269022` (job `133056542073`). The pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device XCFramework link, iPhone simulator selection, and both generic simulator/device native app builds have completed successfully.
+- The `XCTest the native Pocket AI Lab app` step is currently in progress. The iOS simulator XCTest, pinned-GGUF download/inference smoke, macOS XCTest, and runner evidence summary have not started. Job-log retrieval currently returns GitHub `BlobNotFound`, so no assertion-level result is inferred.
+- All four companion workflows passed on the same exact PR #135 head. PR remains draft/open/unmerged. No physical iPhone execution, signed runtime attestation, APEX approval, East authorization, or production readiness is claimed.
