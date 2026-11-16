@@ -38,36 +38,43 @@ export interface EastLifecycleRunResult {
 
 const CHECKPOINT_PREFIX = "east-runtime-checkpoint:v1:";
 
-function encodeCheckpoint(kind: string, checkpoint: EastRuntimeCheckpoint): string {
-  return CHECKPOINT_PREFIX + JSON.stringify({ kind, checkpoint });
+function encodeCheckpoint(kind: string, checkpoint: EastRuntimeCheckpoint, messageOffset: number): string {
+  if (!Number.isInteger(messageOffset) || messageOffset < 0 || messageOffset > checkpoint.messages.length) {
+    throw new Error("Invalid East checkpoint message offset");
+  }
+  const delta = { ...checkpoint, messages: checkpoint.messages.slice(messageOffset) };
+  const encoded = CHECKPOINT_PREFIX + JSON.stringify({ kind, checkpoint: delta });
+  if (encoded.length > 1_000_000) {
+    throw new Error("East checkpoint exceeds the 1 MB per-step persistence bound");
+  }
+  return encoded;
 }
 
-function decodeCheckpoint(value: string | null, expectedKind: string): EastRuntimeCheckpoint {
-  if (!value || !value.startsWith(CHECKPOINT_PREFIX)) {
-    throw new Error("Stored East runtime checkpoint is missing; refusing to regenerate completed work");
-  }
+function decodeCheckpoint(value: string | null): EastRuntimeCheckpoint | null {
+  if (!value || !value.startsWith(CHECKPOINT_PREFIX)) return null;
   try {
     const parsed = JSON.parse(value.slice(CHECKPOINT_PREFIX.length)) as {
-      kind?: unknown;
       checkpoint?: EastRuntimeCheckpoint;
     };
-    if (parsed.kind !== expectedKind || !parsed.checkpoint) {
-      throw new Error("Stored East runtime checkpoint does not match its completed lifecycle step");
-    }
-    return parsed.checkpoint;
+    return parsed.checkpoint ?? null;
   } catch {
     throw new Error("Stored East runtime checkpoint is corrupt; refusing to regenerate completed work");
   }
 }
 
 function latestCheckpoint(task: TaskRecord): EastRuntimeCheckpoint | null {
-  let latest: EastRuntimeCheckpoint | null = null;
+  let latestTask: EastRuntimeCheckpoint["task"] | null = null;
+  const messages: EastRuntimeCheckpoint["messages"][number][] = [];
+  let evidenceMemoryCommitted = false;
   for (const step of task.steps) {
     if (step.status !== "succeeded") continue;
-    latest = decodeCheckpoint(step.result, step.id);
-    
+    const checkpoint = decodeCheckpoint(step.result);
+    if (!checkpoint) continue;
+    latestTask = checkpoint.task;
+    messages.push(...checkpoint.messages);
+    evidenceMemoryCommitted = checkpoint.evidenceMemoryCommitted;
   }
-  return latest;
+  return latestTask ? { version: 1, task: latestTask, messages, evidenceMemoryCommitted } : null;
 }
 
 function buildSteps(): TaskStepDefinition[] {
@@ -183,6 +190,14 @@ export async function runEastTaskWithLifecycle(
     throw new Error("East task objective does not match the lifecycle objective");
   }
 
+  let checkpointedMessageCount = east.checkpointTask(eastTaskId).messages.length;
+  const captureCheckpoint = (kind: string): string => {
+    const checkpoint = east.checkpointTask(eastTaskId);
+    const encoded = encodeCheckpoint(kind, checkpoint, checkpointedMessageCount);
+    checkpointedMessageCount = checkpoint.messages.length;
+    return encoded;
+  };
+
   if (lifecycle.status === "failed" || lifecycle.status === "cancelled") {
     throw new Error("Existing East lifecycle is terminal: " + lifecycle.status);
   }
@@ -194,7 +209,7 @@ export async function runEastTaskWithLifecycle(
   let evidenceRefs: string[] = [];
   const completedDeliberation = lifecycle.steps.find(step => step.id === "deliberate");
   if (completedDeliberation?.status === "succeeded") {
-    const checkpoint = decodeCheckpoint(completedDeliberation.result, "deliberate");
+    const checkpoint = decodeCheckpoint(completedDeliberation.result);
     synthesis = checkpoint?.task.synthesis ?? "";
     evidenceRefs = [...(checkpoint?.task.evidenceRefs ?? completedDeliberation.evidenceRefs)];
     if (!synthesis.trim()) {
@@ -210,11 +225,11 @@ export async function runEastTaskWithLifecycle(
       let refs: string[] = [];
       if (claim.stepId === "assign-core-agents") {
         for (const agentId of EAST_DELIBERATION_AGENTS) east.assignAgent(eastTaskId, agentId);
-        result = encodeCheckpoint("assign-core-agents", east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("assign-core-agents");
       } else if (claim.stepId.startsWith("execute-")) {
         const agentId = claim.stepId.slice("execute-".length);
         const messageId = await east.executeAgent(eastTaskId, agentId);
-        result = encodeCheckpoint("execute-" + agentId, east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("execute-" + agentId);
         refs = ["east-message:" + messageId];
       } else if (claim.stepId === "deliberate") {
         const deliberation = await east.runDeliberation(eastTaskId);
@@ -224,13 +239,13 @@ export async function runEastTaskWithLifecycle(
         synthesis = deliberation.synthesis;
         evidenceRefs = [...deliberation.evidence];
         // Persist the proposal and thread so a fresh East runtime can restore it.
-        result = encodeCheckpoint("deliberate", east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("deliberate");
         refs = evidenceRefs;
       } else if (claim.stepId === "record-unverified-proposal") {
         if (!synthesis.trim()) throw new Error("East deliberation returned no synthesis");
         const accepted = await east.commitTaskEvidence(eastTaskId, synthesis);
         if (accepted !== false) throw new Error("East evidence gate violated its non-authorizing contract");
-        result = encodeCheckpoint("record-unverified-proposal", east.checkpointTask(eastTaskId));
+        result = captureCheckpoint("record-unverified-proposal");
         refs = evidenceRefs;
       } else {
         throw new Error("Unknown East lifecycle step " + claim.stepId);
