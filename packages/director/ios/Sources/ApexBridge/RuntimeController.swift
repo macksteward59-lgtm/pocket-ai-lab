@@ -38,6 +38,7 @@ public enum RuntimeControllerError: Error, Equatable, Sendable {
     case invalidConfiguration
     case modelFileUnavailable
     case modelFileChanged
+    case modelHashMismatch
     case unknownSession
     case notReady
     case invalidRequest
@@ -102,9 +103,9 @@ public actor RuntimeController {
     }
 
     @discardableResult
-    public func load(model: ModelDescriptor, estimatedMemoryMB: Int) async throws -> ModelReport {
+    public func load(model: ModelDescriptor, expectedFileHash: String, estimatedMemoryMB: Int) async throws -> ModelReport {
         try LlamaEngineSupport.validateModel(model)
-        guard estimatedMemoryMB > 0 else { throw RuntimeControllerError.invalidConfiguration }
+        guard estimatedMemoryMB > 0, Self.validSHA256(expectedFileHash) else { throw RuntimeControllerError.invalidConfiguration }
         let url = URL(fileURLWithPath: model.path)
         let before = try fileIdentity(url)
         let lease = try await runtime.acquire(model: model, estimatedMemoryMB: estimatedMemoryMB)
@@ -112,6 +113,7 @@ public actor RuntimeController {
             let after = try fileIdentity(url)
             guard before == after else { throw RuntimeControllerError.modelFileChanged }
             let hash = try Self.sha256File(url)
+            guard hash == expectedFileHash.lowercased() else { throw RuntimeControllerError.modelHashMismatch }
             let afterHash = try fileIdentity(url)
             guard after == afterHash else { throw RuntimeControllerError.modelFileChanged }
             sessions[lease.session.id] = ActiveSession(
@@ -406,6 +408,12 @@ public actor RuntimeController {
 
     private static func sha256(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func validSHA256(_ value: String) -> Bool {
+        value.utf8.count == 64 && value.utf8.allSatisfy {
+            (48...57).contains($0) || (97...102).contains($0) || (65...70).contains($0)
+        }
     }
 
     private static func validUUID(_ value: String) -> Bool {
