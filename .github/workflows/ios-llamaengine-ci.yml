@@ -261,11 +261,37 @@ jobs:
 
       - name: Download the pinned smoke GGUF
         run: |
-          runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/gguf-path.txt
+          # Do not let tee mask a failed download. The helper emits a pin banner
+          # as well as the artifact path, so select only a verified existing GGUF.
+          set -o pipefail
+          runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/gguf-fetch.log
+          python3 - <<'PY'
+          import pathlib, sys
+          log = pathlib.Path("/tmp/gguf-fetch.log").read_text().splitlines()
+          candidates = []
+          for line in log:
+              value = line.strip()
+              if not value.startswith("/"):
+                  continue
+              path = pathlib.Path(value)
+              if path.is_absolute() and path.suffix.lower() == ".gguf" and path.is_file():
+                  candidates.append(str(path))
+          if len(candidates) != 1:
+              sys.exit(f"expected exactly one existing absolute GGUF path; found {len(candidates)}")
+          pathlib.Path("/tmp/gguf-path.txt").write_text(candidates[0] + "\\n")
+          print(f"verified smoke GGUF path: {candidates[0]}")
+          PY
           test -s /tmp/gguf-path.txt
 
       - name: Point the macOS smoke test at that GGUF
-        run: runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$(tail -n 1 /tmp/gguf-path.txt)"
+        run: |
+          gguf_path="$(cat /tmp/gguf-path.txt)"
+          case "$gguf_path" in
+            /*.gguf) ;;
+            *) echo "smoke GGUF path must be an absolute .gguf path" >&2; exit 1 ;;
+          esac
+          test -f "$gguf_path"
+          runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$gguf_path"
 
       - name: XCTest on macOS
         timeout-minutes: 20
