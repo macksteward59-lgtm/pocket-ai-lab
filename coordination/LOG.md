@@ -2352,3 +2352,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Privacy contract:** No chat auto-save, no model-driven verification, all new records start `verified=false`, no plaintext fallback, no silent key regeneration or plaintext migration. Key loss/tampering must fail closed with recovery guidance.
 - **Dependencies:** iOS 16+, CryptoKit, Security/Keychain. XcodeGen auto-includes app/test source directories.
 - **Validation:** Exact-head iOS CI (app build, app XCTest, simulator XCTest, package tests); no physical iPhone Air acceptance claimed until installed-device test.
+
+
+## 2026-11-16 — Native agent catalog claimed
+
+- **Branch:** `codex/native-agent-catalog`, based on routed Agent Team app integration head `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5` (PR #150).
+- **Scope:** Create the native catalog for eight permanent roles and bounded dynamic specialist templates, including explicit capability labels, instructions, message types, unique ID validation, and focused tests/docs.
+- **Exclusions:** No LocalChatView or coordinator changes, no automatic specialist selection, no provider execution, no APEX/East or memory changes. The catalog will not claim agents are active until a separate app integration invokes them.
+- **Dependency:** PR #150 native app integration; its exact-head iOS CI is being retried after an app-build failure.
