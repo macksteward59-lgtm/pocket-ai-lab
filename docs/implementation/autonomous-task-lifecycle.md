@@ -35,7 +35,7 @@ Hosts inject a `TaskLifecycleStore`. Its `save` operation must atomically replac
 
 On startup, call `init()`, then `recoverExpiredLeases()` to recover all tasks, or pass a task ID to recover only that task. Task-scoped recovery validates that the task exists and leaves unrelated task leases untouched. Expired attempts are requeued only while the step's bounded attempt budget remains; otherwise they fail and outstanding work is cancelled. The kernel does not start work merely because it was recovered. A host scheduler must explicitly claim the next ready step.
 
-The in-process mutation queue prevents races among callers using one coordinator instance. A production store shared by multiple processes needs its own transactional compare-and-swap, row locking, or equivalent cross-process claim mechanism. The in-memory queue is not a distributed lock.
+The in-process mutation queue prevents races among callers using one coordinator instance. A production store shared by multiple processes needs its own transactional compare-and-swap, row locking, or equivalent cross-process claim mechanism. The in-memory queue is not a distributed lock. If a save returns `store_conflict`, call `reload()` to replace the coordinator's in-memory snapshot with the authoritative stored state, then reconcile the intended change before retrying; never blindly replay a possibly side-effecting step.
 
 ## Example
 
