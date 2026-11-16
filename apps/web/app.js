@@ -68,6 +68,7 @@ async function sendMessage(text){
  if(!text.trim()||state.busy)return;
  const useCloud=$("cloud-consent")?.checked===true;
  if(useCloud&&!state.cloudConfigured)return;
+ if(useCloud)$("cloud-consent").checked=false;
  $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";
  state.busy=true;$("send").disabled=true;
  const output=appendMessage("assistant",useCloud?"Sending with the configured cloud provider…":"Connecting to your local model…");
