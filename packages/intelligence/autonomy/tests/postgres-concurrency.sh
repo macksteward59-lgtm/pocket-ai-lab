@@ -49,7 +49,7 @@ if [ "$lock_seen" != true ]; then
   exit 1
 fi
 
-stale_result="$(psql --set ON_ERROR_STOP=1 --no-align --tuples-only --command \
+stale_result="$(psql --set ON_ERROR_STOP=1 --quiet --no-align --tuples-only --command \
   "UPDATE pocket_task_lifecycle_snapshots SET payload = '[{\"id\":\"writer-b\"}]'::jsonb, record_version = record_version + 1 WHERE namespace = '\${namespace}' AND record_version = 0 RETURNING record_version")"
 
 wait "$writer_pid"
