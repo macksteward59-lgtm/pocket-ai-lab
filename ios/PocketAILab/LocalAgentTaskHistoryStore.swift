@@ -16,6 +16,8 @@ struct AgentTaskHistoryEntry: Codable, Equatable, Identifiable {
     var roleResults: [AgentTaskRoleResult]
     var finalResponse: String?
     var failureSummary: String?
+    /// IDs of user-selected memory records; memory content is not duplicated in task history.
+    var contextRefs: [String]? = nil
 }
 
 struct AgentTaskRoleResult: Codable, Equatable, Identifiable {
@@ -160,10 +162,13 @@ struct LocalAgentTaskHistoryStore {
         return archive.tasks
     }
 
-    func begin(id: String, objective: String) throws {
+    func begin(id: String, objective: String, contextRefs: [String] = []) throws {
         let normalized = objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !id.isEmpty, id.utf8.count <= 128,
-              !normalized.isEmpty, normalized.utf8.count <= Self.maximumObjectiveBytes else {
+              !normalized.isEmpty, normalized.utf8.count <= Self.maximumObjectiveBytes,
+              contextRefs.count <= 32,
+              contextRefs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 128 }),
+              Set(contextRefs).count == contextRefs.count else {
             throw StoreError.invalidTransition
         }
         var tasks = try readTasks()
@@ -178,7 +183,8 @@ struct LocalAgentTaskHistoryStore {
                 status: .running,
                 roleResults: [],
                 finalResponse: nil,
-                failureSummary: nil
+                failureSummary: nil,
+                contextRefs: contextRefs.isEmpty ? nil : contextRefs
             ),
             at: 0
         )
