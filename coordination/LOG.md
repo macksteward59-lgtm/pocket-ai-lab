@@ -2660,3 +2660,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Verifier hardening:** PR #163 current head `cddb43103384711707c6474c1f99dab5e33c6dd3` still has no surfaced PR run or combined status.
 - **Coordination:** Updated board snapshots and detailed claims for PR #162 and #164 so commit hashes and CI claims match the currently observed heads. The traceability matrix remains at 316 requirement rows; none is marked verified.
 - **No APEX trust/policy/authorization changes, no PR merge/closure/approval, no force-push, no deployment/signing, and no physical iPhone Air test occurred.**
+
+
+## 2026-11-16 UTC — Original 42-skill artifact provenance check
+
+- **Library search:** Found a saved `Mr. Robot Cybersecurity Academy` HTML artifact titled as a 42-skill curriculum. It contains 42 cybersecurity learning areas, practice plans, and dependencies, but no M01–M42 identifiers and no six-layer capability taxonomy.
+- **Disposition:** This artifact is not treated as the original Pocket AI Lab six-layer registry. It may be a separate learning/curriculum artifact; no mapping or renaming was performed. The authoritative M01–M42 source remains unrecovered.
+- **Traceability update:** Added this distinction to the blocker notes in `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md`. The 10 section-5 requirements remain blocked pending authoritative source recovery.
+- **CI checkpoint:** PR #164 exact-head run #43976612502 remains in progress at the physical-iOS link step after pinned llama.cpp build and Swift typecheck passed. No later gate result is yet available.
