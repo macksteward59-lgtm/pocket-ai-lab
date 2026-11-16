@@ -14,7 +14,7 @@ A production `TaskLifecycleStore` must provide all of the following:
 6. Encryption and access control appropriate to task prompts, agent outputs, and evidence references; logs must not copy secrets or full sensitive payloads.
 7. A transactional outbox or equivalent when lifecycle completion must trigger another durable subsystem.
 
-The `InMemoryTaskLifecycleStore` is for tests and ephemeral execution only. `PostgresTaskLifecycleStore` now implements the transactional snapshot contract through an injected SQL transaction adapter, but no database driver, credentials, connection pool, deployment, or migration execution is included.
+The current `InMemoryTaskLifecycleStore` is for tests and ephemeral execution only.
 
 ## Recovery and duplicate-effect rules
 
@@ -59,4 +59,6 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 
 ## Current status
 
-The coordinator and eight-agent East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, versioned task/message checkpoints, and idempotent completed-step resumption into a fresh East runtime. `PostgresTaskLifecycleStore` supplies a transactional row-lock/versioned compare-and-swap adapter, but it still requires a host-provided PostgreSQL transaction implementation and reviewed migration/deployment. Production acceptance remains open for tenant RLS, credentials, TLS, backups, durable MemoryStore, transactional outbox, multi-process fault injection, and active provider cancellation propagation.
+The coordinator and East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, and idempotent completed-step resumption. The East task map and MessageBus remain in-memory, but the adapter serializes a validated task snapshot plus the new message delta into each successfully completed lifecycle step result. A fresh East runtime and fresh coordinator can rehydrate the task and full message thread from the shared lifecycle store without repeating completed inference; the adapter test now uses distinct runtime instances to prove that boundary.
+
+This is checkpoint-based recovery, not a durable per-message event log. If inference succeeds but the process fails before `completeStep` commits the checkpoint, the output may be unavailable after restart. Inference steps remain single-attempt and must fail closed for operator reconciliation rather than silently regenerate. A provider idempotency/result-retrieval contract or transactional outbox is still required to close that crash window. The restart test uses the shared in-memory store interface; the PostgreSQL adapter's atomicity/version-conflict tests are separate, and no live production database integration is claimed. A durable `MemoryStore` must also be injected if episodic memory is expected to survive a process restart. Active provider cancellation propagation and production database/RLS configuration remain open work.
