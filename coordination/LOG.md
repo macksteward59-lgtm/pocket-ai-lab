@@ -2288,3 +2288,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exact head `7fdb54bbedbba8caebdddba911de7c01a1a14b8e`: Cursor, Pocket AI Lab, Consumer, and Governance workflows passed. iOS LlamaEngine run `43911705025` failed at simulator boot, not compilation or XCTest.
 - Job logs show the selected iPhone SE (3rd generation) remained in first-boot data migration (`com.apple.-0LaunchServicesMigrator`) and `xcrun simctl bootstatus ... -b` timed out after 300 seconds. The pinned llama.cpp simulator/macOS build, Swift typecheck, and generic physical-iOS-target link all passed; app build, app XCTest, simulator XCTest, GGUF smoke, and macOS XCTest were skipped after boot failure.
 - Claim extended to the CI workflow reliability slice in `.github/workflows/ios-llamaengine-ci.yml`: prefer an already-booted iPhone simulator and improve bounded boot timeout/diagnostics. No application runtime or governance semantics change. No physical iPhone validation claimed.
+
+
+## 2026-11-16 21:32 UTC — iOS simulator CI reliability patch
+
+- Added a CI-only fix on `codex/ios-routed-agent-app-integration`, commit `32e64d4fe34a554b86d1b16037924d4b8ea8509b`: simulator selection now prefers an already-booted iPhone, otherwise chooses the newest available iOS runtime/device; first-boot `bootstatus` allowance is increased from 300 to 600 seconds within a 12-minute step timeout; failures emit device/runtime diagnostics.
+- No app/runtime source, model-routing behavior, or governance boundary changed. Workflow source was re-fetched and inspected after update. Exact-head CI has not yet appeared in the workflow-run query; checks are pending. Previous iOS failure was a simulator first-boot LaunchServices migration timeout, not an app compile/test failure.
+- PR #150 and validation PR #151 track the feature branch. No merge, local Xcode run, or physical-device validation claimed.
