@@ -1941,3 +1941,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Reviewed PR #131 exact head `4dc767c1958af99383522d08bbca1c42cefe5818` and mainline validation PR #132 exact head `a3a44681c49b5cfaddf343807378c46cfc264d39`. The PostgreSQL adapter uses a namespaced snapshot, transaction + row lock, record-version compare-and-swap, size/schema validation, and explicit coordinator reload after conflict. The focused tests exercise stale writers, namespace separation, rollback, bounds, and reload using a serialized fake database; they do not prove compatibility with a live PostgreSQL driver/server. All four companion workflows on #132 exact head passed. No migration or production database was executed.
 - PRs #131/#132 remain drafts. Host-side TLS, least-privilege credentials, namespace authorization/RLS, encryption/key management, backups, migration execution, and production integration remain explicit deployment obligations. No APEX/East authorization, signed evidence, or receipt authority is added.
 - No merge performed. Existing ownership and trust boundaries preserved.
+
+
+## 2026-11-16 — Native device link and simulator selection passed
+
+- Refreshed PR #135 exact-head iOS workflow `43793269022`: pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device engine link, and simulator selection all completed successfully. The generated native app build is currently in progress; app XCTest, simulator XCTest, pinned-GGUF smoke, and macOS XCTest have not yet run.
+- PR #135 companion workflows remain green at exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5`.
+- PR #129 iOS workflow `43771100673` is now reported cancelled. Its earlier completed stages are not counted as a complete validation result; #135 remains the consolidated mainline native validation candidate.
+- No merge performed. No physical-device run, runtime attestation, pinned-GGUF smoke, or macOS XCTest pass claimed.
