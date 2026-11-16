@@ -523,7 +523,7 @@ private actor RoutingRecordingEngine: LlamaEngine {
 
     func load(model: ModelDescriptor) async throws -> RuntimeSession {
         loadedModelIDs.append(model.id)
-        return RuntimeSession(id: "session-\\(model.id)", modelId: model.id)
+        return RuntimeSession(id: "session-\(model.id)", modelId: model.id)
     }
 
     func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
@@ -564,7 +564,7 @@ private actor BlockingLoadInferenceEngine: LlamaEngine {
     }
 
     func completeLoad(modelId: String) {
-        loadContinuation?.resume(returning: RuntimeSession(id: "session-\\(modelId)", modelId: modelId))
+        loadContinuation?.resume(returning: RuntimeSession(id: "session-\(modelId)", modelId: modelId))
         loadContinuation = nil
     }
 
