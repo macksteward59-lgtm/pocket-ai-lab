@@ -797,6 +797,47 @@ struct LocalChatView: View {
     @State private var selectedAgentIDs = NativeAgentCatalog.permanentAgents.map(\.id)
     @State private var specialistTemplateID = NativeAgentCatalog.specialistTemplates.first?.id ?? ""
     @State private var replacementAgentID = "engineer"
+    @State private var memoryStore = NativeMemoryStore.applicationDefault()
+    @State private var savedMemories: [NativeMemoryEntry] = []
+    @State private var selectedMemoryIDs: Set<String> = []
+    @State private var includeSelectedMemories = false
+    @State private var memoryStatus = "Saved memories are optional and never included without explicit selection."
+
+    private var selectedMemoryEntries: [NativeMemoryEntry] {
+        savedMemories.filter { selectedMemoryIDs.contains($0.id) }
+    }
+
+    private var selectedMemoryContext: String? {
+        guard includeSelectedMemories, !selectedMemoryEntries.isEmpty else { return nil }
+        let records = selectedMemoryEntries.map { entry in
+            let sources = entry.provenance.sourceRefs.joined(separator: ", ")
+            return "[id=\(entry.id) layer=\(entry.layer.rawValue) verified=\(entry.provenance.verified) sources=\(sources)]\n\(entry.content)"
+        }
+        let context = records.joined(separator: "\n\n")
+        return context.utf8.count <= 2_000 ? context : nil
+    }
+
+    private var selectedMemoryContextIssue: String? {
+        guard includeSelectedMemories else { return nil }
+        if selectedMemoryEntries.isEmpty { return "Select at least one saved record, or turn memory context off." }
+        if selectedMemoryContext == nil { return "Selected records exceed the 2 KB task-context limit. Deselect some records." }
+        return nil
+    }
+
+    @MainActor
+    private func refreshSavedMemories() async {
+        do {
+            let loaded = try await memoryStore.load()
+            savedMemories = loaded.sorted { $0.createdAt > $1.createdAt }
+            selectedMemoryIDs.formIntersection(Set(loaded.map(\.id)))
+            memoryStatus = "\(savedMemories.count) encrypted on-device records available. None are selected automatically."
+        } catch {
+            savedMemories = []
+            selectedMemoryIDs = []
+            includeSelectedMemories = false
+            memoryStatus = "Saved memory could not be read. No memory context will be sent."
+        }
+    }
 
     var body: some View {
         NavigationStack {
