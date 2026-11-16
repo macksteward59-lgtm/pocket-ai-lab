@@ -1971,3 +1971,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #94 exact head `533341f664618c62a256bc4483c6856b315d2de0` passed all five check runs: Pocket AI Lab CI push `43794126392`, Pocket AI Lab CI pull request `43794127584`, Consumer prototype CI `43794127579`, Governance sidecar CI `43794127649`, and Cursor collaboration plugin CI `43794127562`.
 - The focused `packages/intelligence/__tests__/autonomy.test.ts` suite passed 17/17 in both Pocket AI Lab CI runs. The full intelligence run reports 72 test files passed; workspace suite reports 28 test files passed. Governance sidecar reported 46 tests passed and offline simulation passed with `authorized=false`; Cursor plugin reported 5 tests passed. No failures were reported.
 - Updated the board status to `in-review`. PR #94 remains draft/open/mergeable and unmerged. This does not implement a production transactional store, cross-process scheduler, governed host execution, or East production integration.
+
+
+## 2026-11-16 — Native XCTest runner determinism hardening queued
+
+- PR #135 new exact head: `5cf2c215be5103eaff8f52cccd827f2114c1ade8`. Updated `.github/workflows/ios-llamaengine-ci.yml` to explicitly boot and wait for the selected iPhone simulator (6-minute bounded boot gate), disable parallel testing for app/simulator/macOS XCTest, and cap each XCTest step at 20 minutes. These changes are diagnostic/reliability hardening; they do not establish the cause of the prior stall.
+- Prior iOS run `43793269022` on head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5` remains reported in progress at native app XCTest, with run `updated_at=02:38:05Z` and no retrievable job logs (`BlobNotFound`). Treat it as stale/stalled, not active progress. Its pinned llama.cpp build, fail-closed typecheck, device XCFramework link, simulator selection, and native app build passed; app XCTest did not conclude.
+- New exact-head iOS run `43794464434` is pending. Companion workflows on the new head are in progress. No new-head CI result is claimed. Simulator XCTest, pinned-GGUF inference smoke, macOS XCTest, physical iPhone generation, and runtime attestation remain unverified.
+- No production runtime, model trust, APEX/East authorization, signed Evidence, or receipt semantics changed. PR #135 remains draft/open/unmerged.
