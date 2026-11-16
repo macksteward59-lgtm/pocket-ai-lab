@@ -60,7 +60,7 @@ if [ -n "$stale_result" ]; then
 fi
 
 final_state="$(psql --set ON_ERROR_STOP=1 --no-align --tuples-only --command \
-  "SELECT record_version || ':' || payload -> 0 ->> 'id' FROM pocket_task_lifecycle_snapshots WHERE namespace = '\${namespace}'")"
+  "SELECT record_version || ':' || (payload -> 0 ->> 'id') FROM pocket_task_lifecycle_snapshots WHERE namespace = '\${namespace}'")"
 
 if [ "$final_state" != "1:writer-a" ]; then
   echo "Unexpected final concurrent snapshot state: $final_state" >&2
