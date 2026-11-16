@@ -121,6 +121,62 @@ final class NativeAgentCoordinatorTests: XCTestCase {
         XCTAssertEqual(count, 0)
     }
 
+    func testOnlyExplicitlySelectedMemoryContextIsPassedAsUntrustedMaterial() async throws {
+        let engine = RecordingInferenceEngine(responses: ["first", "second"])
+        let coordinator = NativeAgentCoordinator(engine: engine, session: RuntimeSession(id: "s", modelId: "m"))
+        let task = AgentTaskRequest(
+            id: "memory-task",
+            objective: "Use the context if relevant",
+            requiredCapabilities: [],
+            context: "Remember the preferred project architecture.",
+            contextRefs: ["memory-record-1"]
+        )
+        _ = try await coordinator.run(task: task, steps: [
+            NativeAgentStep(agentId: "reasoner", instructions: "Analyze"),
+            NativeAgentStep(agentId: "critic", instructions: "Challenge")
+        ])
+        let prompts = await engine.recordedPrompts
+        XCTAssertEqual(prompts.count, 2)
+        XCTAssertTrue(prompts[0].contains("USER-SELECTED MEMORY CONTEXT"))
+        XCTAssertTrue(prompts[0].contains("memory-record-1"))
+        XCTAssertTrue(prompts[0].contains("untrusted reference material"))
+        XCTAssertTrue(prompts[1].contains("Remember the preferred project architecture."))
+    }
+
+    func testOversizedOrUnreferencedMemoryContextFailsBeforeInference() async {
+        let engine = RecordingInferenceEngine(responses: [])
+        let coordinator = NativeAgentCoordinator(engine: engine, session: RuntimeSession(id: "s", modelId: "m"))
+        let oversized = AgentTaskRequest(
+            id: "memory-task", objective: "Review", requiredCapabilities: [],
+            context: String(repeating: "x", count: 2_001), contextRefs: ["memory-record-1"]
+        )
+        do {
+            _ = try await coordinator.run(task: oversized, steps: [
+                NativeAgentStep(agentId: "reasoner", instructions: "Analyze")
+            ])
+            XCTFail("oversized memory context must be rejected")
+        } catch NativeAgentCoordinatorError.invalidTask {
+        } catch {
+            XCTFail("unexpected error: \\(error)")
+        }
+
+        let unreferenced = AgentTaskRequest(
+            id: "memory-task-2", objective: "Review", requiredCapabilities: [],
+            context: "Context without selected record IDs", contextRefs: []
+        )
+        do {
+            _ = try await coordinator.run(task: unreferenced, steps: [
+                NativeAgentStep(agentId: "reasoner", instructions: "Analyze")
+            ])
+            XCTFail("memory context without record IDs must be rejected")
+        } catch NativeAgentCoordinatorError.invalidTask {
+        } catch {
+            XCTFail("unexpected error: \\(error)")
+        }
+        let prompts = await engine.recordedPrompts
+        XCTAssertTrue(prompts.isEmpty)
+    }
+
     func testPriorRoleOutputIsTruncatedBeforeItEntersTheNextPrompt() async throws {
         let engine = RecordingInferenceEngine(responses: [
             String(repeating: "A", count: 2_000),
