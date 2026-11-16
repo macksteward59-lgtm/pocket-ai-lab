@@ -2510,3 +2510,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **PR #160** current head `4fc057eb54a20cab2d765ea1b4829f59c23af610`.
 - **Previous run:** Pocket AI Lab push `43935672650` correctly identified the archive test path issue after the implementation fix: the new test called `collectFiles()` without its required repository-root argument. The production `buildArchive()` call supplies its default root and was not affected.
 - **Fix:** assert `packages/exploitgym` exclusion against the completed archive manifest instead of calling the internal collector directly. Exact-head push CI `43936002601` queued; PR/iOS workflows pending.
+
+
+## 2026-11-16 — Native bridge dispatch gap made explicit
+
+- **PR #160** current head `a3af97b0890e1c39ac7dce173f9cfbd48977c31b`.
+- Reviewed `WorkspaceView.swift` and confirmed the WebView currently applies same-origin top-level navigation policy only; no `WKScriptMessageHandler` is installed and no `BridgeGate.parse` dispatch path is wired into the app.
+- Updated bridge architecture documentation and PR description to state this plainly. Host-issued challenge management and native approval coordination for consequential model operations remain unimplemented; runtime-control messages must remain unavailable until these are connected.
+- Also corrected docs: model hashes/memory estimates are resolved by the host catalog, and the RuntimeController hashes before and after model load.
+- Exact-head CI after this documentation commit is pending. No claim of a live Web-to-native bridge or physical iPhone Air acceptance.
