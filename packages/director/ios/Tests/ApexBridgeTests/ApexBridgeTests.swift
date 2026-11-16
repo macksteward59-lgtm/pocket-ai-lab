@@ -379,12 +379,14 @@ final class BridgeChallengeStoreTests: XCTestCase {
         )
 
         XCTAssertEqual(nonce.utf8.count, 64)
-        XCTAssertTrue(await store.consume(
+        let firstConsume = await store.consume(
             nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
-        ))
-        XCTAssertFalse(await store.consume(
+        )
+        let replayConsume = await store.consume(
             nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
-        ))
+        )
+        XCTAssertTrue(firstConsume)
+        XCTAssertFalse(replayConsume)
     }
 
     func testWrongBindingAndOriginCannotConsumeChallenge() async throws {
@@ -398,18 +400,22 @@ final class BridgeChallengeStoreTests: XCTestCase {
             page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
         )
 
-        XCTAssertFalse(await store.consume(
+        let foreignConsume = await store.consume(
             nonce, page: foreign, trusted: trusted, requestId: requestId, sessionId: sessionId
-        ))
-        XCTAssertFalse(await store.consume(
+        )
+        let wrongRequestConsume = await store.consume(
             nonce, page: trusted, trusted: trusted, requestId: UUID().uuidString, sessionId: sessionId
-        ))
-        XCTAssertFalse(await store.consume(
+        )
+        let wrongSessionConsume = await store.consume(
             nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: UUID().uuidString
-        ))
-        XCTAssertTrue(await store.consume(
+        )
+        let validConsume = await store.consume(
             nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
-        ))
+        )
+        XCTAssertFalse(foreignConsume)
+        XCTAssertFalse(wrongRequestConsume)
+        XCTAssertFalse(wrongSessionConsume)
+        XCTAssertTrue(validConsume)
     }
 
     func testExpiredChallengeFailsClosed() async throws {
@@ -421,10 +427,11 @@ final class BridgeChallengeStoreTests: XCTestCase {
             requestId: UUID().uuidString, sessionId: UUID().uuidString
         )
         clock.advance(6)
-        XCTAssertFalse(await store.consume(
+        let consumed = await store.consume(
             nonce, page: trusted, trusted: trusted,
             requestId: UUID().uuidString, sessionId: UUID().uuidString
-        ))
+        )
+        XCTAssertFalse(consumed)
     }
 
     func testChallengeCannotBeIssuedForUntrustedOriginOrInvalidBinding() async throws {
