@@ -956,8 +956,10 @@ final class PocketAILabTests: XCTestCase {
 
         XCTAssertTrue(model.status.contains("did not complete") || model.status.contains("failed"))
         XCTAssertFalse(model.isModelLoaded)
-        XCTAssertEqual(await engine.loadedModelIDs(), [])
-        XCTAssertEqual(await engine.recordedPrompts().count, 0)
+        let loadedModelIDs = await engine.loadedModelIDs()
+        let prompts = await engine.recordedPrompts()
+        XCTAssertEqual(loadedModelIDs, [])
+        XCTAssertEqual(prompts.count, 0)
     }
 
     @MainActor
