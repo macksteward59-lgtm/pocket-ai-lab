@@ -89,6 +89,21 @@ describe("runEastTaskWithLifecycle", () => {
     expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
     expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
     expect(committed).toBe(1);
+
+    const corrupted = store.load();
+    const firstCompleted = corrupted[0].steps.find(step => step.status === "succeeded");
+    if (!firstCompleted?.result) throw new Error("Expected a stored East checkpoint");
+    firstCompleted.result = firstCompleted.result.replace('"kind":"assign-core-agents"', '"kind":"wrong-step"');
+    store.save(corrupted);
+    taskExists = false;
+    const corruptCoordinator = new TaskLifecycleCoordinator({ store });
+    await expect(runEastTaskWithLifecycle({
+      coordinator: corruptCoordinator, east, eastTaskId: "east-1",
+      lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
+    })).rejects.toThrow(/checkpoint is corrupt/);
+    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(committed).toBe(1);
   });
 
   it("rejects a reused lifecycle ID bound to a different objective without executing East", async () => {
