@@ -273,7 +273,6 @@ struct LocalModelCatalogStore {
         entry.byteCount > 0 &&
         entry.contextLength > 0 &&
         entry.estimatedMemoryMB > 0 &&
-        !entry.capabilities.isEmpty &&
         entry.capabilities.count <= 16
     }
 
