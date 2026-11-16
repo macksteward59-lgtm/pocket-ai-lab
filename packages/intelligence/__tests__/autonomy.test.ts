@@ -385,6 +385,27 @@ describe("TaskLifecycleCoordinator", () => {
     await expect(new TaskLifecycleCoordinator({ store: readyStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
 
+    const mixedStore = new InMemoryTaskLifecycleStore();
+    const mixedCoordinator = new TaskLifecycleCoordinator({ store: mixedStore, createId: () => "mixed-attempt" });
+    await mixedCoordinator.init();
+    await mixedCoordinator.createTask({
+      id: "cancelled-with-failure", objective: "Cancellation cannot conceal a failed step",
+      steps: [
+        { id: "first", description: "First step" },
+        { id: "second", description: "Second step" }
+      ]
+    });
+    const active = await mixedCoordinator.claimNextStep("cancelled-with-failure");
+    await mixedCoordinator.cancelTask("cancelled-with-failure");
+    const mixedSnapshot = mixedStore.load();
+    mixedSnapshot[0].steps[0].status = "failed";
+    mixedSnapshot[0].steps[0].lastError = "Forged failure";
+    mixedSnapshot[0].steps[0].attempts = 1;
+    mixedSnapshot[0].steps[0].attemptIds = [active!.attemptId];
+    mixedStore.save(mixedSnapshot);
+    await expect(new TaskLifecycleCoordinator({ store: mixedStore }).init())
+      .rejects.toMatchObject({ code: "corrupt_store" });
+
     const resultStore = new InMemoryTaskLifecycleStore();
     const resultCoordinator = new TaskLifecycleCoordinator({ store: resultStore });
     await resultCoordinator.init();
