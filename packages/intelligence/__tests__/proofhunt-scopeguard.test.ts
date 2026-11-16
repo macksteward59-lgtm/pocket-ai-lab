@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AuditLedger } from "../security/AuditLedger";
 import { normalizeProgramPolicy } from "../bug-bounty";
-import { hashAssessmentPolicy, hashNormalizedProgramPolicy } from "../security/proofhunt";
+import { hashAssessmentPolicy, hashAssessmentScope, hashNormalizedProgramPolicy } from "../security/proofhunt";
 import {
   ScopeGuard,
   normalizeTargetHostname,
@@ -39,6 +39,8 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
     maxConcurrentJobs: 1,
     stopOnScopeViolation: true as const
   };
+  const targets = overrides.targets ?? [{ hostname: "app.example.com" }, { hostname: "api.example.com" }];
+  const excludedTargets = overrides.excludedTargets ?? [{ hostname: "admin.example.com" }];
   return {
     projectId: "proofhunt-demo",
     environment: "bounty",
@@ -62,6 +64,7 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
       programAuthorizationId: "PROGRAM-1",
       policyVersion: "policy-1",
       policyHash: hashAssessmentPolicy(assessmentPolicy),
+      targetScopeHash: hashAssessmentScope(targets, excludedTargets),
       status: "approved",
       approvedBy: "human-reviewer",
       approvalReference: "approval://proofhunt-demo/1",
@@ -69,8 +72,8 @@ function makeConfig(overrides: Partial<ProofHuntAssessmentConfig> = {}): ProofHu
       approvedAt: "2026-11-15T12:01:00Z",
       expiresAt: "2026-12-01T00:00:00Z"
     },
-    targets: [{ hostname: "app.example.com" }, { hostname: "api.example.com" }],
-    excludedTargets: [{ hostname: "admin.example.com" }],
+    targets,
+    excludedTargets,
     policy: assessmentPolicy,
     ...overrides
   };
@@ -347,6 +350,19 @@ describe("ProofHunt ScopeGuard", () => {
     expect(globalResult.reason).toContain("Emergency stop");
     expect(projectResult.permitted).toBe(false);
     expect(projectResult.reason).toContain("Emergency stop");
+  });
+
+  it("denies target-scope expansion without a new signed operational approval", async () => {
+    const base = makeConfig();
+    const config = makeConfig({
+      environment: "owned",
+      programAuthorization: { ...base.programAuthorization, kind: "asset_ownership" }
+    });
+    (config.targets as unknown as { hostname: string; includeSubdomains?: boolean }[]).push({ hostname: "attacker.example.net" });
+    const { guard } = makeGuard();
+    const result = await guard.authorizeAssessment(config, "attacker.example.net", "static_analysis");
+    expect(result.permitted).toBe(false);
+    expect(result.reason).toContain("target-scope digest");
   });
 
   it("denies policy mutation even when the policy version string is unchanged", async () => {
