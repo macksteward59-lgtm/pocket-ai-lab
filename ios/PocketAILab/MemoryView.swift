@@ -18,7 +18,7 @@ struct MemoryView: View {
             Group {
                 if loadFailed {
                     VStack(spacing: 12) {
-                        Image(systemName: "lock.trianglebadge.exclamationmark").font(.largeTitle).foregroundStyle(.secondary)
+                        Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.secondary)
                         Text("Memory unavailable").font(.headline)
                         Text("The encrypted vault was not replaced. Resolve the Keychain or device-lock issue and try again.")
                             .multilineTextAlignment(.center).foregroundStyle(.secondary)
