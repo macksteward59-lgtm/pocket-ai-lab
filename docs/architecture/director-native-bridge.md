@@ -33,3 +33,6 @@ deviceId and runtimeIdentity are descriptive runtime metadata in this package. T
 ## Intentionally not restored as executable code
 
 The original archive's ApexShell ShellView.swift created an ephemeral signing key in the UI process and passed it into RuntimeController, while the original RuntimeController accepted that key and signed generation records. It also instantiated an unavailable placeholder engine. That implementation is not copied into the app because it would create false trust and readiness claims. A future WebKit shell must use BridgeGate, host-owned approval state, the real shared runtime, and Director-side evidence verification.
+## Integration dependency
+
+This bridge restoration is intentionally stacked on `codex/native-product-experience-integration` (PR #156). The runtime package types `NativeInferenceRuntime`, `ModelPoolLease`, and `InferenceScheduler` are supplied by that prerequisite branch; this PR must be validated and merged after its base integration, not independently against `main`. Keep the bridge and runtime on one shared `PocketLlamaEngine` package identity.
