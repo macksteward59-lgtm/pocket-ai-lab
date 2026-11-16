@@ -2075,3 +2075,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` now includes the fixture fix, the corrected transient memory accounting formula, a pending-load/current-resident regression, and bounded wait helpers. New iOS run `43797547712` is queued/running; companion checks are in progress. Previous run `43794464434` was cancelled when the branch advanced, not a test failure.
 - PR #124 exact head `8d07958f19e5adb1ec435b32e689abd560f1a877` carries the same ModelPool accounting and fixture fix. Its iOS run `43797509448` is running; Consumer, Governance, and Cursor companion checks passed. Prior iOS run `43797268402` was cancelled when the branch advanced before package simulator tests.
 - PR #122 exact head `ad10fac5ac16bc4aaf71eff4ff318dcb59a6dfb8` passed Pocket AI Lab CI. That workflow does not compile Swift; native validation is supplied by #124 and #135 iOS workflows. No physical-device memory/thermal measurement is claimed.
+
+
+## 2026-11-16 — Corrected native integration companion CI green
+
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` passed all four companion workflows: Pocket AI Lab CI `43797547793`, Consumer `43797547697`, Governance `43797547823`, Cursor `43797547693`.
+- iOS LlamaEngine run `43797547712` passed pinned llama.cpp build and fail-closed typecheck; physical-device XCFramework link is in progress. No simulator or GGUF result yet.
+- The new head contains corrected transient ModelPool accounting, a pending-load/current-resident regression, and a single-blocking-unload fixture to ensure test cleanup does not suspend indefinitely.
