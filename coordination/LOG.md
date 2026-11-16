@@ -2554,3 +2554,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated East readiness/lifecycle docs: checkpoint-based restart is supported at completed lifecycle-step boundaries when the injected store is durable; the in-memory East task map and MessageBus are rehydrated, not independently event-sourced. A provider-success/checkpoint-commit crash window remains; inference stays single-attempt and fail-closed.
 - **Validation:** exact-head CI is pending. The integration test uses the in-memory store interface; no live PostgreSQL deployment or RLS configuration is claimed.
 - No APEX authorization, signer, schema, or production runtime behavior changed.
+
+
+## 2026-11-16 — Native product integration simulator test failures triaged
+
+- **PR #156:** branch `codex/native-product-experience-integration`, exact head `af3a75963c389fa4749bfb093ba6e6a9c6172b45`; iOS workflow `43952083577` completed with native app build and app XCTest passing, then failed the separate PocketLlamaEngine simulator XCTest (81 tests, 3 skipped, 3 failures).
+- **Failure 1:** `InferenceSchedulerTests.testFIFOWaitersReceivePermitsInArrivalOrder` observed `[1, 3, 2]` because the test started the second and third Tasks without waiting for the second to enter the scheduler. The test's polling condition only waited until both were queued; it did not establish arrival order. Fix the fixture by waiting for exactly one waiter before starting the third, then waiting for exactly two.
+- **Failures 2–3:** `NativeAgentCoordinatorTests` routed-model tests failed with session ID `session-\\(model.id)`; the test engine used an escaped interpolation marker, causing a literal duplicate session ID and incorrect unload expectation. Correct the fixture to actual Swift interpolation. No production coordinator defect is indicated by these two failures.
+- **Scope:** test-only changes to `runtime/ios/Tests/LlamaEngineTests/NativeAgentCoordinatorTests.swift` and `InferenceSchedulerTests.swift`; no production scheduler/runtime behavior changes.
+- **Physical-device status:** the job used an iPhone Air simulator. This is not a physical iPhone Air test.
