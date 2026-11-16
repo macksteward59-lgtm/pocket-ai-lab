@@ -541,7 +541,7 @@ final class LocalChatModel: ObservableObject {
         let task = AgentTaskRequest(
             id: UUID().uuidString,
             objective: text,
-            requiredCapabilities: requiredCapabilities
+            requiredCapabilities: requiredCapabilities.sorted()
         )
         do {
             // Persist the task before starting inference. If the history archive
