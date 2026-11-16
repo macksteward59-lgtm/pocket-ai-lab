@@ -115,12 +115,12 @@ final class ModelPoolTests: XCTestCase {
         let firstTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while await engine.loadCallCount() == 0 { await Task.yield() }
+        try await waitForTestCondition { await engine.loadCallCount() == 0 }
 
         let secondTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while (await pool.snapshot()).pendingAcquirerCount < 2 { await Task.yield() }
+        try await waitForTestCondition { (await pool.snapshot()).pendingAcquirerCount < 2 }
         await engine.finishLoad()
 
         let first = try await firstTask.value
@@ -144,12 +144,12 @@ final class ModelPoolTests: XCTestCase {
         let cancelledTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while await engine.loadCallCount() == 0 { await Task.yield() }
+        try await waitForTestCondition { await engine.loadCallCount() == 0 }
 
         let survivingTask = Task {
             try await pool.acquire(model: descriptor, estimatedMemoryMB: 512)
         }
-        while (await pool.snapshot()).pendingAcquirerCount < 2 { await Task.yield() }
+        try await waitForTestCondition { (await pool.snapshot()).pendingAcquirerCount < 2 }
 
         // Cancellation belongs to the waiting caller, not the shared native
         // load. The second caller must still receive the completed session.
@@ -263,7 +263,7 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertTrue(firstReleased)
 
         let unloadTask = Task { try await pool.unload(modelId: "unloading") }
-        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+        try await waitForTestCondition { !((await engine.hasStartedUnloading())) }
 
         let duringUnload = await pool.snapshot()
         XCTAssertEqual(duringUnload.loadedModelIDs, [])
@@ -301,7 +301,7 @@ final class ModelPoolTests: XCTestCase {
         let firstAcquire = Task {
             try await pool.acquire(model: model("expected"), estimatedMemoryMB: 400)
         }
-        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+        try await waitForTestCondition { !((await engine.hasStartedUnloading())) }
 
         let duringUnload = await pool.snapshot()
         XCTAssertEqual(duringUnload.unloadingModelIDs, ["expected"])
@@ -340,7 +340,7 @@ final class ModelPoolTests: XCTestCase {
         XCTAssertTrue(released)
 
         let unloadTask = Task { try await pool.unload(modelId: "first") }
-        while !(await engine.hasStartedUnloading()) { await Task.yield() }
+        try await waitForTestCondition { !((await engine.hasStartedUnloading())) }
 
         do {
             _ = try await pool.acquire(model: model("second"), estimatedMemoryMB: 128)
@@ -492,3 +492,23 @@ private actor BlockingUnloadPoolTestEngine: LlamaEngine {
         unloadContinuation = nil
     }
 }
+
+/// Bounds asynchronous fixture polling so a broken actor handshake fails with a
+/// useful XCTest failure instead of leaving the hosted simulator job spinning.
+private func waitForTestCondition(
+    timeout: TimeInterval = 15,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ condition: () async -> Bool
+) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while !(await condition()) {
+        guard Date() < deadline else {
+            XCTFail("Timed out waiting for asynchronous test condition", file: file, line: line)
+            throw TestWaitTimeout()
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+    }
+}
+
+private struct TestWaitTimeout: Error {}
