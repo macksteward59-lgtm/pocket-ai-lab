@@ -2266,3 +2266,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added catalog normalization/persistence coverage, updated app tests to configure role labels, and added a missing-specialist-route test asserting no model load or generation.
 - Feature PR #150: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/150 (stacked on the persistence branch). Mainline validation PR #151: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/151. Exact head `1801d9baf5eff3013e1a7f3cff86c11adc0d1986`.
 - Exact-head workflow runs have not yet appeared in the commit workflow query. No local Xcode execution or physical iPhone validation is claimed. PRs remain draft; no merge or mainline code change.
+
+
+## 2026-11-16 16:54 UTC — Routed Agent Team CI checkpoint and test-source correction
+
+- Exact branch head advanced to `b902cd9b178331ec5786ededdf3e0af9c16f8969`. Corrected an accidental duplicate test-file append before requesting CI: `PocketAILabTests.swift` is restored from the branch base and now contains only the intended routed-profile test updates and fail-before-load regression test. Diff against the persistence base is five focused files; the app test file is +29/-1, not a wholesale replacement.
+- Exact-head workflows: Cursor `43911082931` passed; Pocket AI Lab `43911083255`, Consumer `43911083212`, and Governance `43911083067` are in progress; iOS LlamaEngine `43911083206` is queued. This is not a completed validation pass.
+- PR #150 and mainline validation PR #151 automatically track the updated branch head. Both remain draft; no review threads, merge, or physical-device result.
