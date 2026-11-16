@@ -415,7 +415,7 @@ describe("East APEX decision read", () => {
     const trustSource = readFileSync("packages/director/src/lib/apex/trust.ts", "utf8");
     expect(trustSource).toContain("class ApexSignedEvidenceVerifier");
     expect(trustSource).toContain("verified_candidate");
-    expect(trustSource).not.toMatch(/authorized\\s*:\\s*true/);
+    expect(trustSource).not.toContain("authorized: true");
     expect(existsSync("packages/director/src/lib/apex/rls.ts")).toBe(false);
     expect(existsSync("packages/director/src/lib/apex/schema.ts")).toBe(false);
     const source = readFileSync("src/east/platform.ts", "utf8") + readFileSync("src/east/apex-decision.ts", "utf8");
