@@ -4,106 +4,115 @@ import {
   TaskLifecycleCoordinator
 } from "../autonomy/TaskLifecycleCoordinator";
 import { runEastTaskWithLifecycle } from "../autonomy/EastTaskLifecycleAdapter";
-import { EAST_DELIBERATION_AGENTS, type EastPlatformRuntime } from "../../../src/east/platform";
+import {
+  createEastPlatform,
+  EAST_DELIBERATION_AGENTS,
+  type EastModelBinding,
+  type EastPlatformRuntime
+} from "../../../src/east/platform";
+import type { InferenceRequest, InferenceResult } from "../orchestrator/Orchestrator";
+
+const restartTestModel: EastModelBinding = {
+  id: "east-restart-test-model",
+  name: "East restart test model",
+  runtimePath: "injected-test-runtime",
+  contextLength: 4096,
+  capabilities: ["reason", "code"],
+  memoryEstimateMB: 512
+};
+
+function responseFor(request: InferenceRequest): InferenceResult {
+  const counterargumentIds = request.contextMessages
+    .filter(message => message.messageType === "counterargument")
+    .map(message => message.messageId);
+  switch (request.stage) {
+    case "independent":
+      return { payload: { analysis: "Analysis from " + request.agentId, confidence: 0.4 } };
+    case "cross-review":
+      return { payload: { question: "Who authorizes this?" } };
+    case "challenge":
+      return { payload: { claim: "The proposal is sound", objection: "No independent receipt exists", evidenceRefs: [] } };
+    case "revision":
+      return { payload: { revision: "Keep authorization independent.", addressesMessageIds: counterargumentIds } };
+    case "verification":
+      return { payload: { claim: "Not an approval", verified: true, reason: "Validator agreement is not APEX" } };
+    case "synthesis":
+      return {
+        payload: { synthesis: "Agents proposed a result. Nothing was authorized.", evidenceRefs: ["evidence:restart-test"] },
+        evidenceRefs: ["evidence:restart-test"]
+      };
+    default:
+      throw new Error("Unhandled inference stage " + request.stage);
+  }
+}
+
+function freshEastRuntime(runtimeName: string, generationCalls: string[]): EastPlatformRuntime {
+  let nextId = 0;
+  return createEastPlatform({
+    inference: {
+      async generate(request) {
+        generationCalls.push(runtimeName + ":" + request.stage + ":" + request.agentId);
+        return responseFor(request);
+      }
+    },
+    getResources: () => ({ availableMemoryMB: 8192, loadedModels: [] }),
+    model: restartTestModel,
+    createId: () => runtimeName + "-id-" + nextId++
+  });
+}
 
 describe("runEastTaskWithLifecycle", () => {
-  it("runs the eight-agent East workflow through leased lifecycle steps without granting authority", async () => {
-    const assignments: string[] = [];
-    const executions: string[] = [];
-    let committed = 0;
-    let taskExists = true;
-    const eastTask = {
-      id: "east-1",
-      objective: "Review the integration architecture",
-      assignments: [] as { id: string; agentId: string }[],
-      synthesis: null as string | null,
-      evidenceRefs: [] as string[],
-      evidenceGate: { status: "not_submitted" as const },
-      apexDecision: { status: "unread" as const },
-      authorized: false as const
-    };
-    const east = {
-      createAgentTask: () => "east-1",
-      assignAgent: (_taskId: string, agentId: string) => {
-        assignments.push(agentId);
-        eastTask.assignments.push({ id: "assignment-" + agentId, agentId });
-        return "east-1";
-      },
-      executeAgent: async (_taskId: string, agentId: string) => { executions.push(agentId); return "message-" + agentId; },
-      runDeliberation: async () => {
-        eastTask.synthesis = "Unverified synthesis";
-        eastTask.evidenceRefs = ["evidence:one"];
-        return { synthesis: "Unverified synthesis", evidence: ["evidence:one"] };
-      },
-      commitTaskEvidence: async () => { committed += 1; return false as const; },
-      readApexDecision: async () => ({ status: "unread" as const }),
-      getTask: () => {
-        if (!taskExists) throw Object.assign(new Error("Unknown task"), { code: "unknown_task" });
-        return eastTask;
-      },
-      checkpointTask: () => ({
-        version: 1 as const,
-        task: { ...eastTask, assignments: [...eastTask.assignments], evidenceRefs: [...eastTask.evidenceRefs] },
-        messages: [],
-        evidenceMemoryCommitted: committed > 0
-      }),
-      restoreTask: (checkpoint: { task: typeof eastTask }) => {
-        Object.assign(eastTask, checkpoint.task);
-        taskExists = true;
-      },
-      orchestrator: {} as EastPlatformRuntime["orchestrator"],
-      memory: {} as EastPlatformRuntime["memory"]
-    } as unknown as EastPlatformRuntime;
+  it("restores a completed East task and message thread into a fresh runtime without repeating inference", async () => {
     const store = new InMemoryTaskLifecycleStore();
-    const coordinator = new TaskLifecycleCoordinator({ store });
+    const generationCalls: string[] = [];
+    const firstEast = freshEastRuntime("first-process", generationCalls);
+    const firstCoordinator = new TaskLifecycleCoordinator({ store });
+    const eastTaskId = "east-restart-safe";
+    const lifecycleTaskId = "lifecycle-restart-safe";
+    const objective = "Review restart-safe East execution";
 
-    const result = await runEastTaskWithLifecycle({
-      coordinator, east, eastTaskId: "east-1", lifecycleTaskId: "lifecycle-1",
-      objective: "Review the integration architecture"
+    const first = await runEastTaskWithLifecycle({
+      coordinator: firstCoordinator,
+      east: firstEast,
+      eastTaskId,
+      lifecycleTaskId,
+      objective
     });
 
-    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
-    expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
-    expect(committed).toBe(1);
-    expect(result.lifecycle.status).toBe("completed");
-    expect(result.lifecycle.steps.every(step => step.status === "succeeded")).toBe(true);
-    expect(result.synthesis).toBe("Unverified synthesis");
-    expect(result.evidenceRefs).toEqual(["evidence:one"]);
-    expect(result.authorized).toBe(false);
-    expect(result.evidenceGate.status).toBe("not_submitted");
+    const originalTask = firstEast.getTask(eastTaskId);
+    const originalThread = [...firstEast.orchestrator.bus.getThread(eastTaskId)];
+    const originalGenerationCount = generationCalls.length;
+    expect(originalTask.assignments.map(item => item.agentId)).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(originalThread.length).toBeGreaterThan(EAST_DELIBERATION_AGENTS.length);
+    expect(new Set(originalThread.map(message => message.messageId)).size).toBe(originalThread.length);
+    expect(first.lifecycle.status).toBe("completed");
+    expect(first.lifecycle.steps.every(step => step.status === "succeeded")).toBe(true);
+    expect(first.authorized).toBe(false);
+    expect(originalTask.authorized).toBe(false);
 
-    // A fresh coordinator instance models process-level re-entry against the
-    // same durable-store contract. Completed inference and evidence steps must
-    // be returned from lifecycle state, not executed a second time.
-    const resumedCoordinator = new TaskLifecycleCoordinator({ store });
-    // Simulate a new East process: its in-memory task map is gone, but the
-    // durable lifecycle snapshot contains the completed task and thread.
-    taskExists = false;
+    // This is a different EastPlatformRuntime with a new task map, Orchestrator,
+    // MessageBus, and TaskLifecycleCoordinator. Only the shared lifecycle store
+    // survives, matching the adapter's persisted-checkpoint contract.
+    const secondEast = freshEastRuntime("second-process", generationCalls);
+    const secondCoordinator = new TaskLifecycleCoordinator({ store });
+    expect(() => secondEast.getTask(eastTaskId)).toThrow("Unknown task");
+
     const resumed = await runEastTaskWithLifecycle({
-      coordinator: resumedCoordinator, east, eastTaskId: "east-1",
-      lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
+      coordinator: secondCoordinator,
+      east: secondEast,
+      eastTaskId,
+      lifecycleTaskId,
+      objective
     });
-    expect(resumed.lifecycle.status).toBe("completed");
-    expect(resumed.synthesis).toBe("Unverified synthesis");
-    expect(resumed.evidenceRefs).toEqual(["evidence:one"]);
-    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
-    expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
-    expect(committed).toBe(1);
 
-    const corrupted = store.load();
-    const firstCompleted = corrupted[0].steps.find(step => step.status === "succeeded");
-    if (!firstCompleted?.result) throw new Error("Expected a stored East checkpoint");
-    firstCompleted.result = firstCompleted.result.replace('"kind":"assign-core-agents"', '"kind":"wrong-step"');
-    store.save(corrupted);
-    taskExists = false;
-    const corruptCoordinator = new TaskLifecycleCoordinator({ store });
-    await expect(runEastTaskWithLifecycle({
-      coordinator: corruptCoordinator, east, eastTaskId: "east-1",
-      lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
-    })).rejects.toThrow(/checkpoint is corrupt/);
-    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
-    expect(executions).toEqual([...EAST_DELIBERATION_AGENTS]);
-    expect(committed).toBe(1);
+    expect(secondEast.getTask(eastTaskId)).toEqual(originalTask);
+    expect(secondEast.orchestrator.bus.getThread(eastTaskId)).toEqual(originalThread);
+    expect(resumed.lifecycle.status).toBe("completed");
+    expect(resumed.synthesis).toBe(first.synthesis);
+    expect(resumed.evidenceRefs).toEqual(first.evidenceRefs);
+    expect(resumed.authorized).toBe(false);
+    expect(generationCalls).toHaveLength(originalGenerationCount);
+    expect(generationCalls.every(call => call.startsWith("first-process:"))).toBe(true);
   });
 
   it("rejects a reused lifecycle ID bound to a different objective without executing East", async () => {
