@@ -2519,3 +2519,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated bridge architecture documentation and PR description to state this plainly. Host-issued challenge management and native approval coordination for consequential model operations remain unimplemented; runtime-control messages must remain unavailable until these are connected.
 - Also corrected docs: model hashes/memory estimates are resolved by the host catalog, and the RuntimeController hashes before and after model load.
 - Exact-head CI after this documentation commit is pending. No claim of a live Web-to-native bridge or physical iPhone Air acceptance.
+
+
+## 2026-11-16 — Bridge package CI trigger coverage and archive test pass
+
+- **PR #160** current head `b5b89f66ae411bc2c990a84dc7e9503ba3a4b4bd`.
+- **Confirmed pass:** Pocket AI Lab push run `43936002601` completed successfully on code head `4fc057eb54a20cab2d765ea1b4829f59c23af610`; the desktop archive submodule regression test passed in that run.
+- **Workflow improvement:** added `docs/architecture/director-native-bridge.md` to the iOS LlamaEngine workflow path filters, alongside `packages/director/ios/**`, so bridge package/contract changes reliably trigger the native package and app validation.
+- **Current exact head:** latest commit changes only the iOS workflow trigger path; exact-head iOS run is pending. The previous iOS attempt was cancelled by later commits, so no final-head native test pass is claimed.
