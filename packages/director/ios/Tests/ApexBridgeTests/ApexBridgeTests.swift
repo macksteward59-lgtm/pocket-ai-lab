@@ -365,3 +365,91 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 }
+
+
+final class BridgeChallengeStoreTests: XCTestCase {
+    func testChallengeIsBoundToOriginRequestAndSessionAndConsumedOnce() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 10_000))
+        let store = try BridgeChallengeStore(lifetime: 60, clock: { clock.now() })
+        let trusted = URL(string: "https://workspace.example.test/app")!
+        let requestId = UUID().uuidString
+        let sessionId = UUID().uuidString
+        let nonce = try await store.issue(
+            page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
+        )
+
+        XCTAssertEqual(nonce.utf8.count, 64)
+        XCTAssertTrue(await store.consume(
+            nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
+        ))
+        XCTAssertFalse(await store.consume(
+            nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
+        ))
+    }
+
+    func testWrongBindingAndOriginCannotConsumeChallenge() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 11_000))
+        let store = try BridgeChallengeStore(clock: { clock.now() })
+        let trusted = URL(string: "https://workspace.example.test")!
+        let foreign = URL(string: "https://attacker.example.test")!
+        let requestId = UUID().uuidString
+        let sessionId = UUID().uuidString
+        let nonce = try await store.issue(
+            page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
+        )
+
+        XCTAssertFalse(await store.consume(
+            nonce, page: foreign, trusted: trusted, requestId: requestId, sessionId: sessionId
+        ))
+        XCTAssertFalse(await store.consume(
+            nonce, page: trusted, trusted: trusted, requestId: UUID().uuidString, sessionId: sessionId
+        ))
+        XCTAssertFalse(await store.consume(
+            nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: UUID().uuidString
+        ))
+        XCTAssertTrue(await store.consume(
+            nonce, page: trusted, trusted: trusted, requestId: requestId, sessionId: sessionId
+        ))
+    }
+
+    func testExpiredChallengeFailsClosed() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 12_000))
+        let store = try BridgeChallengeStore(lifetime: 5, clock: { clock.now() })
+        let trusted = URL(string: "https://workspace.example.test")!
+        let nonce = try await store.issue(
+            page: trusted, trusted: trusted,
+            requestId: UUID().uuidString, sessionId: UUID().uuidString
+        )
+        clock.advance(6)
+        XCTAssertFalse(await store.consume(
+            nonce, page: trusted, trusted: trusted,
+            requestId: UUID().uuidString, sessionId: UUID().uuidString
+        ))
+    }
+
+    func testChallengeCannotBeIssuedForUntrustedOriginOrInvalidBinding() async throws {
+        let trusted = URL(string: "https://workspace.example.test")!
+        let foreign = URL(string: "https://attacker.example.test")!
+        let store = try BridgeChallengeStore()
+
+        do {
+            _ = try await store.issue(
+                page: foreign, trusted: trusted,
+                requestId: UUID().uuidString, sessionId: UUID().uuidString
+            )
+            XCTFail("Untrusted page must not receive a challenge.")
+        } catch {
+            XCTAssertEqual(error as? BridgeChallengeError, .untrustedOrigin)
+        }
+
+        do {
+            _ = try await store.issue(
+                page: trusted, trusted: trusted,
+                requestId: "not-a-uuid", sessionId: UUID().uuidString
+            )
+            XCTFail("Invalid request binding must not receive a challenge.")
+        } catch {
+            XCTAssertEqual(error as? BridgeChallengeError, .invalidBinding)
+        }
+    }
+}
