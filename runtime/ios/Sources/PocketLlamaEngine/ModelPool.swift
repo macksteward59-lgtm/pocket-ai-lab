@@ -144,9 +144,15 @@ public actor ModelPool {
             throw ModelPoolError.invalidResourceSnapshot
         }
         let poolAvailable = configuration.maxResidentMemoryMB - reservedMemoryMB
-        let systemAvailableAfterReserve = max(
+        // The host snapshot (for example, os_proc_available_memory) already
+        // reflects resident and unloading process footprint. Only pending loads
+        // may not yet be reflected, so reserve those estimates separately.
+        let pendingLoadReservationMB = pendingLoads.values.reduce(0) {
+            $0 + $1.estimatedMemoryMB
+        }
+        let systemAvailableAfterPendingLoads = max(
             0,
-            systemAvailable - reservedMemoryMB - configuration.minimumFreeMemoryMB
+            systemAvailable - pendingLoadReservationMB - configuration.minimumFreeMemoryMB
         )
         let available = min(poolAvailable, systemAvailableAfterReserve)
         guard estimatedMemoryMB <= available else {
