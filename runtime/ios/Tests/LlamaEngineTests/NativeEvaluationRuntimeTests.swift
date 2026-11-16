@@ -36,9 +36,7 @@ final class NativeEvaluationRuntimeTests: XCTestCase {
             try await runtime.generateForEvaluation(lease: lease, request: request)
         }
 
-        while !(await engine.isDrainBlocked()) {
-            await Task.yield()
-        }
+        try await waitForTestCondition { !(await engine.isDrainBlocked()) }
         let poolWhileDraining = await runtime.snapshot()
         XCTAssertEqual(poolWhileDraining.activeLeaseCount, 1)
         XCTAssertEqual(poolWhileDraining.activeUseCount, 1)
@@ -158,3 +156,23 @@ private actor BlockingPartialEvaluationEngine: LlamaEngine {
         drainContinuation = nil
     }
 }
+
+/// Bounds asynchronous fixture polling so a broken actor handshake fails with a
+/// useful XCTest failure instead of leaving the hosted simulator job spinning.
+private func waitForTestCondition(
+    timeout: TimeInterval = 15,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ condition: () async -> Bool
+) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while await condition() {
+        guard Date() < deadline else {
+            XCTFail("Timed out waiting for asynchronous test condition", file: file, line: line)
+            throw TestWaitTimeout()
+        }
+        try await Task.sleep(nanoseconds: 10_000_000)
+    }
+}
+
+private struct TestWaitTimeout: Error {}
