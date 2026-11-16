@@ -513,58 +513,36 @@ final class LocalChatModel: ObservableObject {
         )
     }
 
-    /// Runs the bounded six-role plan through the shared ModelPool and
-    /// InferenceScheduler. Routed roles may use different models sequentially;
-    /// the one-resident-model limit is preserved. Every role result is untrusted.
+    /// Default run uses all eight permanent roles in canonical order.
     func runDefaultAgentTeam(_ objective: String) async {
+        await runDefaultAgentTeam(objective, agentIDs: NativeAgentCatalog.permanentAgents.map(\.id))
+    }
+
+    /// Executes an explicit, bounded plan from the canonical role catalogue.
+    /// Dynamic specialists are selected by the operator and replace a core role.
+    func runDefaultAgentTeam(_ objective: String, agentIDs: [String]) async {
         let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isBusy, !text.isEmpty else { return }
         guard !availableModels.isEmpty else {
-            status = "Import at least one local model and assign routing labels before running Agent Team."
+            status = "Import local models and assign every required routing label before running Agent Team."
             return
         }
 
-        let steps = [
-            NativeAgentStep(
-                agentId: "reasoner",
-                instructions: "Decompose the task, identify assumptions, constraints, and viable approaches. Do not claim external work.",
-                requiredCapabilities: ["reasoning"]
-            ),
-            NativeAgentStep(
-                agentId: "researcher",
-                instructions: "Analyze only the supplied task and prior proposals. Separate known information from unknowns. Do not claim web research or invent citations.",
-                requiredCapabilities: ["analysis"]
-            ),
-            NativeAgentStep(
-                agentId: "engineer",
-                instructions: "Develop a concrete technical approach and identify implementation dependencies. Do not claim to have changed files or run code.",
-                requiredCapabilities: ["engineering"]
-            ),
-            NativeAgentStep(
-                agentId: "security-analyst",
-                instructions: "Review threats, trust boundaries, privacy, misuse, and failure modes. Preserve all APEX/East authorization boundaries.",
-                messageType: .counterargument,
-                requiredCapabilities: ["security-review"]
-            ),
-            NativeAgentStep(
-                agentId: "critic",
-                instructions: "Challenge assumptions and earlier proposals. Find contradictions, missing cases, and simpler alternatives.",
-                messageType: .counterargument,
-                requiredCapabilities: ["critique"]
-            ),
-            NativeAgentStep(
-                agentId: "validator",
-                instructions: "Synthesize a concise result. Label unverified claims, list remaining gaps, and propose next steps. Never claim tests or external actions occurred.",
-                messageType: .validation,
-                requiredCapabilities: ["validation"]
-            )
-        ]
+        let steps: [NativeAgentStep]
+        do {
+            steps = try NativeAgentCatalog().plan(agentIDs: agentIDs)
+        } catch {
+            status = "Agent Team plan rejected: \(error.localizedDescription)"
+            return
+        }
+        let requiredCapabilities = steps.reduce(into: Set<String>()) { result, step in
+            result.formUnion(step.requiredCapabilities)
+        }
         let task = AgentTaskRequest(
             id: UUID().uuidString,
             objective: text,
-            requiredCapabilities: ["reasoning", "analysis", "engineering", "security-review", "critique", "validation"]
+            requiredCapabilities: requiredCapabilities
         )
-
         do {
             // Persist the task before starting inference. If the history archive
             // cannot be written, do not launch an untracked Agent Team run.
@@ -813,6 +791,9 @@ struct LocalChatView: View {
     @State private var showClearHistoryConfirmation = false
     @State private var showEvaluationHistory = false
     @State private var capabilityDrafts: [String: String] = [:]
+    @State private var selectedAgentIDs = NativeAgentCatalog.permanentAgents.map(\.id)
+    @State private var specialistTemplateID = NativeAgentCatalog.specialistTemplates.first?.id ?? ""
+    @State private var replacementAgentID = "engineer"
 
     var body: some View {
         NavigationStack {
@@ -942,8 +923,51 @@ struct LocalChatView: View {
                     }
                     .pickerStyle(.segmented)
                     if mode == .agentTeam {
-                        Text("Six sequential logical roles are routed to operator-labeled local models. Only one model is loaded at a time; missing specialist routes fail before generation. Roles cannot run tools.")
+                        Text("Eight permanent roles run sequentially by default. Explicitly selected specialists replace a core role; no role is active without a real local model call.")
                             .font(.caption2).foregroundStyle(.secondary)
+                        DisclosureGroup("Configure the agent plan (\(selectedAgentIDs.count)/8)") {
+                            ForEach(NativeAgentCatalog.permanentAgents) { agent in
+                                Toggle(agent.displayName, isOn: Binding(
+                                    get: { selectedAgentIDs.contains(agent.id) },
+                                    set: { enabled in
+                                        if enabled {
+                                            if selectedAgentIDs.count < NativeAgentCatalog.maximumPlanSize {
+                                                selectedAgentIDs.append(agent.id)
+                                            }
+                                        } else {
+                                            selectedAgentIDs.removeAll { $0 == agent.id }
+                                        }
+                                    }
+                                ))
+                                .disabled(model.isBusy)
+                            }
+                            Divider()
+                            Picker("Specialist template", selection: $specialistTemplateID) {
+                                ForEach(NativeAgentCatalog.specialistTemplates) { specialist in
+                                    Text(specialist.displayName).tag(specialist.id)
+                                }
+                            }
+                            Picker("Replace role", selection: $replacementAgentID) {
+                                ForEach(selectedAgentIDs, id: \.self) { id in
+                                    Text(NativeAgentCatalog.permanentAgents.first(where: { $0.id == id })?.displayName ?? id)
+                                        .tag(id)
+                                }
+                            }
+                            Button("Replace selected role with specialist") {
+                                guard !specialistTemplateID.isEmpty,
+                                      selectedAgentIDs.contains(replacementAgentID),
+                                      let index = selectedAgentIDs.firstIndex(of: replacementAgentID) else { return }
+                                selectedAgentIDs[index] = specialistTemplateID
+                            }
+                            .disabled(model.isBusy || selectedAgentIDs.isEmpty || specialistTemplateID.isEmpty)
+                            Button("Restore eight core roles") {
+                                selectedAgentIDs = NativeAgentCatalog.permanentAgents.map(\.id)
+                                replacementAgentID = "engineer"
+                            }
+                            .disabled(model.isBusy)
+                            Text("Specialists are bounded templates, not extra running models. Capability labels only route to operator-configured models; missing routes stop the task before inference.")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
                     HStack(alignment: .bottom) {
                         TextField(
@@ -959,7 +983,7 @@ struct LocalChatView: View {
                                 if mode == .chat {
                                     await model.send(value)
                                 } else {
-                                    await model.runDefaultAgentTeam(value)
+                                    await model.runDefaultAgentTeam(value, agentIDs: selectedAgentIDs)
                                 }
                             }
                         } label: {
