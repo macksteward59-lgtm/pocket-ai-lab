@@ -1994,3 +1994,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #94 exact head `bb6102e99af4f2567b91e876be7eeb65fce06096` passed all five exact-head workflows: Pocket AI Lab CI push `43794777257` and PR `43794773850`, Consumer prototype CI `43794777240`, Governance sidecar `43794777288`, and Cursor collaboration plugin `43794777199`.
 - Focused autonomy tests: 17/17 passed in both Pocket AI Lab runs. Full intelligence suite: 72 test files passed. Workspace suite: 28 test files, 318 passed / 2 skipped. No failures. PR remains draft/open/unmerged.
 - Production transactional persistence, cross-process scheduling, East production integration, governed host execution, and real multi-process/fault-injection acceptance remain open. No APEX authorization or signed receipt is produced by this lifecycle kernel.
+
+
+## 2026-11-16 — Lifecycle/PostgreSQL interface reconciliation queued
+
+- PR #131/#132 carry a second copy of `TaskLifecycleCoordinator` with two integration APIs missing from the current PR #94 head: `reload()` after a PostgreSQL `store_conflict`, and task-scoped `recoverExpiredLeases(taskId?)` used by `EastTaskLifecycleAdapter`. PR #94 now includes both methods while retaining its stricter cancellation and terminal timestamp validation.
+- Added tests for concurrent writer conflict → failed save leaves local state unchanged → `reload()` adopts remote state → safe subsequent write; and for task-scoped lease recovery leaving other tasks' expired leases untouched. Focused suite now contains 19 tests.
+- Added docs for conflict reconciliation and task-scoped recovery. Current PR #94 head `03b6247db1766d01015472525b8ccb93aeefd938`; exact-head CI is running (Pocket AI Lab push/PR, Consumer, Governance, Cursor). Previous head `bb6102e99af4f2567b91e876be7eeb65fce06096` passed all five workflows.
+- This is interface alignment only; PR #131/#132 still require careful diff reconciliation and review before any merge. No production PostgreSQL instance or migration has been executed.
