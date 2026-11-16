@@ -2023,3 +2023,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #103 exact head `752b79b5d7a9e65c1a0e78b722e0574fafea7dc9` passed all five workflows: Pocket AI Lab push `43795650394` and PR `43795660411`, Consumer `43795660407`, Governance `43795660375`, Cursor `43795660394`.
 - The aggregate coordinator and focused autonomy tests now match PR #94's hardened implementation: 19/19 autonomy tests pass; 72 intelligence test files pass; 28 workspace files pass. Consumer and sidecar/plugin checks also pass. The East six-agent adapter and its idempotent resumption tests remain present; `authorized=false` and non-authorizing evidence semantics are preserved.
 - PR #103 remains draft/open/unmerged. PR #131 remains stacked on #103; its coordinator/test/docs are being aligned to the updated base so the persistence PR can narrow to PostgreSQL implementation. PR #132 is the separate mainline validation aggregate.
+
+
+## 2026-11-16 — PostgreSQL store branch aligned to hardened lifecycle contract
+
+- Updated PR #131 branch `codex/east-postgres-lifecycle-store` to use the exact hardened coordinator, 19-test autonomy suite, and lifecycle docs from PR #103/#94. This removes semantic divergence in `reload()`, task-scoped expired-lease recovery, cancellation validation, and terminal chronology when the base PR is integrated.
+- PR #131 exact head `50bfe77f28d6d2cdb79e6007dad35207d3df954b` passed Pocket AI Lab CI run `43795754538`: 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence test files, and 28 workspace test files passed. These PostgreSQL tests use a serialized fake database; no live PostgreSQL server or migration was exercised.
+- PR #131 remains draft/open/mergeable and is stacked on PR #103, whose updated head is `752b79b5d7a9e65c1a0e78b722e0574fafea7dc9`. The PR branch is 3 commits behind its base branch. Do not merge out of order; base integration/reconciliation is still required.
+- PR #132 mainline validation branch now carries the same hardened coordinator/tests and is running its exact-head companion workflows.
