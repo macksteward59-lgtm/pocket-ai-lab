@@ -2806,3 +2806,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated desktop archive collection to use `lstat`, include only regular files, and exclude symlinks and directory gitlinks; added a smoke assertion that the submodule path is not listed as an archive file.
 - Current branch head after initial commits: `a970fb6cc91668dba6519da6a7dfdabd104af53f`. No CI workflow was triggered by branch-only pushes. Tests have not yet run; no ExploitGym benchmark/container workload was run.
 - Expanded the claim only for the directly related ExploitGym isolation documentation and a focused unit test. No bridge/APEX/East trust or authorization files touched.
+
+
+## 2026-11-16 UTC — archive follow-on PR opened; CI test stage running
+
+- Opened draft PR #165 `feat(archive): isolate Grok workspace and ExploitGym restoration`: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/165.
+- Exact head `b89d0bffd319ba940b17c50ee971fa1674dd541f`, base is PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`. PR #165 is open and GitHub currently reports mergeable; it remains draft and stacked pending #164.
+- PR CI run #43983284394, job #133704917188: setup, dependency install/advisory reporting, JavaScript syntax, and type-check/build passed. Test step 9 is in progress; no test conclusion yet.
+- New focused test builds a temporary Git index with a directory gitlink and symlink and asserts both are excluded from archive file collection. It has not yet been observed executing; CI is running the tests.
+- PR #164 iOS LlamaEngine run #43981080474 remains in progress at native app build step 13, unchanged; later XCTest/GGUF/inference gates remain pending. No job logs are available from that runner.
+- No merge/approval, no ExploitGym workload, no physical device validation, and no APEX/East trust change.
