@@ -2230,3 +2230,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Development draft PR #144: `codex/native-agent-model-routing-foundation`, exact head `55697d6ccfc83761fdcf785ba6d8e41676e1d143`, stacked on #135. Its exact-head Pocket AI Lab push workflow `43882623208` passed.
 - Opened main-targeted validation-only draft PR #145 from clean main base `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`, exact head `c3a9bdb2a2673bf19c0c661dc937a9c4c37990a9`, containing the same three files to trigger the full native iOS workflow. At last check, iOS LlamaEngine run `43882896127`, Pocket AI Lab run `43882896082`, and Consumer run `43882896046` were in progress; Cursor run `43882896060` and Governance sidecar run `43882896270` passed.
 - Updated the board with both ownership claims and the validation dependency. No merge or mainline code change. No physical-device inference claim.
+
+
+## 2026-11-16 21:00 UTC — Native routed Agent Team persistence claimed
+
+- ChatGPT claims an additive integration slice on `codex/native-routed-agent-persistence`: connect native per-role routed coordinator outputs to the existing device-local task-history store; preserve append-only role sequence, interrupted recovery without automatic replay, and explicit user-visible history.
+- Scope: `ios/PocketAILab/LocalAgentTaskHistoryStore.swift`, `ios/PocketAILab/LocalChatView.swift`, `ios/PocketAILabTests/LocalAgentTaskHistoryStoreTests.swift`, and a focused architecture note only if required. First action is contract inspection; no implementation is presumed complete.
+- Dependency: PR #146's routed `NativeAgentCoordinator` API. Existing #146/#147 remain draft/unmerged; exact-head native iOS CI is still running. Work will remain isolated and will not alter coordinator/runtime files or governance boundaries.
+- No other AI agent is registered active. No application code, APEX/East trust, authorization, Evidence, or mainline change is included in this claim.
