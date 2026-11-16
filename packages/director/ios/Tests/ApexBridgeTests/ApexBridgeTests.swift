@@ -422,14 +422,16 @@ final class BridgeChallengeStoreTests: XCTestCase {
         let clock = TestClock(Date(timeIntervalSince1970: 12_000))
         let store = try BridgeChallengeStore(lifetime: 5, clock: { clock.now() })
         let trusted = URL(string: "https://workspace.example.test")!
+        let requestId = UUID().uuidString
+        let sessionId = UUID().uuidString
         let nonce = try await store.issue(
             page: trusted, trusted: trusted,
-            requestId: UUID().uuidString, sessionId: UUID().uuidString
+            requestId: requestId, sessionId: sessionId
         )
         clock.advance(6)
         let consumed = await store.consume(
             nonce, page: trusted, trusted: trusted,
-            requestId: UUID().uuidString, sessionId: UUID().uuidString
+            requestId: requestId, sessionId: sessionId
         )
         XCTAssertFalse(consumed)
     }
