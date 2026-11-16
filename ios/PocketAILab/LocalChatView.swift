@@ -520,7 +520,7 @@ final class LocalChatModel: ObservableObject {
 
     /// Executes an explicit, bounded plan from the canonical role catalogue.
     /// Dynamic specialists are selected by the operator and replace a core role.
-    func runDefaultAgentTeam(_ objective: String, agentIDs: [String]) async {
+    func runDefaultAgentTeam(_ objective: String, agentIDs: [String], memoryContext: String? = nil, memoryContextRefs: [String] = []) async {
         let text = objective.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isBusy, !text.isEmpty else { return }
         guard !availableModels.isEmpty else {
@@ -541,12 +541,14 @@ final class LocalChatModel: ObservableObject {
         let task = AgentTaskRequest(
             id: UUID().uuidString,
             objective: text,
-            requiredCapabilities: requiredCapabilities
+            requiredCapabilities: requiredCapabilities,
+            context: memoryContext,
+            contextRefs: memoryContextRefs
         )
         do {
             // Persist the task before starting inference. If the history archive
             // cannot be written, do not launch an untracked Agent Team run.
-            try agentTaskHistoryStore.begin(id: task.id, objective: text)
+            try agentTaskHistoryStore.begin(id: task.id, objective: text, contextRefs: memoryContextRefs)
             let createdAt = Date()
             agentTaskHistory.insert(
                 AgentTaskHistoryEntry(
@@ -557,7 +559,8 @@ final class LocalChatModel: ObservableObject {
                     status: .running,
                     roleResults: [],
                     finalResponse: nil,
-                    failureSummary: nil
+                    failureSummary: nil,
+                    contextRefs: memoryContextRefs.isEmpty ? nil : memoryContextRefs
                 ),
                 at: 0
             )
