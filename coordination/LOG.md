@@ -3069,3 +3069,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Commit: `d69054846e1bc35e6b98234b7e8c8222bb2af59e`. The diff is limited to the single test file; no production runtime, ModelPool, lease, dispatcher, authorization, or model lifecycle code changed.
 - The commit triggered fresh exact-head iOS LlamaEngine CI run #44122327312. Initial poll: job #134176732008 is in progress at Show Xcode; all later gates are pending. No rerun success claimed.
 - Updated the Phase B board row to the repaired exact head and new run. Keep PR #174 and #175 as drafts; do not merge while native tests and smoke validation remain incomplete.
+
+
+## 2026-11-17 — PR #174 refreshed-challenge test correction
+
+- While the first repaired run #44122327312 was progressing, reviewed the challenge/navigation regression test in `ios/PocketAILabTests/WorkspaceBridgeDispatcherTests.swift`.
+- Found that after `navigationStarted()` invalidated the first challenge, the test correctly requested a fresh challenge and built `refreshedGenerationBody`, but accidentally submitted the original `generationBody` containing the invalidated nonce while expecting generation success. This would make the test fail for the correct security behavior.
+- Corrected the test to submit `refreshedGenerationBody`. Commit `4682f4a271e170081f96b91f7d997487e0a69ec9`; test-only change.
+- Fresh exact-head iOS run #44122576415 has been created and is queued (job #134177697892). Run #44122327312 targets the preceding commit and is not evidence for the current head.
+- No production code changed. Keep challenge invalidation and one-use replay rejection intact; do not weaken the test to accept the old nonce. Await exact-head CI before further native changes or merge.
