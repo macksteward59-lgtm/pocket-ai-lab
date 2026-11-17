@@ -344,3 +344,10 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - PR #191 is open/draft/unmerged and GitHub reports it mergeable. No exact-head workflow run or combined status was surfaced for head `0e2368f01440bc5b7b636c40e818e349701d4794`; web validation remains pending. Do not treat prior #185 or #175 CI as evidence for #191.
 - PR #174 remains open/draft/unmerged at `8209c4784a1a715199dcb1ba5322241f5b24105a`; exact-head iOS workflow #44180080060 was previously verified successful across all 19 steps. This is hosted CI, not physical iPhone Air acceptance.
 - No PR was merged; no runtime trust, signed evidence, APEX authorization, or physical-device acceptance is claimed.
+
+
+## 2026-11-17 — Workspace readiness overlap isolated
+
+- Follow-up review found active PR [#189](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/189) overlaps PR #191 in `apps/web/app.js`. Its readiness correction requires a matching native `controllerSessions` record with `canGenerate === true` and `sharedLocalLeaseActive === true`; #191 currently only checks runtime availability plus a Local AI model lease before displaying its ready state.
+- To avoid colliding with the active PR #189 owner, no readiness hunk was copied or edited in #191. Coordination comments were left on both PRs. Keep the UI-ready claim blocked until this exact controller-session/shared-lease gate is integrated and tested.
+- PR #189 and #191 both currently have no exact-head PR-triggered workflow run surfaced. PR #191's commit combined status is also empty. Do not claim web tests passed; exact-head web CI remains pending.
