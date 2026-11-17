@@ -315,3 +315,9 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - Correction to prior status note: PR #162 is **not merged**. Its current state is open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`; the PR API's populated `merge_commit_sha` field was not evidence of a merge. No exact-head workflow run is surfaced for that SHA.
 - PR #174 remains open/unmerged at `8209c4784a1a715199dcb1ba5322241f5b24105a`; exact-head iOS run #44180080060 succeeded across all 19 steps. PR #185 remains open/unmerged and stale/diverged from #174 (1 ahead / 13 behind); reconcile before fresh web CI.
 - No PR was merged, no APEX/runtime/evidence authority was changed, and no physical iPhone Air acceptance is claimed.
+
+
+## 2026-11-17 — Native Workspace cancellation/readiness follow-ons observed
+
+- PR #186 (`codex/workspace-native-chat-abort-race`) remains a separate native Workspace bridge fix; exact-head CI [#44183512449](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183512449) passed on `0f44072cb8c58f3d9cef1f943e8fcab4dd0198a6`.
+- New draft PR #189 ([readiness-state fix](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/189)) stacks on #186 and requires exact controller-session readiness plus shared local lease before showing Workspace as ready. It is outside the East cancellation branch; no changes made. Its workflow was still in progress at the latest check.
