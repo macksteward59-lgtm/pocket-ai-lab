@@ -14,7 +14,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     @MainActor
     private func makeDispatcher(root: URL) -> WorkspaceBridgeDispatcher {
         let composition = NativeRuntimeComposition(
-            engine: engine,
+            engine: DispatcherStubEngine(),
             availableMemoryMB: { 4_096 }
         )
         let catalog = LocalModelCatalogStore(
