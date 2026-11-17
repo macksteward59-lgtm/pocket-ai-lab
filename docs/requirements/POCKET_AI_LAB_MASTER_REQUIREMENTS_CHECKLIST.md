@@ -9,6 +9,8 @@
 
 > **Status discipline:** All checklist items below begin unchecked. Do not mark an item complete because it is planned, described in documentation, represented by a UI, stubbed, mocked, or passes an unrelated CI workflow. Mark it complete only when its stated acceptance evidence exists. Use `[~]` for in progress and `[x]` only for verified completion. Link PRs, commits, test runs, device evidence, and threat-model records.
 
+> **Companion handoff:** See [Complete Product Vision & Engineering Handoff](../../coordination/POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md) for the consolidated architecture, integration contracts, evidence snapshot, roadmap, and next-contributor instructions. This checklist remains the detailed requirement baseline; the traceability matrix remains the per-requirement status ledger.
+
 ## 0. Product definition and non-negotiable principles
 
 - [ ] Deliver one coherent personal AI environment, not merely a chatbot, model launcher, or disconnected collection of agents.
