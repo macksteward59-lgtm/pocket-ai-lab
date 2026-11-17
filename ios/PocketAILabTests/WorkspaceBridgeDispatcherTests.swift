@@ -3,7 +3,6 @@ import XCTest
 @testable import PocketAILab
 import PocketLlamaEngine
 
-@MainActor
 final class WorkspaceBridgeDispatcherTests: XCTestCase {
     private func makeRoot() throws -> URL {
         let root = FileManager.default.temporaryDirectory
@@ -12,6 +11,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         return root
     }
 
+    @MainActor
     private func makeDispatcher(root: URL) -> WorkspaceBridgeDispatcher {
         let composition = NativeRuntimeComposition(
             engine: DispatcherStubEngine(),
@@ -28,6 +28,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testTrustedMainFrameCanReadAppScopedRuntimeStatus() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -50,6 +51,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(data["runtimeTrust"] as? String, "Unverified")
     }
 
+    @MainActor
     func testTrustedMainFrameCanReadSanitizedModelCatalog() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -67,6 +69,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertTrue(models.isEmpty)
     }
 
+    @MainActor
     func testForeignOriginSubframeAndMalformedMessagesAreRejected() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -108,6 +111,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(oversized["error"] as? String, "invalid_message")
     }
 
+    @MainActor
     func testGenerationAndConsequentialActionsRemainDisabled() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -138,6 +142,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(load["error"] as? String, "authorization_required")
     }
 
+    @MainActor
     func testInvalidationDisablesAllFurtherMessages() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
