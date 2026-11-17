@@ -3312,3 +3312,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - GitHub recursive tree inspection on codex/skill-lifecycle-rubric-binding recovered a later 44-entry, five-layer skill catalog and associated registry/lifecycle/evaluation code under packages/intelligence/skills/. It is not the original 42-entry, six-layer source. Exact paths and blob SHAs are recorded in coordination/HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md.
 - Corrected the recovery audit to distinguish metadata-confirmed source content from body text actually retrieved. October 29 mappings must be compared directly with the November 1 six-layer framework before adoption.
 - Updated the coordination board and source-recovery audit only. No application code, authorization policy, tests, merges, or requirement verification status changed.
+
+## 2026-11-17 — Live PR/CI reconciliation
+
+- Refreshed current PR heads and exact-head workflow state for the native bridge chain. PR #164 head `482b364cb362b86224c3399ce16ce51a1c06c738` has iOS run #43991837435 success; PR #168 head `ab6f290702018023edaec800f59bfec422f24bc9` has iOS run #43991941724 success; PR #169 head `3666c01a629219b22b9313cb770b6246f082217d` has iOS run #44092562693 success.
+- PR #171 current head `90b4e2b408fd98d418bff729c8e8d208fe13463f` had no PR-triggered run returned for that exact head. PR #174 current head `e3105b9985e44e687524dd08e32080705d9d4b0f` has iOS run #44161238097 pending. PR #175 web CI #44113067640 passed on its own head, but its base records the older PR #174 head `48a6fabea107cc587327bf1782caef14aeefdab7`; stack reconciliation is required.
+- PR #180 current head `fe25b0a43151f71c23ee8d673788a18187e019c8` has exact-head TypeScript run #44159541367 success. PR #181 current head `46894868049c124808a06e7d0a4d94b89ca82cd1` has no PR-triggered run surfaced; its catalog/context tests remain validation-blocked.
+- Reconfirmed that the October 29 M01–M42 source body has not been retrieved; only response metadata confirms descriptions and mappings exist. The later 44-entry/five-layer catalog is not the original taxonomy.
+- Updated the gap audit, board, and log only. No application code, authorization policy, merge state, or requirement verification status changed. Hosted CI is not physical iPhone Air acceptance.
