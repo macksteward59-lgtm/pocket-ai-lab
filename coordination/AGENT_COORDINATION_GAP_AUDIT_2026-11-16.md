@@ -173,3 +173,12 @@ A focused fail-closed source change is now proposed in PR #167.
 - Focused tests assert all three actions remain blocked.
 
 PR #167 is draft. The exact-head workflow query returned no PR-triggered workflow runs, so this change is not yet CI-validated. It does not implement approval or WebKit dispatch and does not enable consequential actions. Keep it separate from PR #164 until its exact-head iOS tests pass and the mergeability state is understood.
+
+
+## 8. PR #167 native CI routing gap
+
+Exact-head check-runs for PR #167 head e9418da92d6ed06afedc946dff97841f30002c4d show Intelligence workflow run #43991447842 passing. This workflow validates the JavaScript/Node intelligence project, not the Swift Director bridge.
+
+The iOS LlamaEngine workflow was not triggered because its pull_request target-branch filter lists main and codex/native-product-experience-integration, while PR #167 targets codex/bridge-native-runtime-integration. The Swift source and XCTest changes therefore remain unverified by iOS CI. PR #167's body now records this limitation. Do not merge or mark the native change validated based on the Intelligence check.
+
+Required follow-up: establish a supported exact-head iOS CI route for stacked native PRs, then confirm the XCTest suite passes. Do not broaden triggers blindly or weaken workflow protections. Physical iPhone Air acceptance remains a separate gate.
