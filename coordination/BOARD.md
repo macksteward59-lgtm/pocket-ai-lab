@@ -351,3 +351,12 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - Follow-up review found active PR [#189](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/189) overlaps PR #191 in `apps/web/app.js`. Its readiness correction requires a matching native `controllerSessions` record with `canGenerate === true` and `sharedLocalLeaseActive === true`; #191 currently only checks runtime availability plus a Local AI model lease before displaying its ready state.
 - To avoid colliding with the active PR #189 owner, no readiness hunk was copied or edited in #191. Coordination comments were left on both PRs. Keep the UI-ready claim blocked until this exact controller-session/shared-lease gate is integrated and tested.
 - PR #189 and #191 both currently have no exact-head PR-triggered workflow run surfaced. PR #191's commit combined status is also empty. Do not claim web tests passed; exact-head web CI remains pending.
+
+
+## 2026-11-17 — Workspace client rebased again after dispatcher advanced
+
+- PR #174 advanced from `8209c4784a1a715199dcb1ba5322241f5b24105a` to `ad3c049c17b08b8f8dae5f5302692f0b87d798a4`. The one-commit movement changed only `WorkspaceBridgeDispatcher.swift`, `WorkspaceView.swift`, and `WorkspaceBridgeDispatcherTests.swift`; none of the six web-client files changed.
+- Created replacement PR [#193](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/193), based directly on the new #174 head. It is exactly six commits ahead / zero behind with six changed web files. PR #193 is open/draft/unmerged.
+- Closed intermediate PR #191 as superseded; PR #191 was not merged. PR #185 and #191 are both closed/unmerged; #193 is the sole current Workspace web-client follow-on.
+- PR #189 remains active and overlaps `apps/web/app.js` with the controller-session readiness gate. No overlapping code was copied; keep UI-ready state blocked until `controllerSessions`, `canGenerate === true`, and `sharedLocalLeaseActive === true` are integrated and tested.
+- No exact-head workflow run or combined status is surfaced yet for PR #193 head `b7217f5eaededefcd4516cf3d015b3ac505e790a`. Web CI remains pending; prior runs on other heads do not validate #193.
