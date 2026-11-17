@@ -84,3 +84,45 @@ This establishes that e3 has an execution-level cancellation surface in the upst
 
 The integration target is therefore refined: connect the production e3 execution handle/cancel API to a host-owned worker lifecycle that can signal the provider and await its drain before releasing leases and persisting Pocket AI Lab's durable cancellation. If the selected e3 runner only terminates a process group, document that as forced runner termination and do not represent it as provider-level graceful drain or remote GPU cancellation.
 The upstream main-branch package manifest currently reports @elaraai/e3 version 1.0.108, while Pocket AI Lab declares the range ^1.0.98. That makes the inspected upstream implementation relevant to the declared range, but without a lockfile or deployed dependency inventory it still does not identify the exact version actually used in a deployed workspace. Treat 1.0.108 as the inspected upstream source version, not as proof of the installed production version.
+
+
+## Local e3 runner process-boundary finding — graceful provider drain is not available through the stock stop path
+
+A deeper inspection of upstream e3-core's local execution implementation materially narrows the integration options.
+
+- The documented default task runner is `east-node`; the local `LocalTaskRunner` starts task runners as child processes. The e3 skill describes project-owned Node platform functions as a scoped package export supplied to that runner.
+- `TaskExecuteOptions.signal` is forwarded by `LocalTaskRunner.execute` to the local task execution path. That signal reaches `spawnAndCapture`.
+- In the inspected upstream `processExec.ts`, the abort listener calls `stopProcessGroup`, which calls `killProcessGroup`. On POSIX, `killProcessGroup` sends **SIGKILL** to the process group (negative child PID). On Windows, the stop ends the job launcher/job object; without the optional launcher it invokes `taskkill /T /F`. This is not a graceful SIGTERM callback into the East Node process. The runner's stdout/stderr pipes are drained/closed with a bounded 5-second post-exit drain; that is pipe cleanup, not provider settlement.
+- Therefore a module-level SIGTERM listener or process-signal-to-AbortController bridge inside `src/east/platform.ts` would be an incorrect integration assumption for the stock local runner: the inspected stop path does not provide SIGTERM as a graceful cancellation hook. It may forcibly terminate JavaScript before provider finally blocks, model-session release, or durable lifecycle cleanup execute.
+- The orchestrator's `wait(handle)` still provides the correct e3 execution completion barrier: local stop waits for its launched task promises and the run completion promise resolves from the loop's finally path after locks are released. But that barrier proves the runner process has stopped; it does **not** prove an in-process provider gracefully settled if the runner was SIGKILLed. A remote provider may continue compute after its client process dies.
+
+### Revised implementation direction
+
+Do not add a signal listener to the platform module and do not claim graceful provider drain from the stock runner's process-group kill.
+
+The next design decision is between:
+
+1. **Host-owned inference service / worker supervisor (preferred for local provider lifecycle):** inference runs outside the e3 task process group under a separately supervised service. The e3 task sends an execution/attempt identity to that service. The host that owns the e3 run handle receives cancellation, sends an explicit authenticated cancel command to the inference service, waits for provider settlement and lease release, and only then completes its own cancellation path. Client disconnect or e3 process death alone is not accepted as remote cancellation evidence.
+2. **A custom e3 TaskRunner / execution adapter:** only if the selected runner API can be implemented and tested so its AbortSignal is handled by a supervisor that performs cooperative cancellation before terminating task processes. The stock LocalTaskRunner path is not sufficient for this guarantee because its abort path kills the process group.
+
+The host must also own durable correlation between e3 run ID, task execution ID, provider generation ID, and model/session lease. Cancellation must be idempotent; a late result must be rejected by attempt fencing; and recovery must query the supervisor's durable state rather than infer that a provider stopped because the e3 task process disappeared.
+
+### Acceptance test changes
+
+The real-runner test must distinguish these facts:
+- e3 cancellation requested;
+- task process terminated;
+- inference service received authenticated cancellation;
+- provider generation settled (or was explicitly classified as unconfirmed);
+- model/session lease released;
+- durable Pocket AI Lab attempt marked cancelled;
+- restart/recovery did not replay or publish the stale attempt.
+
+A passing process-exit assertion alone is insufficient. For a remote backend, the system must report remote compute termination as unknown unless the backend supplies authoritative completion/cancellation evidence.
+
+Upstream source references (main branch, not a pinned deployment contract):
+- [e3 skill — task runners and platform functions](https://github.com/elaraai/east-workspace/blob/main/libs/e3/SKILL.md)
+- [LocalTaskRunner](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/execution/LocalTaskRunner.ts)
+- [processExec](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/execution/processExec.ts)
+- [orchestrator interfaces](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/dataflow/orchestrator/interfaces.ts)
+- [LocalOrchestrator](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/dataflow/orchestrator/LocalOrchestrator.ts)
