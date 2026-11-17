@@ -23,7 +23,12 @@ final class PocketAILabTests: XCTestCase {
         let taskHistoryStore = LocalAgentTaskHistoryStore(
             fileURL: root.appendingPathComponent("AgentTaskHistory.json")
         )
+        let composition = NativeRuntimeComposition(
+            engine: engine,
+            availableMemoryMB: { 4_096 }
+        )
         return LocalChatModel(
+            runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
             conversationStore: conversationStore,
