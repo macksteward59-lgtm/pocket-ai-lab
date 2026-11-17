@@ -458,3 +458,34 @@ This update does not change the 316-row traceability counts except for the singl
 A further retrieval attempt for the original November 1 conversation source returned no complete M01–M42 descriptions and no exact per-module layer or T0–T4 mapping. The November 1 context does identify the live app files as `src/components/compliance/console.tsx`, `src/lib/compliance/providers.ts`, `src/lib/compliance/modes.ts`, `src/lib/compliance/director.ts` (described as Director and the 42 checks), and `src/lib/compliance/orchestrator.ts`. These are leads for targeted repository/history inspection, not evidence of the missing mappings.
 
 The current TypeScript test workflow is introduced on PR #180 and is not yet in the shared base. PR #181's OWASP test files therefore have no exact-head hosted workflow run. Keep PR #181's status validation-blocked until the workflow is available from the base and runs on its exact head, or until an independently authorized validation mechanism is established. Do not copy the workflow into PR #181 merely to manufacture a run; that would create ownership overlap.
+
+
+---
+
+## 21. Live repository refresh — 2026-11-17
+
+This section supersedes older status snapshots above where exact PR heads or CI states have advanced. It is a documentation-only reconciliation.
+
+### Current bridge/runtime chain
+
+| PR | Current head | Exact-head CI evidence | Current interpretation |
+|---|---|---|---|
+| [#164](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/164) | `482b364cb362b86224c3399ce16ce51a1c06c738` | iOS LlamaEngine run [#43991837435](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991837435) completed success | Hosted CI passed on current head; still no physical iPhone Air acceptance or WebKit action dispatch in this PR. |
+| [#168](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/168) | `ab6f290702018023edaec800f59bfec422f24bc9` | iOS LlamaEngine run [#43991941724](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991941724) completed success | Fail-closed import/load/unload denial and challenge-store invalidation tests have hosted native CI evidence on this head; no approval coordinator is implemented. |
+| [#169](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/169) | `3666c01a629219b22b9313cb770b6246f082217d` | iOS LlamaEngine run [#44092562693](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44092562693) completed success | Mandatory challenge consumption in RuntimeController has hosted native CI evidence on this head; this does not establish trusted WebKit frame origin by itself. |
+| [#171](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/171) | `90b4e2b408fd98d418bff729c8e8d208fe13463f` | No PR-triggered run was returned for this exact head in the current check | App-scoped runtime/session composition remains a critical integration prerequisite; do not transfer older-head CI evidence. |
+| [#174](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/174) | `e3105b9985e44e687524dd08e32080705d9d4b0f` | iOS LlamaEngine run [#44161238097](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44161238097) is pending | Challenge-gated WebKit dispatcher is the active native integration path. Wait for exact-head completion before claiming validation. |
+| [#175](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/175) | `4381df81ed0305a96cded87c78c9e446369c5893` | Exact-head web CI [#44113067640](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44113067640) passed | Workspace native chat client is web-tested, but its recorded base is PR #174's earlier head `48a6fabea107cc587327bf1782caef14aeefdab7`; reconcile its dependency against PR #174's current head before treating the stack as current. |
+
+The native chain remains draft/open. Hosted checks are not physical-device acceptance. Do not enable import/load/unload, infer APEX authorization, or claim signed evidence from these PRs.
+
+### Current OWASP/test-runner dependency
+
+- PR [#180](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/180) current head `fe25b0a43151f71c23ee8d673788a18187e019c8`; exact-head Intelligence TypeScript Tests run [#44159541367](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44159541367) completed success. This validates only its focused test-runner scope.
+- PR [#181](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/181) current head `46894868049c124808a06e7d0a4d94b89ca82cd1`; no PR-triggered workflow run was returned for this exact head. Keep its OWASP tests validation-blocked. PR #180's successful run is not transferable evidence, and the OWASP context builder remains reference-only rather than integrated into `Orchestrator.executeTask()`.
+
+### Source-recovery status
+
+The October 29 response metadata still confirms that the original assistant response contains M01–M42 descriptions and layer mappings, but the actual message body has not been recovered into the repository. The later 44-entry/five-layer catalog remains a separate taxonomy and must not be substituted. No missing description, layer assignment, tier, permission class, or approval rule was reconstructed.
+
+No requirement status was promoted to verified, no PR was merged, and no application or authorization behavior was changed by this refresh.
