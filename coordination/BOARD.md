@@ -284,3 +284,12 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - This is hosted CI evidence only. It does not establish physical iPhone Air acceptance, production runtime trust, Ed25519 signed evidence, device attestation, APEX authorization, or consequential-action approval.
 - PR #185 remains open/unmerged at `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, based on older PR #174 head `beac6964aa4eda8d370b32ffa3ae565745b4e062`. Compare against current #174 head reports diverged: 1 commit ahead / 13 behind, with six web files changed. A blind copy/rebase risks overwriting upstream web changes; reconcile file-by-file and run fresh exact-head web CI before considering the stack current.
 - PR #162 remains open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. No PR-triggered workflow run is currently surfaced for that exact SHA in the latest check; do not infer a pass from the earlier migration workflow correction. Its ownership fencing remains concurrency control, not authentication, tenant isolation/RLS, or APEX authorization.
+
+
+## 2026-11-17 — OWASP catalog immutability hardening
+
+- Continued the existing ChatGPT-owned PR #181 workstream without touching Orchestrator, APEX, East, or native runtime behavior.
+- Found that the exported OWASP catalog and guidance were typed as reference data but remained recursively mutable at runtime. A consumer could mutate nested topic/control/agent arrays or trust/provenance fields through exported objects.
+- Added recursive runtime freezing for the imported OWASP catalog and curated guidance, plus focused assertions that the catalog, nested arrays, guidance objects, and nested guidance arrays are frozen.
+- Latest PR #181 head is `9cdf32e430e629384f4080385e594ad407bd78de`. Read-back confirms all three changes are present. No PR-triggered workflow is surfaced for this exact head because the focused TypeScript workflow is still introduced by separate PR #180 and is not on the shared base. Validation remains pending; do not mark this change passed.
+- PR #181 context builder remains reference-only and is not connected to `Orchestrator.executeTask()`. No merge performed.
