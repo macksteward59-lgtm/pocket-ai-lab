@@ -263,8 +263,9 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(generationData["authorized"] as? Bool, false)
 
         var replayBody = refreshedGenerationBody
+        // Preserve the exact request/session/nonce binding. Only the message
+        // envelope ID changes, so this specifically proves one-use consumption.
         replayBody["id"] = UUID().uuidString
-        replayBody["requestId"] = UUID().uuidString
         let replay = await dispatcher.handle(
             body: replayBody,
             frameOrigin: trustedOrigin,
