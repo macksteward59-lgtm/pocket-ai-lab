@@ -267,11 +267,26 @@ public actor RuntimeController {
         )
         guard challengeAccepted else { throw RuntimeControllerError.unauthorizedChallenge }
 
-        let lease = active.lease
+        // Actor methods are reentrant across the challenge-store await above.
+        // A concurrent disconnect/unload may have released this lease while
+        // authorization was being consumed. Revalidate the exact session and
+        // readiness snapshot before starting inference; never use the stale
+        // ActiveSession captured before suspension.
+        guard !unloadingSessions.contains(sessionId),
+              var latest = sessions[sessionId],
+              latest.lease.session.id == sessionId,
+              let currentReadiness = latest.readiness,
+              currentReadiness.healthCheckId == readiness.healthCheckId,
+              currentReadiness.expiresAt > clock(),
+              latest.generations[requestId] == nil else {
+            throw RuntimeControllerError.unknownSession
+        }
+
+        let lease = latest.lease
         let runtime = self.runtime
         let task = Task { try await runtime.generate(lease: lease, request: request, maxOutputBytes: maxOutputBytes) }
-        active.generations[requestId] = task
-        sessions[sessionId] = active
+        latest.generations[requestId] = task
+        sessions[sessionId] = latest
 
         do {
             let output = try await withTaskCancellationHandler {
@@ -293,7 +308,7 @@ public actor RuntimeController {
                 conversationRequestId: conversationRequestId,
                 attemptId: attemptId,
                 modelId: lease.model.id,
-                modelFileHash: active.fileHash,
+                modelFileHash: latest.fileHash,
                 runtimeSessionId: lease.session.id,
                 runtimeVersion: runtimeVersion,
                 deviceId: deviceId,
@@ -301,7 +316,7 @@ public actor RuntimeController {
                 challengeNonce: challengeNonce,
                 generationResultHash: Self.sha256(Data(output.utf8)),
                 generatedAt: clock(),
-                healthCheckId: readiness.healthCheckId,
+                healthCheckId: currentReadiness.healthCheckId,
                 output: output
             )
         } catch {
