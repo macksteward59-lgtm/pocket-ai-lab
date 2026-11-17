@@ -2965,3 +2965,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Inspected PR #168 patch: consequential model actions remain unconditionally blocked; tests cover import/load/unload denial and challenge invalidation.
 - Re-inspected WorkspaceView: only navigation delegate is installed; no WebKit message handler exists. RuntimeController does not consume challenge-store nonces. Dispatcher must enforce challenge binding and one-use consumption before generation.
 - No merge, no runtime action activation, no device acceptance claim.
+
+
+## 2026-11-17 — Follow-up CI poll
+
+- PR #168 exact-head run #43991941724 advanced through pinned llama.cpp build, fail-closed Swift typecheck, and generic iOS engine link; simulator boot is in progress. Companion Intelligence #43991924464 passed.
+- PR #164 exact-head run #43991837435 advanced through simulator boot, bridge package validation, and native app build; native app XCTest is in progress.
+- Refreshed PR #164 and #168 descriptions with current exact-head state. Remaining gates are explicitly pending; no overall pass or device acceptance claimed.
