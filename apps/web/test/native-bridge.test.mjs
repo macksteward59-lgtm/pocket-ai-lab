@@ -142,6 +142,49 @@ test("native chat refuses a readiness result for a different runtime session", a
   assert.deepEqual(calls, ["getRuntimeStatus", "listModels", "checkReadiness"]);
 });
 
+
+test("aborting native chat sends a cancellation for the exact active request", async () => {
+  let resolveStarted;
+  const started = new Promise(resolve => { resolveStarted = resolve; });
+  const calls = [];
+  const bridge = loadBridge(async message => {
+    calls.push(message);
+    switch (message.action) {
+      case "getRuntimeStatus":
+        return reply(message, { runtimeAvailable: true, activeLocalSessions: [{ modelId: MODEL_ID, sessionId: UUID }] });
+      case "listModels":
+        return reply(message, { models: [{ id: MODEL_ID, selected: true }] });
+      case "checkReadiness":
+        return reply(message, { canGenerate: true, sessionId: UUID });
+      case "authorizeGeneration":
+        return reply(message, {
+          challengeNonce: "0123456789abcdef0123456789abcdef",
+          requestId: message.requestId,
+          sessionId: message.sessionId
+        });
+      case "generate":
+        resolveStarted(message);
+        return new Promise(() => {});
+      case "cancelGeneration":
+        return reply(message, { cancelled: true });
+      default:
+        throw new Error("Unexpected action: " + message.action);
+    }
+  });
+  const controller = new AbortController();
+  const generation = bridge.generate("A long-running request.", {
+    signal: controller.signal,
+    onRequest: () => {}
+  });
+  const active = await started;
+  controller.abort();
+  await assert.rejects(generation, error => error.code === "generation_cancelled");
+  const cancellation = calls.find(call => call.action === "cancelGeneration");
+  assert.ok(cancellation);
+  assert.equal(cancellation.sessionId, active.sessionId);
+  assert.equal(cancellation.requestId, active.requestId);
+});
+
 test("native chat enforces bounded generation settings and prompt size", async () => {
   let calls = 0;
   const bridge = loadBridge(async message => {
