@@ -365,6 +365,7 @@ async function readEventStream(
       }
     }
     if (!finished && buffer.startsWith("data:")) onData(buffer.slice(5).trim());
+    if (signal.aborted) throw abortReason(signal);
   } catch (error) {
     if (signal.aborted) throw abortReason(signal);
     throw error;
@@ -439,6 +440,7 @@ async function readBody(response: Response, signal: AbortSignal): Promise<string
       }
       chunks.push(value);
     }
+    if (signal.aborted) throw abortReason(signal);
   } catch (error) {
     if (signal.aborted) throw abortReason(signal);
     throw error;

@@ -315,6 +315,12 @@ export class TaskLifecycleCoordinator {
     });
   }
 
+  /**
+   * Persists the terminal cancellation state and invalidates outstanding attempt IDs.
+   * This coordinator has no worker handles and cannot stop provider execution itself.
+   * Hosts MUST signal active workers and await their drain before calling this method;
+   * use EastTaskLifecycleAdapter for the integrated signal -> drain -> persist path.
+   */
   async cancelTask(taskId: string): Promise<TaskRecord> {
     return this.mutate(async () => {
       this.requireInitialized();

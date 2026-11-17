@@ -152,4 +152,88 @@ describe("runEastTaskWithLifecycle", () => {
     expect(coordinator.getTask("lifecycle-2").status).toBe("failed");
     expect(coordinator.getTask("lifecycle-2").steps.find(step => step.id === "execute-director")?.attempts).toBe(1);
   });
+
+  it("keeps the durable attempt running until an aborted East provider call drains", async () => {
+    let releaseDrain!: () => void;
+    let providerStarted!: () => void;
+    let receivedSignal: AbortSignal | undefined;
+    const started = new Promise<void>(resolve => { providerStarted = resolve; });
+    const assignments: string[] = [];
+    const eastTask = {
+      id: "east-cancel", objective: "Cancel only after provider drain",
+      assignments: [] as { id: string; agentId: string }[],
+      synthesis: null as string | null, evidenceRefs: [] as string[],
+      evidenceGate: { status: "not_submitted" as const },
+      apexDecision: { status: "unread" as const }, authorized: false as const
+    };
+    const east = {
+      getTask: () => eastTask,
+      assignAgent: (_taskId: string, agentId: string) => {
+        assignments.push(agentId);
+        eastTask.assignments.push({ id: "assignment-" + agentId, agentId });
+        return eastTask.id;
+      },
+      executeAgent: async (_taskId: string, _agentId: string, options?: { signal?: AbortSignal }) => {
+        receivedSignal = options?.signal;
+        providerStarted();
+        await new Promise<void>(resolve => { releaseDrain = resolve; });
+        if (options?.signal?.aborted) {
+          const error = new Error("provider settled after abort");
+          error.name = "AbortError";
+          throw error;
+        }
+        return "unexpected-message";
+      },
+      runDeliberation: async () => ({ synthesis: "unused", evidence: [] }),
+      commitTaskEvidence: async () => false as const,
+      checkpointTask: () => ({
+        version: 1 as const,
+        task: { ...eastTask, assignments: [...eastTask.assignments], evidenceRefs: [...eastTask.evidenceRefs] },
+        messages: [],
+        evidenceMemoryCommitted: false
+      }),
+      restoreTask: () => undefined,
+      orchestrator: {} as EastPlatformRuntime["orchestrator"],
+      memory: {} as EastPlatformRuntime["memory"]
+    } as unknown as EastPlatformRuntime;
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
+    const controller = new AbortController();
+    const pending = runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId: eastTask.id, lifecycleTaskId: "lifecycle-cancel",
+      objective: eastTask.objective, signal: controller.signal
+    });
+    await started;
+
+    expect(receivedSignal).toBe(controller.signal);
+    const running = coordinator.getTask("lifecycle-cancel");
+    expect(running.status).toBe("running");
+    expect(running.steps.find(step => step.id === "execute-director")?.currentAttempt).not.toBeNull();
+
+    controller.abort();
+    await Promise.resolve();
+    const stillRunning = coordinator.getTask("lifecycle-cancel");
+    expect(stillRunning.status).toBe("running");
+    expect(stillRunning.steps.find(step => step.id === "execute-director")?.currentAttempt).not.toBeNull();
+
+    releaseDrain();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    const cancelled = coordinator.getTask("lifecycle-cancel");
+    expect(cancelled.status).toBe("cancelled");
+    expect(cancelled.steps.find(step => step.id === "execute-director")).toMatchObject({
+      status: "cancelled", currentAttempt: null
+    });
+    expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
+    expect(cancelled.steps.filter(step => step.status === "succeeded")).toHaveLength(1);
+
+    // A fresh coordinator must observe the terminal cancellation and refuse
+    // to replay the in-flight inference step after restart.
+    const restartedCoordinator = new TaskLifecycleCoordinator({ store });
+    await expect(runEastTaskWithLifecycle({
+      coordinator: restartedCoordinator, east, eastTaskId: eastTask.id,
+      lifecycleTaskId: "lifecycle-cancel", objective: eastTask.objective
+    })).rejects.toThrow("Existing East lifecycle is terminal: cancelled");
+    expect(restartedCoordinator.getTask("lifecycle-cancel").status).toBe("cancelled");
+  });
+
 });

@@ -62,4 +62,41 @@ describe("RemoteInferenceProvider", () => {
     });
     await expect(provider.generate({} as never)).rejects.toThrow(/did not respond within/);
   });
+
+  it("forwards caller cancellation and distinguishes it from the provider timeout", async () => {
+    let receivedSignal: AbortSignal | null = null;
+    const provider = new RemoteInferenceProvider({
+      enabled: true, baseUrl: "https://infer.example.com", timeoutMs: 5_000,
+      fetchImpl: fakeFetch((_url, init) => {
+        receivedSignal = init.signal as AbortSignal;
+        return new Promise((_resolve, reject) => {
+          receivedSignal!.addEventListener("abort", () => {
+            const error = new Error("aborted");
+            error.name = "AbortError";
+            reject(error);
+          }, { once: true });
+        });
+      })
+    });
+    const controller = new AbortController();
+    const pending = provider.generate({} as never, { signal: controller.signal });
+    await Promise.resolve();
+    expect(receivedSignal).toBeDefined();
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "RemoteInferenceError", code: "cancelled" });
+  });
+
+  it("rejects a pre-aborted caller signal without dispatching the remote request", async () => {
+    let calls = 0;
+    const provider = new RemoteInferenceProvider({
+      enabled: true, baseUrl: "https://infer.example.com",
+      fetchImpl: fakeFetch(() => { calls += 1; return new Response(JSON.stringify({ payload: {} })); })
+    });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(provider.generate({} as never, { signal: controller.signal }))
+      .rejects.toMatchObject({ code: "cancelled" });
+    expect(calls).toBe(0);
+  });
+
 });

@@ -635,3 +635,44 @@ describe("East APEX decision read", () => {
     expect(() => runtime({ apexTimeoutMs: 60_000 })).toThrow(expect.objectContaining({ code: "apex_closed" }));
   });
 });
+
+
+describe("East provider cancellation propagation", () => {
+  it("waits for provider drain, discards late output, and releases no result after cancellation", async () => {
+    let resolveProvider: ((result: InferenceResult) => void) | undefined;
+    let started!: () => void;
+    let receivedSignal: AbortSignal | undefined;
+    let receivedRequest: InferenceRequest | undefined;
+    const providerStarted = new Promise<void>(resolve => { started = resolve; });
+    const platform = runtime({
+      inference: {
+        generate(request, options) {
+          receivedRequest = request;
+          receivedSignal = options?.signal;
+          started();
+          return new Promise<InferenceResult>(resolve => { resolveProvider = resolve; });
+        }
+      }
+    });
+    const taskId = platform.createAgentTask("Cancel only after the active provider drains");
+    assignTeam(platform, taskId);
+    const controller = new AbortController();
+    const pending = platform.runDeliberation(taskId, { signal: controller.signal });
+    await providerStarted;
+
+    expect(receivedSignal).toBe(controller.signal);
+    expect(platform.orchestrator.router.getLoadedModels()).toContain(model.id);
+    controller.abort();
+    let settled = false;
+    void pending.then(() => { settled = true; }, () => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    expect(platform.orchestrator.router.getLoadedModels()).toContain(model.id);
+
+    resolveProvider!(payloadFor(receivedRequest!));
+    await expect(pending).rejects.toMatchObject({ code: "cancelled" });
+    expect(platform.orchestrator.bus.getThread(taskId)).toHaveLength(0);
+    expect(await platform.memory.list()).toHaveLength(0);
+    expect(platform.orchestrator.router.getLoadedModels()).not.toContain(model.id);
+  });
+});
