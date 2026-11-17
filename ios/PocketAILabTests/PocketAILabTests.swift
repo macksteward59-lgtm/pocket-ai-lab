@@ -426,6 +426,96 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertTrue(model.workspaceBridgeRuntimeStatus.contains("No active local model session"))
     }
 
+    @MainActor
+    func testWebKitDispatcherAllowsOnlyTrustedMainFrameReadOnlyActions() throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = makeLocalChatModel(engine: FingerprintTestEngine(), root: root)
+        let trusted = URL(string: "https://workspace.example.test/app")!
+        let dispatcher = WorkspaceBridgeDispatcher(trustedURL: trusted, localChatModel: model)
+        let messageID = UUID().uuidString
+
+        let status = dispatcher.handle(
+            body: ["id": messageID, "action": "getRuntimeStatus"],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(status["ok"] as? Bool, true)
+        XCTAssertEqual(status["id"] as? String, messageID)
+        let statusData = try XCTUnwrap(status["data"] as? [String: Any])
+        XCTAssertEqual(statusData["generationEnabled"] as? Bool, false)
+        XCTAssertEqual(statusData["dispatcherMode"] as? String, "read-only")
+
+        let foreign = dispatcher.handle(
+            body: ["id": messageID, "action": "getRuntimeStatus"],
+            frameOrigin: URL(string: "https://attacker.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(foreign["error"] as? String, "untrusted_origin")
+
+        let subframe = dispatcher.handle(
+            body: ["id": messageID, "action": "getRuntimeStatus"],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: false
+        )
+        XCTAssertEqual(subframe["error"] as? String, "main_frame_required")
+
+        let unknownField = dispatcher.handle(
+            body: ["id": messageID, "action": "getRuntimeStatus", "origin": "https://workspace.example.test"],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(unknownField["error"] as? String, "invalid_message")
+
+        let oversized = dispatcher.handle(
+            body: ["id": messageID, "action": "getRuntimeStatus", "padding": String(repeating: "x", count: 41_000)],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(oversized["error"] as? String, "invalid_message")
+    }
+
+    @MainActor
+    func testWebKitDispatcherKeepsGenerationAndConsequentialActionsDisabled() throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = makeLocalChatModel(engine: FingerprintTestEngine(), root: root)
+        let trusted = URL(string: "https://workspace.example.test/app")!
+        let dispatcher = WorkspaceBridgeDispatcher(trustedURL: trusted, localChatModel: model)
+        let frame = URL(string: "https://workspace.example.test/")!
+
+        let generation = dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "generate",
+                "sessionId": UUID().uuidString,
+                "prompt": "This must not reach inference yet",
+                "requestId": UUID().uuidString,
+                "conversationRequestId": "conversation-1",
+                "attemptId": "attempt-1",
+                "challengeNonce": String(repeating: "a", count: 32)
+            ],
+            frameOrigin: frame,
+            isMainFrame: true
+        )
+        XCTAssertEqual(generation["error"] as? String, "action_not_enabled")
+
+        let load = dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "loadModel", "model": "model-1"],
+            frameOrigin: frame,
+            isMainFrame: true
+        )
+        XCTAssertEqual(load["error"] as? String, "authorization_required")
+
+        dispatcher.invalidate()
+        let afterTeardown = dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "getRuntimeStatus"],
+            frameOrigin: frame,
+            isMainFrame: true
+        )
+        XCTAssertEqual(afterTeardown["error"] as? String, "bridge_unavailable")
+    }
+
     func testWorkspaceURLsRequireAHostAndSecureScheme() {
         XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "https://workspace.example")!))
         XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "http://localhost:8080")!))
