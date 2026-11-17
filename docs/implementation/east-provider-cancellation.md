@@ -136,3 +136,16 @@ A repository scan found two existing host-side patterns that are useful referenc
 - `apps/web/server.mjs` uses the same response-close-to-AbortController pattern for `POST /api/agent-tasks` and `POST /api/chat`, passing the signal into the llama.cpp-backed provider/session.
 
 These are request-scoped cancellation paths. They do not expose a durable e3 run/task execution registry, an authenticated host-to-provider cancel command keyed by a stable generation ID, a provider-settlement query after the original HTTP client disappears, or restart recovery for outstanding provider generations. They are implementation precedents for a host-owned supervisor, not evidence that e3 cancellation is already integrated. Any internal cancellation endpoint must add explicit local-origin/authentication controls, per-attempt ownership, idempotency, and a durable settlement record; it must not trust a caller-supplied task ID alone.
+
+### Deployment entrypoint versus runtime-bound compilation — additional source trace
+
+A second pass compared the repository's actual package start command with the East exports:
+
+- `package.json` starts e3 with `e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev`.
+- `src/east/index.ts` exports a default `e3.package(..., pocketAILabTask)`. That package contains `pocketAILabTaskFunction`, whose East platform declarations are `createAgentTask`, `assignAgent`, `executeAgent`, `runDeliberation`, and `commitTaskEvidence`.
+- The concrete `.implement(...)` callbacks are assembled only inside the private `bindEastPlatform(runtime)` helper. That helper is called by the exported `compilePocketAILabTask(runtime)` function.
+- The checked-in `start` command deploys the default e3 package from the source entrypoint; it does not invoke `createEastPlatform` or `compilePocketAILabTask`. Repository code search on the relevant branch found the compile helper used by its unit test, not by a production composition root.
+
+This is a stronger, concrete integration gap than merely not finding a host-owned cancellation controller: the visible deploy path and the runtime-bound compile path are distinct. The source snapshot does not establish how the default e3 package's platform declarations receive concrete implementations at deployment/runtime. It may be supplied by external workspace configuration or a platform mechanism outside this repository, so do not conclude that deployment is broken solely from this absence. But do not claim that the runtime-bound implementation is active in the deployed e3 task until the external binding mechanism is identified and tested.
+
+**Required verification:** inspect the deployed e3 workspace configuration and exact SDK version; identify how each declared platform function is bound; prove the binding resolves to the intended `EastPlatformRuntime` and provider instance; then prove the same host owns the e3 run handle and can coordinate cancellation/drain. The compiled-task integration test currently exercises `compilePocketAILabTask(runtime)` directly and does not exercise `npm start` / `e3 workspace deploy` / `e3 dataflow run`.
