@@ -1004,6 +1004,41 @@ final class RuntimeControllerTests: XCTestCase {
         await controller.disconnect()
     }
 
+    func testCancelAllInvalidatesReadinessSuspendedDuringFileHash() async throws {
+        let hasher = PausingFileHasher()
+        let (controller, runtime, modelURL, descriptor, expectedHash) = try await makePausedHasherFixture(hasher)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+
+        let readiness = Task { try await controller.readiness(sessionId: sessionID) }
+        await hasher.waitUntilStarted()
+
+        // No native readiness task exists yet: cancellation must invalidate the
+        // suspended hash attempt so it cannot register one after navigation.
+        let cancelled = await controller.cancelAllGenerations()
+        XCTAssertEqual(cancelled, 0)
+        await hasher.resume(with: expectedHash)
+
+        do {
+            _ = try await readiness.value
+            XCTFail("A readiness attempt suspended during file verification must not start after navigation cancellation.")
+        } catch is CancellationError {
+            // Expected: the shared runtime lifecycle epoch changed during hashing.
+        } catch {
+            XCTFail("Expected CancellationError, received: \(error)")
+        }
+
+        let report = await controller.reports().first
+        XCTAssertFalse(report?.canGenerate ?? true)
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeLeaseCount, 1, "Navigation cancellation preserves the controller lease.")
+        XCTAssertEqual(snapshot.activeUseCount, 0, "No native readiness inference may start after cancellation.")
+        await controller.disconnect()
+    }
+
     func testUnloadDuringReadinessHashPreventsStaleProbe() async throws {
         let hasher = PausingFileHasher()
         let (controller, runtime, modelURL, descriptor, expectedHash) = try await makePausedHasherFixture(hasher)
