@@ -182,3 +182,16 @@ Exact-head check-runs for PR #167 head e9418da92d6ed06afedc946dff97841f30002c4d 
 The iOS LlamaEngine workflow was not triggered because its pull_request target-branch filter lists main and codex/native-product-experience-integration, while PR #167 targets codex/bridge-native-runtime-integration. The Swift source and XCTest changes therefore remain unverified by iOS CI. PR #167's body now records this limitation. Do not merge or mark the native change validated based on the Intelligence check.
 
 Required follow-up: establish a supported exact-head iOS CI route for stacked native PRs, then confirm the XCTest suite passes. Do not broaden triggers blindly or weaken workflow protections. Physical iPhone Air acceptance remains a separate gate.
+
+
+## 9. CI trigger repair and replacement hardening PR #168
+
+The stacked iOS CI routing gap was addressed on PR #164's branch by adding codex/bridge-native-runtime-integration to the iOS LlamaEngine workflow pull_request target-branch filter. Workflow change commit: 482b364cb362b86224c3399ce16ce51a1c06c738.
+
+- Refreshed PR #164 iOS run #43991837435 started and was in the pinned llama.cpp build stage at the last checkpoint.
+- Fail-closed BridgeGate hardening was rebased onto the updated PR #164 head as draft PR #168, exact head ab6f290702018023edaec800f59bfec422f24bc9.
+- PR #168 adds unconditional denial of importModel/loadModel/unloadModel absent native host approval, regression tests for all three, and test coverage that BridgeChallengeStore.invalidateAll revokes every outstanding challenge.
+- PR #168 iOS LlamaEngine run #43991941724 started and was in runner setup at the last checkpoint. Wait for exact-head completion and inspect XCTest results before marking validated.
+- PR #167 is closed as superseded, not merged. Continue only with PR #168.
+
+The trigger repair does not itself validate the change. Hosted iOS CI is still distinct from physical iPhone Air acceptance, and the WebKit dispatcher/host approval coordinator remain unimplemented.
