@@ -154,6 +154,72 @@ private actor SlowLlamaEngine: ApexBridge.LlamaEngine {
     func wasDrained(_ requestId: String) -> Bool { drainedRequests.contains(requestId) }
 }
 
+private actor BlockingDrainLlamaEngine: ApexBridge.LlamaEngine {
+    private var generationStarted = false
+    private var generationStartedContinuation: CheckedContinuation<Void, Never>?
+    private var drainStartedContinuation: CheckedContinuation<Void, Never>?
+    private var drainContinuation: CheckedContinuation<Void, Never>?
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        if request.prompt.contains("readiness probe") {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(Token(text: "ready", isComplete: true))
+                continuation.finish()
+            }
+        }
+        generationStarted = true
+        generationStartedContinuation?.resume()
+        generationStartedContinuation = nil
+        return AsyncThrowingStream { continuation in
+            let producer = Task {
+                do {
+                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                    continuation.yield(Token(text: "late", isComplete: true))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in producer.cancel() }
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+
+    func cancelAndWait(sessionId: String, requestId: String) async {
+        await withCheckedContinuation { continuation in
+            drainContinuation = continuation
+            drainStartedContinuation?.resume()
+            drainStartedContinuation = nil
+        }
+    }
+
+    func unload(sessionId: String) async {}
+
+    func waitUntilGenerationStarted() async {
+        if generationStarted { return }
+        await withCheckedContinuation { continuation in
+            generationStartedContinuation = continuation
+        }
+    }
+
+    func waitUntilDrainStarted() async {
+        if drainContinuation != nil { return }
+        await withCheckedContinuation { continuation in
+            drainStartedContinuation = continuation
+        }
+    }
+
+    func finishDrain() {
+        drainContinuation?.resume()
+        drainContinuation = nil
+    }
+}
+
 private actor PausingChallengeStore: BridgeChallengeConsuming {
     private var consumeContinuation: CheckedContinuation<Bool, Never>?
     private var startedContinuation: CheckedContinuation<Void, Never>?
@@ -525,6 +591,80 @@ final class RuntimeControllerTests: XCTestCase {
         let drained = await engine.wasDrained(requestId)
         XCTAssertTrue(drained)
         _ = await controller.unload(sessionId: loaded.sessionId!)
+    }
+
+    func testDisconnectRetainsLeaseUntilNativeCancellationDrainCompletes() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 6_000))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-blocked-drain-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let descriptor = ModelDescriptor(id: "blocked-drain-model", name: "Blocked drain model", path: modelURL.path, contextLength: 1024)
+        let engine = BlockingDrainLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = try BridgeChallengeStore(clock: { clock.now() })
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL,
+            clock: { clock.now() }
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestId = UUID().uuidString
+        let challenge = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestId,
+            sessionId: sessionID
+        )
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "hold until disconnect drains",
+                requestId: requestId,
+                conversationRequestId: "disconnect-drain",
+                attemptId: "disconnect-drain-attempt",
+                challengeNonce: challenge,
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        await engine.waitUntilGenerationStarted()
+
+        let disconnect = Task { await controller.disconnect() }
+        await engine.waitUntilDrainStarted()
+
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeLeaseCount, 1, "The controller lease must remain held while native cancellation is draining.")
+        XCTAssertEqual(whileDraining.activeUseCount, 1, "The inference use-pin must remain held until cancelAndWait returns.")
+        XCTAssertEqual(whileDraining.loadedModelIDs, [descriptor.id])
+
+        await engine.finishDrain()
+        await disconnect.value
+        do {
+            _ = try await generation.value
+            XCTFail("Disconnect must not return a generation result.")
+        } catch {
+            // Cancellation is expected after native drain completes.
+        }
+
+        let afterDrain = await runtime.snapshot()
+        XCTAssertEqual(afterDrain.activeLeaseCount, 0)
+        XCTAssertEqual(afterDrain.activeUseCount, 0)
+        XCTAssertTrue(afterDrain.loadedModelIDs.isEmpty)
     }
 
     func testDisconnectDuringChallengeConsumptionPreventsInference() async throws {
