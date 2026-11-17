@@ -55,16 +55,20 @@ final class BridgeGateTests: XCTestCase {
         XCTAssertEqual(BridgeGate.parse(extraKey, page: page, trusted: trusted), .invalidMessage)
     }
 
-    func testLoadRequiresHostOwnedConsequentialAuthorization() {
+    func testConsequentialActionsRemainBlockedUntilNativeApprovalCoordinatorExists() {
         let page = URL(string: "https://workspace.example.test")!
         let trusted = page
-        let body: [String: Any] = [
-            "id": UUID().uuidString,
-            "action": "loadModel",
-            "model": "local-model-1",
+        let actions: [[String: Any]] = [
+            ["id": UUID().uuidString, "action": "importModel", "model": "local-model-1", "artifactId": "artifact-1"],
+            ["id": UUID().uuidString, "action": "loadModel", "model": "local-model-1"],
+            ["id": UUID().uuidString, "action": "unloadModel", "sessionId": UUID().uuidString]
         ]
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted), .authorizationRequired)
-        // No caller-provided Boolean can turn a consequential action into an accepted message.
+        for body in actions {
+            XCTAssertEqual(
+                BridgeGate.parse(body, page: page, trusted: trusted),
+                .authorizationRequired
+            )
+        }
     }
 
     func testUntrustedOriginAndMissingRequiredFieldsFailClosed() {
