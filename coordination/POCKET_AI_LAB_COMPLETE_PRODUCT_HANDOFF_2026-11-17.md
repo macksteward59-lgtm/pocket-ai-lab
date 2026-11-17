@@ -147,13 +147,76 @@ The original discussion identifies five tiers:
 
 These are the recovered tier labels and governing distinctions. The exact per-module tier assignments, approval matrix, and detailed action definitions must be taken from the original registry/source conversation when recovered; do not infer them from module names.
 
-### 5.4 M01–M42 registry recovery status
+### 5.4 Recovered original M01–M42 capability inventory
 
-The six canonical layer titles and the governance/tier rules above are now recovered and recorded. The personal-context search did not return the exact 42 module names, M01–M42 descriptions, or their individual assignments. Therefore those entries remain **source text not yet recovered**, not an invitation to reconstruct them.
+The original 42-module inventory has now been recovered from the owner's October 29, 2026 conversation. The table below preserves the recovered IDs and names in their original order. These are **capability modules**, not 42 mandatory permanent agents.
 
-A prior conversation also referenced **“Director and the 42 checks”** at `src/lib/compliance/director.ts`. That is a useful retrieval lead, not proof that the current branch contains the original registry; the path was not present at that location on `agent-coordination` when checked. Search the relevant historical conversation and repository commits/branches for the original implementation before writing the module rows.
+| ID | Original module name |
+|---|---|
+| M01 | Network Security |
+| M02 | Penetration Testing |
+| M03 | Vulnerability Assessment |
+| M04 | Web Application Security |
+| M05 | Operating System Security |
+| M06 | Database Security |
+| M07 | Firewall Management |
+| M08 | Intrusion Detection Systems |
+| M09 | Identity and Access Management |
+| M10 | Security Information and Event Management (SIEM) |
+| M11 | Secure Coding Practices |
+| M12 | Security Auditing |
+| M13 | Threat Modeling |
+| M14 | Incident Response |
+| M15 | Reverse Engineering |
+| M16 | Digital Forensics |
+| M17 | Advanced Malware Analysis |
+| M18 | Threat Hunting |
+| M19 | Cloud Security |
+| M20 | Incident Response Automation |
+| M21 | Cyber Threat Intelligence |
+| M22 | IoT Security |
+| M23 | DevSecOps |
+| M24 | Cybersecurity Consulting |
+| M25 | Social Engineering |
+| M26 | Cryptography |
+| M27 | Cybersecurity Research |
+| M28 | Cybersecurity Education and Training |
+| M29 | Cybersecurity Policy and Governance |
+| M30 | AI and Machine Learning in Cybersecurity |
+| M31 | Quantum Computing in Cybersecurity |
+| M32 | Biometric Security |
+| M33 | Blockchain Security |
+| M34 | Cybersecurity Law and Ethics |
+| M35 | Threat Intelligence Automation |
+| M36 | Predictive Analytics for Cybersecurity |
+| M37 | Cyber Physical Systems Security |
+| M38 | Cloud Infrastructure Security |
+| M39 | Red Team Operations |
+| M40 | Blue Team Operations |
+| M41 | Cybersecurity Risk Management |
+| M42 | Secure Software Development Lifecycle (SSDLC) |
 
-When recovered, preserve exact IDs, names, layer assignments, and descriptions verbatim. Then add inputs/outputs, dependencies, permission class, execution tier, resource budget, owner, version, lifecycle, tests, and implementation mapping as separately labeled metadata. Map modules to operating modes without allowing a mode to weaken authorization.
+**Recovery precision:** the original module names and numbering are recovered. The conversation-memory result also returned substantial portions of descriptions, but not a complete verbatim description for every module. Therefore this handoff does not fabricate descriptions, inputs/outputs, or per-module permission/tier assignments. The six-layer titles were recovered from the separate November 1 conversation; the exact original M01–M42-to-six-layer mapping was not returned. Do not infer that mapping from names or the four conceptual groups below.
+
+### 5.5 Recovered four conceptual integration groups
+
+The earlier dossier grouped the capabilities conceptually as follows. These groupings are preserved as a second organizational view; they are **not** substitutes for the canonical six-layer architecture or a definitive per-module mapping.
+
+1. **Technical foundations:** Programming, Networks, Operating systems, Databases, Cryptography.
+2. **Security analysis:** Vulnerability assessment, Threat modeling, Application security, Reverse engineering, Forensics.
+3. **Operational capabilities:** Red team, Blue team, SIEM, Threat hunting, Incident response, Cloud defense.
+4. **Advanced integration:** AI/ML, Automation, Intelligence, Risk governance, Quantum-resistant security, Cyber-physical resilience.
+
+### 5.6 Registry implementation requirements and unresolved source recovery
+
+- Preserve M01–M42 IDs and names exactly as listed; never silently renumber or merge similarly named capabilities.
+- Keep the four conceptual groups and six canonical layers as distinct taxonomies until the original six-layer assignment table is recovered.
+- Recover each original module description verbatim from the October 29 conversation where available. Mark missing description text as unrecovered rather than filling it with generated prose.
+- Recover the November 1 per-layer assignment, tier/permission matrix, and detailed action definitions before assigning those values to individual modules.
+- After source recovery, add implementation metadata separately: inputs, outputs, dependencies, permission class, execution tier, resource budget, owner, version, lifecycle, tests, and implementation mapping.
+- Map modules to the five operating modes without allowing a mode to weaken authorization.
+- A prior conversation referenced **“Director and the 42 checks”** at `src/lib/compliance/director.ts`. This remains a repository-history retrieval lead, not proof that the path exists on the current coordination branch; it was not found at that path on `agent-coordination` when checked.
+
 
 ## 6. Architecture and subsystem ownership
 
