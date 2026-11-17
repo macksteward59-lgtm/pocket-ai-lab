@@ -180,3 +180,8 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 - This is documentation-only. No application implementation, APEX policy, runtime behavior, workflow execution, merge, or requirement status was changed.
 - Preserve the master checklist and 316-row traceability matrix as separate authorities. Their last recorded counts remain historical until a row-level re-audit; no requirements were marked verified by this handoff.
 - Immediate gates: reconcile PR #171/#174/#175 exact heads and native bridge CI; complete physical iPhone Air acceptance; recover original M01–M42 registry; validate East with live PostgreSQL/RLS; connect OWASP reference context to Orchestrator only through a separately tested integration.
+
+
+## Original 42-module capability inventory recovered — 2026-11-17
+
+The October 29 conversation recovery yielded the complete original M01–M42 names and numbering. The complete handoff and master checklist now preserve the inventory and the earlier four conceptual groups. The November 1 six canonical layers and T0–T4 governance remain separately documented. Exact module descriptions for all 42 and the original per-module six-layer/tier assignment matrix are still source-recovery tasks; do not invent them. No application implementation or verification status is changed by this documentation update.
