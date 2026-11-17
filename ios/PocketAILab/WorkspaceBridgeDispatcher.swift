@@ -22,16 +22,19 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     private var lifecycleGeneration: UInt64 = 0
     private var navigationCleanupPending = false
     private let beforeSessionResolution: (@MainActor () async -> Void)?
+    private let beforeNavigationCleanup: (@MainActor () async -> Void)?
 
     init(
         trustedURL: URL,
         runtimeDependency: LocalChatRuntimeDependency,
         modelCatalogStore: LocalModelCatalogStore? = nil,
-        beforeSessionResolution: (@MainActor () async -> Void)? = nil
+        beforeSessionResolution: (@MainActor () async -> Void)? = nil,
+        beforeNavigationCleanup: (@MainActor () async -> Void)? = nil
     ) {
         self.trustedURL = trustedURL
         self.runtimeDependency = runtimeDependency
         self.beforeSessionResolution = beforeSessionResolution
+        self.beforeNavigationCleanup = beforeNavigationCleanup
         if let modelCatalogStore {
             self.modelCatalogStore = modelCatalogStore
         } else {
@@ -63,6 +66,8 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         lifecycleGeneration &+= 1
         let navigationGeneration = lifecycleGeneration
         navigationCleanupPending = true
+        await beforeNavigationCleanup?()
+        guard isActive, lifecycleGeneration == navigationGeneration else { return }
         guard let challengeStore else {
             if isActive, lifecycleGeneration == navigationGeneration {
                 navigationCleanupPending = false
