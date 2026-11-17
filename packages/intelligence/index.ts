@@ -24,3 +24,4 @@ export {
   getOwaspGuidanceTrust,
   type OwaspGuidanceControl
 } from "./knowledge/owaspGuidance";
+\nexport { buildOwaspAgentContext, type OwaspAgentContext } from "./knowledge/owaspContext";\n
