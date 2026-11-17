@@ -23,7 +23,12 @@ final class PocketAILabTests: XCTestCase {
         let taskHistoryStore = LocalAgentTaskHistoryStore(
             fileURL: root.appendingPathComponent("AgentTaskHistory.json")
         )
+        let composition = NativeRuntimeComposition(
+            engine: engine,
+            availableMemoryMB: { 4_096 }
+        )
         return LocalChatModel(
+            runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
             conversationStore: conversationStore,
@@ -54,10 +59,10 @@ final class PocketAILabTests: XCTestCase {
             runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
-            modelCatalogStore: catalog,
             conversationStore: LocalConversationStore(
                 fileURL: root.appendingPathComponent("first-history.json")
             ),
+            modelCatalogStore: catalog,
             agentTaskHistoryStore: LocalAgentTaskHistoryStore(
                 fileURL: root.appendingPathComponent("first-tasks.json")
             )
@@ -68,10 +73,10 @@ final class PocketAILabTests: XCTestCase {
             runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
-            modelCatalogStore: catalog,
             conversationStore: LocalConversationStore(
                 fileURL: root.appendingPathComponent("second-history.json")
             ),
+            modelCatalogStore: catalog,
             agentTaskHistoryStore: LocalAgentTaskHistoryStore(
                 fileURL: root.appendingPathComponent("second-tasks.json")
             )
