@@ -154,6 +154,37 @@ private actor SlowLlamaEngine: ApexBridge.LlamaEngine {
     func wasDrained(_ requestId: String) -> Bool { drainedRequests.contains(requestId) }
 }
 
+private actor PausingChallengeStore: BridgeChallengeConsuming {
+    private var consumeContinuation: CheckedContinuation<Bool, Never>?
+    private var startedContinuation: CheckedContinuation<Void, Never>?
+
+    func consume(
+        _ nonce: String,
+        page: URL,
+        trusted: URL,
+        requestId: String,
+        sessionId: String
+    ) async -> Bool {
+        await withCheckedContinuation { continuation in
+            consumeContinuation = continuation
+            startedContinuation?.resume()
+            startedContinuation = nil
+        }
+    }
+
+    func waitUntilConsumeStarted() async {
+        if consumeContinuation != nil { return }
+        await withCheckedContinuation { continuation in
+            startedContinuation = continuation
+        }
+    }
+
+    func resumeConsume(_ accepted: Bool) {
+        consumeContinuation?.resume(returning: accepted)
+        consumeContinuation = nil
+    }
+}
+
 final class RuntimeControllerTests: XCTestCase {
     private let trustedWorkspaceURL = URL(string: "https://workspace.example.test/app")!
 
@@ -438,6 +469,72 @@ final class RuntimeControllerTests: XCTestCase {
         let drained = await engine.wasDrained(requestId)
         XCTAssertTrue(drained)
         _ = await controller.unload(sessionId: loaded.sessionId!)
+    }
+
+    func testDisconnectDuringChallengeConsumptionPreventsInference() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-disconnect-race-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "disconnect-race-model",
+            name: "Disconnect race model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let runtime = try NativeInferenceRuntime(
+            engine: StubLlamaEngine(),
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = PausingChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL
+        )
+        let expectedHash = Self.sha256(modelURL)
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: expectedHash,
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestID = UUID().uuidString
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "This must not reach inference after disconnect.",
+                requestId: requestID,
+                conversationRequestId: "disconnect-race",
+                attemptId: "disconnect-race-attempt",
+                challengeNonce: String(repeating: "a", count: 32),
+                pageURL: trustedWorkspaceURL
+            )
+        }
+
+        await challengeStore.waitUntilConsumeStarted()
+        await controller.disconnect()
+        await challengeStore.resumeConsume(true)
+
+        do {
+            _ = try await generation.value
+            XCTFail("Generation must not start after its session has been disconnected.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .unknownSession)
+        }
+
+        let reports = await controller.reports()
+        let snapshot = await runtime.snapshot()
+        XCTAssertTrue(reports.isEmpty)
+        XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
