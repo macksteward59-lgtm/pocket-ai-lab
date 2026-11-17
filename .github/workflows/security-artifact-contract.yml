@@ -1,0 +1,35 @@
+name: Security artifact provenance contract
+
+on:
+  pull_request:
+    branches: [agent-coordination]
+    paths:
+      - "packages/intelligence/security-pipeline/artifactCandidate.ts"
+      - "packages/intelligence/security-pipeline/__tests__/artifactCandidate.test.ts"
+      - "tsconfig.security-artifact.json"
+      - ".github/workflows/security-artifact-contract.yml"
+  push:
+    branches: [codex/security-artifact-provenance-contract]
+    paths:
+      - "packages/intelligence/security-pipeline/artifactCandidate.ts"
+      - "packages/intelligence/security-pipeline/__tests__/artifactCandidate.test.ts"
+      - "tsconfig.security-artifact.json"
+      - ".github/workflows/security-artifact-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  artifact-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install declared dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Type-check and compile isolated contract
+        run: npx tsc -p tsconfig.security-artifact.json
+      - name: Run artifact provenance regression tests
+        run: node --test .security-artifact-build/packages/intelligence/security-pipeline/__tests__/artifactCandidate.test.js
