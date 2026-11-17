@@ -362,3 +362,14 @@ Created isolated feature branch `codex/app-scoped-runtime-composition`, stacked 
 CI routing: the iOS workflow's base-branch allowlist did not initially include the PR #169 branch, so PR #171 could not receive the native workflow. Added `codex/runtime-challenge-enforcement` to that allowlist on the PR #169 branch in commit `3666c01a629219b22b9313cb770b6246f082217d`. Exact PR #171 head is `3459a989e68ebb89a4324a9b7fc026ab04d5ea41`; iOS LlamaEngine run #44092708116 and Intelligence CI run #44092697374 are in progress at this refresh. A superseded earlier iOS run was cancelled after a newer head was pushed; that is not a test failure.
 
 This is not completion of ADR-001. `LocalChatModel` still retains its lease; the shared lease/session service, Workspace injection, Runtime Status snapshots, RuntimeController/challenge-store composition, WebKit frame-derived dispatcher, lifecycle invalidation, native approval coordinator, and physical iPhone Air acceptance remain open. Preserve APEX as the sole authorization authority and keep consequential bridge actions fail-closed.
+
+
+---
+
+## 18. Phase A refinement — centralized session lease ownership — 2026-11-17
+
+Extended PR #171 with `NativeModelSessionService` on `codex/app-scoped-runtime-composition`. The service owns exact `ModelPoolLease` values keyed by consumer UUID. `LocalChatModel` no longer owns a mutable lease handle; it resolves its active lease through the shared service. Releasing one consumer no longer attempts to unload a model while another consumer still has a lease. The service unloads only after the final active lease is released and reports unload failures distinctly.
+
+Current PR #171 head: `be517ff613ff822fe649623ffe36ea0512b1dcab`. Current exact-head validation: Pocket AI Lab CI run #44093487773 and iOS LlamaEngine CI run #44093503567 are in progress; previous native workflow attempts on superseded heads were cancelled and are not counted as failures or passes.
+
+Remaining ADR-001 gaps: Workspace does not yet receive the shared service; Runtime Status still reports compile-time probe information rather than live app-scoped pool/scheduler snapshots; RuntimeController and BridgeChallengeStore are not yet composed with the same runtime/session authority; WebKit has no script-message dispatcher; challenge invalidation and native approval coordinator remain outstanding. Physical iPhone Air acceptance is still required. This update does not mark Phase A fully accepted until exact-head CI completes.
