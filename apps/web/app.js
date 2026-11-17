@@ -3,7 +3,7 @@ const state = { model: "model not connected", busy: false, abortController: null
 const views = ["chat","agents","memory","activity","settings"];
 function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
-function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
+function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":label;}
 async function health(){
  const bridge=window.PocketAILabNativeBridge;
  if(bridge&&bridge.isAvailable()){
@@ -13,14 +13,30 @@ async function health(){
    const selected=models.find(model=>model&&model.selected===true);
    const sessions=Array.isArray(status.activeLocalSessions)?status.activeLocalSessions:[];
    const active=selected&&sessions.find(session=>session&&session.modelId===selected.id);
+   const controllerSessions=Array.isArray(status.controllerSessions)?status.controllerSessions:[];
+   const controllerSession=active&&controllerSessions.find(session=>
+    session&&session.modelId===selected.id&&session.sessionId===active.sessionId
+   );
+   const nativeReady=status.runtimeAvailable===true&&!!active&&
+    !!controllerSession&&controllerSession.canGenerate===true&&
+    controllerSession.sharedLocalLeaseActive===true;
    const hint=document.querySelector(".privacy-hint");
    if(selected)state.model=selected.name||selected.id;
-   if(status.runtimeAvailable&&active){
+   if(nativeReady){
     setConnection(true,"iPhone native model ready");
     if(hint)hint.textContent="◉ Prompts are processed by this iPhone's native runtime";
    }else{
-    setConnection(false,"Load a model in Local AI");
-    if(hint)hint.textContent="◉ Open Local AI and load the selected model to enable native Workspace chat";
+    const statusLabel=!status.runtimeAvailable
+     ?"iPhone native runtime unavailable"
+     :!selected
+      ?"Select a model in Local AI"
+      :!active
+       ?"Load the selected model in Local AI"
+       :"Native session not ready for Workspace";
+    setConnection(false,statusLabel);
+    if(hint)hint.textContent=active
+     ?"◉ The selected model is loaded, but Workspace has not verified a ready native controller session"
+     :"◉ Open Local AI and load the selected model to enable native Workspace chat";
    }
   }catch(error){
    setConnection(false,"iPhone native runtime unavailable");
