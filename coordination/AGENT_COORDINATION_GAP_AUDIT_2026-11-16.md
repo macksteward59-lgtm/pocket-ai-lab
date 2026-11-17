@@ -346,3 +346,19 @@ Next implementation sequence:
 4. Derive origin and main-frame status from WebKit frame metadata, issue/consume one-use host challenges, and invalidate them on navigation/disconnect/session replacement/teardown.
 5. Preserve APEX authorization; import/load/unload remain denied pending native approval coordinator.
 6. Prove single runtime/pool/scheduler/lease ownership in tests, then run hosted CI and physical iPhone Air acceptance separately.
+
+
+---
+
+## 17. Phase A implementation — app-scoped runtime composition — 2026-11-17
+
+Created isolated feature branch `codex/app-scoped-runtime-composition`, stacked on the exact PR #169 head branch. Draft PR #171 adds:
+- `NativeRuntimeComposition`, held by the SwiftUI root for app lifetime, constructs one `NativeInferenceRuntime` / ModelPool / InferenceScheduler.
+- Explicit runtime dependency injection into `LocalChatView` and `LocalChatModel`; the production view initializer now requires a dependency rather than silently creating a per-view runtime.
+- A fail-closed unavailable dependency path; it does not retry construction of a second runtime when app-level initialization fails.
+- A two-consumer XCTest that checks one engine model load through the shared pool and eventual single session unload.
+- A second XCTest that confirms unavailable app runtime initialization does not fall back to a per-view runtime.
+
+CI routing: the iOS workflow's base-branch allowlist did not initially include the PR #169 branch, so PR #171 could not receive the native workflow. Added `codex/runtime-challenge-enforcement` to that allowlist on the PR #169 branch in commit `3666c01a629219b22b9313cb770b6246f082217d`. Exact PR #171 head is `3459a989e68ebb89a4324a9b7fc026ab04d5ea41`; iOS LlamaEngine run #44092708116 and Intelligence CI run #44092697374 are in progress at this refresh. A superseded earlier iOS run was cancelled after a newer head was pushed; that is not a test failure.
+
+This is not completion of ADR-001. `LocalChatModel` still retains its lease; the shared lease/session service, Workspace injection, Runtime Status snapshots, RuntimeController/challenge-store composition, WebKit frame-derived dispatcher, lifecycle invalidation, native approval coordinator, and physical iPhone Air acceptance remain open. Preserve APEX as the sole authorization authority and keep consequential bridge actions fail-closed.
