@@ -2857,3 +2857,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Recorded unresolved bridge gap: PR #164 does not install WKScriptMessageHandler/Web-to-native action dispatch, does not consume challenges through WebKit, and does not enable runtime-control actions; host-side approval coordination remains prerequisite.
 - Recorded further gaps: current-head CI for PR #162 is not established; live PostgreSQL/RLS remains unproven; authoritative original six-layer M01-M42 registry remains unavailable; physical iPhone Air install/inference/offline/resource/thermal/battery acceptance remains outstanding.
 - Added `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md`, refreshed the PR #164 status and audit link in `coordination/BOARD.md`, and preserved the existing 316-row inventory counts. No checklist item was marked verified; no application code, APEX/East trust policy, PR state, merge, cancellation, rerun, or physical-device state was changed.
+
+
+## 2026-11-16 UTC — PR #164 native app XCTest passed; simulator XCTest started
+
+- Re-polled exact-head iOS run #43981080474 for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- The native app build step and native Pocket AI Lab app XCTest step have both completed successfully.
+- The iOS engine simulator XCTest step is now `in_progress`; pinned GGUF download/path validation, macOS inference smoke, and runner evidence remain pending.
+- Overall iOS workflow remains `in_progress`. No overall pass, pinned-GGUF model generation, or physical iPhone Air acceptance is claimed.
+- Refreshed `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md` and `coordination/BOARD.md` to replace the previous stale-XCTest checkpoint with the newly observed step state. No source code, PR state, merge, cancellation, rerun, or trust-boundary change.
