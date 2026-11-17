@@ -512,6 +512,7 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertTrue(gate.hasRestoredSavedAddress)
     }
 
+    @MainActor
     func testWorkspaceWebViewReloadsOnlyForExplicitOpenRequests() {
         let coordinator = PrivateWorkspaceWebView.Coordinator(
             trustedURL: URL(string: "https://workspace.example")!,
