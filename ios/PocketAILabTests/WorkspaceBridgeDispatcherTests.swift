@@ -31,6 +31,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     @MainActor
     private func makeLoadedDispatcher(
         root: URL,
+        engine: LlamaEngine = DispatcherStubEngine(),
         beforeSessionResolution: (@MainActor () async -> Void)? = nil,
         beforeNavigationCleanup: (@MainActor () async -> Void)? = nil
     ) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
@@ -56,7 +57,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             quantization: entry.quantization
         )
         let composition = NativeRuntimeComposition(
-            engine: DispatcherStubEngine(),
+            engine: engine,
             availableMemoryMB: { 4_096 }
         )
         let runtime = try XCTUnwrap(composition.runtime)
@@ -556,6 +557,94 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testDispatcherInvalidationDrainsActiveGenerationBeforeReleasingOnlyWorkspaceLease() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let engine = DispatcherBlockingDrainLlamaEngine()
+        let (dispatcher, sessionID, composition) = try await makeLoadedDispatcher(
+            root: root,
+            engine: engine
+        )
+        guard case .shared(let service) = composition.dependency,
+              let runtime = composition.runtime else {
+            throw XCTSkip("Shared runtime composition unavailable in test fixture.")
+        }
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let requestID = UUID().uuidString
+
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        let authorization = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(authorization["ok"] as? Bool, true)
+        let authorizationData = try XCTUnwrap(authorization["data"] as? [String: Any])
+        let nonce = try XCTUnwrap(authorizationData["challengeNonce"] as? String)
+
+        let generation = Task {
+            await dispatcher.handle(
+                body: [
+                    "id": UUID().uuidString,
+                    "action": "generate",
+                    "sessionId": sessionID,
+                    "prompt": "Hold this generation until dispatcher teardown drains it.",
+                    "requestId": requestID,
+                    "conversationRequestId": "dispatcher-drain",
+                    "attemptId": "dispatcher-drain-attempt",
+                    "challengeNonce": nonce
+                ],
+                frameOrigin: trustedOrigin,
+                isMainFrame: true
+            )
+        }
+        await engine.waitUntilGenerationStarted()
+
+        let beforeInvalidation = await runtime.snapshot()
+        XCTAssertEqual(beforeInvalidation.activeLeaseCount, 2)
+        XCTAssertEqual(beforeInvalidation.activeUseCount, 1)
+        XCTAssertEqual(beforeInvalidation.loadedModelIDs.count, 1)
+
+        // This is the dispatcher cleanup invoked by PrivateWorkspaceWebView teardown.
+        dispatcher.invalidate()
+        await engine.waitUntilDrainStarted()
+
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeLeaseCount, 2, "Both consumer leases must remain held until native cancellation drains.")
+        XCTAssertEqual(whileDraining.activeUseCount, 1, "The inference use-pin must remain held during native drain.")
+        XCTAssertEqual(whileDraining.loadedModelIDs.count, 1, "The shared model must remain resident during native drain.")
+        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID], "The Local AI lease must remain untouched.")
+
+        await engine.finishDrain()
+        let response = await generation.value
+
+        let deadline = Date().addingTimeInterval(5)
+        var afterDrain = await runtime.snapshot()
+        while afterDrain.activeLeaseCount != 1, Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+            afterDrain = await runtime.snapshot()
+        }
+
+        XCTAssertEqual(response["ok"] as? Bool, false, "A generation invalidated by teardown must not succeed.")
+        XCTAssertNil((response["data"] as? [String: Any])?["output"], "No stale generation output may escape teardown.")
+        XCTAssertEqual(afterDrain.activeLeaseCount, 1, "Only the Local AI consumer lease should remain.")
+        XCTAssertEqual(afterDrain.activeUseCount, 0, "The native inference use-pin must be released after drain.")
+        XCTAssertEqual(afterDrain.loadedModelIDs, [service.activeLeases()[0].model.id], "The Local AI lease must keep the shared model loaded.")
+        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID], "The exact Local AI session must survive Workspace teardown.")
+    }
+
+    @MainActor
     func testInvalidationDisablesAllFurtherMessages() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -568,6 +657,72 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             isMainFrame: true
         )
         XCTAssertEqual(response["error"] as? String, "bridge_unavailable")
+    }
+}
+
+private actor DispatcherBlockingDrainLlamaEngine: LlamaEngine {
+    private var generationStarted = false
+    private var generationStartedContinuation: CheckedContinuation<Void, Never>?
+    private var drainStartedContinuation: CheckedContinuation<Void, Never>?
+    private var drainContinuation: CheckedContinuation<Void, Never>?
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        if request.prompt.contains("readiness probe") {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(Token(text: "ready", isComplete: true))
+                continuation.finish()
+            }
+        }
+        generationStarted = true
+        generationStartedContinuation?.resume()
+        generationStartedContinuation = nil
+        return AsyncThrowingStream { continuation in
+            let producer = Task {
+                do {
+                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                    continuation.yield(Token(text: "late", isComplete: true))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in producer.cancel() }
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+
+    func cancelAndWait(sessionId: String, requestId: String) async {
+        await withCheckedContinuation { continuation in
+            drainContinuation = continuation
+            drainStartedContinuation?.resume()
+            drainStartedContinuation = nil
+        }
+    }
+
+    func unload(sessionId: String) async {}
+
+    func waitUntilGenerationStarted() async {
+        if generationStarted { return }
+        await withCheckedContinuation { continuation in
+            generationStartedContinuation = continuation
+        }
+    }
+
+    func waitUntilDrainStarted() async {
+        if drainContinuation != nil { return }
+        await withCheckedContinuation { continuation in
+            drainStartedContinuation = continuation
+        }
+    }
+
+    func finishDrain() {
+        drainContinuation?.resume()
+        drainContinuation = nil
     }
 }
 
