@@ -266,6 +266,9 @@ public actor RuntimeController {
             sessionId: sessionId
         )
         guard challengeAccepted else { throw RuntimeControllerError.unauthorizedChallenge }
+        // Cancellation can arrive while challenge consumption is suspended.
+        // Do not start inference for a request the caller has already stopped.
+        try Task.checkCancellation()
 
         // Actor methods are reentrant across the challenge-store await above.
         // A concurrent disconnect/unload may have released this lease while
