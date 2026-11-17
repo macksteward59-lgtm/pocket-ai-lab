@@ -126,3 +126,13 @@ Upstream source references (main branch, not a pinned deployment contract):
 - [processExec](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/execution/processExec.ts)
 - [orchestrator interfaces](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/dataflow/orchestrator/interfaces.ts)
 - [LocalOrchestrator](https://github.com/elaraai/east-workspace/blob/main/libs/e3/packages/e3-core/src/dataflow/orchestrator/LocalOrchestrator.ts)
+
+
+### Existing Pocket AI Lab host-side cancellation building blocks
+
+A repository scan found two existing host-side patterns that are useful references, but neither is yet the e3 execution supervisor:
+
+- `runtime/lab/server.ts` binds to 127.0.0.1, creates an AbortController for `POST /api/tasks`, aborts it when the response closes before completion, and passes the signal to `runLabSession`.
+- `apps/web/server.mjs` uses the same response-close-to-AbortController pattern for `POST /api/agent-tasks` and `POST /api/chat`, passing the signal into the llama.cpp-backed provider/session.
+
+These are request-scoped cancellation paths. They do not expose a durable e3 run/task execution registry, an authenticated host-to-provider cancel command keyed by a stable generation ID, a provider-settlement query after the original HTTP client disappears, or restart recovery for outstanding provider generations. They are implementation precedents for a host-owned supervisor, not evidence that e3 cancellation is already integrated. Any internal cancellation endpoint must add explicit local-origin/authentication controls, per-attempt ownership, idempotency, and a durable settlement record; it must not trust a caller-supplied task ID alone.
