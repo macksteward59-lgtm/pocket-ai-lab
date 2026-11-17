@@ -3095,3 +3095,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Newly passed: fail-closed Swift typecheck, physical-device framework linking, iPhone simulator selection and boot, and restored Director bridge package manifest validation. Earlier pinned llama.cpp simulator/macOS build also remains passed.
 - Native app project generation/build is now in progress. Native app XCTest, simulator XCTest, pinned GGUF smoke setup, and macOS XCTest have not yet run.
 - Updated Phase B coordination board to reflect the completed gates and current build step. PR #174 remains draft; no merge, no physical iPhone Air acceptance, and no signed evidence/authorization claim.
+
+
+## 2026-11-17 — PR #174 replay test strengthened
+
+- During an independent review of the one-use challenge regression, found that the replay test changed both the WebKit envelope `id` and the bound `requestId`. That would reject because the challenge binding did not match, without independently proving that a successfully consumed challenge cannot be replayed with the same binding.
+- Corrected `ios/PocketAILabTests/WorkspaceBridgeDispatcherTests.swift` in commit `be30d18eacdb7c96b5cc3517465b76e1832c1d0f`: preserve the exact consumed `requestId`, `sessionId`, and `challengeNonce`, and change only the message envelope ID. A rejection now specifically exercises one-use challenge consumption.
+- Fresh exact-head iOS LlamaEngine run #44124427695 is pending for this commit. The preceding run #44122576415 is for the previous head and cannot be used as current-head evidence.
+- Updated PR #174 validation and coordination board. No production code changed; no merge.
