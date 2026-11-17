@@ -3122,3 +3122,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added deterministic regression in `baef6bd0f96ace42e33a0d32d957dd00bd35eece`: pause challenge consumption, disconnect and release the session, resume the challenge result, and assert generation fails with `unknownSession` and runtime remains unloaded.
 - Current exact-head iOS LlamaEngine run #44125054127 is in progress for `baef6bd0f96ace42e33a0d32d957dd00bd35eece`. Intelligence CI #44125037166 is also in progress. No current-head build/test result claimed yet.
 - Updated PR #174 validation and the Phase B ownership row. PR remains draft; no merge, no physical-device acceptance, no APEX authorization, no Ed25519 evidence signature.
+
+
+## 2026-11-17 — PR #174 cancellation race guard and regression
+
+- Added `Task.checkCancellation()` immediately after successful challenge consumption in `RuntimeController.generate`. A caller cancelled while suspended on the challenge actor must not launch inference after it resumes.
+- Added deterministic `testCancellationDuringChallengeConsumptionDoesNotStartInference` using the pausing challenge-consumer test double. The test also verifies the readiness report remains valid because inference never began.
+- Corrected the test expectation: readiness should remain valid after pre-inference cancellation; the controller is explicitly disconnected at test end.
+- Current PR head: `8b546de57dde29b722cbbcfaabafd7cb29454c0b`. Current-head Intelligence CI #44125334631 is running. iOS run #44125287074 targeted preceding head `85396e2db6c372bcd4f2b41f0af2f210f146a295` and was cancelled on branch advance; awaiting a current-head iOS run. No current-head native validation is claimed.
+- Updated PR #174 validation and coordination board. Draft remains open; no merge, physical-device acceptance, APEX authorization, or signed evidence.
