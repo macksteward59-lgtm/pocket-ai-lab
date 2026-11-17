@@ -763,6 +763,7 @@ function cloneTask(task: TaskRecord): TaskRecord {
   return {
     ...task,
     metadata: { ...task.metadata },
+    events: [...(task.events ?? [])].map(event => ({ ...event })),
     steps: task.steps.map(step => ({
       ...step,
       dependsOn: [...step.dependsOn],
