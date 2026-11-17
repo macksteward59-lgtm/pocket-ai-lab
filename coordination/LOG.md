@@ -3050,3 +3050,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Native cancellation awaits `RuntimeController.cancelGeneration` and the engine's drain path before the dispatcher replies. If the WKWebView navigation/teardown path fires, the dispatcher invalidates outstanding challenges and cancels all active generation tasks.
 - Added Node coverage for aborting a live native chat request and asserting that the cancellation targets the exact same session/request IDs.
 - Latest PR #175 exact head: `4381df81ed0305a96cded87c78c9e446369c5893`. CI #44113067640 passed JavaScript syntax and TypeScript build and is currently running the full web test suite. Previous exact-head CI #44112487822 passed the pre-cancellation web suite.
+
+
+## 2026-11-17 — PR #174 native XCTest fixture failure isolated
+
+- Re-polled exact-head iOS LlamaEngine run #44112233207 for PR #174 head `48a6fabea107cc587327bf1782caef14aeefdab7`.
+- Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS framework link, iPhone Air simulator boot, Director bridge package validation, and native app build all passed. Native app XCTest compilation failed; simulator XCTest and pinned-GGUF/macOS smoke steps were skipped.
+- Retrieved the failed job log. The compiler reports: `Missing argument for parameter 'runtimeDependency' in call`.
+- Inspected `ios/PocketAILabTests/PocketAILabTests.swift` at the exact PR head. The failing fixture is the restored-model construction in `testLocalModelCatalogPersistsMultipleSameNamedImportsAndSelection`; its `LocalChatModel(engine:modelDirectory:modelCatalogStore:)` call does not inject the now-required app-scoped runtime dependency. The shared-runtime test helper and other explicit constructors already inject it.
+- This is a test-fixture compatibility defect, not evidence of a production app compile failure. Planned repair: create an isolated test `NativeRuntimeComposition` for the restored instance and pass its dependency; keep the test's assertion that catalog restoration does not fabricate a loaded session. Do not change runtime ownership or weaken the required dependency.
+- Updated the Phase B board claim with this exact blocker and retained ChatGPT as the sole owner of `codex/webkit-readonly-dispatcher-rebased`. PR #175 remains a separate web-client scope; no overlap or Agent Team native integration added.
+- No code change or rerun yet. After the fixture-only fix, require a fresh exact-head iOS run through native app XCTest, iOS simulator XCTest, pinned-GGUF macOS smoke, and final runner evidence. Physical iPhone Air acceptance remains separate. No merge performed.
