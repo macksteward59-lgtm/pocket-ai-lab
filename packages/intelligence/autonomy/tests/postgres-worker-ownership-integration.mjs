@@ -138,8 +138,13 @@ async function main() {
     await finalObserver.init();
     assert.equal(finalObserver.getTask(taskId).status, "completed");
     assert.equal(finalObserver.getTask(taskId).steps[0].result, "completed by the persisted lease owner");
+    assert.deepEqual(
+      finalObserver.getTask(taskId).events.map(event => event.type),
+      ["task.created", "step.claimed", "step.completed", "task.completed"]
+    );
+    assert.equal(finalObserver.getTask(taskId).events[1].ownerId, claim.ownerId);
 
-    console.log("East PostgreSQL worker-ownership integration checks passed");
+    console.log("East PostgreSQL worker-ownership and event-journal checks passed");
   } finally {
     await pool.query(
       "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
