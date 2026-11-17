@@ -196,7 +196,7 @@ The original 42-module inventory has now been recovered from the owner's October
 | M41 | Cybersecurity Risk Management |
 | M42 | Secure Software Development Lifecycle (SSDLC) |
 
-**Recovery precision:** the original module names and numbering are recovered. The conversation-memory result also returned substantial portions of descriptions, but not a complete verbatim description for every module. Therefore this handoff does not fabricate descriptions, inputs/outputs, or per-module permission/tier assignments. The six-layer titles were recovered from the separate November 1 conversation; the exact original M01–M42-to-six-layer mapping was not returned. Do not infer that mapping from names or the four conceptual groups below.
+**Recovery precision:** the original module names and numbering are recovered. A prior assistant response in the October 29 conversation reportedly supplied one-sentence, original-style descriptions for M01–M42, but the exact text of that response was not returned by the current conversation-history retrieval. The available dossier summary does not contain the full original descriptions, subskills, functions, or inputs/outputs. Therefore this handoff does not reconstruct or fabricate them. The six canonical layer titles are preserved from the earlier November 1 discussion, but the exact M01–M42-to-six-layer mapping, per-module T0–T4 assignments, permission classes, action definitions, restrictions, and approval matrix were not present in the retrieved history. Do not infer those values from names or the four conceptual groups below.
 
 ### 5.5 Recovered four conceptual integration groups
 
