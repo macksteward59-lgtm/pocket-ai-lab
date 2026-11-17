@@ -22,8 +22,8 @@
 |---|---:|
 | unassessed | 184 |
 | implemented-unverified | 85 |
-| partial | 37 |
-| blocked | 10 |
+| partial | 38 |
+| blocked | 9 |
 | verified | 0 |
 | missing | 0 |
 | **Total** | **316** |
@@ -111,7 +111,7 @@
 | PAL-04-020 | 4. Agent intelligence and coordination / 4.1 Permanent core team / 4.2 Dynamic specialists / 4.3 Collaboration protocol | Record which agent/model generated each contribution and which evidence supports it. | packages/intelligence/; agent, orchestration, deliberation, message-bus and evaluation modules | PR #154/#156 (agent catalogue/native integration candidates); PR #156 iOS CI failed; other four companion workflows passed | implemented-unverified |
 | PAL-04-021 | 4. Agent intelligence and coordination / 4.1 Permanent core team / 4.2 Dynamic specialists / 4.3 Collaboration protocol | Handle agent failure, timeout, refusal, malformed output, and disagreement without falsely reporting success. | packages/intelligence/; agent, orchestration, deliberation, message-bus and evaluation modules | PR #154/#156 (agent catalogue/native integration candidates); PR #156 iOS CI failed; other four companion workflows passed | implemented-unverified |
 | PAL-04-022 | 4. Agent intelligence and coordination / 4.1 Permanent core team / 4.2 Dynamic specialists / 4.3 Collaboration protocol | Test collaboration with tasks requiring genuinely different expertise and independently checkable answers. | packages/intelligence/; agent, orchestration, deliberation, message-bus and evaluation modules | PR #154/#156 (agent catalogue/native integration candidates); PR #156 iOS CI failed; other four companion workflows passed | implemented-unverified |
-| PAL-05-001 | 5. The six-layer / 42-module capability framework | Recover the authoritative original M01–M42 names, descriptions, and layer assignments from the original registry, source archive, or project history. | Original registry/archive source not yet located | No source registry evidence mapped; No requirement-specific test/evidence mapped yet | blocked |
+| PAL-05-001 | Recover original M01–M42 inventory; preserve names while descriptions and original layer assignments remain open | `docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md` (M01–M42 inventory) | Checklist inventory review; source recovery for descriptions/mappings remains open | Coordination recovery record 2026-11-17; no implementation or authorization evidence | partial | All 42 names/IDs are present, including M41 Cybersecurity Risk Management and M42 Secure Software Development Lifecycle (SSDLC); verbatim descriptions and exact six-layer/per-module T0–T4 assignments remain unavailable |
 | PAL-05-002 | 5. The six-layer / 42-module capability framework | Do not invent or silently rename the original 42 module identifiers. | Original registry/archive source not yet located | No source registry evidence mapped; No requirement-specific test/evidence mapped yet | blocked |
 | PAL-05-003 | 5. The six-layer / 42-module capability framework | Preserve the six-layer, 42-module structure as a capability registry, not as a claim that there must be 42 agents. | Original registry/archive source not yet located | No source registry evidence mapped; No requirement-specific test/evidence mapped yet | blocked |
 | PAL-05-004 | 5. The six-layer / 42-module capability framework | Define for every module: stable ID, name, purpose, inputs, outputs, dependencies, permission class, execution class, resource budget, owner, version, tests, and lifecycle. | Original registry/archive source not yet located | No source registry evidence mapped; No requirement-specific test/evidence mapped yet | blocked |
