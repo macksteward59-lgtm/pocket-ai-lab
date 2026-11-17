@@ -53,3 +53,25 @@ cancellation propagation. The East lifecycle adapter is the integrated path. The
   GPU work merely because its HTTP request was aborted. The guarantee is local:
   the adapter's request/response work has settled before East releases its
   in-process route/session lease.
+
+## Compiled e3 entrypoint boundary — integration remains open
+
+The src/east/index.ts entrypoint currently declares:
+
+- executeAgent as East.asyncPlatform("executeAgent", [StringType, StringType], StringType).
+- runDeliberation as East.asyncPlatform("runDeliberation", [StringType], ...).
+- Their .implement(...) callbacks receive only the declared task/agent identifiers and call runtime.executeAgent(taskId, agentId) / runtime.runDeliberation(taskId) without options.
+
+The compiled pocketAILabTaskFunction also has only the objective input. It does not receive a host cancellation token, and bindEastPlatform has no documented runtime context from which to obtain one. Consequently, the optional signal on EastPlatformRuntime and EastTaskLifecycleAdapter is proven only for direct callers that already own an AbortSignal. This source does not prove that cancelling an e3 workspace/task execution aborts an active platform-function invocation or reaches the provider.
+
+The upstream e3 SDK guide describes workspace function calls as cancellable, but that description alone does not specify that cancellation is exposed to an East.asyncPlatform(...).implement(...) callback, nor does it establish the behavior of this repository's e3.task / e3.dataflow run path. The repository currently declares semver ranges for @elaraai/east and @elaraai/e3 and has no checked-in npm/yarn/pnpm lockfile at this branch, so the exact installed e3 implementation cannot be pinned from this source snapshot. Reference: https://github.com/elaraai/east-workspace/blob/main/libs/e3/SKILL.md.
+
+**Required follow-up before claiming end-to-end e3 cancellation:**
+
+1. Pin and inspect the exact e3 package version used by the deployed workspace/runtime, including its task runner and platform binding types/implementation.
+2. Identify a documented host cancellation callback or execution handle that is actually delivered to the platform implementation (or establish an explicit outer host-owned AbortController/worker registry).
+3. Wire that supported host signal into the EastTaskLifecycleAdapter and preserve the signal → provider drain → durable cancellation ordering.
+4. Add an integration test that starts the real compiled e3 task, cancels it through the same host API used in production while inference is blocked, and proves provider settlement precedes lease release and durable cancellation.
+5. Verify restart/recovery behavior against the real e3 execution store/runner, not only the separate lifecycle coordinator store.
+
+Until those conditions are met, classify compiled e3 cancellation as **not integrated / unverified**. Do not add an undeclared argument to the East platform schema, assume an undocumented callback parameter, or treat a cancelled client request as proof that the worker/provider stopped. This gap does not alter APEX authorization, evidence validation, or task ownership contracts.
