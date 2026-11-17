@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": ".security-artifact-build",
+    "noEmitOnError": true
+  },
+  "include": [
+    "packages/intelligence/security-pipeline/artifactCandidate.ts",
+    "packages/intelligence/security-pipeline/__tests__/artifactCandidate.test.ts"
+  ]
+}
