@@ -2945,3 +2945,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Inspected .github/workflows/ios-llamaengine-ci.yml. Its pull_request target-branch filter lists main and codex/native-product-experience-integration, not PR #167's base codex/bridge-native-runtime-integration.
 - Consequently the iOS workflow did not run for PR #167. The Swift source and XCTest edits remain unverified by iOS CI. PR body updated to state this explicitly.
 - Next action: arrange an exact-head iOS validation path without weakening CI or misreporting the Intelligence check. Physical iPhone acceptance remains outstanding.
+
+
+## 2026-11-17 UTC — CI route repaired and hardening moved to PR #168
+
+- Added codex/bridge-native-runtime-integration to the iOS LlamaEngine workflow pull_request target-branch filter on PR #164's branch. Commit 482b364cb362b86224c3399ce16ce51a1c06c738.
+- This triggered refreshed PR #164 iOS run #43991837435; at checkpoint it was building pinned llama.cpp.
+- Rebased the BridgeGate fail-closed hardening onto that updated PR #164 head in branch codex/bridgegate-host-approval-hardening-ci.
+- Added BridgeChallengeStore.invalidateAll regression coverage, proving all outstanding challenges are revoked.
+- Opened replacement draft PR #168, exact head ab6f290702018023edaec800f59bfec422f24bc9. Its iOS LlamaEngine workflow run #43991941724 started; at checkpoint runner setup was in progress.
+- Closed PR #167 as superseded, explicitly without merge. PR #168 is the active review/validation path.
+- No WebKit dispatcher, host approval coordinator, model action dispatch, signing, receipts, APEX authorization, or physical-device acceptance was added.
