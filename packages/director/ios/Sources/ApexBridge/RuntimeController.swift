@@ -42,6 +42,7 @@ public enum RuntimeControllerError: Error, Equatable, Sendable {
     case unknownSession
     case notReady
     case invalidRequest
+    case unauthorizedChallenge
     case duplicateRequest
     case duplicateSession
     case emptyGeneration
@@ -73,6 +74,8 @@ public actor RuntimeController {
     }
 
     private let runtime: NativeInferenceRuntime
+    private let challengeStore: BridgeChallengeStore
+    private let trustedWorkspaceURL: URL
     public let runtimeVersion: String
     public let deviceId: String
     public let runtimeIdentity: String
@@ -85,6 +88,8 @@ public actor RuntimeController {
         runtime: NativeInferenceRuntime,
         deviceId: String,
         runtimeIdentity: String,
+        challengeStore: BridgeChallengeStore,
+        trustedWorkspaceURL: URL,
         runtimeVersion: String = "pocket-ai-lab-native/1",
         readinessTTL: TimeInterval = 120,
         clock: @escaping @Sendable () -> Date = { Date() }
@@ -96,6 +101,8 @@ public actor RuntimeController {
             throw RuntimeControllerError.invalidConfiguration
         }
         self.runtime = runtime
+        self.challengeStore = challengeStore
+        self.trustedWorkspaceURL = trustedWorkspaceURL
         self.deviceId = deviceId
         self.runtimeIdentity = runtimeIdentity
         self.runtimeVersion = runtimeVersion
@@ -209,6 +216,7 @@ public actor RuntimeController {
         conversationRequestId: String,
         attemptId: String,
         challengeNonce: String,
+        pageURL: URL,
         maxTokens: Int = 512,
         temperature: Double = 0.2,
         maxOutputBytes: Int = 64_000
@@ -247,6 +255,17 @@ public actor RuntimeController {
         )
         do { try LlamaEngineSupport.validateRequest(request) }
         catch { throw RuntimeControllerError.invalidRequest }
+
+        // A nonce-shaped string is not authorization. Consume a host-issued,
+        // origin/request/session-bound challenge exactly once before inference.
+        let challengeAccepted = await challengeStore.consume(
+            challengeNonce,
+            page: pageURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestId,
+            sessionId: sessionId
+        )
+        guard challengeAccepted else { throw RuntimeControllerError.unauthorizedChallenge }
 
         let lease = active.lease
         let runtime = self.runtime
