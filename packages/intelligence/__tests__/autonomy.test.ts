@@ -217,11 +217,15 @@ describe("TaskLifecycleCoordinator", () => {
     expect(completed.events.map(event => event.sequence)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(completed.events[1]).toMatchObject({
       eventId: "event-journal:2", stepId: "work",
-      attemptId: claimed!.attemptId, ownerId: "worker-event-journal"
+      attemptId: claimed!.attemptId, ownerId: "worker-event-journal",
+      resultingStepStatus: "running"
     });
     expect(completed.events[2]).toMatchObject({
-      type: "step.failed", uncertain: false, attemptId: claimed!.attemptId
+      type: "step.failed", uncertain: false, attemptId: claimed!.attemptId,
+      resultingStepStatus: "pending"
     });
+    expect(completed.events[4]).toMatchObject({ resultingStepStatus: "succeeded" });
+    expect(completed.events[5]).toMatchObject({ resultingTaskStatus: "completed" });
 
     const snapshot = await store.load();
     snapshot[0].events[0].type = "task.failed";
