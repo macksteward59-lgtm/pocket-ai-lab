@@ -3158,3 +3158,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Previous iOS run #44125349459 on `8b546de57dde29b722cbbcfaabafd7cb29454c0b` passed pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, device framework link, simulator boot, and Director package validation. Native app build was cancelled on branch advance; app XCTest, simulator XCTest, and GGUF smoke were skipped.
 - Current-head iOS run #44129072799 is queued for `005ac8ee131f8a036f13a7e01ca6caff40176353`; current-head Intelligence CI #44129054825 is running.
 - PR #174 remains draft and unmerged; physical iPhone Air acceptance remains outstanding.
+
+
+## 2026-11-17 — Current-head CI update for model-file race fix
+
+- Intelligence CI #44129054825 completed successfully on current PR #174 head `005ac8ee131f8a036f13a7e01ca6caff40176353`: dependency/advisory reporting, JavaScript syntax, TypeScript build, and tests all passed.
+- iOS LlamaEngine run #44129072799 is still pending with no runner job allocated; no current-head native compile/XCTest result yet.
+- Current head includes the post-challenge GGUF re-hash and deterministic same-size/restored-timestamp mutation regression.
+- Updated Phase B board. PR #174 remains draft and unmerged.
