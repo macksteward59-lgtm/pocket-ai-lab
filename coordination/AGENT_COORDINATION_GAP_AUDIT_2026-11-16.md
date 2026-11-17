@@ -429,3 +429,25 @@ Validation snapshot:
 - PR #175 exact head `4381df81ed0305a96cded87c78c9e446369c5893`; exact-head CI #44113067640 passed JavaScript syntax, TypeScript build, and the full web test suite.
 - PR #174 native exact head `48a6fabea107cc587327bf1782caef14aeefdab7`; Intelligence CI passed, iOS LlamaEngine CI #44112233207 is running at pinned llama.cpp build.
 - These hosted workflows are not physical device acceptance.
+
+
+## 7. Current coordination and source-recovery update — 2026-11-17
+
+### M01–M42 inventory
+
+The current master checklist contains all 42 original module names and IDs. The final entries are:
+
+- M41 — Cybersecurity Risk Management
+- M42 — Secure Software Development Lifecycle (SSDLC)
+
+The inventory-name recovery is complete. The following remain blocked pending the original source: complete verbatim descriptions, the exact mapping of all 42 modules to the six canonical layers, and per-module T0–T4/permission assignments. Do not infer these from names or from the separate four-group conceptual view. The six layer names and global tier labels are documented, but they do not establish per-module assignments.
+
+### Focused TypeScript and OWASP PR validation
+
+- PR #180 current head `419e006ca0ad5ed40386b540ba4bc7e4b46681e4` is 1 ahead / 0 behind `agent-coordination` head `8025680f732a55b00b52e07e765c1d6d25bd200b`. Its exact-head workflow #44153786406 completed successfully. Its three-file scope is limited to the TypeScript test runner, package scripts, and focused tsconfig.
+- PR #181 current head `9956428091446d9408b765b19c2881cec0edd7bd` is 1 ahead / 0 behind the same base and changes nine OWASP knowledge files. No exact-head workflow run exists for #181. The successful #180 run is not evidence for #181's catalog/context tests.
+- PR #181's context builder is reference-only and is not yet integrated into `Orchestrator.executeTask()`. No OWASP reference material grants tool permissions or execution authority.
+
+### Scope and status
+
+This update does not change the 316-row traceability counts except for the single M01–M42 inventory requirement moved from blocked to partial. It does not mark any requirement verified. The current master checklist and traceability matrix remain separate authorities. No application implementation, APEX policy, East behavior, native runtime, PR merge/closure, or physical iPhone Air acceptance is changed or implied.
