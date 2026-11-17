@@ -83,6 +83,10 @@ public actor RuntimeController {
     private let clock: @Sendable () -> Date
     private let fileHasher: @Sendable (URL) async throws -> String
     private var sessions: [String: ActiveSession] = [:]
+    // Request-scoped tasks cover preparation as well as native inference. A task is
+    // inserted before its first suspension so cancellation can find it during hashing
+    // or one-use challenge consumption, not only after inference registration.
+    private var generationAttempts: [String: [String: Task<RuntimeGenerationRecord, Error>]] = [:]
     private var unloadingSessions: Set<String> = []
     // Invalidates generation attempts suspended before their native task is registered.
     private var generationLifecycle: UInt64 = 0
@@ -246,6 +250,8 @@ public actor RuntimeController {
         }
     }
 
+    /// Registers a request-scoped task before preparation can suspend. The task
+    /// remains addressable until preparation, inference, and cleanup have settled.
     public func generate(
         sessionId: String,
         prompt: String,
@@ -258,6 +264,57 @@ public actor RuntimeController {
         temperature: Double = 0.2,
         maxOutputBytes: Int = 64_000
     ) async throws -> RuntimeGenerationRecord {
+        guard generationAttempts[sessionId]?[requestId] == nil else {
+            throw RuntimeControllerError.duplicateRequest
+        }
+
+        // Task inherits this actor's isolation. It cannot enter performGeneration
+        // until this actor turn yields, so the exact attempt is registered first.
+        let task = Task {
+            try await self.performGeneration(
+                sessionId: sessionId,
+                prompt: prompt,
+                requestId: requestId,
+                conversationRequestId: conversationRequestId,
+                attemptId: attemptId,
+                challengeNonce: challengeNonce,
+                pageURL: pageURL,
+                maxTokens: maxTokens,
+                temperature: temperature,
+                maxOutputBytes: maxOutputBytes
+            )
+        }
+        var attempts = generationAttempts[sessionId] ?? [:]
+        attempts[requestId] = task
+        generationAttempts[sessionId] = attempts
+
+        do {
+            let record = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            clearGenerationAttempt(sessionId: sessionId, requestId: requestId)
+            return record
+        } catch {
+            clearGenerationAttempt(sessionId: sessionId, requestId: requestId)
+            throw error
+        }
+    }
+
+    private func performGeneration(
+        sessionId: String,
+        prompt: String,
+        requestId: String,
+        conversationRequestId: String,
+        attemptId: String,
+        challengeNonce: String,
+        pageURL: URL,
+        maxTokens: Int,
+        temperature: Double,
+        maxOutputBytes: Int
+    ) async throws -> RuntimeGenerationRecord {
+        try Task.checkCancellation()
         guard generationDrainCount == 0 else { throw CancellationError() }
         let requestLifecycle = generationLifecycle
         guard !unloadingSessions.contains(sessionId),
@@ -408,10 +465,12 @@ public actor RuntimeController {
     /// Cancels the matching request and waits for the native runtime's drain path.
     @discardableResult
     public func cancelGeneration(sessionId: String, requestId: String) async -> Bool {
-        guard let task = sessions[sessionId]?.generations[requestId] else { return false }
+        guard let task = generationAttempts[sessionId]?[requestId] else { return false }
         task.cancel()
+        // Await the entire request task. During preparation this means waiting for
+        // the suspended hash/challenge operation to return and observe cancellation;
+        // during inference it includes the engine's cancellation drain.
         _ = try? await task.value
-        clearGeneration(sessionId: sessionId, requestId: requestId)
         return true
     }
 
@@ -433,8 +492,11 @@ public actor RuntimeController {
         for task in readinessTasks { task.cancel() }
         for task in readinessTasks { _ = try? await task.value }
 
-        let pending = sessions.flatMap { sessionId, active in
-            active.generations.keys.map { (sessionId, $0) }
+        // The request registry includes preparation-stage attempts that have no
+        // entry in ActiveSession.generations yet. Snapshot it only after raising the
+        // lifecycle barrier; new requests now fail before registration.
+        let pending = generationAttempts.flatMap { sessionId, attempts in
+            attempts.keys.map { (sessionId, $0) }
         }
         var cancelled = 0
         for (sessionId, requestId) in pending {
@@ -474,6 +536,16 @@ public actor RuntimeController {
     public func reports() -> [ModelReport] {
         let now = clock()
         return sessions.keys.sorted().map { report(for: $0, now: now) }
+    }
+
+    private func clearGenerationAttempt(sessionId: String, requestId: String) {
+        guard var attempts = generationAttempts[sessionId] else { return }
+        attempts.removeValue(forKey: requestId)
+        if attempts.isEmpty {
+            generationAttempts.removeValue(forKey: sessionId)
+        } else {
+            generationAttempts[sessionId] = attempts
+        }
     }
 
     private func clearGeneration(sessionId: String, requestId: String) {
