@@ -2995,3 +2995,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exact-head iOS LlamaEngine CI run #43995918805 started; first job poll shows runner setup / Show Xcode in progress and all later gates pending. No test pass claimed.
 - This closes direct controller generation without challenge-store consumption. WebKit frame-derived origin dispatch and challenge invalidation on navigation/session replacement/teardown remain unimplemented. Consequential model actions remain blocked.
 - No merge or physical iPhone Air acceptance.
+
+
+## 2026-11-17 — PR #169 native CI correction and runtime composition audit
+
+- Rechecked PR #169 first iOS run #43995918805 logs. Native app XCTest compilation failed because three tests unpacked five fixture values after the fixture added a sixth `BridgeChallengeStore` return value.
+- Corrected all three test destructurings in `ApexBridgeTests.swift`. Commit `c984e102c6e7c851252888a9599999780b523710`.
+- Intelligence CI #44017778362 passed for that test-fix commit.
+- Found the iOS workflow did not include PR #169's base branch in its `pull_request.branches` filter. Added `codex/bridgegate-host-approval-hardening-ci` to `.github/workflows/ios-llamaengine-ci.yml` and committed `c727342a1485846a94190cc3c2cd19729fb75e6f`.
+- This triggered iOS LlamaEngine run #44066457735 for PR #169. Latest poll: pinned llama.cpp artifact restore in progress; Swift/app/simulator/GGUF/macOS gates pending. No iOS pass claimed.
+- Audited app composition: LocalChatModel privately owns NativeInferenceRuntime and ModelPoolLease; WorkspaceView creates an independent WKWebView and has no shared runtime/session injection. A standalone WebKit handler would not currently reach the active local chat runtime. Recorded this as a prerequisite: introduce one app-scoped runtime/session owner shared by Local AI and Workspace before adding WebKit dispatch. Avoid creating a second competing runtime/lease owner.
+- Updated coordination gap audit section 14 with exact commits, run status, new shared-runtime gap, and implementation sequence.
+- No PR merged, no consequential model action enabled, and no physical iPhone Air acceptance claimed.
