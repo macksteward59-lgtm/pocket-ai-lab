@@ -279,7 +279,7 @@ private actor PausingChallengeStore: BridgeChallengeConsuming {
 }
 
 private actor BlockingReadinessDrainEngine: ApexBridge.LlamaEngine {
-    private var readinessContinuation: CheckedContinuation<Void, Never>?
+    private var readinessStreamContinuation: AsyncThrowingStream<Token, Error>.Continuation?
     private var drainContinuation: CheckedContinuation<Void, Never>?
     private var readinessStarted = false
     private var drainStarted = false
@@ -296,8 +296,8 @@ private actor BlockingReadinessDrainEngine: ApexBridge.LlamaEngine {
                 continuation.finish(throwing: CancellationError())
             }
         }
-        return AsyncThrowingStream { _ in
-            Task { await self.markReadinessStarted() }
+        return AsyncThrowingStream { continuation in
+            Task { await self.registerReadinessContinuation(continuation) }
         }
     }
 
@@ -312,7 +312,10 @@ private actor BlockingReadinessDrainEngine: ApexBridge.LlamaEngine {
 
     func unload(sessionId: String) async {}
 
-    private func markReadinessStarted() {
+    private func registerReadinessContinuation(
+        _ continuation: AsyncThrowingStream<Token, Error>.Continuation
+    ) {
+        readinessStreamContinuation = continuation
         readinessStarted = true
         readinessWaiter?.resume()
         readinessWaiter = nil
@@ -1277,7 +1280,8 @@ final class RuntimeControllerTests: XCTestCase {
         let whileDraining = await runtime.snapshot()
         XCTAssertEqual(whileDraining.activeLeaseCount, 1)
         XCTAssertEqual(whileDraining.activeUseCount, 1, "The readiness inference use-pin must remain held during native drain.")
-        XCTAssertFalse(await cancellationFinished.hasFinished(), "cancelAllGenerations must not return before the native readiness drain.")
+        let finishedBeforeDrain = await cancellationFinished.hasFinished()
+        XCTAssertFalse(finishedBeforeDrain, "cancelAllGenerations must not return before the native readiness drain.")
 
         await engine.finishCancellationDrain()
         await cancellation.value
@@ -1293,7 +1297,8 @@ final class RuntimeControllerTests: XCTestCase {
         let afterDrain = await runtime.snapshot()
         XCTAssertEqual(afterDrain.activeLeaseCount, 1, "Navigation cancellation preserves the loaded controller lease.")
         XCTAssertEqual(afterDrain.activeUseCount, 0, "The readiness use-pin is released only after native drain.")
-        XCTAssertFalse((await controller.reports().first)?.canGenerate ?? true)
+        let readinessReport = await controller.reports().first
+        XCTAssertFalse(readinessReport?.canGenerate ?? true)
         await controller.disconnect()
     }
 
