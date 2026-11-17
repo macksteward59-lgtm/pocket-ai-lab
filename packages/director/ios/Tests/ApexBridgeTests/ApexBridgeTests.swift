@@ -1046,7 +1046,7 @@ final class RuntimeControllerTests: XCTestCase {
         } catch is CancellationError {
             // Unload cancels and drains the registered request before releasing its lease.
         } catch {
-            XCTFail("Expected cancellation after unload, received: \\(error)")
+            XCTFail("Expected cancellation after unload, received: \(error)")
         }
 
         let reports = await controller.reports()
