@@ -3043,3 +3043,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added Node tests for unsupported actions/fields, challenge sequencing, missing local lease, session mismatch, prompt/options bounds, and static/offline asset loading.
 - PR #175 exact head `f23166867ed346024000f3423b2019c16a7f4f32`: Intelligence CI #44112487822 passed JavaScript syntax, TypeScript build, and the full web test suite. PR #174 native head `48a6fabea107cc587327bf1782caef14aeefdab7`: Intelligence CI passed; iOS LlamaEngine CI #44112233207 is still running at pinned llama.cpp build.
 - Agent Team UI remains on the existing server-backed task endpoint; the native bridge client currently wires ordinary chat only. No APEX signing, device attestation, consequential action approval, or physical iPhone Air acceptance is claimed. No PR merged.
+
+### PR #175 cancellation follow-on — 2026-11-17
+
+- Added an explicit Stop control to the native Chat path. The web client captures the exact session/request UUID after host challenge issuance and sends `cancelGeneration` for that pair when the user stops or starts a new conversation.
+- Native cancellation awaits `RuntimeController.cancelGeneration` and the engine's drain path before the dispatcher replies. If the WKWebView navigation/teardown path fires, the dispatcher invalidates outstanding challenges and cancels all active generation tasks.
+- Added Node coverage for aborting a live native chat request and asserting that the cancellation targets the exact same session/request IDs.
+- Latest PR #175 exact head: `4381df81ed0305a96cded87c78c9e446369c5893`. CI #44113067640 passed JavaScript syntax and TypeScript build and is currently running the full web test suite. Previous exact-head CI #44112487822 passed the pre-cancellation web suite.
