@@ -52,7 +52,7 @@ struct WorkspaceView: View {
     private var workspaceRuntimeStatus: String {
         switch runtimeDependency {
         case .shared:
-            return "Connected to the app-scoped native runtime. Workspace commands are read-only."
+            return "Connected to the app-scoped native runtime. Generation stays disabled until the exact Local AI session passes readiness and receives a one-use host challenge. Generated output remains an unsigned evidence candidate, not authorization."
         case .unavailable:
             return "Native runtime unavailable. Workspace commands are disabled."
         case .createForTesting:
