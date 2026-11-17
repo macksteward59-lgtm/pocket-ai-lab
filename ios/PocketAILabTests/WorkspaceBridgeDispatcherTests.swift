@@ -29,6 +29,47 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    private func makeLoadedDispatcher(root: URL) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
+        let modelDirectory = root.appendingPathComponent("Models", isDirectory: true)
+        try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
+        let modelURL = modelDirectory.appendingPathComponent("dispatcher-test.gguf")
+        try Data("GGUF-test-model-fixture".utf8).write(to: modelURL)
+        let fingerprint = try ModelArtifactFingerprint.compute(at: modelURL)
+        let catalog = LocalModelCatalogStore(
+            fileURL: root.appendingPathComponent("ModelCatalog.json"),
+            modelDirectory: modelDirectory
+        )
+        let snapshot = try catalog.register(
+            ImportedModelArtifact(url: modelURL, fingerprint: fingerprint),
+            displayName: "Dispatcher test model"
+        )
+        let entry = try XCTUnwrap(snapshot.entries.first)
+        let descriptor = ModelDescriptor(
+            id: entry.id,
+            name: entry.name,
+            path: modelURL.path,
+            contextLength: entry.contextLength,
+            quantization: entry.quantization
+        )
+        let composition = NativeRuntimeComposition(
+            engine: DispatcherStubEngine(),
+            availableMemoryMB: { 4_096 }
+        )
+        let runtime = try XCTUnwrap(composition.runtime)
+        guard case .shared(let service) = composition.dependency else {
+            throw XCTSkip("Shared runtime composition unavailable in test fixture.")
+        }
+        let lease = try await runtime.acquire(model: descriptor, estimatedMemoryMB: entry.estimatedMemoryMB)
+        try service.retain(lease, for: UUID())
+        let dispatcher = WorkspaceBridgeDispatcher(
+            trustedURL: URL(string: "https://workspace.example.test/app")!,
+            runtimeDependency: composition.dependency,
+            modelCatalogStore: catalog
+        )
+        return (dispatcher, lease.session.id, composition)
+    }
+
+    @MainActor
     func testTrustedMainFrameCanReadAppScopedRuntimeStatus() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -47,7 +88,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(data["runtimeAvailable"] as? Bool, true)
         XCTAssertEqual(data["modelLoaded"] as? Bool, false)
         XCTAssertEqual(data["generationEnabled"] as? Bool, false)
-        XCTAssertEqual(data["dispatcherMode"] as? String, "read-only")
+        XCTAssertEqual(data["dispatcherMode"] as? String, "read-only-until-ready")
         XCTAssertEqual(data["runtimeTrust"] as? String, "Unverified")
     }
 
@@ -132,7 +173,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             frameOrigin: trustedOrigin,
             isMainFrame: true
         )
-        XCTAssertEqual(generation["error"] as? String, "action_not_enabled")
+        XCTAssertEqual(generation["error"] as? String, "model_not_loaded_or_session_mismatch")
 
         let load = await dispatcher.handle(
             body: ["id": UUID().uuidString, "action": "loadModel", "model": "model-1"],
@@ -140,6 +181,71 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             isMainFrame: true
         )
         XCTAssertEqual(load["error"] as? String, "authorization_required")
+    }
+
+    @MainActor
+    func testHostChallengeGatesGenerationOnExactSharedRuntimeSession() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let (dispatcher, sessionID, composition) = try await makeLoadedDispatcher(root: root)
+        _ = composition
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let requestID = UUID().uuidString
+
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+        let readinessData = try XCTUnwrap(readiness["data"] as? [String: Any])
+        XCTAssertEqual(readinessData["canGenerate"] as? Bool, true)
+
+        let authorization = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(authorization["ok"] as? Bool, true)
+        let authorizationData = try XCTUnwrap(authorization["data"] as? [String: Any])
+        let nonce = try XCTUnwrap(authorizationData["challengeNonce"] as? String)
+
+        let generationBody: [String: Any] = [
+            "id": UUID().uuidString,
+            "action": "generate",
+            "sessionId": sessionID,
+            "prompt": "Answer from the local test engine.",
+            "requestId": requestID,
+            "conversationRequestId": "conversation-1",
+            "attemptId": "attempt-1",
+            "challengeNonce": nonce
+        ]
+        let generation = await dispatcher.handle(
+            body: generationBody,
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(generation["ok"] as? Bool, true)
+        let generationData = try XCTUnwrap(generation["data"] as? [String: Any])
+        XCTAssertEqual(generationData["output"] as? String, "stub")
+        XCTAssertEqual(generationData["runtimeSessionId"] as? String, sessionID)
+        XCTAssertEqual(generationData["authorized"] as? Bool, false)
+
+        var replayBody = generationBody
+        replayBody["id"] = UUID().uuidString
+        replayBody["requestId"] = UUID().uuidString
+        let replay = await dispatcher.handle(
+            body: replayBody,
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(replay["error"] as? String, "generation_failed")
+        XCTAssertTrue((replay["detail"] as? String ?? "").contains("unauthorizedChallenge"))
     }
 
     @MainActor
