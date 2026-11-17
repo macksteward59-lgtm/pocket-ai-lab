@@ -89,6 +89,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(data["modelLoaded"] as? Bool, false)
         XCTAssertEqual(data["generationEnabled"] as? Bool, false)
         XCTAssertEqual(data["dispatcherMode"] as? String, "read-only-until-ready")
+        XCTAssertEqual((data["activeLocalSessions"] as? [[String: Any]])?.count, 0)
         XCTAssertEqual(data["runtimeTrust"] as? String, "Unverified")
     }
 
