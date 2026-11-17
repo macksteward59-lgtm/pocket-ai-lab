@@ -89,7 +89,9 @@ public actor RuntimeController {
     private var generationAttempts: [String: [String: Task<RuntimeGenerationRecord, Error>]] = [:]
     // Distinguishes a completed request awaiting its caller's cleanup from a
     // request that is still cancellable. A late cancel must not be acknowledged.
-    private var finishedGenerationAttempts: [String: Set<String>] = [:]
+    private var finishedGenerationAttempts: [String: [String: Date]] = [:]
+    private let completedGenerationAttemptTTL: TimeInterval = 30
+    private let maximumCompletedGenerationAttempts = 512
     // A cancel may reach this actor before its matching generate message. Keep a
     // bounded, short-lived exact-ID tombstone so actor message ordering cannot
     // turn that early cancellation into a later generation.
@@ -273,6 +275,10 @@ public actor RuntimeController {
         temperature: Double = 0.2,
         maxOutputBytes: Int = 64_000
     ) async throws -> RuntimeGenerationRecord {
+        pruneFinishedGenerationAttempts(now: clock())
+        guard finishedGenerationAttempts[sessionId]?[requestId] == nil else {
+            throw RuntimeControllerError.duplicateRequest
+        }
         guard !consumeCancellationTombstone(sessionId: sessionId, requestId: requestId) else {
             throw CancellationError()
         }
@@ -478,10 +484,11 @@ public actor RuntimeController {
     /// Cancels the matching request and waits for the native runtime's drain path.
     @discardableResult
     public func cancelGeneration(sessionId: String, requestId: String) async -> Bool {
+        pruneFinishedGenerationAttempts(now: clock())
+        if finishedGenerationAttempts[sessionId]?[requestId] != nil {
+            return false
+        }
         if let task = generationAttempts[sessionId]?[requestId] {
-            guard !finishedGenerationAttempts[sessionId, default: []].contains(requestId) else {
-                return false
-            }
             task.cancel()
             // Await the entire request task. During preparation this means waiting
             // for the suspended hash/challenge operation to return and observe
@@ -604,19 +611,35 @@ public actor RuntimeController {
         return expiry > now
     }
 
+    private func pruneFinishedGenerationAttempts(now: Date) {
+        for sessionId in Array(finishedGenerationAttempts.keys) {
+            guard var requests = finishedGenerationAttempts[sessionId] else { continue }
+            requests = requests.filter { $0.value > now }
+            if requests.isEmpty {
+                finishedGenerationAttempts.removeValue(forKey: sessionId)
+            } else {
+                finishedGenerationAttempts[sessionId] = requests
+            }
+        }
+    }
+
     private func markGenerationAttemptFinished(sessionId: String, requestId: String) {
-        finishedGenerationAttempts[sessionId, default: []].insert(requestId)
+        let now = clock()
+        pruneFinishedGenerationAttempts(now: now)
+        let count = finishedGenerationAttempts.values.reduce(0) { $0 + $1.count }
+        if count >= maximumCompletedGenerationAttempts,
+           let oldest = finishedGenerationAttempts.flatMap({ sessionId, requests in
+               requests.map { (sessionId, $0.key, $0.value) }
+           }).min(by: { $0.2 < $1.2 }) {
+            finishedGenerationAttempts[oldest.0]?.removeValue(forKey: oldest.1)
+            if finishedGenerationAttempts[oldest.0]?.isEmpty == true {
+                finishedGenerationAttempts.removeValue(forKey: oldest.0)
+            }
+        }
+        finishedGenerationAttempts[sessionId, default: [:]][requestId] = now.addingTimeInterval(completedGenerationAttemptTTL)
     }
 
     private func clearGenerationAttempt(sessionId: String, requestId: String) {
-        if var finished = finishedGenerationAttempts[sessionId] {
-            finished.remove(requestId)
-            if finished.isEmpty {
-                finishedGenerationAttempts.removeValue(forKey: sessionId)
-            } else {
-                finishedGenerationAttempts[sessionId] = finished
-            }
-        }
         guard var attempts = generationAttempts[sessionId] else { return }
         attempts.removeValue(forKey: requestId)
         if attempts.isEmpty {
