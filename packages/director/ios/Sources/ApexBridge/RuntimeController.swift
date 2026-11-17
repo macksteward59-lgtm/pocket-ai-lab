@@ -276,6 +276,33 @@ public actor RuntimeController {
         // readiness snapshot before starting inference; never use the stale
         // ActiveSession captured before suspension.
         guard !unloadingSessions.contains(sessionId),
+              let beforeRehash = sessions[sessionId],
+              beforeRehash.lease.session.id == sessionId,
+              let beforeRehashReadiness = beforeRehash.readiness,
+              beforeRehashReadiness.healthCheckId == readiness.healthCheckId,
+              beforeRehashReadiness.expiresAt > clock(),
+              beforeRehash.generations[requestId] == nil else {
+            throw RuntimeControllerError.unknownSession
+        }
+
+        // Challenge consumption is an asynchronous suspension point. Re-hash
+        // after it as well, so a model-file change during authorization cannot
+        // pass the pre-challenge check and proceed to inference.
+        do {
+            try await verifyFile(beforeRehash)
+        } catch {
+            if var current = sessions[sessionId],
+               current.readiness?.healthCheckId == readiness.healthCheckId {
+                current.readiness = nil
+                sessions[sessionId] = current
+            }
+            throw error
+        }
+        try Task.checkCancellation()
+
+        // verifyFile itself awaits an off-actor hash. Revalidate session and
+        // readiness once more after that suspension before starting inference.
+        guard !unloadingSessions.contains(sessionId),
               var latest = sessions[sessionId],
               latest.lease.session.id == sessionId,
               let currentReadiness = latest.readiness,
