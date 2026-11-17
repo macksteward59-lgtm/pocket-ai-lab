@@ -3,6 +3,61 @@ import PocketLlamaEngine
 import os
 
 @MainActor
+final class NativeModelSessionService {
+    enum ReleaseOutcome {
+        case releasedAndUnloaded
+        case releasedSharedSession
+        case releaseRejected
+        case releasedButUnloadFailed(String)
+    }
+
+    let runtime: NativeInferenceRuntime
+    private var leases: [UUID: ModelPoolLease] = [:]
+
+    init(runtime: NativeInferenceRuntime) {
+        self.runtime = runtime
+    }
+
+    func lease(for ownerID: UUID) -> ModelPoolLease? {
+        leases[ownerID]
+    }
+
+    func retain(_ lease: ModelPoolLease, for ownerID: UUID) throws {
+        guard leases[ownerID] == nil else { throw ModelPoolError.invalidLease }
+        leases[ownerID] = lease
+    }
+
+    /// Releases one consumer's exact lease and unloads only after the final
+    /// app-scoped consumer releases the shared native session.
+    func release(for ownerID: UUID) async -> ReleaseOutcome {
+        guard let lease = leases[ownerID] else { return .releaseRejected }
+        guard await runtime.release(lease) else { return .releaseRejected }
+        leases[ownerID] = nil
+        let snapshot = await runtime.snapshot()
+        guard snapshot.activeLeaseCount == 0,
+              snapshot.loadedModelIDs.contains(lease.model.id) else {
+            return .releasedSharedSession
+        }
+        do {
+            try await runtime.unload(modelId: lease.model.id)
+            return .releasedAndUnloaded
+        } catch {
+            return .releasedButUnloadFailed(error.localizedDescription)
+        }
+    }
+
+    func snapshot() async -> ModelPoolSnapshot {
+        await runtime.snapshot()
+    }
+}
+
+enum LocalChatRuntimeDependency {
+    case shared(NativeModelSessionService)
+    case unavailable(String)
+    case createForTesting
+}
+
+@MainActor
 final class LocalChatModel: ObservableObject {
     @Published var modelURL: URL?
     @Published var modelName = "No model imported"
@@ -26,11 +81,14 @@ final class LocalChatModel: ObservableObject {
     @Published var trustStatus = RuntimeTrustPresentation.stateLabel
 
     private let runtime: NativeInferenceRuntime?
+    private let sessionService: NativeModelSessionService?
+    private let leaseOwnerID = UUID()
+    private var lease: ModelPoolLease? { sessionService?.lease(for: leaseOwnerID) }
     private let modelDirectory: URL
-    private var lease: ModelPoolLease?
     private var artifactFingerprint: ModelArtifactFingerprint?
 
     init(
+        runtimeDependency: LocalChatRuntimeDependency = .createForTesting,
         engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true),
         modelDirectory: URL? = nil,
         conversationStore: LocalConversationStore = LocalConversationStore(),
@@ -46,21 +104,34 @@ final class LocalChatModel: ObservableObject {
             .appendingPathComponent("Models", isDirectory: true)
         self.modelDirectory = resolvedModelDirectory
         self.modelCatalogStore = modelCatalogStore ?? LocalModelCatalogStore(modelDirectory: resolvedModelDirectory)
-        do {
-            let configuration = try ModelPoolConfiguration(
-                maxResidentMemoryMB: 4_096,
-                maxLoadedModels: 1,
-                minimumFreeMemoryMB: 512
-            )
-            runtime = try NativeInferenceRuntime(
-                engine: engine,
-                poolConfiguration: configuration,
-                availableMemoryMB: availableMemoryMB,
-                maxConcurrentRequests: 1
-            )
-        } catch {
+        switch runtimeDependency {
+        case .shared(let sharedService):
+            sessionService = sharedService
+            runtime = sharedService.runtime
+        case .unavailable(let message):
+            sessionService = nil
             runtime = nil
-            status = "Native inference runtime configuration failed: \(error.localizedDescription)"
+            status = message
+        case .createForTesting:
+            do {
+                let configuration = try ModelPoolConfiguration(
+                    maxResidentMemoryMB: 4_096,
+                    maxLoadedModels: 1,
+                    minimumFreeMemoryMB: 512
+                )
+                let createdRuntime = try NativeInferenceRuntime(
+                    engine: engine,
+                    poolConfiguration: configuration,
+                    availableMemoryMB: availableMemoryMB,
+                    maxConcurrentRequests: 1
+                )
+                runtime = createdRuntime
+                sessionService = NativeModelSessionService(runtime: createdRuntime)
+            } catch {
+                runtime = nil
+                sessionService = nil
+                status = "Native inference runtime configuration failed: \(error.localizedDescription)"
+            }
         }
 
         let probe = LlamaCppMetalBackend.probe()
@@ -263,24 +334,33 @@ final class LocalChatModel: ObservableObject {
         do {
             let currentFingerprint = try await fingerprintFile(at: modelURL)
             guard currentFingerprint == expectedFingerprint else {
-                if let previous = lease {
-                    guard await runtime.release(previous) else {
-                        status = "Changed model file detected, but its active lease could not be released."
+                if lease != nil {
+                    let outcome = await sessionService?.release(for: leaseOwnerID)
+                    guard case .releasedAndUnloaded? = outcome else {
+                        if case .releasedSharedSession? = outcome {
+                            status = "This consumer released its lease; another consumer still owns the shared model session."
+                        } else if case .releasedButUnloadFailed(let message)? = outcome {
+                            status = "Lease released, but native unload failed: \(message)"
+                        } else {
+                            status = "Changed model file detected, but its active lease could not be released."
+                        }
                         return
                     }
-                    lease = nil
-                    try await runtime.unload(modelId: previous.model.id)
                 }
                 status = "The selected model file changed after import. Re-import it before loading."
                 return
             }
-            if let previous = lease {
-                guard await runtime.release(previous) else {
+            if lease != nil {
+                let outcome = await sessionService?.release(for: leaseOwnerID)
+                switch outcome {
+                case .releasedAndUnloaded?, .releasedSharedSession?: break
+                case .releasedButUnloadFailed(let message)?:
+                    status = "Previous model lease released, but native unload failed: \(message)"
+                    return
+                default:
                     status = "The previous model lease could not be released. The new model was not loaded."
                     return
                 }
-                lease = nil
-                try await runtime.unload(modelId: previous.model.id)
             }
             guard let catalogEntry = availableModels.first(where: { $0.id == selectedModelID }),
                   catalogEntry.sha256 == expectedFingerprint.sha256,
@@ -289,7 +369,6 @@ final class LocalChatModel: ObservableObject {
                 status = "Selected model identity does not match its catalog record. Loading failed closed."
                 return
             }
-            let estimate = catalogEntry.estimatedMemoryMB
             let descriptor = ModelDescriptor(
                 id: catalogEntry.id,
                 name: catalogEntry.name,
@@ -297,30 +376,35 @@ final class LocalChatModel: ObservableObject {
                 contextLength: catalogEntry.contextLength,
                 quantization: catalogEntry.quantization
             )
-            let acquired = try await runtime.acquire(model: descriptor, estimatedMemoryMB: estimate)
+            let acquired = try await runtime.acquire(
+                model: descriptor,
+                estimatedMemoryMB: catalogEntry.estimatedMemoryMB
+            )
+            do {
+                try await sessionService?.retain(acquired, for: leaseOwnerID)
+            } catch {
+                _ = await runtime.release(acquired)
+                throw error
+            }
             do {
                 let afterLoadFingerprint = try await fingerprintFile(at: modelURL)
                 guard afterLoadFingerprint == expectedFingerprint else {
                     throw LocalChatError.modelChanged
                 }
             } catch {
-                guard await runtime.release(acquired) else {
-                    // Keep the exact lease reachable so the caller can retry unload;
-                    // never drop the only handle to a still-leased native session.
-                    lease = acquired
+                let outcome = await sessionService?.release(for: leaseOwnerID)
+                if case .releaseRejected? = outcome {
                     throw LocalChatError.leaseReleaseFailed
                 }
-                try? await runtime.unload(modelId: acquired.model.id)
+                if case .releasedButUnloadFailed? = outcome {
+                    throw LocalChatError.leaseReleaseFailed
+                }
                 throw error
             }
-            lease = acquired
             status = RuntimeTrustPresentation.statusMessage(
-                after: "A real llama.cpp model session is loaded through the shared ModelPool."
+                after: "A real llama.cpp model session is loaded through the app-scoped session service and shared ModelPool."
             )
         } catch {
-            // Preserve any previously held lease on preflight errors (for example,
-            // an artifact becoming unreadable). Clearing it here would orphan the
-            // ModelPool lease and make the loaded session impossible to unload.
             status = "Model load failed closed: \(error.localizedDescription)"
         }
     }
@@ -332,21 +416,18 @@ final class LocalChatModel: ObservableObject {
     }
 
     func unloadModel() async {
-        guard !isBusy else { return }
-        guard let runtime, let current = lease else { return }
+        guard !isBusy, lease != nil else { return }
         isBusy = true
         defer { isBusy = false }
-        guard await runtime.release(current) else {
+        switch await sessionService?.release(for: leaseOwnerID) {
+        case .releasedAndUnloaded?:
+            status = "Model unloaded after the final app-scoped lease was released."
+        case .releasedSharedSession?:
+            status = "This consumer released its lease; the shared model remains loaded for another consumer."
+        case .releasedButUnloadFailed(let message)?:
+            status = "Model lease released, but native unload did not complete: \(message)"
+        default:
             status = "The model lease was not released; the native session remains protected."
-            return
-        }
-        do {
-            try await runtime.unload(modelId: current.model.id)
-            lease = nil
-            status = "Model unloaded after its lease was released."
-        } catch {
-            lease = nil
-            status = "Model lease released, but native unload did not complete: \(error.localizedDescription)"
         }
     }
 
@@ -783,7 +864,12 @@ private enum LocalInteractionMode: String, CaseIterable, Identifiable {
 }
 
 struct LocalChatView: View {
-    @StateObject private var model = LocalChatModel()
+    @StateObject private var model: LocalChatModel
+
+    @MainActor
+    init(runtimeDependency: LocalChatRuntimeDependency) {
+        _model = StateObject(wrappedValue: LocalChatModel(runtimeDependency: runtimeDependency))
+    }
     @State private var mode: LocalInteractionMode = .chat
     @State private var showImporter = false
     @State private var prompt = ""
