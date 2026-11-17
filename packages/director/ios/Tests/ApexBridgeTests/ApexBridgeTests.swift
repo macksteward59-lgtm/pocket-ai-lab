@@ -1169,6 +1169,54 @@ final class RuntimeControllerTests: XCTestCase {
         await controller.disconnect()
     }
 
+    func testCancellationDeliveredBeforeGenerationBlocksExactRequest() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 4_500))
+        let (controller, runtime, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestID = UUID().uuidString
+        let cancellationConfirmed = await controller.cancelGeneration(
+            sessionId: sessionID,
+            requestId: requestID
+        )
+        XCTAssertTrue(cancellationConfirmed, "A valid exact-request cancellation may arrive before its generation message.")
+
+        let nonce = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+        do {
+            _ = try await controller.generate(
+                sessionId: sessionID,
+                prompt: "This exact request was cancelled before dispatch.",
+                requestId: requestID,
+                conversationRequestId: "cancel-before-generate",
+                attemptId: "cancel-before-generate-attempt",
+                challengeNonce: nonce,
+                pageURL: trustedWorkspaceURL
+            )
+            XCTFail("A matching generation must not start after its cancellation tombstone was recorded.")
+        } catch is CancellationError {
+            // Expected: the one-use tombstone is consumed before preparation starts.
+        } catch {
+            XCTFail("Expected CancellationError, received: \(error)")
+        }
+
+        let report = await controller.reports().first
+        XCTAssertEqual(report?.sessionId, sessionID)
+        XCTAssertTrue(report?.canGenerate ?? false, "A rejected cancelled request must not invalidate the model's readiness.")
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        await controller.disconnect()
+    }
+
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
         let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
