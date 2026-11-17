@@ -56,6 +56,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     func navigationStarted() async {
         guard isActive, let challengeStore else { return }
         await challengeStore.invalidateAll()
+        _ = await runtimeController?.cancelAllGenerations()
     }
 
     func invalidate() {
@@ -129,8 +130,11 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 data["activeUseCount"] = snapshot.activeUseCount
                 if let runtimeController {
                     let reports = await runtimeController.reports()
-                    data["generationEnabled"] = reports.contains(where: { $0.canGenerate })
-                    data["dispatcherMode"] = reports.contains(where: { $0.canGenerate })
+                    let activeLocalSessionIDs = Set(service.activeLeases().map { $0.session.id })
+                    data["generationEnabled"] = reports.contains {
+                        $0.canGenerate && activeLocalSessionIDs.contains($0.sessionId ?? "")
+                    }
+                    data["dispatcherMode"] = (data["generationEnabled"] as? Bool == true)
                         ? "challenge-gated"
                         : "read-only-until-ready"
                     data["controllerSessions"] = reports.map { report in
@@ -138,6 +142,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                             "modelId": report.id,
                             "phase": report.phase,
                             "canGenerate": report.canGenerate,
+                            "sharedLocalLeaseActive": activeLocalSessionIDs.contains(report.sessionId ?? ""),
                             "sessionId": report.sessionId ?? ""
                         ]
                     }
