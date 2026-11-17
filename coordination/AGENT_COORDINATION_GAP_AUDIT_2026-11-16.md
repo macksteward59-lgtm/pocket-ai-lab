@@ -195,3 +195,16 @@ The stacked iOS CI routing gap was addressed on PR #164's branch by adding codex
 - PR #167 is closed as superseded, not merged. Continue only with PR #168.
 
 The trigger repair does not itself validate the change. Hosted iOS CI is still distinct from physical iPhone Air acceptance, and the WebKit dispatcher/host approval coordinator remain unimplemented.
+
+
+## 10. Exact-head bridge CI refresh and source gap recheck — 2026-11-17
+
+Rechecked the current exact-head jobs for PR #168 and PR #164 and inspected the native workspace/bridge source.
+
+- PR #168 head `ab6f290702018023edaec800f59bfec422f24bc9`, run [#43991941724](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991941724): job remains `in_progress` at “Build pinned llama.cpp for the simulator and macOS”. Setup, checkout, Xcode display, CMake/Ninja install, and pinned artifact restore passed. Swift typecheck, native app build/XCTest, simulator XCTest, and GGUF/macOS smoke steps have not yet run.
+- PR #164 head `482b364cb362b86224c3399ce16ce51a1c06c738`, run [#43991837435](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991837435): pinned llama.cpp build, fail-closed Swift typecheck, generic iOS engine link, simulator selection passed. Simulator boot remains in progress; bridge manifest validation, app build/XCTest, simulator XCTest, and GGUF/macOS smoke remain pending.
+- PR #168 patch inspection confirms the caller-controlled `consequentialAuthorized` Boolean is removed and `importModel`, `loadModel`, and `unloadModel` are unconditionally denied with `authorizationRequired`. Tests cover all three denials and challenge-store `invalidateAll()` behavior. No approval mechanism is implemented.
+- Source recheck of `ios/PocketAILab/WorkspaceView.swift` confirms `PrivateWorkspaceWebView.Coordinator` implements only `WKNavigationDelegate`; no `WKScriptMessageHandler`/reply handler is registered in `WKWebViewConfiguration`. Thus no page-to-native message dispatcher is installed.
+- `BridgeChallengeStore` remains a host-side primitive. `RuntimeController.generate` validates the nonce's format and records it in the unsigned generation candidate; it does not consume or independently validate the challenge. The future dispatcher must consume the challenge against the frame-derived trusted origin, request UUID, and runtime session before invoking generation. Direct controller invocation with a well-formed fabricated nonce is not challenge-authorized.
+
+No PR was merged, no consequential action was enabled, and no physical iPhone Air acceptance is claimed. Next implementation remains a separately reviewed WebKit dispatcher with main-frame/origin/schema checks, one-use consume-before-generate, teardown invalidation, and negative/replay/expiry tests; consequential operations stay blocked until a parameter-bound native approval coordinator exists.
