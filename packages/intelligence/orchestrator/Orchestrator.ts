@@ -54,7 +54,8 @@ export interface InferenceResult {
 }
 
 export interface InferenceProvider {
-  generate(request: InferenceRequest): Promise<InferenceResult>;
+  /** Providers must settle this promise only after an aborted backend request has drained. */
+  generate(request: InferenceRequest, options?: { signal?: AbortSignal }): Promise<InferenceResult>;
 }
 
 const STAGE_PLAN: Record<DeliberationStage, AgentId[]> = {
@@ -162,8 +163,11 @@ export class Orchestrator {
   }
 
   async executeTask(
-    request: TaskRequest
+    request: TaskRequest,
+    options: { signal?: AbortSignal } = {}
   ): Promise<{ synthesis: string; evidenceRefs: string[]; consensus: boolean; notes: string[] }> {
+    const signal = options.signal;
+    throwIfAborted(signal);
     if (!request.id.trim() || !request.objective.trim()) {
       throw new Error("Task id and objective are required");
     }
@@ -175,12 +179,14 @@ export class Orchestrator {
         const generated: AgentMessage[] = [];
         let nextSequence = this.bus.getThread(request.id).length;
         for (const agentId of STAGE_PLAN[stage]) {
+          throwIfAborted(signal);
           const agent = this.agents.getAgent(agentId);
           if (!agent) throw new Error("Unknown agent: " + agentId);
           const model = this.models.getPreferredModel(agentId);
           const selected = await this.router.route(agentId, model, requiredCapabilities);
           const sessionId = this.agents.startSession(agentId, request.id, selected.id);
           try {
+            throwIfAborted(signal);
             this.agents.updateStatus(sessionId, "running");
             const result = await this.inference.generate({
               agentId,
@@ -193,7 +199,10 @@ export class Orchestrator {
                 "Return only a structured payload valid for message type " + STAGE_MESSAGE_TYPE[stage] + "."
               ].join("\n"),
               contextMessages: [...priorMessages]
-            });
+            }, { signal });
+            // Do not publish a result produced after cancellation. The provider
+            // promise must settle before this finally block releases its lease.
+            throwIfAborted(signal);
             const message: AgentMessage = {
               protocolVersion: 1,
               messageId: crypto.randomUUID(),
@@ -258,3 +267,12 @@ export class Orchestrator {
     return reviewScanTelemetry(this, input);
   }
 }
+
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  const error = new Error("Inference cancelled");
+  error.name = "AbortError";
+  throw error;
+}
+
