@@ -9,6 +9,9 @@ on:
       - codex/bridge-native-runtime-integration
       # Allow the next stacked runtime-challenge PR to receive native Swift/XCTest CI.
       - codex/bridgegate-host-approval-hardening-ci
+      # Allow the runtime-challenge stack and its app-composition follow-ons.
+      - codex/runtime-challenge-enforcement
+      - codex/app-scoped-runtime-composition
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
