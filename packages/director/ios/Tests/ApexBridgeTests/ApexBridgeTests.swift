@@ -657,15 +657,17 @@ final class RuntimeControllerTests: XCTestCase {
         let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
         let originalAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
-        let originalDate = originalAttributes[.modificationDate] as? Date
+        let originalDate = try XCTUnwrap(originalAttributes[.modificationDate] as? Date)
         let originalSize = (originalAttributes[.size] as? NSNumber)?.intValue
         try Data("GGUF-MODEL-FIXTURE".utf8).write(to: modelURL, options: .atomic)
-        if let originalDate {
-            try FileManager.default.setAttributes([.modificationDate: originalDate], ofItemAtPath: modelURL.path)
-        }
+        try FileManager.default.setAttributes([.modificationDate: originalDate], ofItemAtPath: modelURL.path)
         let changedAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
         XCTAssertEqual((changedAttributes[.size] as? NSNumber)?.intValue, originalSize)
-        XCTAssertEqual(changedAttributes[.modificationDate] as? Date, originalDate)
+        let changedDate = try XCTUnwrap(changedAttributes[.modificationDate] as? Date)
+        // APFS/HFS timestamp precision can differ slightly after atomic replacement.
+        // Verify restoration within filesystem precision; the SHA-256 assertion below
+        // proves that the artifact bytes nevertheless changed.
+        XCTAssertLessThanOrEqual(abs(changedDate.timeIntervalSince(originalDate)), 1.0)
         XCTAssertNotEqual(Self.sha256(modelURL), expectedHash)
 
         do {
