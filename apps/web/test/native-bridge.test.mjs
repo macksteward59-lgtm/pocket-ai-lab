@@ -244,3 +244,60 @@ test("synchronous abort from onRequest cancels the exact dispatched native gener
   assert.equal(cancellation.requestId, activeRequest.requestId);
   assert.equal(dispatched.requestId, activeRequest.requestId);
 });
+
+
+test("native cancellation drain wins when generation completes during cancellation", async () => {
+  let finishCancellation;
+  let resolveCancellationStarted;
+  const cancellationStarted = new Promise(resolve => { resolveCancellationStarted = resolve; });
+  const calls = [];
+  const bridge = loadBridge(message => {
+    calls.push(message);
+    switch (message.action) {
+      case "getRuntimeStatus":
+        return Promise.resolve(reply(message, {
+          runtimeAvailable: true,
+          activeLocalSessions: [{ modelId: MODEL_ID, sessionId: UUID }]
+        }));
+      case "listModels":
+        return Promise.resolve(reply(message, { models: [{ id: MODEL_ID, selected: true }] }));
+      case "checkReadiness":
+        return Promise.resolve(reply(message, { canGenerate: true, sessionId: UUID }));
+      case "authorizeGeneration":
+        return Promise.resolve(reply(message, {
+          challengeNonce: "0123456789abcdef0123456789abcdef",
+          requestId: message.requestId,
+          sessionId: message.sessionId
+        }));
+      case "generate":
+        return Promise.resolve(reply(message, {
+          output: "This output must not escape after cancellation.",
+          runtimeSessionId: UUID,
+          authorized: false
+        }));
+      case "cancelGeneration":
+        resolveCancellationStarted();
+        return new Promise(resolve => {
+          finishCancellation = () => resolve(reply(message, { cancelled: true }));
+        });
+      default:
+        throw new Error("Unexpected action: " + message.action);
+    }
+  });
+
+  const controller = new AbortController();
+  const generation = bridge.generate("Finish while cancellation is draining.", {
+    signal: controller.signal,
+    onRequest: () => controller.abort()
+  });
+  await cancellationStarted;
+
+  let settled = false;
+  generation.then(() => { settled = true; }, () => { settled = true; });
+  await Promise.resolve();
+  assert.equal(settled, false, "The client must wait for the native drain response.");
+
+  finishCancellation();
+  await assert.rejects(generation, error => error.code === "generation_cancelled");
+  assert.equal(calls.filter(call => call.action === "cancelGeneration").length, 1);
+});
