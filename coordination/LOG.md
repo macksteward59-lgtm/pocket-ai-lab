@@ -3215,3 +3215,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Current evidence cautions retained: PR #171 owns shared app-scoped runtime; PR #174 owns native challenge-gated WebKit dispatch; PR #175 owns web client integration; exact-head native CI must be re-polled; hosted checks are not physical iPhone Air acceptance. PR #181 OWASP context remains unconnected to `Orchestrator.executeTask()`; PR #180 exact-head workflow status must be checked. East live PostgreSQL/RLS evidence and original M01–M42 registry remain open.
 - No application code, tests, APEX authorization, signing, attestation, merge, or device acceptance was performed or claimed.
 - **Next action:** all contributors read the complete handoff and reconcile exact PR heads/CI and non-overlapping file ownership before taking another implementation slice.
+
+
+## 2026-11-17 — Autonomous vulnerability pipeline handoff
+
+- **Branch:** `codex/autonomous-vulnerability-pipeline-handoff`, based on `agent-coordination`.
+- **Scope:** documentation only under `coordination/vulnerability-pipeline/`: `ROADMAP_MILESTONES.md`, `SECURITY_AGENT_PROMPTS.md`, `INFRASTRUCTURE_REQUIREMENTS.md`, and `DEV_ENVIRONMENT_CONFIG.env`.
+- **Design decision:** preserve the four requested roadmap stages but add a mandatory Milestone 0 for explicit authorization/scope, plus reporting and remediation-learning requirements. Integrate with existing Director/APEX, East/e3, eight permanent agents, ModelRouter, and ExploitGym boundaries; do not create a parallel authority or runtime.
+- **Safety defaults:** passive collection only; active testing disabled; external egress disabled; sandbox disabled until separately reviewed; scope manifest required; no secrets or model weights committed.
+- **Prompt changes:** replace arbitrary exploit/PoC generation with a safe validation-harness proposal using synthetic fixtures and approved test APIs. Model scores remain prioritization hints, not proof or authorization.
+- **Infrastructure correction:** two RTX 4090 GPUs do not automatically provide a single contiguous 48 GB VRAM pool; workstation hardware is not an iPhone Air requirement. Model candidates require license/hash/benchmark verification.
+- **Validation:** documentation-only. No scanner, decompiler, fuzz harness, sandbox, application code, tests, or target activity was implemented or run. No APEX authorization, East execution authority, CI pass, or physical-device acceptance is claimed.
+- **Review request:** verify file placement, policy language, and compatibility with the complete product handoff before merging. Implementation must be separately claimed on a feature branch after the scope and sandbox contracts are approved.
