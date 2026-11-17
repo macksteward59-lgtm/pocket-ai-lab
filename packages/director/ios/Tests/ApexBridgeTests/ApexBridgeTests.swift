@@ -779,7 +779,8 @@ final class RuntimeControllerTests: XCTestCase {
         let readiness = Task { try await controller.readiness(sessionId: sessionID) }
         await hasher.waitUntilStarted()
 
-        XCTAssertTrue(await controller.unload(sessionId: sessionID))
+        let didUnload = await controller.unload(sessionId: sessionID)
+        XCTAssertTrue(didUnload)
         await hasher.resume(with: expectedHash)
 
         do {
@@ -788,8 +789,10 @@ final class RuntimeControllerTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? RuntimeControllerError, .unknownSession)
         }
-        XCTAssertTrue(await controller.reports().isEmpty)
-        XCTAssertTrue(await runtime.snapshot().loadedModelIDs.isEmpty)
+        let reports = await controller.reports()
+        let snapshot = await runtime.snapshot()
+        XCTAssertTrue(reports.isEmpty)
+        XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 
 }
