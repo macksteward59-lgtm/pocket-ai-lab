@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - codex/native-product-experience-integration
+      # Allow stacked Director bridge PRs to receive native Swift/XCTest CI.
+      - codex/bridge-native-runtime-integration
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
