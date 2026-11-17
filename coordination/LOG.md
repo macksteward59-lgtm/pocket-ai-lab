@@ -2956,3 +2956,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Opened replacement draft PR #168, exact head ab6f290702018023edaec800f59bfec422f24bc9. Its iOS LlamaEngine workflow run #43991941724 started; at checkpoint runner setup was in progress.
 - Closed PR #167 as superseded, explicitly without merge. PR #168 is the active review/validation path.
 - No WebKit dispatcher, host approval coordinator, model action dispatch, signing, receipts, APEX authorization, or physical-device acceptance was added.
+
+
+## 2026-11-17 — Bridge CI and dispatcher source recheck
+
+- Rechecked PR #168 exact-head run #43991941724: still building pinned llama.cpp; later Swift/app/simulator/GGUF gates have not started.
+- Rechecked PR #164 exact-head run #43991837435: pinned build, fail-closed typecheck, generic iOS link, and simulator selection passed; simulator boot remains in progress.
+- Inspected PR #168 patch: consequential model actions remain unconditionally blocked; tests cover import/load/unload denial and challenge invalidation.
+- Re-inspected WorkspaceView: only navigation delegate is installed; no WebKit message handler exists. RuntimeController does not consume challenge-store nonces. Dispatcher must enforce challenge binding and one-use consumption before generation.
+- No merge, no runtime action activation, no device acceptance claim.
