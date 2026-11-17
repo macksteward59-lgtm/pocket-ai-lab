@@ -65,7 +65,63 @@ Governance: one central Director selects modules; the separate Authorization Eng
 
 Original execution tiers: T0 Observe; T1 Assess; T2 Modify; T3 High-impact; T4 Prohibited. Do not infer individual module tier assignments from names.
 
-The exact M01–M42 names, descriptions, and per-layer assignments have not yet been returned by the conversation-memory search. Preserve this known framework and continue source retrieval; do not fabricate missing registry entries.
+The original M01–M42 names and numbering have now been recovered from the October 29, 2026 conversation. They are capability modules, not 42 mandatory permanent agents. The exact six-layer assignment table and complete verbatim descriptions remain unrecovered; do not infer either from module names or the separate four-group taxonomy.
+
+| ID | Original module name |
+|---|---|
+| M01 | Network Security |
+| M02 | Penetration Testing |
+| M03 | Vulnerability Assessment |
+| M04 | Web Application Security |
+| M05 | Operating System Security |
+| M06 | Database Security |
+| M07 | Firewall Management |
+| M08 | Intrusion Detection Systems |
+| M09 | Identity and Access Management |
+| M10 | Security Information and Event Management (SIEM) |
+| M11 | Secure Coding Practices |
+| M12 | Security Auditing |
+| M13 | Threat Modeling |
+| M14 | Incident Response |
+| M15 | Reverse Engineering |
+| M16 | Digital Forensics |
+| M17 | Advanced Malware Analysis |
+| M18 | Threat Hunting |
+| M19 | Cloud Security |
+| M20 | Incident Response Automation |
+| M21 | Cyber Threat Intelligence |
+| M22 | IoT Security |
+| M23 | DevSecOps |
+| M24 | Cybersecurity Consulting |
+| M25 | Social Engineering |
+| M26 | Cryptography |
+| M27 | Cybersecurity Research |
+| M28 | Cybersecurity Education and Training |
+| M29 | Cybersecurity Policy and Governance |
+| M30 | AI and Machine Learning in Cybersecurity |
+| M31 | Quantum Computing in Cybersecurity |
+| M32 | Biometric Security |
+| M33 | Blockchain Security |
+| M34 | Cybersecurity Law and Ethics |
+| M35 | Threat Intelligence Automation |
+| M36 | Predictive Analytics for Cybersecurity |
+| M37 | Cyber Physical Systems Security |
+| M38 | Cloud Infrastructure Security |
+| M39 | Red Team Operations |
+| M40 | Blue Team Operations |
+| M41 | Cybersecurity Risk Management |
+| M42 | Secure Software Development Lifecycle (SSDLC) |
+
+Earlier four-group conceptual view (distinct from the six canonical layers):
+1. Technical foundations: Programming, Networks, Operating systems, Databases, Cryptography.
+2. Security analysis: Vulnerability assessment, Threat modeling, Application security, Reverse engineering, Forensics.
+3. Operational capabilities: Red team, Blue team, SIEM, Threat hunting, Incident response, Cloud defense.
+4. Advanced integration: AI/ML, Automation, Intelligence, Risk governance, Quantum-resistant security, Cyber-physical resilience.
+
+- [ ] Recover and preserve each original module description verbatim where available; mark any unavailable description as unrecovered.
+- [ ] Recover the original M01–M42-to-six-layer mapping and per-module T0–T4/permission matrix from the November 1 source; do not infer assignments.
+- [ ] Keep the four conceptual groups separate from the canonical six-layer taxonomy.
+
 
 ## 2. Director/APEX governance and authorization
 
