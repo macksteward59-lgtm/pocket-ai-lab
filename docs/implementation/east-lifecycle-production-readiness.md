@@ -65,6 +65,10 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 - Audit events are durable and redact sensitive payloads.
 - Physical-device tests cover memory pressure, thermal pressure, process termination, and restart.
 
+## Lifecycle event journal
+
+The coordinator now records ordered task/step transition events in the same durable snapshot as the corresponding state change. Event sequence and deterministic task-local IDs are validated on load; the journal is bounded at 2,048 events and refuses new transitions rather than pruning when full. Legacy snapshots without event history remain readable with an empty journal. This gives restart-visible transition history but is not a separate append-only SQL event table, tamper-evident hash chain, signed Evidence, or APEX authorization. Production audit retention, access controls, redaction, and tamper-evidence still require an explicit design.
+
 ## Current status
 
 The coordinator and East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, and idempotent completed-step resumption. The East task map and MessageBus remain in-memory, but the adapter serializes a validated task snapshot plus the new message delta into each successfully completed lifecycle step result. A fresh East runtime and fresh coordinator can rehydrate the task and full message thread from the shared lifecycle store without repeating completed inference; the adapter test now uses distinct runtime instances to prove that boundary.
