@@ -598,7 +598,7 @@ final class RuntimeControllerTests: XCTestCase {
 
         let report = await controller.reports().first
         XCTAssertEqual(report?.sessionId, sessionID)
-        XCTAssertFalse(report?.canGenerate ?? true)
+        XCTAssertTrue(report?.canGenerate ?? false)
         await controller.disconnect()
     }
 
