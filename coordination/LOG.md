@@ -3087,3 +3087,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Device framework link, simulator selection/boot, Director bridge manifest, app build, native app XCTest, engine simulator XCTest, GGUF download/path validation, and macOS XCTest have not yet run.
 - The active job log endpoint currently returns BlobNotFound; this is an unavailable log artifact, not evidence of a test failure. Continue using job step summaries for status and do not infer a cause.
 - Board updated. PR #174 remains draft; no merge or physical-device acceptance.
+
+
+## 2026-11-17 — PR #174 native validation advanced
+
+- Re-polled exact-head run #44122576415, commit `4682f4a271e170081f96b91f7d997487e0a69ec9`.
+- Newly passed: fail-closed Swift typecheck, physical-device framework linking, iPhone simulator selection and boot, and restored Director bridge package manifest validation. Earlier pinned llama.cpp simulator/macOS build also remains passed.
+- Native app project generation/build is now in progress. Native app XCTest, simulator XCTest, pinned GGUF smoke setup, and macOS XCTest have not yet run.
+- Updated Phase B coordination board to reflect the completed gates and current build step. PR #174 remains draft; no merge, no physical iPhone Air acceptance, and no signed evidence/authorization claim.
