@@ -29,6 +29,7 @@ on:
     branches:
       - main
       - ios/private-iphone-test-hybrid
+      - codex/runtime-request-attempt-registry
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
