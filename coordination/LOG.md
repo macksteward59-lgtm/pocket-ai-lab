@@ -3112,3 +3112,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Intelligence CI #44124408403 has passed dependency installation/advisory reporting, JavaScript syntax, and TypeScript build; its test step is still running.
 - Prior iOS run #44122576415 remains attached to previous head `4682f4a271e170081f96b91f7d997487e0a69ec9`; it is not current-head evidence.
 - Coordination board and PR validation describe this distinction. No merge, physical-device test, APEX authorization, Ed25519 signature, or signed evidence receipt.
+
+
+## 2026-11-17 — PR #174 actor-reentrancy hardening
+
+- Independent review found an actor-reentrancy window in `RuntimeController.generate`: it checked the active session, then awaited challenge consumption. A concurrent `disconnect()`/unload could release the controller's ModelPool lease before the suspended generation resumed.
+- Fixed in `8dcacb00218758863b25da856f3b59b169c940f9`: after challenge consumption, revalidate that the session is still present, not unloading, keyed by the exact RuntimeSession ID, retains the same unexpired readiness health-check, and has no duplicate request before starting inference. Generation now uses the latest active lease/state, not the pre-await snapshot.
+- Introduced narrow `BridgeChallengeConsuming: Sendable` protocol in `823e2280b7ac18e5c8891c00e3f637a1a626a2bf`; RuntimeController now depends on this consumption-only contract (`eb487a5aa1c24970c7588bb1537d560a1c9268ff`). Challenge issuance remains host-owned by BridgeChallengeStore.
+- Added deterministic regression in `baef6bd0f96ace42e33a0d32d957dd00bd35eece`: pause challenge consumption, disconnect and release the session, resume the challenge result, and assert generation fails with `unknownSession` and runtime remains unloaded.
+- Current exact-head iOS LlamaEngine run #44125054127 is in progress for `baef6bd0f96ace42e33a0d32d957dd00bd35eece`. Intelligence CI #44125037166 is also in progress. No current-head build/test result claimed yet.
+- Updated PR #174 validation and the Phase B ownership row. PR remains draft; no merge, no physical-device acceptance, no APEX authorization, no Ed25519 evidence signature.
