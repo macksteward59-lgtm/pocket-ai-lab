@@ -29,7 +29,7 @@ import type { LlamaCppInferenceResult } from "./result";
 export type { LlamaCppInferenceResult } from "./result";
 
 export interface LlamaCppGenerateOptions {
-  /** Honored by this adapter. Not yet part of InferenceProvider; see coordination log. */
+  /** Caller-owned cancellation propagated to the backend and awaited through stream/body drain. */
   signal?: AbortSignal;
 }
 
