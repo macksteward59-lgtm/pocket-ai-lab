@@ -121,7 +121,7 @@ export type ScopePreflightResult =
       authorizationGranted: false;
       status: "apex_decision_required";
       manifestId: string;
-      manifestDigest: string;
+      declaredDigestUnverified: string;
       reason: "A_VALID_MANIFEST_IS_NOT_AN_AUTHORIZATION";
     }
   | {
@@ -165,7 +165,7 @@ export function checkScopeConstraints(
     authorizationGranted: false,
     status: "apex_decision_required",
     manifestId: manifest.manifest_id,
-    manifestDigest: manifest.integrity.sha256,
+    declaredDigestUnverified: manifest.integrity.sha256,
     reason: "A_VALID_MANIFEST_IS_NOT_AN_AUTHORIZATION",
   };
 }
