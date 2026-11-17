@@ -42,7 +42,7 @@ interface OwaspCatalog {
   invariants: string[];
 }
 
-export const OWASP_KNOWLEDGE_CATALOG = catalog as OwaspCatalog;
+export const OWASP_KNOWLEDGE_CATALOG = catalog as unknown as OwaspCatalog;
 
 export function getOwaspSource(sourceId: string): OwaspKnowledgeSource | undefined {
   return OWASP_KNOWLEDGE_CATALOG.sources.find(source => source.id === sourceId);
@@ -68,5 +68,7 @@ export function getOwaspSourcesForTopics(topics: readonly string[]): OwaspKnowle
  * tool allowlist, permission grant, APEX decision, or execution receipt.
  */
 export function isOwaspReferenceUntrusted(sourceId: string): boolean {
-  return getOwaspSource(sourceId)?.trust === "untrusted-reference";
+  // Unknown sources fail closed: they are not eligible to be treated as trusted.
+  const source = getOwaspSource(sourceId);
+  return !source || source.trust === "untrusted-reference";
 }
