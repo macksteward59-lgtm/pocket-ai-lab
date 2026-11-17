@@ -107,7 +107,7 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
-        config.userContentController.addScriptMessageHandlerWithReply(
+        config.userContentController.addScriptMessageHandler(
             context.coordinator,
             contentWorld: .page,
             name: WorkspaceBridgeDispatcher.messageHandlerName
