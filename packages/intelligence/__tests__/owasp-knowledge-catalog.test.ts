@@ -27,6 +27,6 @@ assert.ok(getOwaspSourcesForAgent("security-analyst").length >= 5);
 assert.ok(getOwaspSourcesForPack("evidence").some(source => source.id === "OWASP-AGENT-EVIDENCE"));
 assert.ok(getOwaspSourcesForTopics(["rag-poisoning"]).some(source => source.id === "OWASP-LLM-PROMPT-INJECTION"));
 assert.deepEqual(getOwaspSourcesForTopics(["topic-that-does-not-exist"]), []);
-assert.equal(isOwaspReferenceUntrusted("unknown-source"), false);
+assert.equal(isOwaspReferenceUntrusted("unknown-source"), true);
 
 console.log("OWASP knowledge catalog checks passed.");
