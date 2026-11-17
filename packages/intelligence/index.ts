@@ -5,3 +5,13 @@ export { ModelRouter } from "./model-router/ModelRouter";
 export { DeliberationEngine } from "./deliberation/DeliberationEngine";
 export { MemoryManager } from "./memory/MemoryManager";
 export { Orchestrator } from "./orchestrator/Orchestrator";
+export {
+  OWASP_KNOWLEDGE_CATALOG,
+  getOwaspSource,
+  getOwaspSourcesForAgent,
+  getOwaspSourcesForPack,
+  getOwaspSourcesForTopics,
+  isOwaspReferenceUntrusted,
+  type KnowledgeAgentId,
+  type OwaspKnowledgeSource
+} from "./knowledge";
