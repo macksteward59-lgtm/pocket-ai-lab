@@ -42,7 +42,6 @@ function fixture(overrides: Record<string, unknown> = {}): unknown {
 
 function validManifest(): ScopeManifest {
   const result = validateScopeManifest(fixture(), NOW);
-  assert.equal(result.valid, true);
   if (!result.valid) throw new Error(result.errors.join("; "));
   return result.manifest;
 }
