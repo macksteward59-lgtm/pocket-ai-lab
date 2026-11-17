@@ -179,3 +179,27 @@ The upstream East project authoring guide requires project-owned platform functi
 When the custom platform package is added, migrate declarations and exported implementations together to the agreed project-prefixed dotted identifiers. Do not rename only one side. The task body invokes createAgentTask, assignAgent, runDeliberation, and commitTaskEvidence; executeAgent is bound but not called directly by this task body. Confirm whether executeAgent is an intentional exported platform capability before retaining or removing it.
 
 This is a static source audit against the upstream authoring guide. No runtime source was changed, and the existing in-process compile tests do not validate e3 runner package resolution.
+
+### Provider-boundary audit — local transport drain versus remote generation cancellation
+
+The provider implementations show two different cancellation guarantees, which must not be conflated:
+
+| Provider path | Caller signal | What the code waits for | What remains unproven |
+|---|---|---|---|
+| `Orchestrator.executeTask` | Passes the same signal to each `InferenceProvider.generate` call | Awaits the provider promise; releases the agent session and model-router lease in `finally`; checks abort before publishing and before memory write | Does not make an e3 task runner deliver a signal into the East callback |
+| `LlamaCppInferenceProvider` + `HttpLlamaCppBackend` | Combines caller signal with timeout and passes it through HTTP requests and body/stream readers | Awaits request/body reader settlement; stream reader is cancelled on abort; provider rejects after transport cleanup | Does not prove llama-server stopped generation or freed its model-side work |
+| `RemoteInferenceProvider` | Converts caller abort into an AbortController passed to `fetch`; also has its own timeout | Awaits fetch/body response promise and removes listener/timer in `finally` | No stable generation ID, authenticated cancel endpoint, settlement query, or authoritative remote-compute stop receipt; remote server may continue generation after HTTP disconnect |
+
+The `InferenceProvider` interface comment explicitly requires a provider to settle only after an aborted backend request has drained. `Orchestrator.executeTask` honors that contract by awaiting `generate` rather than racing it against an abort promise. Its `finally` releases the session and router lease only after `generate` settles. `EastPlatformRuntime.executeAgent` and `runDeliberation` pass the caller signal into that same orchestration path.
+
+The checked-in East task declaration still has no cancellation parameter/context: `executeAgent` and `runDeliberation` are East platform functions whose implementations call the runtime methods without options, and the task function receives only `objective`. Therefore these provider and orchestrator guarantees are established for a direct caller that already owns an AbortSignal; they do not establish that e3 cancellation reaches the provider.
+
+For remote inference, an aborted HTTP fetch is a local transport outcome, not a remote generation cancellation receipt. Until a host-owned supervisor and inference service support an authenticated, idempotent cancellation command keyed by a stable generation ID plus a settlement query, the durable attempt must report remote compute termination as **unconfirmed/unknown**. It must fence late results and must not replay or publish a stale attempt after restart.
+
+### Focused test coverage and remaining acceptance gap
+
+The East platform test suite currently demonstrates ordinary execution, compile-time binding, provider failure, and governance fail-closed behavior. The existing cancellation/drain contract describes a regression that blocks a provider promise, aborts the caller, confirms the caller remains pending until the provider settles, and then confirms no late MessageBus publication or deliberation memory write. That regression is valuable for the direct runtime API, but it is not a real e3 deployment/runner test.
+
+The llama.cpp adapter tests cover caller cancellation at the provider boundary, and its HTTP backend explicitly cancels response bodies/readers. The remote provider has a fetch-level AbortController path, but this repository does not contain an inference-host cancel-by-generation API or remote settlement protocol. These tests therefore validate local request cancellation semantics only; none can establish that an arbitrary remote inference server terminated GPU work.
+
+**Required next tests:** (1) direct East runtime blocked-provider drain test; (2) llama.cpp HTTP stream/body cancellation test with provider promise settlement; (3) remote provider fetch abort test with explicit classification that remote generation termination is unknown; (4) host-supervisor integration test correlating e3 run/task, generation ID, lease release, durable cancellation, and restart recovery; and (5) real e3 deploy/run cancellation test using the same production runner and host API. Do not claim (4) or (5) pass based on current unit tests.
