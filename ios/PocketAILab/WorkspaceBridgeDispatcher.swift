@@ -20,6 +20,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     private let runtimeController: RuntimeController?
     private var isActive = true
     private var lifecycleGeneration: UInt64 = 0
+    private var navigationCleanupPending = false
     private let beforeSessionResolution: (@MainActor () async -> Void)?
 
     init(
@@ -60,9 +61,19 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     func navigationStarted() async {
         guard isActive else { return }
         lifecycleGeneration &+= 1
-        guard let challengeStore else { return }
+        let navigationGeneration = lifecycleGeneration
+        navigationCleanupPending = true
+        guard let challengeStore else {
+            if isActive, lifecycleGeneration == navigationGeneration {
+                navigationCleanupPending = false
+            }
+            return
+        }
         await challengeStore.invalidateAll()
+        guard isActive, lifecycleGeneration == navigationGeneration else { return }
         _ = await runtimeController?.cancelAllGenerations()
+        guard isActive, lifecycleGeneration == navigationGeneration else { return }
+        navigationCleanupPending = false
     }
 
     func invalidate() {
@@ -234,8 +245,9 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                   requestedSession == sessionId,
                   let runtimeController,
                   let challengeStore,
+                  isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending,
                   await runtimeController.reports().contains(where: { $0.sessionId == sessionId && $0.canGenerate }),
-                  isActive, lifecycleGeneration == requestGeneration else {
+                  isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending else {
                 return Self.error("runtime_not_ready", id: messageID)
             }
             do {
@@ -245,7 +257,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                     requestId: requestId,
                     sessionId: sessionId
                 )
-                guard isActive, lifecycleGeneration == requestGeneration else {
+                guard isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending else {
                     await challengeStore.invalidateAll()
                     return Self.error("bridge_unavailable", id: messageID)
                 }
@@ -273,11 +285,12 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                   let sessionId = await ensureControllerSession(lifecycleGeneration: requestGeneration),
                   requestedSession == sessionId,
                   let frameOrigin,
-                  let runtimeController else {
+                  let runtimeController,
+                  isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending else {
                 return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
             }
             do {
-                guard isActive, lifecycleGeneration == requestGeneration else { return Self.error("bridge_unavailable", id: messageID) }
+                guard isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending else { return Self.error("bridge_unavailable", id: messageID) }
                 let record = try await runtimeController.generate(
                     sessionId: sessionId,
                     prompt: prompt,
@@ -347,6 +360,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
             guard let selectedID = catalog.selectedModelID,
                   let entry = catalog.entries.first(where: { $0.id == selectedID }) else {
                 await challengeStore?.invalidateAll()
+                guard isActive, lifecycleGeneration == expectedGeneration else { return nil }
                 await runtimeController.disconnect()
                 return nil
             }
@@ -362,6 +376,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 $0.model == descriptor && $0.session.modelId == entry.id
             }) else {
                 await challengeStore?.invalidateAll()
+                guard isActive, lifecycleGeneration == expectedGeneration else { return nil }
                 await runtimeController.disconnect()
                 return nil
             }
@@ -396,6 +411,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
             }
             return sessionId
         } catch {
+            guard isActive, lifecycleGeneration == expectedGeneration else { return nil }
             await runtimeController.disconnect()
             return nil
         }
