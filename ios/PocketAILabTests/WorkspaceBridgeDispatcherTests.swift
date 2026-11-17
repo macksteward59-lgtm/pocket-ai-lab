@@ -225,6 +225,31 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             "attemptId": "attempt-1",
             "challengeNonce": nonce
         ]
+        await dispatcher.navigationStarted()
+        let invalidated = await dispatcher.handle(
+            body: generationBody,
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(invalidated["error"] as? String, "generation_failed")
+        XCTAssertTrue((invalidated["detail"] as? String ?? "").contains("unauthorizedChallenge"))
+
+        let refreshedAuthorization = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(refreshedAuthorization["ok"] as? Bool, true)
+        let refreshedData = try XCTUnwrap(refreshedAuthorization["data"] as? [String: Any])
+        let refreshedNonce = try XCTUnwrap(refreshedData["challengeNonce"] as? String)
+        var refreshedGenerationBody = generationBody
+        refreshedGenerationBody["challengeNonce"] = refreshedNonce
+
         let generation = await dispatcher.handle(
             body: generationBody,
             frameOrigin: trustedOrigin,
@@ -236,7 +261,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(generationData["runtimeSessionId"] as? String, sessionID)
         XCTAssertEqual(generationData["authorized"] as? Bool, false)
 
-        var replayBody = generationBody
+        var replayBody = refreshedGenerationBody
         replayBody["id"] = UUID().uuidString
         replayBody["requestId"] = UUID().uuidString
         let replay = await dispatcher.handle(
