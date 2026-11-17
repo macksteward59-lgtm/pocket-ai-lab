@@ -3173,3 +3173,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Compared PR #174 and PR #175 changed-file lists. No file paths overlap: PR #174 owns the native iOS WebKit dispatcher/runtime controller and native tests; PR #175 owns the web workspace client, bridge adapter, service worker, and web tests.
 - PR #171 remains the shared-runtime owner and is still open at head `90b4e2b408fd98d418bff729c8e8d208fe13463f`; PR #174 remains stacked on that exact base.
 - Current-head Intelligence CI #44129054825 passed. Current-head iOS run #44129072799 remains pending with no job allocated as of this check.
+
+
+## 2026-11-17 — TypeScript test-runner workstream claimed
+
+- Claimed isolated root test infrastructure work on `codex/typescript-test-runner`.
+- Scope is limited to `package.json` and a dedicated `.github/workflows/intelligence-tests.yml`; existing workflows, OWASP feature files, Orchestrator, APEX, East, native runtime, and memory are excluded.
+- Purpose: declare the already-referenced `tsx` runner, run the existing Gate 0.1 and OWASP regression scripts, and make TypeScript build/test evidence available for the OWASP integration branch.
+- No test results or application behavior changes are claimed at claim time.
