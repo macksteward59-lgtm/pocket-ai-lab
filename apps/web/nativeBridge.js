@@ -130,12 +130,41 @@
       throw makeError("invalid_generation_challenge", "The native host did not issue a valid generation challenge.");
     }
 
-    if (options.signal && options.signal.aborted) {
+    const signal = options.signal;
+    if (signal && signal.aborted) {
       throw makeError("generation_cancelled", "Generation was cancelled before native inference started.");
     }
     if (typeof options.onRequest === "function") {
       options.onRequest({ sessionId, requestId });
     }
+    // onRequest is caller code and may synchronously abort the signal. Check
+    // again before registering the listener or dispatching native generation.
+    if (signal && signal.aborted) {
+      throw makeError("generation_cancelled", "Generation was cancelled before native inference started.");
+    }
+
+    let abortListener;
+    let abortPromise;
+    if (signal && typeof signal.addEventListener === "function") {
+      abortPromise = new Promise((resolve, reject) => {
+        abortListener = async () => {
+          try {
+            await cancelGeneration(sessionId, requestId);
+            reject(makeError("generation_cancelled", "Native generation was cancelled and drained."));
+          } catch (error) {
+            reject(makeError("generation_cancel_failed", error && error.message));
+          }
+        };
+        signal.addEventListener("abort", abortListener, { once: true });
+      });
+      // Close the already-aborted window before the native request is posted.
+      // No asynchronous work occurs between this check and request dispatch.
+      if (signal.aborted) {
+        signal.removeEventListener("abort", abortListener);
+        throw makeError("generation_cancelled", "Generation was cancelled before native inference started.");
+      }
+    }
+
     const generationPromise = request("generate", {
       sessionId,
       prompt,
@@ -147,23 +176,11 @@
       temperature
     });
     let record;
-    if (options.signal && typeof options.signal.addEventListener === "function") {
-      let abortListener;
-      const abortPromise = new Promise((resolve, reject) => {
-        abortListener = async () => {
-          try {
-            await cancelGeneration(sessionId, requestId);
-            reject(makeError("generation_cancelled", "Native generation was cancelled and drained."));
-          } catch (error) {
-            reject(makeError("generation_cancel_failed", error && error.message));
-          }
-        };
-        options.signal.addEventListener("abort", abortListener, { once: true });
-      });
+    if (abortPromise) {
       try {
         record = await Promise.race([generationPromise, abortPromise]);
       } finally {
-        options.signal.removeEventListener("abort", abortListener);
+        signal.removeEventListener("abort", abortListener);
       }
     } else {
       record = await generationPromise;

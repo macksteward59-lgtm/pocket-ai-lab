@@ -195,3 +195,45 @@ test("native chat enforces bounded generation settings and prompt size", async (
   await assert.rejects(() => bridge.generate("x".repeat(32_769)), error => error.code === "prompt_too_large");
   assert.equal(calls, 0);
 });
+
+
+test("synchronous abort from onRequest prevents native generation dispatch", async () => {
+  const calls = [];
+  const bridge = loadBridge(async message => {
+    calls.push(message.action);
+    switch (message.action) {
+      case "getRuntimeStatus":
+        return reply(message, {
+          runtimeAvailable: true,
+          activeLocalSessions: [{ modelId: MODEL_ID, sessionId: UUID }]
+        });
+      case "listModels":
+        return reply(message, { models: [{ id: MODEL_ID, selected: true }] });
+      case "checkReadiness":
+        return reply(message, { canGenerate: true, sessionId: UUID });
+      case "authorizeGeneration":
+        return reply(message, {
+          challengeNonce: "0123456789abcdef0123456789abcdef",
+          requestId: message.requestId,
+          sessionId: message.sessionId
+        });
+      case "generate":
+      case "cancelGeneration":
+        throw new Error("Native inference must not start for a synchronously aborted request.");
+      default:
+        throw new Error("Unexpected action: " + message.action);
+    }
+  });
+
+  const controller = new AbortController();
+  await assert.rejects(
+    () => bridge.generate("Cancel before dispatch.", {
+      signal: controller.signal,
+      onRequest: () => controller.abort()
+    }),
+    error => error.code === "generation_cancelled"
+  );
+  assert.deepEqual(calls, [
+    "getRuntimeStatus", "listModels", "checkReadiness", "authorizeGeneration"
+  ]);
+});
