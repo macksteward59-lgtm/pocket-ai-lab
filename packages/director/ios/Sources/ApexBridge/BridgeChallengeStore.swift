@@ -11,7 +11,19 @@ public enum BridgeChallengeError: Error, Equatable, Sendable {
 /// The page can receive a nonce, but it cannot mint one or extend its lifetime.
 /// A challenge is bound to the trusted origin, request UUID, and runtime session.
 /// The WebKit message handler must consume it before dispatching generation.
-public actor BridgeChallengeStore {
+/// Minimal host-owned challenge-consumption contract. The controller
+/// depends on consumption only; issuance remains exclusively on the host store.
+public protocol BridgeChallengeConsuming: Sendable {
+    func consume(
+        _ nonce: String,
+        page: URL,
+        trusted: URL,
+        requestId: String,
+        sessionId: String
+    ) async -> Bool
+}
+
+public actor BridgeChallengeStore: BridgeChallengeConsuming {
     private struct Entry: Sendable {
         let origin: Origin
         let requestId: String
