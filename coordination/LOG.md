@@ -3430,3 +3430,9 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - PR #162 advanced concurrently from workflow checkout SHA `165594b26598955f219529b12aa79ca2cec8a372` to current head `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The current workflow file has an explicit `psql "$DATABASE_URL"` argument, so the exact cause of the discrepancy between the committed file and the runner's logged command remains unresolved. No branch edits were made; inspect exact current commit/workflow and rerun before changing it.
 - PR #185 compares as diverged from current PR #174: 1 ahead / 13 behind, six-file web-only delta. It remains draft and requires rebase/reconciliation plus exact-head web CI.
 - No PR merge, application code change, deployment, production database/RLS operation, signed evidence, APEX authorization, or physical iPhone Air acceptance occurred.
+
+
+### Correction — East migration workflow root cause resolved from exact commit comparison
+
+- Compared the failing run's checked-out workflow at `165594b26598955f219529b12aa79ca2cec8a372` with the current PR #162 head `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The failing revision omitted `psql "$DATABASE_URL"` and therefore used the runner's local Unix socket. The current head's workflow explicitly passes `"$DATABASE_URL"`, addressing the observed connection-target defect.
+- No additional code edit was made by this coordination pass. Exact-head CI for `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3` has not yet surfaced; the real PostgreSQL integration test remains unverified until that run passes.
