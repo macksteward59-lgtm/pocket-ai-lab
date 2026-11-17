@@ -242,7 +242,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testCatalogHashMismatchFailsBeforeAcquiringLease() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_500))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         let wrongHash = String(repeating: "0", count: 64)
         XCTAssertNotEqual(expectedHash, wrongHash)
@@ -260,7 +260,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testDuplicateRuntimeSessionCannotOverwriteExistingLease() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_750))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
 
         let first = try await controller.load(
@@ -413,7 +413,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         _ = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         await controller.disconnect()
