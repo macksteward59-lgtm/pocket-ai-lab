@@ -138,12 +138,18 @@ export type ScopePreflightResult =
 export function checkScopeConstraints(
   manifest: ScopeManifest,
   request: ScopeActionRequest,
+  now: Date = new Date(),
 ): ScopePreflightResult {
   const reasons: string[] = [];
   const requestTime = request.requestedAt.getTime();
+  const validationTime = now.getTime();
 
+  // requestedAt is event metadata supplied by the caller, not a trusted clock.
+  // The separately injected clock is for deterministic tests/host clock control;
+  // production callers should omit it and use the current process time.
   if (!Number.isFinite(requestTime)) reasons.push("invalid_request_time");
-  if (Date.parse(manifest.expires_at) <= requestTime) reasons.push("manifest_expired");
+  if (!Number.isFinite(validationTime)) reasons.push("invalid_validation_time");
+  if (Date.parse(manifest.expires_at) <= validationTime) reasons.push("manifest_expired");
   if (!manifest.permitted_operations.includes(request.operation)) reasons.push("operation_not_in_manifest");
   if (!manifest.environments.includes(request.environment)) reasons.push("environment_not_in_manifest");
 
