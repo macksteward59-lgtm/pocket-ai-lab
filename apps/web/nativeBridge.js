@@ -178,6 +178,13 @@
       record = abortPromise
         ? await Promise.race([generationPromise, abortPromise])
         : await generationPromise;
+
+      // If generation wins the race after AbortSignal fires, still wait for the
+      // native cancellation response. The host response represents completion
+      // of the native drain; never surface output from a cancelled request.
+      if (signal && signal.aborted && abortPromise) {
+        await abortPromise;
+      }
     } finally {
       if (signal && abortListener) {
         signal.removeEventListener("abort", abortListener);
