@@ -320,6 +320,22 @@ public actor RuntimeController {
         return true
     }
 
+    /// Cancels every active generation and awaits each runtime cancellation
+    /// drain. Used when the trusted workspace navigates or is torn down.
+    @discardableResult
+    public func cancelAllGenerations() async -> Int {
+        let pending = sessions.flatMap { sessionId, active in
+            active.generations.keys.map { (sessionId, $0) }
+        }
+        var cancelled = 0
+        for (sessionId, requestId) in pending {
+            if await cancelGeneration(sessionId: sessionId, requestId: requestId) {
+                cancelled += 1
+            }
+        }
+        return cancelled
+    }
+
     /// Releases one exact session lease. Other consumers' leases are never evicted.
     @discardableResult
     public func unload(sessionId: String) async -> Bool {
