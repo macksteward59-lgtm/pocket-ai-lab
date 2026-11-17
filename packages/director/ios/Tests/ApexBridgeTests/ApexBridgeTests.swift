@@ -44,15 +44,15 @@ final class BridgeGateTests: XCTestCase {
             "attemptId": "attempt-1",
             "challengeNonce": "0123456789abcdef"
         ]
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: false), .accepted)
+        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted), .accepted)
 
         var shortNonce = body
         shortNonce["challengeNonce"] = "short"
-        XCTAssertEqual(BridgeGate.parse(shortNonce, page: page, trusted: trusted, consequentialAuthorized: false), .invalidMessage)
+        XCTAssertEqual(BridgeGate.parse(shortNonce, page: page, trusted: trusted), .invalidMessage)
 
         var extraKey = body
         extraKey["privateKey"] = "must-not-cross-the-bridge"
-        XCTAssertEqual(BridgeGate.parse(extraKey, page: page, trusted: trusted, consequentialAuthorized: false), .invalidMessage)
+        XCTAssertEqual(BridgeGate.parse(extraKey, page: page, trusted: trusted), .invalidMessage)
     }
 
     func testLoadRequiresHostOwnedConsequentialAuthorization() {
@@ -63,16 +63,16 @@ final class BridgeGateTests: XCTestCase {
             "action": "loadModel",
             "model": "local-model-1",
         ]
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: false), .authorizationRequired)
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: true), .accepted)
+        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted), .authorizationRequired)
+        // No caller-provided Boolean can turn a consequential action into an accepted message.
     }
 
     func testUntrustedOriginAndMissingRequiredFieldsFailClosed() {
         let trusted = URL(string: "https://workspace.example.test")!
         let foreign = URL(string: "https://attacker.example.test")!
         let body: [String: Any] = ["id": UUID().uuidString, "action": "getRuntimeStatus"]
-        XCTAssertEqual(BridgeGate.parse(body, page: foreign, trusted: trusted, consequentialAuthorized: false), .untrustedOrigin)
-        XCTAssertEqual(BridgeGate.parse(["id": UUID().uuidString, "action": "generate"], page: trusted, trusted: trusted, consequentialAuthorized: false), .invalidMessage)
+        XCTAssertEqual(BridgeGate.parse(body, page: foreign, trusted: trusted), .untrustedOrigin)
+        XCTAssertEqual(BridgeGate.parse(["id": UUID().uuidString, "action": "generate"], page: trusted, trusted: trusted), .invalidMessage)
     }
 }
 
