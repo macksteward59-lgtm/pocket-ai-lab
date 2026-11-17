@@ -334,3 +334,13 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 
 
 - Follow-up exact head `ebb047c958034071044702ae9b12329e8aea98e3` adds a PostgreSQL-store coordinator-restart regression: a drained cancellation persists as terminal, remains terminal after a fresh coordinator loads the same namespace, rejects the stale attempt, and cannot be claimed again. The test uses the transactional fake DB adapter, not a live PostgreSQL service. Exact-head CI [#44188338518](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44188338518) passed: JavaScript syntax, TypeScript build, and the full configured test suite.
+
+
+## 2026-11-17 — Workspace web-client stack rebased onto current dispatcher
+
+- PR [#191](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/191) is the active six-file Workspace web-client follow-on. Branch `codex/workspace-native-chat-client-on-174` is based directly on PR #174's verified head `8209c4784a1a715199dcb1ba5322241f5b24105a`; compare reports 6 commits ahead / 0 behind and exactly six changed paths under `apps/web`.
+- The rebase preserves the native bridge readiness/session/challenge flow, no-silent-server-fallback behavior, offline-shell registration, and synchronous AbortSignal cancellation regression. Existing web files were hash-compared at the old PR #185 base and current #174 head before transplant; all four shared base files were identical.
+- PR [#185](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/185) was closed as superseded by #191; no code was merged from #185. Its stale stack had been 1 commit ahead / 13 behind current #174.
+- PR #191 is open/draft/unmerged and GitHub reports it mergeable. No exact-head workflow run or combined status was surfaced for head `0e2368f01440bc5b7b636c40e818e349701d4794`; web validation remains pending. Do not treat prior #185 or #175 CI as evidence for #191.
+- PR #174 remains open/draft/unmerged at `8209c4784a1a715199dcb1ba5322241f5b24105a`; exact-head iOS workflow #44180080060 was previously verified successful across all 19 steps. This is hosted CI, not physical iPhone Air acceptance.
+- No PR was merged; no runtime trust, signed evidence, APEX authorization, or physical-device acceptance is claimed.
