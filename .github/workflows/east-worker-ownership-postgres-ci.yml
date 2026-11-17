@@ -1,0 +1,50 @@
+name: East Worker Ownership PostgreSQL Integration
+
+on:
+  push:
+    branches:
+      - "codex/**"
+    paths:
+      - "packages/intelligence/autonomy/**"
+      - ".github/workflows/east-worker-ownership-postgres-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  east-worker-ownership:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: east_worker_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: east_worker_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d east_worker_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://postgres:east_worker_ci_password@127.0.0.1:5432/east_worker_ci
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Apply the reviewed lifecycle schema migration
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+          psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/migrations/001_task_lifecycle_snapshots.sql
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install
+      - name: Install temporary PostgreSQL driver
+        run: npm install --no-save --package-lock=false pg
+      - name: Exercise real PostgreSQL worker ownership fencing
+        run: node --import tsx packages/intelligence/autonomy/tests/postgres-worker-ownership-integration.mjs
