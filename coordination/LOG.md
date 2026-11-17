@@ -3007,3 +3007,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Audited app composition: LocalChatModel privately owns NativeInferenceRuntime and ModelPoolLease; WorkspaceView creates an independent WKWebView and has no shared runtime/session injection. A standalone WebKit handler would not currently reach the active local chat runtime. Recorded this as a prerequisite: introduce one app-scoped runtime/session owner shared by Local AI and Workspace before adding WebKit dispatch. Avoid creating a second competing runtime/lease owner.
 - Updated coordination gap audit section 14 with exact commits, run status, new shared-runtime gap, and implementation sequence.
 - No PR merged, no consequential model action enabled, and no physical iPhone Air acceptance claimed.
+
+## 2026-11-17 — PR #173 WebKit read-only dispatcher follow-on
+
+- Rechecked active bridge work and found PR #171 had independently begun app-scoped runtime composition. Closed my earlier draft PR #172 as superseded to avoid duplicating the same LocalChatModel/RootView ownership changes.
+- Created a clean follow-on branch `codex/webkit-readonly-dispatcher` from PR #171 exact head `be517ff613ff822fe649623ffe36ea0512b1dcab`; PR #173 is stacked on #171 and consumes its `LocalChatRuntimeDependency` / `NativeModelSessionService` rather than constructing another runtime.
+- Added a fixed-name `WKScriptMessageHandlerWithReply` in the `.page` content world. The dispatcher derives origin from `WKScriptMessage.frameInfo.securityOrigin`, rejects subframes, foreign origins, malformed/unknown schemas, and payloads over 40 KiB.
+- Enabled only read-only `getRuntimeStatus` and `listModels`, with status sourced from the shared ModelPool snapshot and model metadata sourced from the local catalog. Readiness, validation, generation, cancellation, import, load, and unload remain disabled/fail-closed.
+- Added handler removal and dispatcher invalidation on WebView teardown; changing the workspace request identity recreates the WebView so the trusted-origin-bound coordinator is not reused.
+- Added focused tests in a new test file, avoiding PR #171's runtime-composition test file. Added the app-composition base branch to the iOS workflow allowlist for stacked native CI.
+- PR #173 exact head `b716ef8f358dc4819e96bc5e1edeae3b8faaee7c`: iOS LlamaEngine run #44093929443 remains in progress at pinned llama.cpp build; Intelligence CI #44093922426 passed. No full native acceptance claimed.
+- Next bridge prerequisite: compose `RuntimeController` and `BridgeChallengeStore` with the same app-scoped runtime/session/lease. Do not enable generation until host challenge issue/consume occurs before inference and challenge invalidation is tested for navigation, teardown, and session replacement. Consequential model actions remain blocked pending a parameter-bound native approval coordinator.
+- No PR merged and no physical iPhone Air acceptance claimed.
