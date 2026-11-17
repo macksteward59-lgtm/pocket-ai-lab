@@ -691,9 +691,13 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     @MainActor
     func testDismantleRemovesPageWorldHandlerAndNavigationDelegate() async throws {
         let trustedURL = URL(string: "https://workspace.example.test/app")!
+        let composition = NativeRuntimeComposition(
+            engine: DispatcherStubEngine(),
+            availableMemoryMB: { 4_096 }
+        )
         let coordinator = PrivateWorkspaceWebView.Coordinator(
             trustedURL: trustedURL,
-            runtimeDependency: .createForTesting
+            runtimeDependency: composition.dependency
         )
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addScriptMessageHandler(
