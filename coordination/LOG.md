@@ -2926,3 +2926,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added `docs/architecture/trusted-webkit-dispatcher-contract.md` specifying WebKit frame-derived origin checks, challenge consumption before generation, host-owned approval for consequential actions, teardown invalidation, strict schemas, negative/replay tests, and merge/activation gates.
 - PR #166 is documentation-only. Its exact-head workflow query returned no workflow runs; no runtime tests or dispatcher implementation are claimed. PR remains open/draft and unmerged.
 - No application source, APEX trust policy, signer/receipt semantics, East authorization, PR merge state, or physical-device acceptance changed.
+
+
+## 2026-11-17 UTC — BridgeGate consequential-action fail-closed hardening opened as PR #167
+
+- Re-read PR #164 exact-head BridgeGate.swift and ApexBridgeTests.swift.
+- Identified that BridgeGate.parse accepted a caller-provided consequentialAuthorized Boolean and could return accepted for import/load/unload when true.
+- Created codex/bridgegate-host-approval-hardening from PR #164 exact head 6661bf655edef85e94fa1f363fcf54a33f20233c.
+- Removed the Boolean parameter. The parser now returns authorizationRequired unconditionally for importModel, loadModel, and unloadModel. Updated regression tests for all three.
+- Opened draft PR #167, exact head e9418da92d6ed06afedc946dff97841f30002c4d. Exact-head workflow query returned no PR-triggered runs. This is not yet CI-validated.
+- No WebKit handler, host approval coordinator, import/load/unload implementation, signing, receipt, APEX authorization, merge, or device acceptance was added.
