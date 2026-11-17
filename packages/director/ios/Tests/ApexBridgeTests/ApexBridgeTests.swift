@@ -593,7 +593,7 @@ final class RuntimeControllerTests: XCTestCase {
         } catch is CancellationError {
             // Expected: cancellation was observed before native inference began.
         } catch {
-            XCTFail("Expected CancellationError, received: \\(error)")
+            XCTFail("Expected CancellationError, received: \(error)")
         }
 
         let report = await controller.reports().first
