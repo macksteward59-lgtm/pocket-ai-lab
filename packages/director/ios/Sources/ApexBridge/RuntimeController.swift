@@ -74,7 +74,7 @@ public actor RuntimeController {
     }
 
     private let runtime: NativeInferenceRuntime
-    private let challengeStore: BridgeChallengeStore
+    private let challengeStore: BridgeChallengeConsuming
     private let trustedWorkspaceURL: URL
     public let runtimeVersion: String
     public let deviceId: String
@@ -88,7 +88,7 @@ public actor RuntimeController {
         runtime: NativeInferenceRuntime,
         deviceId: String,
         runtimeIdentity: String,
-        challengeStore: BridgeChallengeStore,
+        challengeStore: BridgeChallengeConsuming,
         trustedWorkspaceURL: URL,
         runtimeVersion: String = "pocket-ai-lab-native/1",
         readinessTTL: TimeInterval = 120,
