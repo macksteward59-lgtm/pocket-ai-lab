@@ -489,3 +489,30 @@ The native chain remains draft/open. Hosted checks are not physical-device accep
 The October 29 response metadata still confirms that the original assistant response contains M01–M42 descriptions and layer mappings, but the actual message body has not been recovered into the repository. The later 44-entry/five-layer catalog remains a separate taxonomy and must not be substituted. No missing description, layer assignment, tier, permission class, or approval rule was reconstructed.
 
 No requirement status was promoted to verified, no PR was merged, and no application or authorization behavior was changed by this refresh.
+
+
+---
+
+## 22. Workspace web-client cancellation repair and stack replacement — 2026-11-17
+
+### PR #174 current native dispatcher gate
+- PR #174 current fetched head: `beac6964aa4eda8d370b32ffa3ae565745b4e062`, based on PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`.
+- Exact-head iOS workflow [#44161924371](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44161924371) is queued at this refresh; no native acceptance is claimed.
+- The preceding dispatcher lifecycle fixes include synchronous lifecycle-generation advancement, a navigation-cleanup barrier, and deterministic stale-session-resolution regressions. These changes remain subject to the current exact-head native workflow.
+
+### PR #185 replaces the stale Workspace web-client stack
+- PR: [#185](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/185), draft/open.
+- Branch: `codex/workspace-native-chat-client-rebased`.
+- Exact head: `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`.
+- Base branch: `codex/webkit-readonly-dispatcher-rebased`, exact base at creation `beac6964aa4eda8d370b32ffa3ae565745b4e062` (PR #174 head at that time).
+- Six-file web client change is carried forward from PR #175; no native dispatcher, runtime, APEX, signer, receipt, or authorization files are changed.
+- Fixed cancellation handoff by registering the AbortSignal listener before native generation dispatch, rechecking the signal after registration, and invoking the UI `onRequest` callback only after the native request is dispatched. Thus a synchronous abort from `onRequest` reaches the already-installed listener and sends cancellation for the exact request.
+- Added a deterministic test that aborts synchronously inside `onRequest`, checks `generation_cancelled`, and verifies the cancellation request uses the exact session/request UUID.
+- At this refresh no PR-triggered workflow run was returned for PR #185's exact head. Do not mark its tests passed until exact-head web CI completes.
+
+### Stale PR #175
+- PR #175 remains open/draft at head `4381df81ed0305a96cded87c78c9e446369c5893`, still based on old PR #174 commit `48a6fabea107cc587327bf1782caef14aeefdab7`.
+- Compare against PR #174 current head at this refresh shows the branches diverged: PR #175 is 10 commits ahead and 29 behind. It does not include the latest native dispatcher/runtime hardening and contains the reported cancellation race.
+- PR #185 is the replacement candidate. Do not merge PR #175; keep it open until PR #185's exact-head validation and stack review are complete, then close/supersede deliberately.
+
+No PR was merged. No physical iPhone Air acceptance is claimed. No APEX authorization, signing, or consequential bridge action was added.
