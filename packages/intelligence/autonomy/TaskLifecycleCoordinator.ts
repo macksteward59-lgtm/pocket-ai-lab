@@ -592,8 +592,13 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
     // A terminal task cannot retain live leases or runnable descendants.
     for (const step of next.steps) {
       if (step.status === "pending" || step.status === "running") {
+        const attempt = step.currentAttempt;
         step.status = "cancelled";
         step.currentAttempt = null;
+        appendEvent(next, "step.cancelled", now, {
+          stepId: step.id,
+          ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {})
+        });
       }
     }
   } else if (next.steps.every(step => step.status === "succeeded")) next.status = "completed";
