@@ -24,7 +24,7 @@ struct WorkspaceView: View {
                 Text(localChatModel.workspaceBridgeRuntimeStatus)
                     .font(.caption2).foregroundStyle(.secondary).padding(.horizontal)
                 if let loadURL {
-                    PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID)
+                    PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID, localChatModel: localChatModel)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     VStack(spacing: 10) {
@@ -98,14 +98,20 @@ func isAllowedWorkspaceURL(_ url: URL) -> Bool {
 struct PrivateWorkspaceWebView: UIViewRepresentable {
     let url: URL
     let requestID: UUID
+    let localChatModel: LocalChatModel
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(trustedURL: url)
+        Coordinator(trustedURL: url, localChatModel: localChatModel)
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
+        config.userContentController.addScriptMessageHandlerWithReply(
+            context.coordinator,
+            contentWorld: .page,
+            name: WorkspaceBridgeDispatcher.messageHandlerName
+        )
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         _ = context.coordinator.shouldLoad(requestID)
@@ -120,12 +126,40 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
         webView.load(URLRequest(url: url))
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        webView.configuration.userContentController.removeScriptMessageHandler(
+            forName: WorkspaceBridgeDispatcher.messageHandlerName,
+            contentWorld: .page
+        )
+        coordinator.invalidate()
+        webView.navigationDelegate = nil
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandlerWithReply {
         private let trustedURL: URL
+        private let dispatcher: WorkspaceBridgeDispatcher
         private(set) var lastRequestID: UUID?
 
-        init(trustedURL: URL) {
+        init(trustedURL: URL, localChatModel: LocalChatModel) {
             self.trustedURL = trustedURL
+            self.dispatcher = WorkspaceBridgeDispatcher(trustedURL: trustedURL, localChatModel: localChatModel)
+        }
+
+        func invalidate() {
+            dispatcher.invalidate()
+        }
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage,
+            replyHandler: @escaping (Any?, String?) -> Void
+        ) {
+            dispatcher.userContentController(
+                userContentController,
+                didReceive: message,
+                replyHandler: replyHandler
+            )
         }
 
         func shouldLoad(_ requestID: UUID) -> Bool {
