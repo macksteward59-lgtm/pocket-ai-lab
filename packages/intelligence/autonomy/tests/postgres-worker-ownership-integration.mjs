@@ -39,13 +39,15 @@ const database = {
 async function main() {
   const namespace = "worker-fence-" + randomUUID();
   const taskId = "task-" + randomUUID();
+  const ownerId = "worker-owner-" + randomUUID();
+  const contenderId = "worker-contender-" + randomUUID();
   const owner = new TaskLifecycleCoordinator({
     store: new PostgresTaskLifecycleStore(database, namespace),
-    workerId: "worker-owner-" + randomUUID()
+    workerId: ownerId
   });
   const contender = new TaskLifecycleCoordinator({
     store: new PostgresTaskLifecycleStore(database, namespace),
-    workerId: "worker-contender-" + randomUUID()
+    workerId: contenderId
   });
 
   try {
@@ -77,8 +79,7 @@ async function main() {
     const winningCoordinator = ownerWon ? owner : contender;
     const losingCoordinator = ownerWon ? contender : owner;
     const claim = winners[0].value;
-    assert.equal(claim.ownerId, ownerWon ? ownerWonId(owner) : claim.ownerId);
-    assert.ok(claim.ownerId.startsWith("worker-owner-") || claim.ownerId.startsWith("worker-contender-"));
+    assert.equal(claim.ownerId, ownerWon ? ownerId : contenderId);
 
     // A third, independent process reads the persisted active owner identity.
     const observer = new TaskLifecycleCoordinator({
