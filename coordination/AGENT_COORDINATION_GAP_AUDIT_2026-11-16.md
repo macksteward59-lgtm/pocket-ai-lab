@@ -294,3 +294,34 @@ Implementation review still required: verify all native controller construction 
 3. Inject the same service into WorkspaceView and define the narrow bridge protocol for status, model listing, readiness, generation, cancellation, and unload. Keep import/load/unload blocked pending native approval.
 4. Add the frame-derived main-frame WebKit dispatcher and lifecycle challenge invalidation with negative, replay, expiry, wrong-origin, wrong-session, and navigation tests.
 5. Run exact-head iOS CI and then perform physical iPhone Air acceptance separately.
+
+
+---
+
+## 15. Live refresh — 2026-11-17
+
+### 15.1 PR #169 exact-head CI reconciliation
+
+The first PR #169 iOS run, #43995918805, failed during native app XCTest compilation. The job log identifies three stale tuple destructuring sites in `ApexBridgeTests.swift`: the fixture had been extended to return six values including `BridgeChallengeStore`, while three tests still destructured five. The simulator XCTest, GGUF download, and macOS XCTest steps were skipped after this compile failure.
+
+This failure was not a runtime authorization bypass or a llama.cpp build failure. The current branch includes the corrected six-element destructuring. A subsequent workflow on exact current head `c727342a1485846a94190cc3c2cd19729fb75e6f`, run #44066457735, completed with conclusion **success**. This clears hosted iOS workflow validation for that exact head only. It does not establish physical iPhone Air acceptance, WebKit dispatch, native approval coordination, signing, receipts, attestation, or full APEX authorization.
+
+### 15.2 Remaining native integration blocker: runtime ownership
+
+The current board identifies a deeper architecture issue: `LocalChatModel` owns a private `NativeInferenceRuntime` / `ModelPoolLease`, while `WorkspaceView` has no shared runtime/session injection. Do not create a second runtime owner in `WorkspaceView`. The next integration change must establish one app-scoped runtime/session service shared by Local AI and Workspace, with one lease owner and a consistent readiness/file-hash contract. Only after that should the trusted main-frame WebKit dispatcher and challenge lifecycle be integrated.
+
+Required dispatcher acceptance remains:
+- Derive origin from `WKScriptMessage.frameInfo.securityOrigin`, not a page-provided string.
+- Reject subframes and non-trusted origins.
+- Validate strict message schemas and bind one-use challenges to origin, request UUID, active runtime session, and expiry.
+- Invalidate outstanding challenges on navigation, session replacement, disconnect, and teardown.
+- Keep import/load/unload denied until a native approval coordinator exists.
+- Preserve APEX as the sole authorization authority and test fabricated, expired, wrong-binding, replayed, and subframe messages.
+
+### 15.3 Advanced Security Research scope addition
+
+Added `docs/requirements/ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md` and section 19 of the master checklist. The scope includes Operation Triangulation as a defensive historical case study and program-specific bounty research such as Microsoft Windows Insider Preview. It requires exact target/build scope, safe-harbor and exclusion checks, provenance, isolated sample handling, independent validation, APEX authorization, and East/e3 durable execution. This is a requirements baseline only; no active testing or exploit execution is authorized or claimed.
+
+### 15.4 Coordination discipline
+
+The `agent-coordination` branch remains documentation-only. Application implementation belongs on isolated feature branches with exact-head CI and review. The master checklist and traceability ledger remain evidence-driven; no broad requirement is marked verified solely because a PR exists or hosted CI passes.
