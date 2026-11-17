@@ -406,3 +406,26 @@ Exact PR #174 head at this update: `a1a60c39ce12c2b1e5408bb79fe87dfd10f34f5d`. i
 5. Verify actual model inference, cancellation, thermal/memory behavior, and app lifecycle on the physical iPhone Air. Hosted CI and simulator success are not device acceptance.
 
 No PR merged and no physical iPhone Air acceptance claimed.
+
+## 20. Phase C — Workspace frontend client for the native iOS bridge — 2026-11-17
+
+PR #175 (`codex/workspace-native-chat-client`) is stacked on PR #174 and adds the web-side client without changing the native dispatcher authority.
+
+Implemented:
+- Optional `apps/web/nativeBridge.js` detects the fixed WKWebView `pocketAILab` message handler and uses UUID-correlated request/reply envelopes.
+- Client enforces per-action field allowlists, rejects unknown fields/actions, validates response correlation, and bounds prompt size and generation options.
+- A native chat turn obtains runtime status and selected catalog model, requires a matching active Local AI lease, requests a real readiness probe, obtains a host-issued one-use challenge, and then submits generation. The client verifies the returned runtime session ID.
+- In the iOS WKWebView, the Chat composer uses native generation. If the native bridge exists but the model is not loaded or native generation fails, it does not silently fall back to server inference.
+- In ordinary Safari/desktop browsers where no native handler exists, the existing server-backed llama.cpp route remains unchanged.
+- Added the bridge script to the HTML shell and service-worker offline cache. Added Node tests for action/schema restrictions, challenge sequencing, missing lease, session mismatch, prompt/options bounds, and static/offline serving.
+
+Boundaries:
+- This currently wires the ordinary Chat composer only. Agent Team remains on the existing server-backed task endpoint pending a separate native Agent Team bridge contract.
+- The JS helper is not an authorization authority; native `BridgeGate`, `BridgeChallengeStore`, and `RuntimeController` remain authoritative.
+- No import/load/unload action is exposed by this frontend client.
+- No signed evidence, APEX approval, device attestation, or physical iPhone Air acceptance is implied.
+
+Validation snapshot:
+- PR #175 exact head `f23166867ed346024000f3423b2019c16a7f4f32`; Intelligence CI #44112487822 is running the web tests.
+- PR #174 native exact head `48a6fabea107cc587327bf1782caef14aeefdab7`; Intelligence CI passed, iOS LlamaEngine CI #44112233207 is running at pinned llama.cpp build.
+- These hosted workflows are not physical device acceptance.
