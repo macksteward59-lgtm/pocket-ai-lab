@@ -185,6 +185,31 @@ private actor PausingChallengeStore: BridgeChallengeConsuming {
     }
 }
 
+private actor PausingFileHasher {
+    private var continuation: CheckedContinuation<String, Error>?
+    private var startedContinuation: CheckedContinuation<Void, Never>?
+
+    func hash() async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            startedContinuation?.resume()
+            startedContinuation = nil
+        }
+    }
+
+    func waitUntilStarted() async {
+        if continuation != nil { return }
+        await withCheckedContinuation { continuation in
+            startedContinuation = continuation
+        }
+    }
+
+    func resume(with hash: String) {
+        continuation?.resume(returning: hash)
+        continuation = nil
+    }
+}
+
 final class RuntimeControllerTests: XCTestCase {
     private let trustedWorkspaceURL = URL(string: "https://workspace.example.test/app")!
 
@@ -216,6 +241,37 @@ final class RuntimeControllerTests: XCTestCase {
             clock: { clock.now() }
         )
         return (controller, runtime, modelURL, descriptor, Self.sha256(modelURL), challengeStore)
+    }
+
+    private func makePausedHasherFixture(
+        _ hasher: PausingFileHasher
+    ) async throws -> (RuntimeController, NativeInferenceRuntime, URL, ModelDescriptor, String) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-paused-hash-fixture".utf8).write(to: modelURL)
+        let descriptor = ModelDescriptor(
+            id: "paused-hash-model",
+            name: "Paused hash model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let runtime = try NativeInferenceRuntime(
+            engine: StubLlamaEngine(),
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = try BridgeChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL,
+            fileHasher: { _ in try await hasher.hash() }
+        )
+        return (controller, runtime, modelURL, descriptor, Self.sha256(modelURL))
     }
 
     private static func sha256(_ url: URL) -> String {
@@ -685,6 +741,57 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(reports.isEmpty)
         XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
+
+    func testConcurrentReadinessReservesBeforeSuspendedFileHash() async throws {
+        let hasher = PausingFileHasher()
+        let (controller, _, modelURL, descriptor, expectedHash) = try await makePausedHasherFixture(hasher)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+
+        let firstReadiness = Task { try await controller.readiness(sessionId: sessionID) }
+        await hasher.waitUntilStarted()
+
+        do {
+            _ = try await controller.readiness(sessionId: sessionID)
+            XCTFail("A second readiness request must not pass the reserved attempt.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .duplicateRequest)
+        }
+
+        await hasher.resume(with: expectedHash)
+        let ready = try await firstReadiness.value
+        XCTAssertTrue(ready.canGenerate)
+        await controller.disconnect()
+    }
+
+    func testUnloadDuringReadinessHashPreventsStaleProbe() async throws {
+        let hasher = PausingFileHasher()
+        let (controller, runtime, modelURL, descriptor, expectedHash) = try await makePausedHasherFixture(hasher)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+
+        let readiness = Task { try await controller.readiness(sessionId: sessionID) }
+        await hasher.waitUntilStarted()
+
+        XCTAssertTrue(await controller.unload(sessionId: sessionID))
+        await hasher.resume(with: expectedHash)
+
+        do {
+            _ = try await readiness.value
+            XCTFail("A stale readiness caller must not start a probe after unload.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .unknownSession)
+        }
+        XCTAssertTrue(await controller.reports().isEmpty)
+        XCTAssertTrue(await runtime.snapshot().loadedModelIDs.isEmpty)
+    }
+
 }
 
 
