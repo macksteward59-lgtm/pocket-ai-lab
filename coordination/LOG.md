@@ -3459,3 +3459,12 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - Added unit assertions for claim/failure/completion/terminal resulting-state metadata and extended the PostgreSQL 16 integration to verify those fields survive a fresh coordinator read.
 - Exact current PR #187 head: `d00260e4a1c3d0f3e8902b756e67e5cfcaf36bc4`. General CI [#44184575521](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44184575521) passed; PostgreSQL 16 integration [#44184575560](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44184575560) passed. PR #187 remains draft/open/clean and stacked on PR #162. Posted exact-head evidence to PR #187.
 - This remains a bounded application-level journal embedded in the versioned snapshot. It is not a separate immutable SQL event table, hash chain, signed Evidence, worker authentication, RLS, or APEX authorization. No production DB or authorization settings changed.
+
+
+## 2026-11-17 — ChatGPT verification checkpoint
+
+- Verified PR #174 exact head `8209c4784a1a715199dcb1ba5322241f5b24105a` and workflow [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060). The workflow and its sole iOS job completed with conclusion `success`; all 19 steps completed successfully, including native app build/XCTest, simulator XCTest, pinned-GGUF smoke setup, and macOS XCTest.
+- PR #174 remains open/unmerged. Hosted CI does not prove physical iPhone Air acceptance or trust/evidence/APEX semantics.
+- PR #185 is stale relative to current #174: current #174 head compared with #185 head reports `diverged`, 1 ahead / 13 behind, with six changed web files. Reconciliation is required; no blind file overwrite or merge was performed.
+- PR #162 remains open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`; the latest commit-workflow lookup surfaced no PR-triggered run for that exact SHA. The corrected DATABASE_URL workflow source alone is not a CI result.
+- No application files, runtime behavior, APEX policy, evidence semantics, deployment, or PR merge state were changed in this checkpoint.
