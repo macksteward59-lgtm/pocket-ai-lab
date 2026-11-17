@@ -265,3 +265,32 @@ A focused implementation follow-on now enforces challenge consumption inside the
 - Import/load/unload remain blocked by PR #168. No approval coordinator, signing, receipts, attestation, APEX authorization, physical iPhone Air acceptance, or merge is claimed.
 
 Implementation review still required: verify all native controller construction sites and the exact-head Swift/XCTest results; then implement the frame-derived WebKit dispatcher and lifecycle invalidation as a separate reviewed slice.
+
+
+## 14. PR #169 fixture correction, CI routing, and shared-runtime integration gap — 2026-11-17
+
+### Exact-head correction and validation
+- PR #169's first iOS run [#43995918805](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43995918805) failed at native app XCTest compilation because three tests still destructured the old five-element `makeFixture` tuple after it began returning `BridgeChallengeStore` as a sixth element. The compiler diagnostics identified lines 245, 263, and 416 in `ApexBridgeTests.swift`.
+- Corrected those three destructurings to ignore the unused sixth value. Commit `c984e102c6e7c851252888a9599999780b523710`.
+- The Intelligence workflow for that commit [#44017778362](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44017778362) completed successfully.
+- A workflow routing gap was found: iOS LlamaEngine CI's `pull_request.branches` filter contained PR #168's base branch but not PR #169's base branch `codex/bridgegate-host-approval-hardening-ci`. Added that base branch to the allowlist.
+- Workflow routing fix commit `c727342a1485846a94190cc3c2cd19729fb75e6f`. This triggered the exact-head iOS workflow [#44066457735](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44066457735), now in progress. At the latest poll it was restoring pinned llama.cpp artifacts; Swift typecheck, native app build/XCTest, simulator XCTest, GGUF/macOS smoke, and runner evidence remain pending. Do not claim PR #169's iOS validation passed until the full run is terminal-success.
+
+### Newly identified integration blocker: two independent native runtime owners
+- `LocalChatModel` in `ios/PocketAILab/LocalChatView.swift` privately constructs and owns its own `NativeInferenceRuntime`, `ModelPoolLease`, selected catalog model, and local chat lifecycle.
+- `WorkspaceView` currently constructs a standalone `PrivateWorkspaceWebView`; it does not receive a shared runtime service, selected model/session, or runtime controller. `RootView` independently instantiates `LocalChatView` and `WorkspaceView` as separate tabs.
+- Therefore, installing a WebKit message handler alone would not connect the web workspace to the already-active local chat runtime. Creating another RuntimeController/runtime inside WorkspaceView would create a second ownership path and risk duplicate model loads, conflicting ModelPool leases, and inconsistent readiness/session state.
+- Before implementing WebKit dispatch, refactor the app composition around one app-scoped native runtime/session service (or an explicitly designed adapter over the existing LocalChatModel runtime and lease). Both Local AI and Workspace must consume that same authoritative service. Preserve one ModelPool lease owner, one readiness contract, and the existing file-hash/session checks.
+- Then inject a host dispatcher into the WebView. Derive origin only from `WKScriptMessage.frameInfo.securityOrigin`, require main-frame messages, validate strict BridgeGate schema and payload bounds, issue one-use challenges natively, and call the same runtime service. Invalidate challenges on navigation, teardown, model/session replacement, and workspace close.
+
+### Security boundary unchanged
+- PR #168 still denies import/load/unload. No consequential action is enabled.
+- The RuntimeController challenge check consumes a one-use host challenge before inference, but the `pageURL` argument is not itself proof of WebKit origin. Only a host dispatcher that supplies frame-derived context can close that trust boundary end-to-end.
+- No signing, receipts, device attestation, APEX authorization, merge, or physical iPhone Air acceptance is claimed.
+
+### Required next sequence
+1. Finish exact-head PR #169 iOS workflow and resolve any compiler/test failures.
+2. Design and test the app-scoped shared runtime/session service; migrate LocalChatModel without changing inference behavior or ownership semantics.
+3. Inject the same service into WorkspaceView and define the narrow bridge protocol for status, model listing, readiness, generation, cancellation, and unload. Keep import/load/unload blocked pending native approval.
+4. Add the frame-derived main-frame WebKit dispatcher and lifecycle challenge invalidation with negative, replay, expiry, wrong-origin, wrong-session, and navigation tests.
+5. Run exact-head iOS CI and then perform physical iPhone Air acceptance separately.
