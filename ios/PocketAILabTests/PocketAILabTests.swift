@@ -23,7 +23,12 @@ final class PocketAILabTests: XCTestCase {
         let taskHistoryStore = LocalAgentTaskHistoryStore(
             fileURL: root.appendingPathComponent("AgentTaskHistory.json")
         )
+        let composition = NativeRuntimeComposition(
+            engine: engine,
+            availableMemoryMB: { 4_096 }
+        )
         return LocalChatModel(
+            runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
             conversationStore: conversationStore,
@@ -31,6 +36,86 @@ final class PocketAILabTests: XCTestCase {
             modelCatalogStore: catalogStore,
             availableMemoryMB: { 4_096 }
         )
+    }
+
+    @MainActor
+    func testMultipleLocalChatConsumersShareOneAppScopedRuntimePool() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
+        try validGGUFHeader().write(to: source)
+
+        let engine = FingerprintTestEngine()
+        let catalog = LocalModelCatalogStore(
+            fileURL: root.appendingPathComponent("ModelCatalog.json"),
+            modelDirectory: modelDirectory
+        )
+        let composition = NativeRuntimeComposition(
+            engine: engine,
+            availableMemoryMB: { 4_096 }
+        )
+        let first = LocalChatModel(
+            runtimeDependency: composition.dependency,
+            engine: engine,
+            modelDirectory: modelDirectory,
+            conversationStore: LocalConversationStore(
+                fileURL: root.appendingPathComponent("first-history.json")
+            ),
+            agentTaskHistoryStore: LocalAgentTaskHistoryStore(
+                fileURL: root.appendingPathComponent("first-tasks.json")
+            ),
+            modelCatalogStore: catalog
+        )
+        try await first.importModel(from: source)
+
+        let second = LocalChatModel(
+            runtimeDependency: composition.dependency,
+            engine: engine,
+            modelDirectory: modelDirectory,
+            conversationStore: LocalConversationStore(
+                fileURL: root.appendingPathComponent("second-history.json")
+            ),
+            agentTaskHistoryStore: LocalAgentTaskHistoryStore(
+                fileURL: root.appendingPathComponent("second-tasks.json")
+            ),
+            modelCatalogStore: catalog
+        )
+
+        await first.loadModel()
+        await second.loadModel()
+
+        XCTAssertTrue(first.isModelLoaded)
+        XCTAssertTrue(second.isModelLoaded)
+        let loadCount = await engine.loadCount()
+        XCTAssertEqual(loadCount, 1, "Both consumers must resolve through the same ModelPool.")
+
+        await first.unloadModel()
+        await second.unloadModel()
+        let unloadedSessions = await engine.unloadedSessionIDs()
+        XCTAssertEqual(unloadedSessions, ["fingerprint-session"])
+    }
+
+    @MainActor
+    func testUnavailableAppRuntimeDoesNotCreatePerViewFallback() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(
+            runtimeDependency: .unavailable("App-scoped runtime initialization failed closed."),
+            engine: engine,
+            modelDirectory: root.appendingPathComponent("models", isDirectory: true)
+        )
+
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        let loadCount = await engine.loadCount()
+        XCTAssertEqual(loadCount, 0, "An unavailable shared runtime must not trigger a second per-view runtime.")
+        XCTAssertFalse(model.isModelLoaded)
+        XCTAssertTrue(model.status.contains("shared native inference runtime is unavailable"))
     }
 
     func testUnavailableProbeNeverClaimsMetalReady() {
