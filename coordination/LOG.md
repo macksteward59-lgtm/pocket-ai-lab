@@ -3249,3 +3249,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #180's exact-head run #44143460216 is successful for its former head `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; it is not carried forward as proof for a newly synchronized head. PR #181 still has no exact-head run.
 - Updated the board to state the current resynchronization and validation requirement. Next, synchronize both feature branches after this board update so the base remains stable; do not make another base documentation change until after their exact-head runs are recorded elsewhere or the next audit.
 - No merges, application changes, or scope changes were made.
+
+
+## 2026-11-17 — Vulnerability pipeline scope preflight implementation
+
+- Claimed and implemented a separate Milestone 0 slice on `codex/security-pipeline-scope-contract`, isolated from the Grok security research agency branch and OWASP knowledge work.
+- Added a strict version-1 scope manifest parser with exact target identifiers, canonical hostname constraints, bounded collection limits, required redaction, retention bounds, expiry checks, and rejection of unknown fields, wildcard hosts, duplicates, and malformed hashes.
+- Added an exact target/operation/environment preflight matcher. A matching manifest returns `apex_decision_required` and `authorizationGranted: false`; this module has no signing keys, APEX client, network access, or execution hooks and cannot authorize a protected action.
+- Added eight focused regression tests for valid shape, expiry, wildcard rejection, malformed/unknown fields, target mismatch, operation mismatch, environment mismatch, and the invariant that a matching manifest still requires APEX.
+- Added an isolated TypeScript config and dedicated GitHub Actions workflow. Exact-head CI status must be checked before claiming a pass.
+- No target collection, network activity, static scanning, decompilation, active testing, or sandbox execution occurred. No APEX integration or cryptographic signature verification is claimed.
