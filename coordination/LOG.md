@@ -3259,3 +3259,6 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Added eight focused regression tests for valid shape, expiry, wildcard rejection, malformed/unknown fields, target mismatch, operation mismatch, environment mismatch, and the invariant that a matching manifest still requires APEX.
 - Added an isolated TypeScript config and dedicated GitHub Actions workflow. Exact-head CI status must be checked before claiming a pass.
 - No target collection, network activity, static scanning, decompilation, active testing, or sandbox execution occurred. No APEX integration or cryptographic signature verification is claimed.
+
+
+- Follow-up hardening: the preflight result now labels the manifest's supplied SHA-256 as `declaredDigestUnverified`; the value is format-checked but not recomputed or authenticated by this module. Added a package-local barrel export. Top-level package export and APEX integration remain deferred to avoid colliding with the separate OWASP integration branch and to preserve the authorization boundary.
