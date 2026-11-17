@@ -126,3 +126,11 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 
 
 | ChatGPT | PR #168 CI-routable fail-closed BridgeGate hardening; PR #167 superseded/closed without merge. iOS workflow branch filter extended on PR #164 base. | codex/bridgegate-host-approval-hardening-ci | validation-running | 2026-11-17 | PR #168 exact head ab6f290702018023edaec800f59bfec422f24bc9. iOS run #43991941724 started for PR #168; PR #164 refreshed iOS run #43991837435 also in progress. Await exact-head Swift/XCTest results. |
+
+
+## Latest bridge checkpoint — 2026-11-17
+
+- PR #168 exact head `ab6f290702018023edaec800f59bfec422f24bc9`: iOS run #43991941724 remains at pinned llama.cpp build; all subsequent native gates pending.
+- PR #164 exact head `482b364cb362b86224c3399ce16ce51a1c06c738`: run #43991837435 has passed pinned build, fail-closed typecheck, generic iOS engine link, and simulator selection; simulator boot is in progress.
+- WorkspaceView still has no WKScriptMessageHandler; RuntimeController does not consume BridgeChallengeStore challenges. Consequential actions remain blocked by PR #168.
+- Next: implement and test the host-side WebKit dispatcher only after the challenge/approval boundary is enforceable. No physical iPhone Air acceptance or PR merge is claimed.
