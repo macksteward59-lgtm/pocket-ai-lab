@@ -3189,3 +3189,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The initial workflow run #44131504364 on prior head `f85ea21fca35a97919b536c2bd3ea01d3b71920f` failed in `actions/setup-node` before dependency installation: npm caching requires a checked-in lockfile, and the repository has none.
 - Removed `cache: npm` from the dedicated workflow. This is a setup correction only; no build or test result is yet available for the corrected head.
 - PR #179 changes only `package.json` and `.github/workflows/intelligence-tests.yml`. Await exact-head CI; then use the runner to validate OWASP PR #178. No application runtime, Orchestrator, APEX, East, or native files changed.
+
+
+## 2026-11-17 — Focused intelligence validation and branch refresh
+
+- CI on test-runner head `c266c39658a4796fdc7add0e8750c0e1dcbd053b` passed `npm install`, `npm run build:intelligence` (`tsc -p tsconfig.intelligence.json`), and `npm test`; Gate 0.1 checks reported all passed.
+- The earlier broad root build exposed two pre-existing East compile errors in `src/east/index.ts`: `@elaraai/e3` has no named export `e3`, and the selected `BlockBuilder` type has no `$0`. East files were not changed. Added a focused intelligence tsconfig to avoid changing East ownership or behavior.
+- Refreshed the test-runner work onto latest `agent-coordination` head `19fe3296ad30a1a2e3d27787d70327b6b5f903ab`, creating `codex/typescript-test-runner-v2` and draft PR #180. Compare shows 3 commits ahead, 0 behind, with only package.json, tsconfig.intelligence.json, and the dedicated workflow changed.
+- Closed PR #179 as superseded; nothing was merged from it. Exact-head CI for PR #180 is pending. The passing CI evidence above is from the prior branch head, not the new PR #180 head.
