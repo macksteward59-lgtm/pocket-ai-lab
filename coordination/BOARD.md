@@ -156,3 +156,6 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 
 
 | ChatGPT | Advanced Security Research requirements: Operation Triangulation defensive case study, scoped bounty-program workflows (including Microsoft Windows Insider Preview), provenance, isolated analysis, APEX authorization, and East/e3 execution controls. | `agent-coordination` (documentation only) | requirements-added | 2026-11-17 | Added `docs/requirements/ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md` and linked section 19 in the master checklist. No exploit execution, external testing, or permission expansion. |
+
+
+| ChatGPT | ADR-001: establish one app-scoped native runtime/session/lease owner shared by Local AI, Workspace, and Runtime Status before adding the WebKit dispatcher. | `agent-coordination` (architecture decision record) | proposed-architecture | 2026-11-17 | Source audit confirmed LocalChatModel constructs its own NativeInferenceRuntime and ModelPoolLease; WorkspaceView constructs WKWebView without a script-message handler or injected runtime. ADR specifies ownership, request flow, APEX invariants, phased implementation, and acceptance tests. No runtime code changed. |
