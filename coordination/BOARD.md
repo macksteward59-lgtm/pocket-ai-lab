@@ -184,3 +184,11 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 ## Original 42-module capability inventory recovered — 2026-11-17
 
 The October 29 conversation recovery yielded the complete original M01–M42 names and numbering, including M41 Cybersecurity Risk Management and M42 Secure Software Development Lifecycle (SSDLC). The complete handoff and master checklist preserve the inventory and earlier four conceptual groups. The November 1 six canonical layers and T0–T4 governance remain separately documented. Exact module descriptions and original per-module six-layer/tier assignments are still source-recovery tasks; do not invent them. No application implementation or verification status is changed by this documentation update.
+
+## Historical framework source recovery refinement — 2026-11-17
+
+- A targeted conversation retrieval positively identified the October 29 assistant response at 2026-10-29T09:06:15Z, **“Mr. Robot — Comprehensive Cybersecurity Skill Set”**. Retrieval metadata confirms that it contains sections I–VII, verbatim M01–M42 descriptions, layer mappings, programming foundations, capability layers, and an overall capability profile. The exact message body/mapping text has not yet been returned, so it must still be transcribed from the original conversation/export.
+- A recursive Git tree inspection found the later codex/skill-lifecycle-rubric-binding implementation under packages/intelligence/skills/, not the old src/lib/compliance/* paths. That later catalog contains 44 entries across five layers and is explicitly not the original 42-entry/six-layer framework.
+- The later lifecycle/evaluation primitives may be reviewed as engineering references, but their taxonomy and metadata are not substitutes for original module mappings or Authorization Engine policy.
+- Detailed evidence and blob SHAs: coordination/HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md.
+- No module mappings or per-module permissions were inferred; no application code or authorization behavior changed.
