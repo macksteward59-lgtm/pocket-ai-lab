@@ -3227,3 +3227,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - **Infrastructure correction:** removed machine-specific hardware sizing from the project handoff. Runtime requirements are hardware-agnostic and prioritize verified native-device capability; optional external compute remains explicitly configured and user-approved. Model candidates require license/hash/benchmark verification.
 - **Validation:** documentation-only. No scanner, decompiler, fuzz harness, sandbox, application code, tests, or target activity was implemented or run. No APEX authorization, East execution authority, CI pass, or physical-device acceptance is claimed.
 - **Review request:** verify file placement, policy language, and compatibility with the complete product handoff before merging. Implementation must be separately claimed on a feature branch after the scope and sandbox contracts are approved.
+
+
+## 2026-11-17 — Vulnerability pipeline handoff completeness expansion
+
+- Reassessed the initial roadmap as a documentation handoff, not an operational pipeline. Added the missing implementation contracts under `coordination/vulnerability-pipeline/`: exact authorization-scope manifest contract plus non-authorizing example, threat model, finding/evidence record contract, evaluation and staged acceptance gates, sandbox acceptance test matrix, and operator/incident-response runbook.
+- Updated the roadmap to link these artifacts and distinguish handoff completeness from implementation and operational readiness.
+- Safety posture remains unchanged: no active target activity, scanner/decompiler worker, fuzzing, or sandbox execution was implemented or run. The example scope manifest is explicitly not a grant. Active testing, external egress, and sandbox execution remain disabled.
+- This branch remains documentation-only and is two commits behind/diverged from the current `agent-coordination` base at the last comparison. Reconcile/rebase against the latest base before merge; do not merge based on this handoff update alone.
+- No CI pass, APEX integration, East execution integration, sandbox isolation, or target authorization is claimed.
