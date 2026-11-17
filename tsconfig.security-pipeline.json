@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist/security-pipeline"
+  },
+  "include": [
+    "packages/intelligence/security-pipeline/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

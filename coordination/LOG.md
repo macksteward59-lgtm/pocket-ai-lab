@@ -3249,3 +3249,22 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #180's exact-head run #44143460216 is successful for its former head `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; it is not carried forward as proof for a newly synchronized head. PR #181 still has no exact-head run.
 - Updated the board to state the current resynchronization and validation requirement. Next, synchronize both feature branches after this board update so the base remains stable; do not make another base documentation change until after their exact-head runs are recorded elsewhere or the next audit.
 - No merges, application changes, or scope changes were made.
+
+
+## 2026-11-17 — Vulnerability pipeline scope preflight implementation
+
+- Claimed and implemented a separate Milestone 0 slice on `codex/security-pipeline-scope-contract`, isolated from the Grok security research agency branch and OWASP knowledge work.
+- Added a strict version-1 scope manifest parser with exact target identifiers, canonical hostname constraints, bounded collection limits, required redaction, retention bounds, expiry checks, and rejection of unknown fields, wildcard hosts, duplicates, and malformed hashes.
+- Added an exact target/operation/environment preflight matcher. A matching manifest returns `apex_decision_required` and `authorizationGranted: false`; this module has no signing keys, APEX client, network access, or execution hooks and cannot authorize a protected action.
+- Added eight focused regression tests for valid shape, expiry, wildcard rejection, malformed/unknown fields, target mismatch, operation mismatch, environment mismatch, and the invariant that a matching manifest still requires APEX.
+- Added an isolated TypeScript config and dedicated GitHub Actions workflow. Exact-head CI status must be checked before claiming a pass.
+- No target collection, network activity, static scanning, decompilation, active testing, or sandbox execution occurred. No APEX integration or cryptographic signature verification is claimed.
+
+
+- Follow-up hardening: the preflight result now labels the manifest's supplied SHA-256 as `declaredDigestUnverified`; the value is format-checked but not recomputed or authenticated by this module. Added a package-local barrel export. Top-level package export and APEX integration remain deferred to avoid colliding with the separate OWASP integration branch and to preserve the authorization boundary.
+
+
+- First exact-head workflow run `44151799626` reached TypeScript compilation and caught a test-helper control-flow narrowing error (`TS2339` on the failure branch after an assertion). Corrected the helper to narrow the discriminated result directly before accessing validation errors. The fix is committed; a fresh exact-head run is required and no passing CI is claimed yet.
+
+
+- Exact-head workflow `44151982811` for `7bcc81bdaa8184ad9e6d3010b042ee09e8fa9c8e` completed successfully: isolated TypeScript compilation passed and all 9 scope-manifest regression tests passed (9 passed, 0 failed). This validates only the preflight module and its tests, not APEX authorization or operational scanning.

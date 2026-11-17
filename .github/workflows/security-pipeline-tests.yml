@@ -1,0 +1,34 @@
+name: Security Pipeline Scope Contract
+
+on:
+  push:
+    branches:
+      - codex/security-pipeline-scope-contract
+  pull_request:
+    branches:
+      - agent-coordination
+    paths:
+      - "packages/intelligence/security-pipeline/**"
+      - "tsconfig.security-pipeline.json"
+      - ".github/workflows/security-pipeline-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  scope-contract:
+    name: Scope manifest typecheck and negative tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install repository dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck isolated scope contract
+        run: npx tsc -p tsconfig.security-pipeline.json
+      - name: Run scope contract regression tests
+        run: npx --yes tsx --test packages/intelligence/security-pipeline/__tests__/scopeManifest.test.ts
