@@ -278,6 +278,68 @@ private actor PausingChallengeStore: BridgeChallengeConsuming {
     }
 }
 
+private actor BlockingReadinessDrainEngine: ApexBridge.LlamaEngine {
+    private var readinessContinuation: CheckedContinuation<Void, Never>?
+    private var drainContinuation: CheckedContinuation<Void, Never>?
+    private var readinessStarted = false
+    private var drainStarted = false
+    private var readinessWaiter: CheckedContinuation<Void, Never>?
+    private var drainWaiter: CheckedContinuation<Void, Never>?
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        guard request.prompt.contains("readiness probe") else {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: CancellationError())
+            }
+        }
+        return AsyncThrowingStream { _ in
+            Task { await self.markReadinessStarted() }
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+
+    func cancelAndWait(sessionId: String, requestId: String) async {
+        drainStarted = true
+        drainWaiter?.resume()
+        drainWaiter = nil
+        await withCheckedContinuation { drainContinuation = $0 }
+    }
+
+    func unload(sessionId: String) async {}
+
+    private func markReadinessStarted() {
+        readinessStarted = true
+        readinessWaiter?.resume()
+        readinessWaiter = nil
+    }
+
+    func waitUntilReadinessInferenceStarted() async {
+        if readinessStarted { return }
+        await withCheckedContinuation { readinessWaiter = $0 }
+    }
+
+    func waitUntilCancellationDrainStarted() async {
+        if drainStarted { return }
+        await withCheckedContinuation { drainWaiter = $0 }
+    }
+
+    func finishCancellationDrain() {
+        drainContinuation?.resume()
+        drainContinuation = nil
+    }
+}
+
+private actor CancellationCompletionSignal {
+    private var finished = false
+    func markFinished() { finished = true }
+    func hasFinished() -> Bool { finished }
+}
+
 private actor PausingFileHasher {
     private var continuation: CheckedContinuation<String, Error>?
     private var startedContinuation: CheckedContinuation<Void, Never>?
@@ -1163,6 +1225,75 @@ final class RuntimeControllerTests: XCTestCase {
         let snapshot = await runtime.snapshot()
         XCTAssertEqual(snapshot.activeLeaseCount, 1, "Navigation cancellation preserves the controller lease.")
         XCTAssertEqual(snapshot.activeUseCount, 0, "No native readiness inference may start after cancellation.")
+        await controller.disconnect()
+    }
+
+    func testCancelAllWaitsForRegisteredReadinessNativeDrain() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("readiness-drain.gguf")
+        try Data("GGUF-readiness-drain-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "readiness-drain-model",
+            name: "Readiness drain model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let engine = BlockingReadinessDrainEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = try BridgeChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL
+        )
+        let expectedHash = Self.sha256(modelURL)
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: expectedHash,
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+
+        let readiness = Task { try await controller.readiness(sessionId: sessionID) }
+        await engine.waitUntilReadinessInferenceStarted()
+
+        let cancellationFinished = CancellationCompletionSignal()
+        let cancellation = Task {
+            _ = await controller.cancelAllGenerations()
+            await cancellationFinished.markFinished()
+        }
+        await engine.waitUntilCancellationDrainStarted()
+
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeLeaseCount, 1)
+        XCTAssertEqual(whileDraining.activeUseCount, 1, "The readiness inference use-pin must remain held during native drain.")
+        XCTAssertFalse(await cancellationFinished.hasFinished(), "cancelAllGenerations must not return before the native readiness drain.")
+
+        await engine.finishCancellationDrain()
+        await cancellation.value
+        do {
+            _ = try await readiness.value
+            XCTFail("A readiness probe cancelled during native inference must not succeed.")
+        } catch is CancellationError {
+            // Expected: readiness is cancelled and its native drain has completed.
+        } catch {
+            XCTFail("Expected CancellationError, received: \\(error)")
+        }
+
+        let afterDrain = await runtime.snapshot()
+        XCTAssertEqual(afterDrain.activeLeaseCount, 1, "Navigation cancellation preserves the loaded controller lease.")
+        XCTAssertEqual(afterDrain.activeUseCount, 0, "The readiness use-pin is released only after native drain.")
+        XCTAssertFalse((await controller.reports().first)?.canGenerate ?? true)
         await controller.disconnect()
     }
 
