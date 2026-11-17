@@ -67,12 +67,12 @@ Critical remaining bridge gap:
 - Therefore this is not yet a complete working web/native action bridge and must not be described as one.
 
 Current exact-head CI evidence:
-- Run #43981080474 remains reported in progress.
+- Run #43981080474 remains reported in progress overall; its native app build and native app XCTest steps have now completed successfully.
 - Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS engine link, simulator selection/boot, Director bridge package validation, and native app build for simulator and generic iOS targets have passed.
-- Native app XCTest remains reported in progress beyond its configured 20-minute step timeout; GitHub job-log retrieval returns BlobNotFound.
-- iOS engine simulator XCTest, pinned GGUF download/path validation, macOS inference smoke, and final runner evidence remain pending.
+- Native app XCTest completed successfully on the exact head.
+- iOS engine simulator XCTest is now in_progress; pinned GGUF download/path validation, macOS inference smoke, and final runner evidence remain pending.
 - Companion Intelligence CI #43981072947 passed on the exact PR head.
-- Treat the iOS run as stale/inconclusive, not a pass and not a diagnosed test failure.
+- The overall iOS run remains in_progress; do not claim an overall workflow pass or model generation until the remaining gates complete.
 
 ### 1.3 Grok Workspace and ExploitGym archive slice — PR #165
 
