@@ -3241,3 +3241,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Test-runner PR #180 branch head is now `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; compare at synchronization time was 1 ahead, 0 behind, with only the dedicated workflow, `package.json`, and `tsconfig.intelligence.json` changed. Exact-head workflow #44143460216 was created and is in progress; no result is claimed yet.
 - The coordination board was updated afterward in commit `e89153d0971363938d5aea098f0d8af0a1bb00d7` to record those exact feature heads and the in-progress validation state. That documentation-only board commit advances the base after the branch synchronization; no application files or ownership boundaries changed.
 - No merge, PR closure, Orchestrator integration, runtime change, or OWASP execution-context activation was performed.
+
+
+## 2026-11-17 — Reconciliation before next exact-head validation
+
+- Live recheck found the coordination branch had advanced to `4261b45672240a23b6cfcfae9a9f3314e94b757a` after the previous branch synchronization. Both PR #180 and #181 therefore became two commits behind; their feature-file scopes remained isolated (three test-runner paths and nine OWASP paths respectively).
+- PR #180's exact-head run #44143460216 is successful for its former head `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; it is not carried forward as proof for a newly synchronized head. PR #181 still has no exact-head run.
+- Updated the board to state the current resynchronization and validation requirement. Next, synchronize both feature branches after this board update so the base remains stable; do not make another base documentation change until after their exact-head runs are recorded elsewhere or the next audit.
+- No merges, application changes, or scope changes were made.
