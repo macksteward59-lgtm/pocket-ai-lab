@@ -423,6 +423,12 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             beforeNavigationCleanup: { await gate.pauseIfArmed() }
         )
         let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true, "Authorization after cleanup should be tested against a ready session.")
 
         await gate.arm()
         let navigation = Task { await dispatcher.navigationStarted() }
