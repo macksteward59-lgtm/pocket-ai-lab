@@ -153,7 +153,7 @@ public actor RuntimeController {
         guard !unloadingSessions.contains(sessionId),
               var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
         guard active.readinessTaskId == nil else { throw RuntimeControllerError.duplicateRequest }
-        do { try verifyFile(active) }
+        do { try await verifyFile(active) }
         catch {
             active.readiness = nil
             sessions[sessionId] = active
@@ -405,15 +405,18 @@ public actor RuntimeController {
         )
     }
 
-    private func verifyFile(_ active: ActiveSession) throws {
+    private func verifyFile(_ active: ActiveSession) async throws {
         let url = URL(fileURLWithPath: active.lease.model.path)
         let current = try fileIdentity(url)
         guard current == active.fileIdentity else { throw RuntimeControllerError.modelFileChanged }
         // Size and modification time are useful change detectors, but neither
         // proves byte identity. Re-hash before readiness and generation so a
         // same-size rewrite with restored timestamps cannot retain readiness.
-        let currentHash = try Self.sha256File(url)
-        guard currentHash == active.fileHash else { throw RuntimeControllerError.modelFileChanged }
+        let expectedHash = active.fileHash
+        let currentHash = try await Task.detached(priority: .utility) {
+            try Self.sha256File(url)
+        }.value
+        guard currentHash == expectedHash else { throw RuntimeControllerError.modelFileChanged }
     }
 
     private func fileIdentity(_ url: URL) throws -> ModelFileIdentity {
