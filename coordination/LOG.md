@@ -3103,3 +3103,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Corrected `ios/PocketAILabTests/WorkspaceBridgeDispatcherTests.swift` in commit `be30d18eacdb7c96b5cc3517465b76e1832c1d0f`: preserve the exact consumed `requestId`, `sessionId`, and `challengeNonce`, and change only the message envelope ID. A rejection now specifically exercises one-use challenge consumption.
 - Fresh exact-head iOS LlamaEngine run #44124427695 is pending for this commit. The preceding run #44122576415 is for the previous head and cannot be used as current-head evidence.
 - Updated PR #174 validation and coordination board. No production code changed; no merge.
+
+
+## 2026-11-17 — PR #174 exact-head rerun queued
+
+- Confirmed PR #174 head is `be30d18eacdb7c96b5cc3517465b76e1832c1d0f`, still open and draft, based on PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`.
+- Exact-head iOS LlamaEngine workflow #44124427695 exists for this commit but remains queued/pending with no job allocated at the latest poll. No test result is inferred.
+- Intelligence CI #44124408403 has passed dependency installation/advisory reporting, JavaScript syntax, and TypeScript build; its test step is still running.
+- Prior iOS run #44122576415 remains attached to previous head `4682f4a271e170081f96b91f7d997487e0a69ec9`; it is not current-head evidence.
+- Coordination board and PR validation describe this distinction. No merge, physical-device test, APEX authorization, Ed25519 signature, or signed evidence receipt.
