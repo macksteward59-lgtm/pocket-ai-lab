@@ -20,14 +20,17 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     private let runtimeController: RuntimeController?
     private var isActive = true
     private var lifecycleGeneration: UInt64 = 0
+    private let beforeSessionResolution: (@MainActor () async -> Void)?
 
     init(
         trustedURL: URL,
         runtimeDependency: LocalChatRuntimeDependency,
-        modelCatalogStore: LocalModelCatalogStore? = nil
+        modelCatalogStore: LocalModelCatalogStore? = nil,
+        beforeSessionResolution: (@MainActor () async -> Void)? = nil
     ) {
         self.trustedURL = trustedURL
         self.runtimeDependency = runtimeDependency
+        self.beforeSessionResolution = beforeSessionResolution
         if let modelCatalogStore {
             self.modelCatalogStore = modelCatalogStore
         } else {
@@ -332,6 +335,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     /// RuntimeSession already held by Local AI; no duplicate engine load is
     /// treated as equivalent merely because the model ID matches.
     private func ensureControllerSession(lifecycleGeneration expectedGeneration: UInt64) async -> String? {
+        await beforeSessionResolution?()
         guard isActive, lifecycleGeneration == expectedGeneration,
               case .shared(let service) = runtimeDependency,
               let runtimeController else { return nil }
