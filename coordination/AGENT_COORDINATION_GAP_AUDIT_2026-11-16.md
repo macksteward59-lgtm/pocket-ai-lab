@@ -139,3 +139,20 @@ PR #162 adds worker ownership fencing to lifecycle attempts. Its previously reco
 ## 5. Acceptance rule
 
 A feature is complete only when its production path is integrated, the relevant tests pass on the exact commit, independent review is recorded, and the applicable target-environment evidence exists. For local inference, physical iPhone Air evidence is mandatory. Hosted CI and simulator checks are supporting evidence, not a substitute.
+
+
+## 6. Trusted WebKit dispatcher follow-on — PR #166
+
+A documentation-only follow-on has been opened to turn the bridge gap into an explicit implementation and acceptance contract.
+
+- PR: [#166](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/166)
+- Branch: `codex/webkit-bridge-dispatcher-contract`
+- Exact head: `0ae7dafff95065d5a17c6c3caac98897a0cae43b`
+- Base: PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`
+- File: `docs/architecture/trusted-webkit-dispatcher-contract.md`
+
+The contract requires a native host dispatcher to derive origin from `WKScriptMessage.frameInfo`, reject subframes and foreign origins, bind the request and runtime session to a host-issued challenge, consume that challenge exactly once before invoking generation, and invalidate pending challenges on navigation/session replacement/teardown. Import/load/unload remain disabled until explicit native approval bound to exact parameters. Page-supplied authorization booleans are prohibited.
+
+PR #166 is draft and documentation-only. The exact-head workflow query returned no workflow runs, so there is no runtime/test validation claim. No WebKit handler has been implemented or enabled. This is not a complete bridge and does not change the status of PR #164's runtime implementation or physical iPhone Air acceptance.
+
+The next code change must be a separately reviewed implementation with focused origin, frame, schema, challenge replay/expiry/binding, approval, cancellation, and teardown tests. The challenge must be consumed before generation; validation must not be an optional callback that callers can bypass.
