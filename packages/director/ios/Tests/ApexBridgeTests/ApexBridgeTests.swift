@@ -379,6 +379,8 @@ private actor ThirdCallPausingFileHasher {
     private var callCount = 0
     private var continuation: CheckedContinuation<String, Error>?
     private var startedContinuation: CheckedContinuation<Void, Never>?
+    private var cancellationObserved = false
+    private var cancellationWaiter: CheckedContinuation<Void, Never>?
 
     init(expectedHash: String) {
         self.expectedHash = expectedHash
@@ -387,10 +389,14 @@ private actor ThirdCallPausingFileHasher {
     func hash() async throws -> String {
         callCount += 1
         guard callCount == 3 else { return expectedHash }
-        return try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            startedContinuation?.resume()
-            startedContinuation = nil
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                startedContinuation?.resume()
+                startedContinuation = nil
+            }
+        } onCancel: {
+            Task { await self.cancelThirdCall() }
         }
     }
 
@@ -399,6 +405,19 @@ private actor ThirdCallPausingFileHasher {
         await withCheckedContinuation { continuation in
             startedContinuation = continuation
         }
+    }
+
+    func waitUntilThirdCallCancelled() async {
+        if cancellationObserved { return }
+        await withCheckedContinuation { cancellationWaiter = $0 }
+    }
+
+    private func cancelThirdCall() {
+        cancellationObserved = true
+        cancellationWaiter?.resume()
+        cancellationWaiter = nil
+        continuation?.resume(throwing: CancellationError())
+        continuation = nil
     }
 
     func resume() {
@@ -836,11 +855,12 @@ final class RuntimeControllerTests: XCTestCase {
         let sessionID = try XCTUnwrap(loaded.sessionId)
         _ = try await controller.readiness(sessionId: sessionID)
 
+        let requestID = UUID().uuidString
         let generation = Task {
             try await controller.generate(
                 sessionId: sessionID,
                 prompt: "This must not start after navigation cancellation.",
-                requestId: UUID().uuidString,
+                requestId: requestID,
                 conversationRequestId: "navigation-cancel-race",
                 attemptId: "navigation-cancel-race-attempt",
                 challengeNonce: String(repeating: "b", count: 32),
@@ -849,9 +869,9 @@ final class RuntimeControllerTests: XCTestCase {
         }
         await challengeStore.waitUntilConsumeStarted()
 
-        let cancelledCount = await controller.cancelAllGenerations()
-        XCTAssertEqual(cancelledCount, 0, "The request is intentionally suspended before it registers a native generation task.")
-        await challengeStore.resumeConsume(true)
+        let cancellation = Task { await controller.cancelAllGenerations() }
+        let cancelledCount = await cancellation.value
+        XCTAssertEqual(cancelledCount, 1, "Navigation cancellation must find and drain a request still consuming its challenge.")
 
         do {
             _ = try await generation.value
@@ -933,9 +953,12 @@ final class RuntimeControllerTests: XCTestCase {
         // the real one-use challenge has already been accepted.
         await hasher.waitUntilThirdCallStarted()
 
-        let cancelledCount = await controller.cancelAllGenerations()
-        XCTAssertEqual(cancelledCount, 0, "No native generation Task is registered while the post-challenge hash is suspended.")
-        await hasher.resume()
+        let cancellation = Task { await controller.cancelAllGenerations() }
+        // The request is now registered before preparation. cancelAll must wait
+        // for this suspended hash to settle rather than returning early.
+        await hasher.waitUntilThirdCallCancelled()
+        let cancelledCount = await cancellation.value
+        XCTAssertEqual(cancelledCount, 1, "Navigation cancellation must drain a request suspended in the post-challenge hash.")
 
         do {
             _ = try await generation.value
@@ -1020,8 +1043,10 @@ final class RuntimeControllerTests: XCTestCase {
         do {
             _ = try await generation.value
             XCTFail("Generation must not start after its session has been disconnected.")
+        } catch is CancellationError {
+            // Unload cancels and drains the registered request before releasing its lease.
         } catch {
-            XCTAssertEqual(error as? RuntimeControllerError, .unknownSession)
+            XCTFail("Expected cancellation after unload, received: \\(error)")
         }
 
         let reports = await controller.reports()
