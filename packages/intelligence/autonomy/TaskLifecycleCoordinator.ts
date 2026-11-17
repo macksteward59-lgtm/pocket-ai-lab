@@ -59,6 +59,33 @@ export interface TaskStepRecord {
   uncertainOnExpiredLease?: boolean;
 }
 
+export type TaskLifecycleEventType =
+  | "task.created"
+  | "step.claimed"
+  | "step.completed"
+  | "step.failed"
+  | "step.cancelled"
+  | "step.lease_expired"
+  | "task.completed"
+  | "task.failed"
+  | "task.cancelled";
+
+/** Durable audit metadata only; event contents never authorize execution. */
+export interface TaskLifecycleEvent {
+  sequence: number;
+  eventId: string;
+  type: TaskLifecycleEventType;
+  occurredAt: string;
+  stepId?: string;
+  attemptId?: string;
+  ownerId?: string;
+  uncertain?: boolean;
+  resultingStepStatus?: StepStatus;
+  resultingTaskStatus?: TaskStatus;
+}
+
+export const MAX_TASK_LIFECYCLE_EVENTS = 2_048;
+
 export interface TaskRecord {
   id: string;
   objective: string;
@@ -70,6 +97,8 @@ export interface TaskRecord {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+  /** Ordered, append-only lifecycle transitions retained in the durable snapshot. */
+  events: TaskLifecycleEvent[];
 }
 
 export interface StepClaim {
@@ -195,8 +224,10 @@ export class TaskLifecycleCoordinator {
   async createTask(definition: TaskDefinition): Promise<TaskRecord> {
     return this.mutate(async () => {
       this.requireInitialized();
-      const task = normalizeDefinition(definition, this.now());
+      const now = this.now();
+      const task = normalizeDefinition(definition, now);
       if (this.records.has(task.id)) throw new TaskLifecycleError("duplicate_task", "Task id already exists");
+      appendEvent(task, "task.created", now, { resultingTaskStatus: task.status });
       const next = new Map(this.records);
       next.set(task.id, task);
       await this.persist(next);
@@ -260,6 +291,7 @@ export class TaskLifecycleCoordinator {
       };
       updated.status = "running";
       updated.updatedAt = now.toISOString();
+      appendEvent(updated, "step.claimed", now, { stepId: target.id, attemptId, ownerId: this.workerId, resultingStepStatus: target.status });
       await this.replaceTask(updated);
 
       return {
@@ -305,7 +337,9 @@ export class TaskLifecycleCoordinator {
       step.evidenceRefs = [...new Set(refs)];
       step.completedAt = now.toISOString();
       step.currentAttempt = null;
+      appendEvent(updated, "step.completed", now, { stepId: step.id, attemptId: input.attemptId, ownerId: this.workerId, resultingStepStatus: step.status });
       const final = refreshTaskStatus(updated, now);
+      appendTerminalEvent(updated.status, final, now);
       await this.replaceTask(final);
       return cloneTask(final);
     });
@@ -337,7 +371,12 @@ export class TaskLifecycleCoordinator {
       step.status = !outcomeUncertain && input.retryable === true && step.attempts < step.maxAttempts
         ? "pending"
         : "failed";
+      appendEvent(updated, "step.failed", now, {
+        stepId: step.id, attemptId: input.attemptId, ownerId: this.workerId, uncertain: outcomeUncertain,
+        resultingStepStatus: step.status
+      });
       const final = refreshTaskStatus(updated, now);
+      appendTerminalEvent(updated.status, final, now);
       await this.replaceTask(final);
       return cloneTask(final);
     });
@@ -355,10 +394,17 @@ export class TaskLifecycleCoordinator {
       updated.updatedAt = now.toISOString();
       for (const step of updated.steps) {
         if (step.status === "pending" || step.status === "running") {
+          const attempt = step.currentAttempt;
           step.status = "cancelled";
           step.currentAttempt = null;
+          appendEvent(updated, "step.cancelled", now, {
+            stepId: step.id,
+            ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {}),
+            resultingStepStatus: step.status
+          });
         }
       }
+      appendEvent(updated, "task.cancelled", now, { resultingTaskStatus: updated.status });
       await this.replaceTask(updated);
       return cloneTask(updated);
     });
@@ -382,6 +428,7 @@ export class TaskLifecycleCoordinator {
         for (const step of updated.steps) {
           if (step.status !== "running" || !step.currentAttempt) continue;
           if (Date.parse(step.currentAttempt.leaseExpiresAt) > now.getTime()) continue;
+          const expiredAttempt = step.currentAttempt;
           const outcomeUncertain = step.uncertainOnExpiredLease === true;
           step.lastError = outcomeUncertain
             ? "Execution lease expired before completion; provider outcome is uncertain and requires operator reconciliation"
@@ -389,10 +436,20 @@ export class TaskLifecycleCoordinator {
           step.currentAttempt = null;
           step.uncertain = outcomeUncertain;
           step.status = !outcomeUncertain && step.attempts < step.maxAttempts ? "pending" : "failed";
+          appendEvent(updated, "step.lease_expired", now, {
+            stepId: step.id, attemptId: expiredAttempt.id,
+            ...(expiredAttempt.ownerId ? { ownerId: expiredAttempt.ownerId } : {}),
+            uncertain: outcomeUncertain,
+            resultingStepStatus: step.status
+          });
           recovered += 1;
           changed = true;
         }
-        if (changed) next.set(id, refreshTaskStatus(updated, now));
+        if (changed) {
+          const final = refreshTaskStatus(updated, now);
+          appendTerminalEvent(updated.status, final, now);
+          next.set(id, final);
+        }
       }
       if (recovered > 0) await this.persist(next);
       return recovered;
@@ -513,7 +570,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
   return {
     id: definition.id.trim(), objective: definition.objective.trim(), status: "ready",
     steps, maxConcurrentSteps, leaseMs, metadata: { ...metadata },
-    createdAt: timestamp, updatedAt: timestamp, completedAt: null
+    createdAt: timestamp, updatedAt: timestamp, completedAt: null, events: []
   };
 }
 
@@ -540,8 +597,14 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
     // A terminal task cannot retain live leases or runnable descendants.
     for (const step of next.steps) {
       if (step.status === "pending" || step.status === "running") {
+        const attempt = step.currentAttempt;
         step.status = "cancelled";
         step.currentAttempt = null;
+        appendEvent(next, "step.cancelled", now, {
+          stepId: step.id,
+          ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {}),
+          resultingStepStatus: step.status
+        });
       }
     }
   } else if (next.steps.every(step => step.status === "succeeded")) next.status = "completed";
@@ -567,7 +630,8 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
       Object.entries(task.metadata).some(([key, value]) => !key.trim() || typeof value !== "string") ||
       !validTimestamp(task.createdAt) || !validTimestamp(task.updatedAt) ||
       Date.parse(task.updatedAt) < Date.parse(task.createdAt) ||
-      (task.completedAt !== null && !validTimestamp(task.completedAt))) {
+      (task.completedAt !== null && !validTimestamp(task.completedAt)) ||
+      (task.events !== undefined && (!Array.isArray(task.events) || task.events.length > MAX_TASK_LIFECYCLE_EVENTS))) {
     throw new TaskLifecycleError("corrupt_store", "Stored task record is invalid");
   }
 
@@ -620,6 +684,24 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     ids.add(step.id);
   }
 
+  const events = task.events ?? [];
+  for (let index = 0; index < events.length; index += 1) {
+    const event = events[index];
+    if (!event || event.sequence !== index + 1 || event.eventId !== `${task.id}:${index + 1}` ||
+        !["task.created", "step.claimed", "step.completed", "step.failed", "step.cancelled",
+          "step.lease_expired", "task.completed", "task.failed", "task.cancelled"].includes(event.type) ||
+        !validTimestamp(event.occurredAt) || Date.parse(event.occurredAt) < Date.parse(task.createdAt) ||
+        Date.parse(event.occurredAt) > Date.parse(task.updatedAt) ||
+        (event.stepId !== undefined && (typeof event.stepId !== "string" || !ids.has(event.stepId))) ||
+        (event.attemptId !== undefined && (typeof event.attemptId !== "string" || !event.attemptId.trim() || event.attemptId.length > 256)) ||
+        (event.ownerId !== undefined && (typeof event.ownerId !== "string" || !event.ownerId.trim() || event.ownerId.length > 256)) ||
+        (event.uncertain !== undefined && typeof event.uncertain !== "boolean") ||
+        (event.resultingStepStatus !== undefined && !["pending", "running", "succeeded", "failed", "cancelled"].includes(event.resultingStepStatus)) ||
+        (event.resultingTaskStatus !== undefined && !["ready", "running", "completed", "failed", "cancelled"].includes(event.resultingTaskStatus))) {
+      throw new TaskLifecycleError("corrupt_store", "Stored task lifecycle event is invalid");
+    }
+  }
+
   for (const step of task.steps) {
     if (step.dependsOn.some(id => !ids.has(id))) {
       throw new TaskLifecycleError("corrupt_store", "Stored task contains an unknown dependency");
@@ -647,12 +729,38 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
   assertAcyclic(task.steps);
   return cloneTask({
     ...task,
+    events: [...(task.events ?? [])].map(event => ({ ...event })),
     steps: task.steps.map(step => ({
       ...step,
       uncertain: step.uncertain ?? false,
       uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? (step.maxAttempts === 1)
     }))
   });
+}
+
+function appendEvent(
+  task: TaskRecord,
+  type: TaskLifecycleEventType,
+  now: Date,
+  details: Omit<Partial<TaskLifecycleEvent>, "sequence" | "eventId" | "type" | "occurredAt"> = {}
+): void {
+  if (task.events.length >= MAX_TASK_LIFECYCLE_EVENTS) {
+    throw new TaskLifecycleError("event_log_full", "Task lifecycle event history reached its retention limit");
+  }
+  const sequence = task.events.length + 1;
+  task.events.push({
+    sequence,
+    eventId: `${task.id}:${sequence}`,
+    type,
+    occurredAt: now.toISOString(),
+    ...details
+  });
+}
+
+function appendTerminalEvent(previousStatus: TaskStatus, task: TaskRecord, now: Date): void {
+  if (previousStatus === task.status) return;
+  if (task.status === "completed") appendEvent(task, "task.completed", now, { resultingTaskStatus: task.status });
+  else if (task.status === "failed") appendEvent(task, "task.failed", now, { resultingTaskStatus: task.status });
 }
 
 function isTerminal(status: TaskStatus): boolean {
@@ -663,6 +771,7 @@ function cloneTask(task: TaskRecord): TaskRecord {
   return {
     ...task,
     metadata: { ...task.metadata },
+    events: [...(task.events ?? [])].map(event => ({ ...event })),
     steps: task.steps.map(step => ({
       ...step,
       dependsOn: [...step.dependsOn],

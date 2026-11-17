@@ -118,7 +118,8 @@ function task(id: string): TaskRecord {
     metadata: {},
     createdAt: "2026-11-15T12:00:00.000Z",
     updatedAt: "2026-11-15T12:00:00.000Z",
-    completedAt: null
+    completedAt: null,
+    events: []
   };
 }
 

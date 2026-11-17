@@ -37,6 +37,14 @@ On startup, call `init()`, then `recoverExpiredLeases()` to recover all tasks, o
 
 Each coordinator instance receives a unique worker identity by default; a host may supply an explicit process-unique `workerId`. A restarted coordinator cannot adopt an unexpired lease from its predecessor. Legacy active attempts without an owner identity remain readable but cannot be completed or failed; wait for expiry and recover them. This owner check is concurrency fencing, not authentication or authorization. The in-process mutation queue prevents races among callers using one coordinator instance. A production store shared by multiple processes needs its own transactional compare-and-swap, row locking, or equivalent cross-process claim mechanism. The in-memory queue is not a distributed lock. If a save returns `store_conflict`, call `reload()` to replace the coordinator's in-memory snapshot with the authoritative stored state, then reconcile the intended change before retrying; never blindly replay a possibly side-effecting step.
 
+## Durable lifecycle event history
+
+Every newly created task now starts with a persisted `task.created` event. The coordinator appends ordered events for step claims, completions, failures, lease expiry/recovery, step cancellation, and terminal task completion/failure/cancellation. Each event has a task-local monotonic sequence, deterministic event ID (`<taskId>:<sequence>`), UTC timestamp, and bounded step/attempt/worker metadata where applicable.
+
+The event history is stored in the same versioned task snapshot as the task and steps. Snapshot replacement and event append therefore share the store's atomic commit boundary: a failed save publishes neither the state transition nor its event. The coordinator returns defensive copies so callers cannot mutate its in-memory journal through `getTask`, `listTasks`, returned mutation results, or the in-memory test store.
+
+The journal is capped at 2,048 events per task. It fails closed with `event_log_full` instead of silently pruning history. Legacy snapshots without an `events` field load as an empty history and receive new events on subsequent transitions; historic events are not fabricated. This is an application-level append-only API over the snapshot, not a separate immutable database ledger, cryptographic hash chain, signed evidence record, or authorization source. Production audit retention/tamper-evidence remains a separate requirement.
+
 ## Example
 
 ```ts
