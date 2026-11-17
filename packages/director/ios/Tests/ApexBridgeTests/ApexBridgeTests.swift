@@ -155,7 +155,9 @@ private actor SlowLlamaEngine: ApexBridge.LlamaEngine {
 }
 
 final class RuntimeControllerTests: XCTestCase {
-    private func makeFixture(clock: TestClock, readinessTTL: TimeInterval = 120) throws -> (RuntimeController, NativeInferenceRuntime, URL, ModelDescriptor, String) {
+    private let trustedWorkspaceURL = URL(string: "https://workspace.example.test/app")!
+
+    private func makeFixture(clock: TestClock, readinessTTL: TimeInterval = 120) throws -> (RuntimeController, NativeInferenceRuntime, URL, ModelDescriptor, String, BridgeChallengeStore) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let modelURL = directory.appendingPathComponent("model.gguf")
@@ -172,14 +174,17 @@ final class RuntimeControllerTests: XCTestCase {
             poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
             availableMemoryMB: { 4096 }
         )
+        let challengeStore = try BridgeChallengeStore(clock: { clock.now() })
         let controller = try RuntimeController(
             runtime: runtime,
             deviceId: "test-device",
             runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL,
             readinessTTL: readinessTTL,
             clock: { clock.now() }
         )
-        return (controller, runtime, modelURL, descriptor, Self.sha256(modelURL))
+        return (controller, runtime, modelURL, descriptor, Self.sha256(modelURL), challengeStore)
     }
 
     private static func sha256(_ url: URL) -> String {
@@ -189,7 +194,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testLoadRequiresRealReadinessBeforeGenerationAndReturnsUnsignedCandidate() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_000))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
 
         let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
@@ -199,7 +204,7 @@ final class RuntimeControllerTests: XCTestCase {
             _ = try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "hello", requestId: UUID().uuidString,
                 conversationRequestId: "conversation-1", attemptId: "attempt-1",
-                challengeNonce: "0123456789abcdef"
+                challengeNonce: "0123456789abcdef", pageURL: trustedWorkspaceURL
             )
             XCTFail("Generation must require a fresh readiness probe.")
         } catch {
@@ -210,17 +215,21 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(ready.canGenerate)
         XCTAssertNotNil(ready.healthCheckId)
         let requestId = UUID().uuidString
+        let challenge = try await challengeStore.issue(
+            page: trustedWorkspaceURL, trusted: trustedWorkspaceURL,
+            requestId: requestId, sessionId: loaded.sessionId!
+        )
         let record = try await controller.generate(
             sessionId: loaded.sessionId!, prompt: "hello", requestId: requestId,
             conversationRequestId: "conversation-1", attemptId: "attempt-1",
-            challengeNonce: "0123456789abcdef"
+            challengeNonce: challenge, pageURL: trustedWorkspaceURL
         )
         XCTAssertEqual(record.output, "answer")
         XCTAssertEqual(record.requestId, requestId)
         XCTAssertEqual(record.modelId, descriptor.id)
         XCTAssertEqual(record.modelFileHash, ready.fileHash)
         XCTAssertEqual(record.healthCheckId, ready.healthCheckId)
-        XCTAssertEqual(record.challengeNonce, "0123456789abcdef")
+        XCTAssertEqual(record.challengeNonce, challenge)
         XCTAssertFalse(record.authorized)
         XCTAssertFalse(String(describing: record).contains("signature"))
         let unloaded = await controller.unload(sessionId: loaded.sessionId!)
@@ -233,7 +242,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testCatalogHashMismatchFailsBeforeAcquiringLease() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_500))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         let wrongHash = String(repeating: "0", count: 64)
         XCTAssertNotEqual(expectedHash, wrongHash)
@@ -251,7 +260,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testDuplicateRuntimeSessionCannotOverwriteExistingLease() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_750))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
 
         let first = try await controller.load(
@@ -278,9 +287,52 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(afterUnload.loadedModelIDs.isEmpty)
     }
 
+
+    func testGenerationRejectsFabricatedAndReplayedChallenges() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_500))
+        let (controller, _, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
+        _ = try await controller.readiness(sessionId: loaded.sessionId!)
+
+        let fabricatedRequest = UUID().uuidString
+        do {
+            _ = try await controller.generate(
+                sessionId: loaded.sessionId!, prompt: "must not run", requestId: fabricatedRequest,
+                conversationRequestId: "conversation-1", attemptId: "attempt-fake",
+                challengeNonce: "0123456789abcdef0123456789abcdef", pageURL: trustedWorkspaceURL
+            )
+            XCTFail("A caller-supplied nonce must not authorize generation.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .unauthorizedChallenge)
+        }
+
+        let requestId = UUID().uuidString
+        let challenge = try await challengeStore.issue(
+            page: trustedWorkspaceURL, trusted: trustedWorkspaceURL,
+            requestId: requestId, sessionId: loaded.sessionId!
+        )
+        _ = try await controller.generate(
+            sessionId: loaded.sessionId!, prompt: "authorized once", requestId: requestId,
+            conversationRequestId: "conversation-1", attemptId: "attempt-valid",
+            challengeNonce: challenge, pageURL: trustedWorkspaceURL
+        )
+
+        do {
+            _ = try await controller.generate(
+                sessionId: loaded.sessionId!, prompt: "replay", requestId: UUID().uuidString,
+                conversationRequestId: "conversation-1", attemptId: "attempt-replay",
+                challengeNonce: challenge, pageURL: trustedWorkspaceURL
+            )
+            XCTFail("A consumed challenge must not authorize a second generation.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .unauthorizedChallenge)
+        }
+    }
+
     func testReadinessExpiresAndCannotBeReused() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 2_000))
-        let (controller, _, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock, readinessTTL: 30)
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock, readinessTTL: 30)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
@@ -289,7 +341,7 @@ final class RuntimeControllerTests: XCTestCase {
             _ = try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "hello", requestId: UUID().uuidString,
                 conversationRequestId: "conversation-1", attemptId: "attempt-1",
-                challengeNonce: "0123456789abcdef"
+                challengeNonce: "0123456789abcdef", pageURL: trustedWorkspaceURL
             )
             XCTFail("Expired readiness must fail closed.")
         } catch {
@@ -299,7 +351,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testModelFileChangeInvalidatesReadinessAndGeneration() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 3_000))
-        let (controller, _, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
@@ -308,7 +360,7 @@ final class RuntimeControllerTests: XCTestCase {
             _ = try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "hello", requestId: UUID().uuidString,
                 conversationRequestId: "conversation-1", attemptId: "attempt-1",
-                challengeNonce: "0123456789abcdef"
+                challengeNonce: "0123456789abcdef", pageURL: trustedWorkspaceURL
             )
             XCTFail("A changed model artifact must invalidate the active session.")
         } catch {
@@ -334,15 +386,17 @@ final class RuntimeControllerTests: XCTestCase {
             poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
             availableMemoryMB: { 4096 }
         )
-        let controller = try RuntimeController(runtime: runtime, deviceId: "test-device", runtimeIdentity: "test-runtime", clock: { clock.now() })
+        let challengeStore = try BridgeChallengeStore(clock: { clock.now() })
+        let controller = try RuntimeController(runtime: runtime, deviceId: "test-device", runtimeIdentity: "test-runtime", challengeStore: challengeStore, trustedWorkspaceURL: trustedWorkspaceURL, clock: { clock.now() })
         let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         _ = try await controller.readiness(sessionId: loaded.sessionId!)
         let requestId = UUID().uuidString
+        let challenge = try await challengeStore.issue(page: trustedWorkspaceURL, trusted: trustedWorkspaceURL, requestId: requestId, sessionId: loaded.sessionId!)
         let generation = Task {
             try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "slow request", requestId: requestId,
                 conversationRequestId: "conversation-2", attemptId: "attempt-2",
-                challengeNonce: "abcdef0123456789"
+                challengeNonce: challenge, pageURL: trustedWorkspaceURL
             )
         }
         try await Task.sleep(nanoseconds: 100_000_000)
@@ -359,7 +413,7 @@ final class RuntimeControllerTests: XCTestCase {
 
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
-        let (controller, runtime, modelURL, descriptor, expectedHash) = try makeFixture(clock: clock)
+        let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         _ = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
         await controller.disconnect()
