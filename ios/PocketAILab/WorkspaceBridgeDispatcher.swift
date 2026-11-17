@@ -167,6 +167,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 data["modelLoaded"] = false
                 data["activeLeaseCount"] = 0
                 data["activeUseCount"] = 0
+                data["activeLocalSessions"] = []
                 data["controllerSessions"] = []
             }
             return ["id": messageID, "ok": true, "data": data]
