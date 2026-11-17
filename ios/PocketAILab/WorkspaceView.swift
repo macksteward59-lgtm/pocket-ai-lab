@@ -182,7 +182,7 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            dispatcher.navigationStarted()
+            Task { await dispatcher.navigationStarted() }
         }
 
         func webView(
