@@ -371,6 +371,35 @@ final class RuntimeControllerTests: XCTestCase {
     }
 
 
+    func testSameSizeModelMutationWithRestoredTimestampInvalidatesReadiness() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 3_250))
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+
+        let loaded = try await controller.load(model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256)
+        _ = try await controller.readiness(sessionId: loaded.sessionId!)
+        let originalAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
+        let originalDate = originalAttributes[.modificationDate] as? Date
+        let originalSize = (originalAttributes[.size] as? NSNumber)?.intValue
+        try Data("GGUF-MODEL-FIXTURE".utf8).write(to: modelURL, options: .atomic)
+        if let originalDate {
+            try FileManager.default.setAttributes([.modificationDate: originalDate], ofItemAtPath: modelURL.path)
+        }
+        let changedAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
+        XCTAssertEqual((changedAttributes[.size] as? NSNumber)?.intValue, originalSize)
+        XCTAssertEqual(changedAttributes[.modificationDate] as? Date, originalDate)
+        XCTAssertNotEqual(Self.sha256(modelURL), expectedHash)
+
+        do {
+            _ = try await controller.readiness(sessionId: loaded.sessionId!)
+            XCTFail("A same-size byte mutation must invalidate the loaded artifact even if its timestamp is restored.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .modelFileChanged)
+        }
+        let reports = await controller.reports()
+        XCTAssertFalse(reports.first?.canGenerate ?? true)
+    }
+
     func testCancelGenerationWaitsForNativeDrain() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 5_000))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -400,8 +429,8 @@ final class RuntimeControllerTests: XCTestCase {
             )
         }
         try await Task.sleep(nanoseconds: 100_000_000)
-        let cancelled = await controller.cancelGeneration(sessionId: loaded.sessionId!, requestId: requestId)
-        XCTAssertTrue(cancelled)
+        let cancelledCount = await controller.cancelAllGenerations()
+        XCTAssertEqual(cancelledCount, 1)
         do {
             _ = try await generation.value
             XCTFail("Cancelled generation must not return output.")
