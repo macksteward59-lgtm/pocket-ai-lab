@@ -3215,3 +3215,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Current evidence cautions retained: PR #171 owns shared app-scoped runtime; PR #174 owns native challenge-gated WebKit dispatch; PR #175 owns web client integration; exact-head native CI must be re-polled; hosted checks are not physical iPhone Air acceptance. PR #181 OWASP context remains unconnected to `Orchestrator.executeTask()`; PR #180 exact-head workflow status must be checked. East live PostgreSQL/RLS evidence and original M01–M42 registry remain open.
 - No application code, tests, APEX authorization, signing, attestation, merge, or device acceptance was performed or claimed.
 - **Next action:** all contributors read the complete handoff and reconcile exact PR heads/CI and non-overlapping file ownership before taking another implementation slice.
+
+
+## 2026-11-17 — OWASP branch synchronized and superseded PR retired
+
+- Rebased the OWASP feature content without carrying forward coordination-file snapshots: `codex/owasp-knowledge-integration-v4` now has a single feature commit `d746413055f298d4720a42985bc5ed5b336741a1` directly on coordination base `1afd16017ab386dcff750b57c605c429921606eb`.
+- Compare confirms 1 commit ahead, 0 behind; the only changed paths are the OWASP requirements document, catalog/context/guidance modules, exports, JSON-module compiler setting, and two focused tests.
+- Updated the coordination board to point to active draft PR #181 and its exact head. Closed superseded PR #178 unmerged; no changes from it were merged.
+- PR #181 remains draft. Exact-head CI is still pending because the test-runner workflow in PR #180 is not on the base branch. PR #180 remains separate and unmerged; its earlier passing run is not evidence for PR #181.
+- No Orchestrator, APEX, East, native runtime, MemoryManager, or MessageBus behavior changed. OWASP content remains untrusted reference-only data and is not connected to task execution.
