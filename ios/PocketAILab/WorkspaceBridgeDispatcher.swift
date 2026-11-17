@@ -128,6 +128,12 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 data["modelLoaded"] = !snapshot.loadedModelIDs.isEmpty
                 data["activeLeaseCount"] = snapshot.activeLeaseCount
                 data["activeUseCount"] = snapshot.activeUseCount
+                data["activeLocalSessions"] = service.activeLeases().map { lease in
+                    [
+                        "modelId": lease.model.id,
+                        "sessionId": lease.session.id
+                    ]
+                }
                 if let runtimeController {
                     let reports = await runtimeController.reports()
                     let activeLocalSessionIDs = Set(service.activeLeases().map { $0.session.id })
@@ -154,6 +160,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 data["modelLoaded"] = false
                 data["activeLeaseCount"] = 0
                 data["activeUseCount"] = 0
+                data["activeLocalSessions"] = []
                 data["controllerSessions"] = []
             case .createForTesting:
                 data["runtimeAvailable"] = false
