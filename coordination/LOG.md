@@ -3140,3 +3140,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Intelligence CI #44125334631 is on the same current head; dependency install, advisory reporting, JavaScript syntax, and TypeScript build passed; tests are running.
 - Earlier run #44125287074 targeted the prior commit and was cancelled after the branch advanced. It is not counted as current-head evidence.
 - Updated the Phase B board with the current exact-head iOS run. PR remains draft and unmerged.
+
+
+## 2026-11-17 — Current-head CI progress
+
+- Exact-head Intelligence CI #44125334631 completed successfully for `8b546de57dde29b722cbbcfaabafd7cb29454c0b`: dependency/advisory steps, JavaScript syntax, TypeScript build, and full test step all passed.
+- Exact-head iOS LlamaEngine run #44125349459 is building pinned llama.cpp. Runner setup, checkout, Xcode discovery, CMake/Ninja installation, and pinned build-artifact restore passed; pinned simulator/macOS build is in progress.
+- Swift fail-closed typecheck, device framework link, simulator boot, Director package validation, app build/XCTest, simulator XCTest, GGUF download, and macOS XCTest remain pending.
+- Updated Phase B board. Current native validation is still incomplete; no physical iPhone Air acceptance and no merge.
