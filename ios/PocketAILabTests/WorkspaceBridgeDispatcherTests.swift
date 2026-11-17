@@ -688,6 +688,47 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         )
         XCTAssertEqual(response["error"] as? String, "bridge_unavailable")
     }
+    @MainActor
+    func testDismantleRemovesPageWorldHandlerAndNavigationDelegate() async throws {
+        let trustedURL = URL(string: "https://workspace.example.test/app")!
+        let coordinator = PrivateWorkspaceWebView.Coordinator(
+            trustedURL: trustedURL,
+            runtimeDependency: .createForTesting
+        )
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addScriptMessageHandler(
+            coordinator,
+            contentWorld: .page,
+            name: WorkspaceBridgeDispatcher.messageHandlerName
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = coordinator
+
+        let loaded = expectation(description: "Workspace test document finishes loading")
+        let loadingObservation = webView.observe(\.isLoading, options: [.new]) { view, change in
+            guard change.newValue == false, view.url != nil else { return }
+            loaded.fulfill()
+        }
+        webView.loadHTMLString(
+            "<!doctype html><html><body>Workspace teardown test</body></html>",
+            baseURL: trustedURL
+        )
+        await fulfillment(of: [loaded], timeout: 10)
+
+        let handlerBeforeTeardown = try await webView.evaluateJavaScript(
+            "typeof window.webkit.messageHandlers.pocketAILab"
+        )
+        XCTAssertEqual(handlerBeforeTeardown as? String, "object")
+
+        PrivateWorkspaceWebView.dismantleUIView(webView, coordinator: coordinator)
+
+        XCTAssertNil(webView.navigationDelegate)
+        let handlerAfterTeardown = try await webView.evaluateJavaScript(
+            "typeof window.webkit.messageHandlers.pocketAILab"
+        )
+        XCTAssertEqual(handlerAfterTeardown as? String, "undefined")
+        withExtendedLifetime(loadingObservation) {}
+    }
 }
 
 private actor DispatcherBlockingDrainLlamaEngine: LlamaEngine {
@@ -741,47 +782,6 @@ private actor DispatcherBlockingDrainLlamaEngine: LlamaEngine {
         drainContinuation = nil
     }
 
-    @MainActor
-    func testDismantleRemovesPageWorldHandlerAndNavigationDelegate() async throws {
-        let trustedURL = URL(string: "https://workspace.example.test/app")!
-        let coordinator = PrivateWorkspaceWebView.Coordinator(
-            trustedURL: trustedURL,
-            runtimeDependency: .createForTesting
-        )
-        let configuration = WKWebViewConfiguration()
-        configuration.userContentController.addScriptMessageHandler(
-            coordinator,
-            contentWorld: .page,
-            name: WorkspaceBridgeDispatcher.messageHandlerName
-        )
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = coordinator
-
-        let loaded = expectation(description: "Workspace test document finishes loading")
-        let loadingObservation = webView.observe(\.isLoading, options: [.new]) { view, change in
-            guard change.newValue == false, view.url != nil else { return }
-            loaded.fulfill()
-        }
-        webView.loadHTMLString(
-            "<!doctype html><html><body>Workspace teardown test</body></html>",
-            baseURL: trustedURL
-        )
-        await fulfillment(of: [loaded], timeout: 10)
-
-        let handlerBeforeTeardown = try await webView.evaluateJavaScript(
-            "typeof window.webkit.messageHandlers.pocketAILab"
-        )
-        XCTAssertEqual(handlerBeforeTeardown as? String, "object")
-
-        PrivateWorkspaceWebView.dismantleUIView(webView, coordinator: coordinator)
-
-        XCTAssertNil(webView.navigationDelegate)
-        let handlerAfterTeardown = try await webView.evaluateJavaScript(
-            "typeof window.webkit.messageHandlers.pocketAILab"
-        )
-        XCTAssertEqual(handlerAfterTeardown as? String, "undefined")
-        withExtendedLifetime(loadingObservation) {}
-    }
 
 }
 
