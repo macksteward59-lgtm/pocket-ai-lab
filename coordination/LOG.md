@@ -3224,3 +3224,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Updated the coordination board to point to active draft PR #181 and its exact head. Closed superseded PR #178 unmerged; no changes from it were merged.
 - PR #181 remains draft. Exact-head CI is still pending because the test-runner workflow in PR #180 is not on the base branch. PR #180 remains separate and unmerged; its earlier passing run is not evidence for PR #181.
 - No Orchestrator, APEX, East, native runtime, MemoryManager, or MessageBus behavior changed. OWASP content remains untrusted reference-only data and is not connected to task execution.
+
+
+## 2026-11-17 — OWASP and test-runner exact-head audit
+
+- Rechecked active PRs #181 and #180 against the live `agent-coordination` branch. PR #181 remains open/draft at exact head `2a3b5e94503b0c8258cec320abe2a3dfbf93bfff`, directly based on `ab6b2b49d7bd199c4b9b02042ba870ddc678ea22`; compare reports 1 ahead, 0 behind. No PR-triggered workflow run exists for this exact OWASP head.
+- PR #180 remains open/draft at exact head `558fb2b48e88c487e9f04ab4ba29609f49d8d66b`. Exact-head workflow #44132022621 completed successfully, but its branch is now 10 commits behind current coordination. The earlier pass is not treated as current-base validation; synchronize and rerun before depending on the workflow for PR #181.
+- Corrected the coordination board's stale PR #181 head and base, and changed PR #180 status to resync-required with its exact-head passing run and current behind-count recorded.
+- No application code, OWASP feature code, Orchestrator, APEX, East, native runtime, or test behavior changed. No merge or PR closure performed.
