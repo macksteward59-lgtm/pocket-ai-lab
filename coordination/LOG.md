@@ -3061,3 +3061,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - This is a test-fixture compatibility defect, not evidence of a production app compile failure. Planned repair: create an isolated test `NativeRuntimeComposition` for the restored instance and pass its dependency; keep the test's assertion that catalog restoration does not fabricate a loaded session. Do not change runtime ownership or weaken the required dependency.
 - Updated the Phase B board claim with this exact blocker and retained ChatGPT as the sole owner of `codex/webkit-readonly-dispatcher-rebased`. PR #175 remains a separate web-client scope; no overlap or Agent Team native integration added.
 - No code change or rerun yet. After the fixture-only fix, require a fresh exact-head iOS run through native app XCTest, iOS simulator XCTest, pinned-GGUF macOS smoke, and final runner evidence. Physical iPhone Air acceptance remains separate. No merge performed.
+
+
+## 2026-11-17 — PR #174 test-fixture repair and native CI rerun
+
+- Fixed the exact XCTest compiler error in `ios/PocketAILabTests/PocketAILabTests.swift` on `codex/webkit-readonly-dispatcher-rebased`. The restored-model fixture now creates a dedicated test `NativeRuntimeComposition` and injects its dependency into `LocalChatModel`; the existing assertion that catalog restoration does not fabricate a loaded session remains unchanged.
+- Commit: `d69054846e1bc35e6b98234b7e8c8222bb2af59e`. The diff is limited to the single test file; no production runtime, ModelPool, lease, dispatcher, authorization, or model lifecycle code changed.
+- The commit triggered fresh exact-head iOS LlamaEngine CI run #44122327312. Initial poll: job #134176732008 is in progress at Show Xcode; all later gates are pending. No rerun success claimed.
+- Updated the Phase B board row to the repaired exact head and new run. Keep PR #174 and #175 as drafts; do not merge while native tests and smoke validation remain incomplete.
