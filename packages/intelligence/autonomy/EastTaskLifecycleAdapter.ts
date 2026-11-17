@@ -222,6 +222,7 @@ export async function runEastTaskWithLifecycle(
 
   while (true) {
     if (signal?.aborted) {
+      if (coordinator.getTask(lifecycleTaskId).status === "completed") break;
       await coordinator.cancelTask(lifecycleTaskId);
       throw cancellationError();
     }
