@@ -35,7 +35,13 @@ interface OwaspCatalog {
     name: string;
     url: string;
     branch: string;
+    revision: string;
     revisionPolicy: string;
+    license: {
+      spdx: string;
+      url: string;
+      attribution: string;
+    };
   };
   sources: OwaspKnowledgeSource[];
   routingRules: OwaspRoutingRule[];
