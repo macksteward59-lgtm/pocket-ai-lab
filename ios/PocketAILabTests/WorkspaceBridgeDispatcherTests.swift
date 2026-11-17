@@ -364,6 +364,54 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testInFlightAuthorizationCannotIssueChallengeAfterNavigation() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let gate = DispatcherResolutionGate()
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(
+            root: root,
+            beforeSessionResolution: { await gate.pauseIfArmed() }
+        )
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        await gate.arm()
+        let request = Task {
+            await dispatcher.handle(
+                body: [
+                    "id": UUID().uuidString,
+                    "action": "authorizeGeneration",
+                    "sessionId": sessionID,
+                    "requestId": UUID().uuidString
+                ],
+                frameOrigin: trustedOrigin,
+                isMainFrame: true
+            )
+        }
+        await gate.waitUntilEntered()
+        await dispatcher.navigationStarted()
+        await gate.resume()
+
+        let response = await request.value
+        XCTAssertEqual(response["ok"] as? Bool, false)
+        XCTAssertEqual(response["error"] as? String, "runtime_not_ready")
+
+        // Navigation invalidates old work but leaves the trusted bridge usable
+        // for the newly committed same-origin document.
+        let status = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "getRuntimeStatus"],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(status["ok"] as? Bool, true)
+    }
+
+    @MainActor
     func testInvalidationDisablesAllFurtherMessages() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
