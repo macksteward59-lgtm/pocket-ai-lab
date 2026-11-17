@@ -3265,3 +3265,6 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 
 - First exact-head workflow run `44151799626` reached TypeScript compilation and caught a test-helper control-flow narrowing error (`TS2339` on the failure branch after an assertion). Corrected the helper to narrow the discriminated result directly before accessing validation errors. The fix is committed; a fresh exact-head run is required and no passing CI is claimed yet.
+
+
+- Exact-head workflow `44151982811` for `7bcc81bdaa8184ad9e6d3010b042ee09e8fa9c8e` completed successfully: isolated TypeScript compilation passed and all 9 scope-manifest regression tests passed (9 passed, 0 failed). This validates only the preflight module and its tests, not APEX authorization or operational scanning.
