@@ -376,18 +376,33 @@ Remaining ADR-001 gaps: Workspace does not yet receive the shared service; Runti
 
 ---
 
-## 19. Phase B — WebKit read-only ingress on app-scoped runtime — 2026-11-17
+## 19. Phase B — WebKit challenge-gated generation on app-scoped runtime — 2026-11-17
 
-PR #173 (`codex/webkit-readonly-dispatcher`) is a follow-on stacked on PR #171's app-scoped runtime composition. During implementation, a parallel PR #171 was discovered already implementing app-lifetime runtime ownership and centralized exact ModelPool lease management. The duplicate PR #172 was closed as superseded; its duplicate ownership changes were not carried forward.
+The active follow-on is PR #174 (`codex/webkit-readonly-dispatcher-rebased`), stacked on PR #171's updated app-scoped runtime branch at `90b4e2b408fd98d418bff729c8e8d208fe13463f`. PR #173 was closed as superseded because the parent branch advanced after the first follow-on was opened. PR #172 was already closed as superseded when PR #171's concurrent runtime-composition work was discovered.
 
-PR #173 currently:
-- Injects the existing `LocalChatRuntimeDependency` from `NativeRuntimeComposition` into Workspace; it does not create a second runtime or ModelPool.
-- Installs a `WKScriptMessageHandlerWithReply` under the fixed `pocketAILab` name in the page content world.
-- Derives origin from `WKScriptMessage.frameInfo.securityOrigin`; requires main-frame messages; validates with `BridgeGate.parse`; rejects unknown fields/actions, foreign origins, malformed values, and payloads larger than 40 KiB.
-- Enables only read-only `getRuntimeStatus` and `listModels`. Status uses the shared `NativeModelSessionService.snapshot()`; model inventory comes from the private local catalog and excludes file paths and raw file hashes.
-- Removes the handler and invalidates the dispatcher at WebView teardown. A new request identity recreates the WebView when the trusted workspace is changed.
-- Keeps readiness, validation, generation, cancellation, import, load, and unload disabled. This is not yet the full WebKit bridge.
+### Implemented in PR #174
 
-Validation snapshot at exact PR #173 head `b716ef8f358dc4819e96bc5e1edeae3b8faaee7c`: Intelligence CI #44093922426 passed; iOS LlamaEngine CI #44093929443 is still running at pinned llama.cpp build. Exact-head native app build/XCTest/simulator/GGUF/macOS gates remain pending. Hosted CI is not physical iPhone Air acceptance.
+- Injects the existing app-scoped `LocalChatRuntimeDependency` into Workspace; no second `NativeInferenceRuntime`, ModelPool, or scheduler is constructed.
+- Adds a read-only `NativeModelSessionService.activeLeases()` inventory. Workspace only attaches a Director `RuntimeController` lease after Local AI already holds a lease for the selected catalog descriptor. The controller obtains a second consumer lease from the same ModelPool, and the dispatcher requires exact equality of `RuntimeSession.id` between the controller lease and Local AI lease before readiness or generation. A matching model ID alone is insufficient.
+- Installs a `WKScriptMessageHandlerWithReply` under the fixed `pocketAILab` name in the `.page` content world. Origin comes from `WKScriptMessage.frameInfo.securityOrigin`; main-frame only; strict `BridgeGate.parse`; rejects foreign origins, unknown fields/actions, malformed values, and payloads above 40 KiB.
+- Supports read-only `getRuntimeStatus` and `listModels`, native `checkReadiness`, host-only `authorizeGeneration`, challenge-gated `generate`, and drained `cancelGeneration`.
+- `authorizeGeneration` issues a host-owned one-use challenge only after readiness is true. Challenge binds origin, request UUID, and exact runtime session. `RuntimeController.generate` consumes it before inference.
+- Generation returns an unsigned `RuntimeGenerationRecord` candidate with `authorized == false`. This is not a signed receipt, APEX authorization, device attestation, or proof of trust.
+- Import/load/unload remain rejected by BridgeGate until a separate parameter-bound native approval coordinator exists.
+- Navigation invalidates all outstanding challenges and cancels/drains active generation. Session replacement invalidates challenges and disconnects the prior controller lease. WebView teardown removes the message handler, invalidates challenges, cancels/drains work, and releases the controller lease without unloading a model still leased by Local AI.
+- `RuntimeController` re-hashes the model off actor before readiness and generation, comparing against the load-time SHA-256. This supplements file size/modification-time identity and detects same-size mutation with restored timestamps.
+- Tests cover trusted frame/origin, schema and size limits, exact shared-session equality, real readiness probe, host challenge issuance/consumption, replay rejection, navigation invalidation, same-size model tampering, cancellation drain, and teardown.
 
-Next required phase: make the app-scoped runtime/session service the single source of truth for both local chat and `RuntimeController`; attach or transfer the exact lease without duplicate acquisition; issue and consume a host-owned challenge bound to WebKit frame origin, request UUID, and active runtime session before inference; invalidate challenges on navigation, teardown, workspace close, and session replacement; test expiry/replay/wrong-origin/wrong-session and cancellation. Keep consequential import/load/unload disabled until parameter-bound native approval exists. Preserve APEX as sole authorization authority; no signed receipts, attestation, or device acceptance is implied by this read-only dispatcher.
+### Validation snapshot
+
+Exact PR #174 head at this update: `a1a60c39ce12c2b1e5408bb79fe87dfd10f34f5d`. iOS LlamaEngine CI #44111771628 is queued for that exact head; Pocket AI Lab CI #44111746838 is running. The earlier iOS run #44093929443 failed XCTest compilation due three app-scoped runtime fixture issues (two initializer argument-order errors and one missing runtime dependency); those fixtures were corrected in the parent PR #171 branch and carried into the clean follow-on. Prior Pocket AI Lab CI #44111500667 passed on an earlier `ac29e06` head, not the current exact head. Do not treat these as final validation until the current exact-head jobs complete.
+
+### Remaining bridge gates
+
+1. Confirm exact-head native app build, XCTest, simulator XCTest, pinned GGUF/macOS smoke gates, and workflow runner evidence.
+2. Test expiry, wrong-origin, wrong-session, wrong-request, replay, navigation, teardown, and session replacement end-to-end against the host dispatcher.
+3. Complete the native approval coordinator for import/load/unload with parameter-bound, one-use approvals. Keep those actions denied until then.
+4. Integrate APEX authorization and Ed25519 signed evidence receipts as a distinct authority. The generation record remains unsigned and `authorized == false`.
+5. Verify actual model inference, cancellation, thermal/memory behavior, and app lifecycle on the physical iPhone Air. Hosted CI and simulator success are not device acceptance.
+
+No PR merged and no physical iPhone Air acceptance claimed.
