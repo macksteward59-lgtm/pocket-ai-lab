@@ -2891,3 +2891,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Important enforcement distinction: `BridgeChallengeStore.consume` correctly implements origin/request/session-bound one-use expiry checks as a standalone actor, but `RuntimeController.generate` only validates that `challengeNonce` is a well-formed token and copies it into an unsigned generation candidate. It does not consume or verify the challenge itself. Therefore the bridge host dispatcher must perform `consume` before calling the controller; direct controller invocation with a fabricated well-formed nonce is not challenge-authorized.
 - Required tests for the follow-on bridge integration: reject absent/foreign-origin/replayed/expired/wrong-request/wrong-session nonces; ensure a failed binding does not consume another request's challenge; ensure successful consumption precedes exactly one runtime generation; ensure no page-supplied boolean can authorize import/load/unload; verify handler is removed on teardown and only main-frame trusted-origin messages are accepted.
 - No application code changed. PR #164 remains a deliberately incomplete bridge foundation, not an enabled WebKit bridge. Coordination audit and board now record this narrower security boundary.
+
+
+## 2026-11-17 00:12 UTC — PR #164 macOS gate remains active; runner logs unavailable
+
+- Re-polled exact-head run #43981080474, job #133697485358. Steps 1–17 remain completed successfully/skipped; macOS XCTest step 18 remains `in_progress`; runner evidence and post-job checkout remain pending.
+- Retried job-log retrieval; GitHub returned `BlobNotFound`. The test output therefore remains unavailable, and no failure cause or success can be inferred.
+- Updated the gap audit and coordination board with this observation. No app code, PR state, workflow cancellation/rerun, merge, or trust boundary changed.
+- Separately reviewed PR #162 current head `1db0345938ac029c3742a391c51ad7027d57e3bc`: its PostgreSQL concurrency tests use a deterministic fake database adapter, and no PR-triggered workflow run surfaced for that exact commit. Existing board/audit status remains correct: exact-head CI and live ephemeral PostgreSQL integration are still required before acceptance.
