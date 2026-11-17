@@ -236,8 +236,14 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(model.selectedModelID, firstID)
         XCTAssertEqual(model.modelURL, firstURL)
 
+        let restoredEngine = FingerprintTestEngine()
+        let restoredComposition = NativeRuntimeComposition(
+            engine: restoredEngine,
+            availableMemoryMB: { 4_096 }
+        )
         let restored = LocalChatModel(
-            engine: FingerprintTestEngine(),
+            runtimeDependency: restoredComposition.dependency,
+            engine: restoredEngine,
             modelDirectory: modelDirectory,
             modelCatalogStore: catalog
         )
@@ -506,8 +512,12 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertTrue(gate.hasRestoredSavedAddress)
     }
 
+    @MainActor
     func testWorkspaceWebViewReloadsOnlyForExplicitOpenRequests() {
-        let coordinator = PrivateWorkspaceWebView.Coordinator(trustedURL: URL(string: "https://workspace.example")!)
+        let coordinator = PrivateWorkspaceWebView.Coordinator(
+            trustedURL: URL(string: "https://workspace.example")!,
+            runtimeDependency: .createForTesting
+        )
         let firstRequest = UUID()
         XCTAssertTrue(coordinator.shouldLoad(firstRequest))
         XCTAssertFalse(coordinator.shouldLoad(firstRequest))

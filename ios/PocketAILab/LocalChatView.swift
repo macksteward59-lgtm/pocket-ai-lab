@@ -22,6 +22,13 @@ final class NativeModelSessionService {
         leases[ownerID]
     }
 
+    /// Read-only inventory of exact consumer leases. Bridge consumers may
+    /// verify that their controller session resolves to an already-loaded
+    /// app-scoped session without acquiring a second native model load.
+    func activeLeases() -> [ModelPoolLease] {
+        leases.values.sorted { $0.leaseId < $1.leaseId }
+    }
+
     func retain(_ lease: ModelPoolLease, for ownerID: UUID) throws {
         guard leases[ownerID] == nil else { throw ModelPoolError.invalidLease }
         leases[ownerID] = lease
