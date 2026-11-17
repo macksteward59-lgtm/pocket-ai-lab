@@ -3087,3 +3087,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Device framework link, simulator selection/boot, Director bridge manifest, app build, native app XCTest, engine simulator XCTest, GGUF download/path validation, and macOS XCTest have not yet run.
 - The active job log endpoint currently returns BlobNotFound; this is an unavailable log artifact, not evidence of a test failure. Continue using job step summaries for status and do not infer a cause.
 - Board updated. PR #174 remains draft; no merge or physical-device acceptance.
+
+
+## 2026-11-17 — ChatGPT — OWASP security knowledge integration
+
+- **Branch:** `codex/owasp-knowledge-security-integration`, based on `agent-coordination` at `23046bce807a5ffd2ed5efc5a6cfd3f578a046b2`.
+- **Claimed scope:** OWASP source catalog and provenance metadata; role/topic/knowledge-pack routing metadata; OWASP-derived Pocket AI Lab requirements; focused catalog tests and package barrel export.
+- **Sources inspected:** AI Agent Security, LLM Prompt Injection Prevention, MCP Security, Verifying Third-Party Agent Execution Evidence, Threat Modeling, Secrets Management, OAuth 2.0, and Mobile Application Security Cheat Sheets. The repository license is CC BY-SA 4.0; attribution and ShareAlike obligations are recorded.
+- **Files added:** `docs/requirements/OWASP_SECURITY_KNOWLEDGE_INTEGRATION.md`; `packages/intelligence/knowledge/owaspSources.json`; `packages/intelligence/knowledge/index.ts`; `packages/intelligence/__tests__/owasp-knowledge-catalog.test.ts`.
+- **Files updated:** `packages/intelligence/index.ts`, `tsconfig.json` (JSON module resolution), and coordination claim record.
+- **Review findings:** the inspected MessageBus validates and freezes message shape but does not itself authenticate senders, authorize recipients, prevent replay, or enforce expiry/delegation limits. The inspected MemoryManager has provenance and layer labels but does not itself enforce namespace isolation, TTL, secret screening, or cryptographic integrity. These are gap findings, not authorization to modify currently owned APEX, memory, or runtime workstreams.
+- **Status:** Catalog and requirements only; no claim that ingestion, retrieval, prompt-injection defense, message authentication, encrypted memory, iOS hardening, or APEX controls are implemented. Exact-head tests/CI remain pending.
