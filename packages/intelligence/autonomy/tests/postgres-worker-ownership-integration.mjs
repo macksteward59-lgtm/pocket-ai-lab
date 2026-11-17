@@ -143,6 +143,9 @@ async function main() {
       ["task.created", "step.claimed", "step.completed", "task.completed"]
     );
     assert.equal(finalObserver.getTask(taskId).events[1].ownerId, claim.ownerId);
+    assert.equal(finalObserver.getTask(taskId).events[1].resultingStepStatus, "running");
+    assert.equal(finalObserver.getTask(taskId).events[2].resultingStepStatus, "succeeded");
+    assert.equal(finalObserver.getTask(taskId).events[3].resultingTaskStatus, "completed");
 
     console.log("East PostgreSQL worker-ownership and event-journal checks passed");
   } finally {
