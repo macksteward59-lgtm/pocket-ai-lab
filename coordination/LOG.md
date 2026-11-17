@@ -2826,3 +2826,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Other visible test output: EAGLE Python suite ran 10 tests with 4 skipped and no failures; custom-GGUF Python suite ran 7 tests and passed. The complete workflow test job succeeded.
 - This is hosted CI on exact PR #165 head, not Windows/macOS physical packaging validation, not ExploitGym workload execution, and not physical iPhone acceptance.
 - PR #165 remains draft/open and stacked on PR #164. PR #164 iOS run #43981080474 remains stuck at native app build step 13 with no later XCTest/GGUF/inference gates observed. No merges, approvals, or APEX/East trust changes.
+
+
+## 2026-11-16 23:59 UTC — PR #164 native app build gate passed
+
+- Re-polled exact PR #164 head `6661bf655edef85e94fa1f363fcf54a33f20233c`, run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job `133697485358`.
+- Newly completed successfully: pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS engine link, iPhone simulator selection/boot, Director bridge package manifest validation, and full XcodeGen native app build for both generic iOS Simulator and generic iOS destinations.
+- Native Pocket AI Lab app XCTest step 14 is currently in progress. iOS engine simulator XCTest, pinned GGUF download, macOS smoke XCTest, and runner evidence steps remain pending. Workflow run remains `in_progress`; no artifacts have been published. Job log retrieval returns GitHub `BlobNotFound`, so no test failure or success diagnosis is available yet.
+- This is hosted Intel macOS CI; generic iOS linking is not physical-device execution. No actual GGUF generation, physical iPhone Air test, or production signing is claimed.
+- No PR #164 source edits, cancellation, restart, merge, or approval. PR #165 remains draft and its exact-head CI has passed; it remains stacked on #164.
+- Traceability rule: do not mark any requirement verified solely from compile/link/build gates. Map requirement-specific XCTest and model-generation evidence only after those gates complete.
