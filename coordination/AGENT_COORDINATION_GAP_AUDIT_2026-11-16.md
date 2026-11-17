@@ -208,3 +208,14 @@ Rechecked the current exact-head jobs for PR #168 and PR #164 and inspected the 
 - `BridgeChallengeStore` remains a host-side primitive. `RuntimeController.generate` validates the nonce's format and records it in the unsigned generation candidate; it does not consume or independently validate the challenge. The future dispatcher must consume the challenge against the frame-derived trusted origin, request UUID, and runtime session before invoking generation. Direct controller invocation with a well-formed fabricated nonce is not challenge-authorized.
 
 No PR was merged, no consequential action was enabled, and no physical iPhone Air acceptance is claimed. Next implementation remains a separately reviewed WebKit dispatcher with main-frame/origin/schema checks, one-use consume-before-generate, teardown invalidation, and negative/replay/expiry tests; consequential operations stay blocked until a parameter-bound native approval coordinator exists.
+
+
+## 11. Follow-up exact-head CI checkpoint — 2026-11-17
+
+A later poll confirms the PR #168 and PR #164 native workflows remain active, with additional completed gates:
+
+- PR #168 exact head `ab6f290702018023edaec800f59bfec422f24bc9`, run [#43991941724](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991941724): pinned llama.cpp build, fail-closed Swift typecheck, and generic iOS engine link passed. Simulator boot is in progress. Bridge package validation, app build/XCTest, simulator XCTest, GGUF download, macOS XCTest, and runner evidence remain pending. Companion Intelligence run #43991924464 passed.
+- PR #164 exact head `482b364cb362b86224c3399ce16ce51a1c06c738`, run [#43991837435](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991837435): pinned llama.cpp build, fail-closed typecheck, generic iOS link, simulator boot, bridge package manifest validation, and native app build passed. Native app XCTest is in progress; simulator XCTest and GGUF/macOS smoke remain pending.
+- PR descriptions #164 and #168 were refreshed with these exact-head checkpoints.
+
+No overall native workflow pass, physical iPhone Air acceptance, WebKit dispatcher implementation, or PR merge is claimed.
