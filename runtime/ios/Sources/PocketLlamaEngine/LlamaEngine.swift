@@ -253,6 +253,9 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         guard let token = UUID(uuidString: request.requestId) else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        // Reset before publishing the generation task. A later cancel can now
+        // only set the flag; the C decode entry point must never clear it.
+        sessions[session.id]?.resetCancellation()
         generation[session.id] = token
         let slot = TaskSlot()
         let stream = AsyncThrowingStream<Token, Error> { continuation in
@@ -414,6 +417,10 @@ private final class LoadedSession: @unchecked Sendable {
             throw LlamaEngineError.backendFailed("llama.cpp returned empty text. No token was invented.")
         }
         return text
+    }
+
+    func resetCancellation() {
+        pocket_llama_reset_cancel(handle)
     }
 
     func requestCancel() {
