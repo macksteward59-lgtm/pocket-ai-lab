@@ -236,8 +236,14 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(model.selectedModelID, firstID)
         XCTAssertEqual(model.modelURL, firstURL)
 
+        let restoredEngine = FingerprintTestEngine()
+        let restoredComposition = NativeRuntimeComposition(
+            engine: restoredEngine,
+            availableMemoryMB: { 4_096 }
+        )
         let restored = LocalChatModel(
-            engine: FingerprintTestEngine(),
+            runtimeDependency: restoredComposition.dependency,
+            engine: restoredEngine,
             modelDirectory: modelDirectory,
             modelCatalogStore: catalog
         )
