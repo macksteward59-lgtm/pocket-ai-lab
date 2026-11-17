@@ -112,12 +112,30 @@ test("a matching manifest still requires an independent APEX decision", () => {
   assert.equal(result.reason, "A_VALID_MANIFEST_IS_NOT_AN_AUTHORIZATION");
 });
 
-test("denies a manifest that expires before the requested action", () => {
+test("denies a manifest that is expired at validation time even when requestedAt is backdated", () => {
   const manifest = validManifest();
-  const result = checkScopeConstraints(manifest, {
-    ...request,
-    requestedAt: new Date("2026-11-17T19:00:00.000Z"),
-  });
+  const result = checkScopeConstraints(
+    manifest,
+    {
+      ...request,
+      requestedAt: new Date("2026-11-17T17:30:00.000Z"),
+    },
+    new Date("2026-11-17T20:00:00.000Z"),
+  );
   assert.equal(result.constraintsSatisfied, false);
   assert.equal(result.authorizationGranted, false);
+  assert.deepEqual(
+    result.status === "denied" ? result.reasons : [],
+    ["manifest_expired"],
+  );
+});
+
+test("rejects an unusable validation clock", () => {
+  const result = checkScopeConstraints(validManifest(), request, new Date(Number.NaN));
+  assert.equal(result.constraintsSatisfied, false);
+  assert.equal(result.authorizationGranted, false);
+  assert.deepEqual(
+    result.status === "denied" ? result.reasons : [],
+    ["invalid_validation_time"],
+  );
 });
