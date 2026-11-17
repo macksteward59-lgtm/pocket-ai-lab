@@ -144,7 +144,9 @@
             await cancelGeneration(sessionId, requestId);
             reject(makeError("generation_cancelled", "Native generation was cancelled and drained."));
           } catch (error) {
-            reject(makeError("generation_cancel_failed", error && error.message));
+            reject(error && typeof error.code === "string"
+              ? error
+              : makeError("generation_cancel_failed", error && error.message));
           }
         };
         signal.addEventListener("abort", abortListener, { once: true });
@@ -200,7 +202,14 @@
     if (typeof sessionId !== "string" || typeof requestId !== "string") {
       throw makeError("invalid_request", "A runtime session and request UUID are required for cancellation.");
     }
-    return request("cancelGeneration", { sessionId, requestId });
+    const result = await request("cancelGeneration", { sessionId, requestId });
+    if (result.cancelled !== true) {
+      throw makeError(
+        "generation_cancel_not_confirmed",
+        "The native runtime did not confirm cancellation of this exact request."
+      );
+    }
+    return result;
   }
 
   Object.defineProperty(globalThis, "PocketAILabNativeBridge", {
