@@ -81,6 +81,8 @@ def _parse_entry(entry: str) -> _Rule:
     if wildcard:
         host = host[2:]
     canonical, is_ip = _canonical_host(host)
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("port must be between 1 and 65535")
     if wildcard and is_ip:
         raise ValueError("wildcard IP entries are not supported")
     return _Rule(canonical, port, wildcard)
