@@ -19,6 +19,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     private let challengeStore: BridgeChallengeStore?
     private let runtimeController: RuntimeController?
     private var isActive = true
+    private var lifecycleGeneration: UInt64 = 0
 
     init(
         trustedURL: URL,
@@ -54,13 +55,16 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     /// A same-origin page navigation must invalidate outstanding one-use
     /// challenges without permanently disabling the new document's bridge.
     func navigationStarted() async {
-        guard isActive, let challengeStore else { return }
+        guard isActive else { return }
+        lifecycleGeneration &+= 1
+        guard let challengeStore else { return }
         await challengeStore.invalidateAll()
         _ = await runtimeController?.cancelAllGenerations()
     }
 
     func invalidate() {
         guard isActive else { return }
+        lifecycleGeneration &+= 1
         isActive = false
         guard let challengeStore, let runtimeController else { return }
         Task {
@@ -93,6 +97,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     /// testable without constructing a live web view.
     func handle(body: Any, frameOrigin: URL?, isMainFrame: Bool) async -> [String: Any] {
         guard isActive else { return Self.error("bridge_unavailable") }
+        let requestGeneration = lifecycleGeneration
         guard isMainFrame else { return Self.error("main_frame_required") }
         guard let message = body as? [String: Any],
               JSONSerialization.isValidJSONObject(message),
@@ -192,13 +197,15 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
 
         case "checkReadiness":
             guard let requestedSession = message["sessionId"] as? String,
-                  let sessionId = await ensureControllerSession(),
+                  let sessionId = await ensureControllerSession(lifecycleGeneration: requestGeneration),
+                  lifecycleGeneration == requestGeneration,
                   requestedSession == sessionId,
                   let runtimeController else {
                 return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
             }
             do {
                 let report = try await runtimeController.readiness(sessionId: sessionId)
+                guard isActive, lifecycleGeneration == requestGeneration else { return Self.error("bridge_unavailable", id: messageID) }
                 return [
                     "id": messageID,
                     "ok": true,
@@ -224,7 +231,8 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                   requestedSession == sessionId,
                   let runtimeController,
                   let challengeStore,
-                  await runtimeController.reports().contains(where: { $0.sessionId == sessionId && $0.canGenerate }) else {
+                  await runtimeController.reports().contains(where: { $0.sessionId == sessionId && $0.canGenerate }),
+                  isActive, lifecycleGeneration == requestGeneration else {
                 return Self.error("runtime_not_ready", id: messageID)
             }
             do {
@@ -234,6 +242,10 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                     requestId: requestId,
                     sessionId: sessionId
                 )
+                guard isActive, lifecycleGeneration == requestGeneration else {
+                    await challengeStore.invalidateAll()
+                    return Self.error("bridge_unavailable", id: messageID)
+                }
                 return [
                     "id": messageID,
                     "ok": true,
@@ -262,6 +274,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
             }
             do {
+                guard isActive, lifecycleGeneration == requestGeneration else { return Self.error("bridge_unavailable", id: messageID) }
                 let record = try await runtimeController.generate(
                     sessionId: sessionId,
                     prompt: prompt,
@@ -274,6 +287,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                     temperature: message["temperature"] as? Double ?? 0.2,
                     maxOutputBytes: Self.maximumOutputBytes
                 )
+                guard isActive, lifecycleGeneration == requestGeneration else { return Self.error("bridge_unavailable", id: messageID) }
                 return [
                     "id": messageID,
                     "ok": true,
@@ -317,8 +331,9 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
     /// app-scoped ModelPool. It is accepted only if it resolves to the exact
     /// RuntimeSession already held by Local AI; no duplicate engine load is
     /// treated as equivalent merely because the model ID matches.
-    private func ensureControllerSession() async -> String? {
-        guard case .shared(let service) = runtimeDependency,
+    private func ensureControllerSession(lifecycleGeneration expectedGeneration: UInt64) async -> String? {
+        guard isActive, lifecycleGeneration == expectedGeneration,
+              case .shared(let service) = runtimeDependency,
               let runtimeController else { return nil }
         do {
             let catalog = try modelCatalogStore.load()
@@ -345,6 +360,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
             }
 
             let reports = await runtimeController.reports()
+            guard isActive, lifecycleGeneration == expectedGeneration else { return nil }
             if let existing = reports.first(where: {
                 $0.id == entry.id && $0.fileHash == entry.sha256 &&
                 $0.sessionId == localLease.session.id
@@ -354,11 +370,16 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
 
             await challengeStore?.invalidateAll()
             await runtimeController.disconnect()
+            guard isActive, lifecycleGeneration == expectedGeneration else { return nil }
             let report = try await runtimeController.load(
                 model: descriptor,
                 expectedFileHash: entry.sha256,
                 estimatedMemoryMB: entry.estimatedMemoryMB
             )
+            guard isActive, lifecycleGeneration == expectedGeneration else {
+                if let staleSession = report.sessionId { _ = await runtimeController.unload(sessionId: staleSession) }
+                return nil
+            }
             guard let sessionId = report.sessionId,
                   sessionId == localLease.session.id else {
                 if let mismatchedSession = report.sessionId {
