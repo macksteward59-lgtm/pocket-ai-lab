@@ -304,3 +304,14 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - Focused regression proves caller remains pending until the provider settles and that the late result is neither published nor stored.
 - Exact-head Pocket AI Lab CI [#44186203351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44186203351) completed successfully: JavaScript syntax, TypeScript build, and full configured test step passed. The regression also asserts the model-router reservation remains present during the unresolved provider call and is released only after provider settlement.
 - This is cooperative cancellation. A provider that ignores AbortSignal is not force-killed; caller waits for it to settle. No hard-stop guarantee, production RLS, APEX authorization, or physical iPhone acceptance is claimed. PR remains draft/open/unmerged.
+
+
+## 2026-11-17 — OWASP catalog audit and PR status correction
+
+- PR #181 remains open/unmerged at exact head `c69ced4535d331748eddfac2a105a863262094dc`, based on `agent-coordination` head `1899752f3fa5e169f179668b96ebc07ee5098f84`. Compare is 5 commits ahead / 0 behind and remains scoped to the nine OWASP feature paths.
+- Independently fetched all eight OWASP source files from pinned upstream commit `7af0ef1b745f1a38ce905c00c5a592d5b3a515a9`; each GitHub blob SHA matches its catalog `blobSha` exactly. Catalog URLs are pinned to that revision and its license metadata identifies CC-BY-SA-4.0.
+- Review found the TypeScript `OwaspCatalog.repository` interface omitted `revision` (referenced by the catalog test) and the catalog's `license` metadata. Updated `packages/intelligence/knowledge/index.ts` to type both fields; commit `c69ced4535d331748eddfac2a105a863262094dc`. Read-back confirms the fields are present.
+- No exact-head workflow run is surfaced for PR #181. PR #180's focused TypeScript workflow passed on its own head `fe25b0a43151f71c23ee8d673788a18187e019c8`, but that does not validate #181. Keep #181 validation-blocked until its exact head is tested; do not duplicate workflow ownership in the OWASP PR.
+- Correction to prior status note: PR #162 is **not merged**. Its current state is open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`; the PR API's populated `merge_commit_sha` field was not evidence of a merge. No exact-head workflow run is surfaced for that SHA.
+- PR #174 remains open/unmerged at `8209c4784a1a715199dcb1ba5322241f5b24105a`; exact-head iOS run #44180080060 succeeded across all 19 steps. PR #185 remains open/unmerged and stale/diverged from #174 (1 ahead / 13 behind); reconcile before fresh web CI.
+- No PR was merged, no APEX/runtime/evidence authority was changed, and no physical iPhone Air acceptance is claimed.
