@@ -9,6 +9,8 @@ on:
       - codex/bridge-native-runtime-integration
       # Allow the next stacked runtime-challenge PR to receive native Swift/XCTest CI.
       - codex/bridgegate-host-approval-hardening-ci
+      # Keep the runtime challenge base branch eligible after its CI-only advance.
+      - codex/runtime-challenge-enforcement
       # Allow the WebKit dispatcher follow-on to run native Swift/XCTest CI.
       - codex/app-scoped-runtime-composition
       # Allow test-only follow-ons stacked on the WebKit dispatcher to run native Swift/XCTest CI.
