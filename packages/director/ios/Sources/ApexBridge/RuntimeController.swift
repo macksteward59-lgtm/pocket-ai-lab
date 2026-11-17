@@ -171,6 +171,7 @@ public actor RuntimeController {
 
         do {
             try await verifyFile(active)
+            try Task.checkCancellation()
         } catch {
             if var latest = sessions[sessionId], latest.readinessTaskId == token {
                 latest.readiness = nil
