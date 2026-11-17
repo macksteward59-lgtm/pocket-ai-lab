@@ -185,6 +185,50 @@ describe("TaskLifecycleCoordinator", () => {
     })).rejects.toMatchObject({ code: "stale_attempt" });
   });
 
+  it("marks expired single-attempt work uncertain and never auto-replays it after restart", async () => {
+    let milliseconds = Date.parse("2026-11-17T12:00:00.000Z");
+    const now = () => new Date(milliseconds);
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({
+      store,
+      now,
+      workerId: "worker-side-effect"
+    });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "uncertain-side-effect",
+      objective: "Do not duplicate a side effect after an ambiguous provider outcome",
+      leaseMs: 1_000,
+      steps: [{ id: "publish", description: "Perform one non-idempotent external side effect", maxAttempts: 1 }]
+    });
+
+    const claim = await coordinator.claimNextStep("uncertain-side-effect");
+    expect(claim?.ownerId).toBe("worker-side-effect");
+    milliseconds += 1_001;
+
+    expect(await coordinator.recoverExpiredLeases("uncertain-side-effect")).toBe(1);
+    const recovered = coordinator.getTask("uncertain-side-effect");
+    expect(recovered.steps[0]).toMatchObject({
+      status: "failed",
+      uncertain: true,
+      uncertainOnExpiredLease: true,
+      currentAttempt: null
+    });
+    expect(recovered.steps[0].lastError).toContain("outcome is uncertain");
+    expect(await coordinator.claimNextStep("uncertain-side-effect")).toBeNull();
+
+    const persisted = await store.load();
+    expect(persisted[0].steps[0].uncertain).toBe(true);
+    const restarted = new TaskLifecycleCoordinator({
+      store,
+      now,
+      workerId: "worker-after-restart"
+    });
+    await restarted.init();
+    expect(restarted.getTask("uncertain-side-effect").steps[0].uncertain).toBe(true);
+    expect(await restarted.claimNextStep("uncertain-side-effect")).toBeNull();
+  });
+
   it("binds a live lease to its claiming worker and rejects foreign completion or failure", async () => {
     const h = harness();
     await h.coordinator.init();
