@@ -426,6 +426,6 @@ Boundaries:
 - No signed evidence, APEX approval, device attestation, or physical iPhone Air acceptance is implied.
 
 Validation snapshot:
-- PR #175 exact head `4381df81ed0305a96cded87c78c9e446369c5893`; latest CI #44113067640 passed JavaScript syntax and TypeScript build and is running the web test suite. Prior CI #44112487822 passed the pre-cancellation web suite.
+- PR #175 exact head `4381df81ed0305a96cded87c78c9e446369c5893`; exact-head CI #44113067640 passed JavaScript syntax, TypeScript build, and the full web test suite.
 - PR #174 native exact head `48a6fabea107cc587327bf1782caef14aeefdab7`; Intelligence CI passed, iOS LlamaEngine CI #44112233207 is running at pinned llama.cpp build.
 - These hosted workflows are not physical device acceptance.
