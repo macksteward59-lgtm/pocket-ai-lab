@@ -6,7 +6,12 @@
     "name": "OWASP/CheatSheetSeries",
     "url": "https://github.com/OWASP/CheatSheetSeries",
     "branch": "master",
-    "revisionPolicy": "Pin a commit SHA before production ingestion; master is mutable."
+    "revisionPolicy": "Pin a commit SHA before production ingestion; master is mutable.",
+    "license": {
+      "spdx": "CC-BY-SA-4.0",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/master/LICENSE.md",
+      "attribution": "OWASP Cheat Sheet Series"
+    }
   },
   "sources": [
     {
