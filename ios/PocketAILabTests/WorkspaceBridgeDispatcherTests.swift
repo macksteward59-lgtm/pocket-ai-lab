@@ -1,0 +1,171 @@
+import Foundation
+import XCTest
+@testable import PocketAILab
+import PocketLlamaEngine
+
+@MainActor
+final class WorkspaceBridgeDispatcherTests: XCTestCase {
+    private func makeRoot() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+
+    private func makeDispatcher(root: URL) -> WorkspaceBridgeDispatcher {
+        let composition = NativeRuntimeComposition(
+            engine: DispatcherStubEngine(),
+            availableMemoryMB: { 4_096 }
+        )
+        let catalog = LocalModelCatalogStore(
+            fileURL: root.appendingPathComponent("ModelCatalog.json"),
+            modelDirectory: root.appendingPathComponent("Models", isDirectory: true)
+        )
+        return WorkspaceBridgeDispatcher(
+            trustedURL: URL(string: "https://workspace.example.test/app")!,
+            runtimeDependency: composition.dependency,
+            modelCatalogStore: catalog
+        )
+    }
+
+    func testTrustedMainFrameCanReadAppScopedRuntimeStatus() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dispatcher = makeDispatcher(root: root)
+        let messageID = UUID().uuidString
+
+        let response = await dispatcher.handle(
+            body: ["id": messageID, "action": "getRuntimeStatus"],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+
+        XCTAssertEqual(response["id"] as? String, messageID)
+        XCTAssertEqual(response["ok"] as? Bool, true)
+        let data = try XCTUnwrap(response["data"] as? [String: Any])
+        XCTAssertEqual(data["runtimeAvailable"] as? Bool, true)
+        XCTAssertEqual(data["modelLoaded"] as? Bool, false)
+        XCTAssertEqual(data["generationEnabled"] as? Bool, false)
+        XCTAssertEqual(data["dispatcherMode"] as? String, "read-only")
+        XCTAssertEqual(data["runtimeTrust"] as? String, "Unverified")
+    }
+
+    func testTrustedMainFrameCanReadSanitizedModelCatalog() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dispatcher = makeDispatcher(root: root)
+
+        let response = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "listModels"],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+
+        XCTAssertEqual(response["ok"] as? Bool, true)
+        let data = try XCTUnwrap(response["data"] as? [String: Any])
+        let models = try XCTUnwrap(data["models"] as? [[String: Any]])
+        XCTAssertTrue(models.isEmpty)
+    }
+
+    func testForeignOriginSubframeAndMalformedMessagesAreRejected() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dispatcher = makeDispatcher(root: root)
+        let body: [String: Any] = ["id": UUID().uuidString, "action": "getRuntimeStatus"]
+
+        let foreign = await dispatcher.handle(
+            body: body,
+            frameOrigin: URL(string: "https://attacker.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(foreign["error"] as? String, "untrusted_origin")
+
+        let subframe = await dispatcher.handle(
+            body: body,
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: false
+        )
+        XCTAssertEqual(subframe["error"] as? String, "main_frame_required")
+
+        var extraField = body
+        extraField["origin"] = "https://workspace.example.test"
+        let malformed = await dispatcher.handle(
+            body: extraField,
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(malformed["error"] as? String, "invalid_message")
+
+        let oversized = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "getRuntimeStatus",
+                "padding": String(repeating: "x", count: 41_000)
+            ],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(oversized["error"] as? String, "invalid_message")
+    }
+
+    func testGenerationAndConsequentialActionsRemainDisabled() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dispatcher = makeDispatcher(root: root)
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+
+        let generation = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "generate",
+                "sessionId": UUID().uuidString,
+                "prompt": "This must not reach inference",
+                "requestId": UUID().uuidString,
+                "conversationRequestId": "conversation-1",
+                "attemptId": "attempt-1",
+                "challengeNonce": String(repeating: "a", count: 32)
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(generation["error"] as? String, "action_not_enabled")
+
+        let load = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "loadModel", "model": "model-1"],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(load["error"] as? String, "authorization_required")
+    }
+
+    func testInvalidationDisablesAllFurtherMessages() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let dispatcher = makeDispatcher(root: root)
+        dispatcher.invalidate()
+
+        let response = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "getRuntimeStatus"],
+            frameOrigin: URL(string: "https://workspace.example.test/")!,
+            isMainFrame: true
+        )
+        XCTAssertEqual(response["error"] as? String, "bridge_unavailable")
+    }
+}
+
+private actor DispatcherStubEngine: LlamaEngine {
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.yield(Token(text: "stub", isComplete: true))
+            continuation.finish()
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
+    func unload(sessionId: String) async {}
+}
