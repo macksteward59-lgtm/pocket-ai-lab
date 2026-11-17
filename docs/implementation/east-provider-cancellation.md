@@ -39,7 +39,7 @@ completed task as cancelled.
 worker handle and cannot stop a model/provider. Hosts must signal and drain
 workers before invoking it. Calling it directly while a provider is still
 running only invalidates the durable attempt and is not a substitute for
-cancellation propagation. The East lifecycle adapter is the integrated path.
+cancellation propagation. The East lifecycle adapter is the integrated path. The PostgreSQL store regression uses a transactional fake database adapter to prove the persisted terminal state survives coordinator recreation; it is not a live PostgreSQL service test.
 
 ## Provider adapter coverage
 
