@@ -661,15 +661,18 @@ describe("East provider cancellation propagation", () => {
     await providerStarted;
 
     expect(receivedSignal).toBe(controller.signal);
+    expect(platform.orchestrator.router.getLoadedModels()).toContain(model.id);
     controller.abort();
     let settled = false;
     void pending.then(() => { settled = true; }, () => { settled = true; });
     await Promise.resolve();
     expect(settled).toBe(false);
+    expect(platform.orchestrator.router.getLoadedModels()).toContain(model.id);
 
     resolveProvider!(payloadFor(receivedRequest!));
     await expect(pending).rejects.toMatchObject({ code: "cancelled" });
     expect(platform.orchestrator.bus.getThread(taskId)).toHaveLength(0);
     expect(await platform.memory.list()).toHaveLength(0);
+    expect(platform.orchestrator.router.getLoadedModels()).not.toContain(model.id);
   });
 });
