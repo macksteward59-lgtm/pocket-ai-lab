@@ -3251,6 +3251,27 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - No merges, application changes, or scope changes were made.
 
 
+## 2026-11-17 — Original six-layer framework recovered from conversation memory
+
+- Corrected the earlier handoff: the original six layer titles were present in the owner's November 1, 2026 ChatGPT discussion and have now been restored.
+- Canonical layers: Reconnaissance and Intelligence; Threat Modeling and Risk Assessment; Penetration Testing and Analysis; Infrastructure and Application Security; Detection and Response; Engineering and Continuous Improvement.
+- Restored governance: one central Director selects modules; Authorization Engine controls invocation; restricted skills remain unexecuted absent authorization; Critic/Validator are advisory only; local stand-in changes require explicit human approval; materially changed operations require new approval.
+- Restored tier labels: T0 Observe, T1 Assess, T2 Modify, T3 High-impact, T4 Prohibited. Individual module tier mappings are not inferred.
+- The memory search still did not return exact M01–M42 names/descriptions/assignments. It surfaced a historical reference to “Director and the 42 checks” at `src/lib/compliance/director.ts`; that path was not found at that location on the current coordination branch. Treat it as a historical retrieval lead, not an authoritative current file.
+- Updated the complete product handoff and master requirements checklist. No implementation or requirement verification status was changed.
+- Next retrieval target: original November 1 conversation content / historical `director.ts` implementation and tests to recover all 42 entries verbatim.
+
+
+## 2026-11-17 — Original M01–M42 capability inventory recovered
+
+- Recovered the original 42 module names and numbering from the October 29, 2026 ChatGPT conversation. Added the full M01–M42 inventory to the complete product handoff and master requirements checklist.
+- Preserved the earlier four conceptual integration groups: technical foundations; security analysis; operational capabilities; advanced integration.
+- Kept those four groups distinct from the six canonical layers recovered from the November 1 conversation. The exact M01–M42-to-six-layer mapping and complete verbatim descriptions for all 42 are not yet recovered; no per-module tier or permission assignments were invented.
+- The 42 entries are a capability registry, not a requirement for 42 permanent agents. Director selection and independent Authorization Engine control remain intact; Critic and Validator remain advisory.
+- Updated coordination board. Documentation-only change; no application code, tests, authorization policy, requirement verification status, merge, or physical-device acceptance changed.
+- Next source-recovery task: retrieve full original descriptions and November 1 layer/tier mapping, then add traceability from each module to its implementation and acceptance tests.
+
+
 ## 2026-11-17 — Vulnerability pipeline scope preflight implementation
 
 - Claimed and implemented a separate Milestone 0 slice on `codex/security-pipeline-scope-contract`, isolated from the Grok security research agency branch and OWASP knowledge work.
@@ -3268,3 +3289,6 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 
 - Exact-head workflow `44151982811` for `7bcc81bdaa8184ad9e6d3010b042ee09e8fa9c8e` completed successfully: isolated TypeScript compilation passed and all 9 scope-manifest regression tests passed (9 passed, 0 failed). This validates only the preflight module and its tests, not APEX authorization or operational scanning.
+
+- Exact-head run #44153405562 passed on commit `eee27a4c6deaeaf2841cfa8445c6d9a7ca58b414`: isolated TypeScript compilation and all 10 scope-manifest regression tests passed. Added trusted validation-clock checking so caller-controlled `requestedAt` cannot extend manifest validity; regression covers a backdated request against an already-expired manifest and an invalid clock. This remains preflight only; APEX authorization is still required.
+- The feature branch has been resynchronized at the documentation-file level with the current `agent-coordination` board/log snapshot to preserve intervening coordination updates. Confirm clean mergeability and exact-head checks before any merge.
