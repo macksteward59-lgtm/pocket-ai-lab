@@ -53,9 +53,9 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
 
     /// A same-origin page navigation must invalidate outstanding one-use
     /// challenges without permanently disabling the new document's bridge.
-    func navigationStarted() {
+    func navigationStarted() async {
         guard isActive, let challengeStore else { return }
-        Task { await challengeStore.invalidateAll() }
+        await challengeStore.invalidateAll()
     }
 
     func invalidate() {
