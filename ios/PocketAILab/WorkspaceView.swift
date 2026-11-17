@@ -3,6 +3,7 @@ import WebKit
 import ApexBridge
 
 struct WorkspaceView: View {
+    @EnvironmentObject private var localChatModel: LocalChatModel
     @AppStorage("workspaceURL") private var workspaceURL = ""
     @State private var address = ""
     @State private var loadURL: URL?
@@ -20,6 +21,8 @@ struct WorkspaceView: View {
                     Button("Open", action: openWorkspace).buttonStyle(.borderedProminent)
                 }.padding(.horizontal)
                 Text(validationMessage).font(.caption).foregroundStyle(.secondary).padding(.horizontal)
+                Text(localChatModel.workspaceBridgeRuntimeStatus)
+                    .font(.caption2).foregroundStyle(.secondary).padding(.horizontal)
                 if let loadURL {
                     PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
