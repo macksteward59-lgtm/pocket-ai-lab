@@ -516,3 +516,10 @@ No requirement status was promoted to verified, no PR was merged, and no applica
 - PR #185 is the replacement candidate. Do not merge PR #175; keep it open until PR #185's exact-head validation and stack review are complete, then close/supersede deliberately.
 
 No PR was merged. No physical iPhone Air acceptance is claimed. No APEX authorization, signing, or consequential bridge action was added.
+
+
+### PR #185 exact-head CI result — 2026-11-17
+
+- PR #185 head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f` completed Pocket AI Lab CI [#44162270273](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44162270273) with conclusion **success**. The job completed dependency installation, JS syntax checks, TypeScript build, and the repository's configured `npm test` command.
+- PR #185's base remains PR #174's current fetched head `beac6964aa4eda8d370b32ffa3ae565745b4e062`; PR #174 native workflow #44161924371 remains in progress. Thus the web slice is green, but the complete native+web stack is not yet validated.
+- The cancellation fix's regression test is included in the full npm test run. This is hosted CI only, not physical iPhone Air acceptance.
