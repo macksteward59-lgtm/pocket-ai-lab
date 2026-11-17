@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, "codex/consumer-prototype-foundation"]
   pull_request:
-    branches: [main]
+    branches: [main, "codex/**"]
 jobs:
   web:
     runs-on: ubuntu-latest
