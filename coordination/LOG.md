@@ -3305,3 +3305,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #181 remains validation-blocked: its branch has no exact-head workflow run, and the only relevant workflow is not in the shared base because it is supplied by PR #180. No duplicate workflow was added to #181.
 - Checked GitHub commit history for the four November 1 source leads (`src/lib/compliance/director.ts`, `modes.ts`, `orchestrator.ts`, and `src/components/compliance/console.tsx`); the current repository history API returned no commits for those paths. This does not establish that the original conversation source never existed; it means this repository history did not recover it.
 - No PR merge, app implementation, APEX authorization, runtime behavior, or physical device acceptance changed.
+
+## 2026-11-17 — October 29 source metadata recovered; later skills taxonomy distinguished
+
+- Targeted conversation search identified the exact October 29 assistant response at 2026-10-29T09:06:15Z, “Mr. Robot — Comprehensive Cybersecurity Skill Set”, and preceding user request at 09:03:41Z. Retrieval metadata confirms the response contains sections I–VII, M01–M42 verbatim descriptions, layer mappings, programming foundations, capability layers, and an overall capability profile. The actual body and mapping text were not returned, so no content was copied or reconstructed.
+- GitHub recursive tree inspection on codex/skill-lifecycle-rubric-binding recovered a later 44-entry, five-layer skill catalog and associated registry/lifecycle/evaluation code under packages/intelligence/skills/. It is not the original 42-entry, six-layer source. Exact paths and blob SHAs are recorded in coordination/HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md.
+- Corrected the recovery audit to distinguish metadata-confirmed source content from body text actually retrieved. October 29 mappings must be compared directly with the November 1 six-layer framework before adoption.
+- Updated the coordination board and source-recovery audit only. No application code, authorization policy, tests, merges, or requirement verification status changed.
