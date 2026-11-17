@@ -451,3 +451,10 @@ The inventory-name recovery is complete. The following remain blocked pending th
 ### Scope and status
 
 This update does not change the 316-row traceability counts except for the single M01–M42 inventory requirement moved from blocked to partial. It does not mark any requirement verified. The current master checklist and traceability matrix remain separate authorities. No application implementation, APEX policy, East behavior, native runtime, PR merge/closure, or physical iPhone Air acceptance is changed or implied.
+
+
+## 8. Follow-up source retrieval and CI dependency — 2026-11-17
+
+A further retrieval attempt for the original November 1 conversation source returned no complete M01–M42 descriptions and no exact per-module layer or T0–T4 mapping. The November 1 context does identify the live app files as `src/components/compliance/console.tsx`, `src/lib/compliance/providers.ts`, `src/lib/compliance/modes.ts`, `src/lib/compliance/director.ts` (described as Director and the 42 checks), and `src/lib/compliance/orchestrator.ts`. These are leads for targeted repository/history inspection, not evidence of the missing mappings.
+
+The current TypeScript test workflow is introduced on PR #180 and is not yet in the shared base. PR #181's OWASP test files therefore have no exact-head hosted workflow run. Keep PR #181's status validation-blocked until the workflow is available from the base and runs on its exact head, or until an independently authorized validation mechanism is established. Do not copy the workflow into PR #181 merely to manufacture a run; that would create ownership overlap.
