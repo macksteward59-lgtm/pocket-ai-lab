@@ -1,18 +1,23 @@
 import Foundation
 import WebKit
 import ApexBridge
+import PocketLlamaEngine
 
-/// Main-frame WebKit ingress. This initial slice is deliberately read-only:
-/// it observes the app-scoped ModelPool and local catalog but cannot start,
-/// stop, or generate through a model session.
+/// Main-frame WebKit ingress. Runtime commands are accepted only when the
+/// controller resolves to the exact model session already leased by Local AI.
+/// The controller takes its own consumer lease from the same app-scoped pool;
+/// it must resolve to the same RuntimeSession ID before any probe or generation.
 @MainActor
 final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply {
     static let messageHandlerName = "pocketAILab"
     private static let maximumMessageBytes = 40_960
+    private static let maximumOutputBytes = 64_000
 
     private let trustedURL: URL
     private let runtimeDependency: LocalChatRuntimeDependency
     private let modelCatalogStore: LocalModelCatalogStore
+    private let challengeStore: BridgeChallengeStore?
+    private let runtimeController: RuntimeController?
     private var isActive = true
 
     init(
@@ -29,10 +34,31 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 .appendingPathComponent("Models", isDirectory: true)
             self.modelCatalogStore = LocalModelCatalogStore(modelDirectory: modelDirectory)
         }
+
+        if case .shared(let service) = runtimeDependency,
+           let challengeStore = try? BridgeChallengeStore() {
+            self.challengeStore = challengeStore
+            self.runtimeController = try? RuntimeController(
+                runtime: service.runtime,
+                deviceId: "unattested-ios-device",
+                runtimeIdentity: "pocket-ai-lab-native-runtime",
+                challengeStore: challengeStore,
+                trustedWorkspaceURL: trustedURL
+            )
+        } else {
+            self.challengeStore = nil
+            self.runtimeController = nil
+        }
     }
 
     func invalidate() {
+        guard isActive else { return }
         isActive = false
+        guard let challengeStore, let runtimeController else { return }
+        Task {
+            await challengeStore.invalidateAll()
+            await runtimeController.disconnect()
+        }
     }
 
     func userContentController(
@@ -85,7 +111,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
             var data: [String: Any] = [
                 "runtimeTrust": "Unverified",
                 "generationEnabled": false,
-                "dispatcherMode": "read-only"
+                "dispatcherMode": "read-only-until-ready"
             ]
             switch runtimeDependency {
             case .shared(let service):
@@ -93,14 +119,32 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 data["runtimeAvailable"] = true
                 data["modelLoaded"] = !snapshot.loadedModelIDs.isEmpty
                 data["activeLeaseCount"] = snapshot.activeLeaseCount
+                data["activeUseCount"] = snapshot.activeUseCount
+                if let runtimeController {
+                    let reports = await runtimeController.reports()
+                    data["controllerSessions"] = reports.map { report in
+                        [
+                            "modelId": report.id,
+                            "phase": report.phase,
+                            "canGenerate": report.canGenerate,
+                            "sessionId": report.sessionId ?? ""
+                        ]
+                    }
+                } else {
+                    data["controllerSessions"] = []
+                }
             case .unavailable:
                 data["runtimeAvailable"] = false
                 data["modelLoaded"] = false
                 data["activeLeaseCount"] = 0
+                data["activeUseCount"] = 0
+                data["controllerSessions"] = []
             case .createForTesting:
                 data["runtimeAvailable"] = false
                 data["modelLoaded"] = false
                 data["activeLeaseCount"] = 0
+                data["activeUseCount"] = 0
+                data["controllerSessions"] = []
             }
             return ["id": messageID, "ok": true, "data": data]
 
@@ -122,11 +166,183 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 return Self.error("catalog_unavailable", id: messageID)
             }
 
+        case "checkReadiness":
+            guard let requestedSession = message["sessionId"] as? String,
+                  let sessionId = await ensureControllerSession(),
+                  requestedSession == sessionId,
+                  let runtimeController else {
+                return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
+            }
+            do {
+                let report = try await runtimeController.readiness(sessionId: sessionId)
+                return [
+                    "id": messageID,
+                    "ok": true,
+                    "data": [
+                        "modelId": report.id,
+                        "phase": report.phase,
+                        "canGenerate": report.canGenerate,
+                        "sessionId": report.sessionId ?? "",
+                        "fileHash": report.fileHash ?? "",
+                        "runtimeVersion": report.runtimeVersion ?? "",
+                        "healthCheckId": report.healthCheckId ?? "",
+                        "expiresAt": report.expiresAt?.timeIntervalSince1970 ?? 0
+                    ]
+                ]
+            } catch {
+                return Self.error("readiness_failed", id: messageID, detail: String(describing: error))
+            }
+
+        case "authorizeGeneration":
+            guard let requestedSession = message["sessionId"] as? String,
+                  let requestId = message["requestId"] as? String,
+                  let sessionId = await ensureControllerSession(),
+                  requestedSession == sessionId,
+                  let runtimeController,
+                  let challengeStore,
+                  await runtimeController.reports().contains(where: { $0.sessionId == sessionId && $0.canGenerate }) else {
+                return Self.error("runtime_not_ready", id: messageID)
+            }
+            do {
+                let nonce = try await challengeStore.issue(
+                    page: frameOrigin ?? trustedURL,
+                    trusted: trustedURL,
+                    requestId: requestId,
+                    sessionId: sessionId
+                )
+                return [
+                    "id": messageID,
+                    "ok": true,
+                    "data": [
+                        "challengeNonce": nonce,
+                        "expiresInSeconds": 60,
+                        "requestId": requestId,
+                        "sessionId": sessionId
+                    ]
+                ]
+            } catch {
+                return Self.error("challenge_issue_failed", id: messageID, detail: String(describing: error))
+            }
+
+        case "generate":
+            guard let requestedSession = message["sessionId"] as? String,
+                  let prompt = message["prompt"] as? String,
+                  let requestId = message["requestId"] as? String,
+                  let conversationRequestId = message["conversationRequestId"] as? String,
+                  let attemptId = message["attemptId"] as? String,
+                  let challengeNonce = message["challengeNonce"] as? String,
+                  let sessionId = await ensureControllerSession(),
+                  requestedSession == sessionId,
+                  let frameOrigin,
+                  let runtimeController else {
+                return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
+            }
+            do {
+                let record = try await runtimeController.generate(
+                    sessionId: sessionId,
+                    prompt: prompt,
+                    requestId: requestId,
+                    conversationRequestId: conversationRequestId,
+                    attemptId: attemptId,
+                    challengeNonce: challengeNonce,
+                    pageURL: frameOrigin,
+                    maxTokens: message["maxTokens"] as? Int ?? 512,
+                    temperature: message["temperature"] as? Double ?? 0.2,
+                    maxOutputBytes: Self.maximumOutputBytes
+                )
+                return [
+                    "id": messageID,
+                    "ok": true,
+                    "data": [
+                        "output": record.output,
+                        "requestId": record.requestId,
+                        "conversationRequestId": record.conversationRequestId,
+                        "attemptId": record.attemptId,
+                        "modelId": record.modelId,
+                        "runtimeSessionId": record.runtimeSessionId,
+                        "modelFileHash": record.modelFileHash,
+                        "runtimeVersion": record.runtimeVersion,
+                        "generationResultHash": record.generationResultHash,
+                        "generatedAt": record.generatedAt.timeIntervalSince1970,
+                        "authorized": false
+                    ]
+                ]
+            } catch {
+                return Self.error("generation_failed", id: messageID, detail: String(describing: error))
+            }
+
+        case "cancelGeneration":
+            guard let requestedSession = message["sessionId"] as? String,
+                  let requestId = message["requestId"] as? String,
+                  let sessionId = await ensureControllerSession(),
+                  requestedSession == sessionId,
+                  let runtimeController else {
+                return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
+            }
+            let cancelled = await runtimeController.cancelGeneration(sessionId: sessionId, requestId: requestId)
+            return ["id": messageID, "ok": true, "data": ["cancelled": cancelled]]
+
         default:
-            // Readiness, validation, generation, and cancellation remain off
-            // until they can use the exact app-scoped lease and host challenge.
-            // Import/load/unload are rejected by BridgeGate without native approval.
+            // Import/load/unload remain rejected by BridgeGate until a separate
+            // parameter-bound native approval coordinator exists.
             return Self.error("action_not_enabled", id: messageID)
+        }
+    }
+
+    /// The Director controller obtains a second consumer lease from the same
+    /// app-scoped ModelPool. It is accepted only if it resolves to the exact
+    /// RuntimeSession already held by Local AI; no duplicate engine load is
+    /// treated as equivalent merely because the model ID matches.
+    private func ensureControllerSession() async -> String? {
+        guard case .shared(let service) = runtimeDependency,
+              let runtimeController else { return nil }
+        do {
+            let catalog = try modelCatalogStore.load()
+            guard let selectedID = catalog.selectedModelID,
+                  let entry = catalog.entries.first(where: { $0.id == selectedID }) else {
+                await runtimeController.disconnect()
+                return nil
+            }
+            let modelURL = try modelCatalogStore.resolve(entry)
+            let descriptor = ModelDescriptor(
+                id: entry.id,
+                name: entry.name,
+                path: modelURL.path,
+                contextLength: entry.contextLength,
+                quantization: entry.quantization
+            )
+            guard let localLease = service.activeLeases().first(where: {
+                $0.model == descriptor && $0.session.modelId == entry.id
+            }) else {
+                await runtimeController.disconnect()
+                return nil
+            }
+
+            let reports = await runtimeController.reports()
+            if let existing = reports.first(where: {
+                $0.id == entry.id && $0.fileHash == entry.sha256 &&
+                $0.sessionId == localLease.session.id
+            }), let sessionId = existing.sessionId {
+                return sessionId
+            }
+
+            await runtimeController.disconnect()
+            let report = try await runtimeController.load(
+                model: descriptor,
+                expectedFileHash: entry.sha256,
+                estimatedMemoryMB: entry.estimatedMemoryMB
+            )
+            guard let sessionId = report.sessionId,
+                  sessionId == localLease.session.id else {
+                if let mismatchedSession = report.sessionId {
+                    _ = await runtimeController.unload(sessionId: mismatchedSession)
+                }
+                return nil
+            }
+            return sessionId
+        } catch {
+            await runtimeController.disconnect()
+            return nil
         }
     }
 
@@ -142,7 +358,11 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         return components.url
     }
 
-    private static func error(_ code: String, id: String = "") -> [String: Any] {
-        ["id": id, "ok": false, "error": code]
+    private static func error(_ code: String, id: String = "", detail: String? = nil) -> [String: Any] {
+        var result: [String: Any] = ["id": id, "ok": false, "error": code]
+        if let detail {
+            result["detail"] = String(detail.prefix(256))
+        }
+        return result
     }
 }
