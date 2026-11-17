@@ -3468,3 +3468,12 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - PR #185 is stale relative to current #174: current #174 head compared with #185 head reports `diverged`, 1 ahead / 13 behind, with six changed web files. Reconciliation is required; no blind file overwrite or merge was performed.
 - PR #162 remains open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`; the latest commit-workflow lookup surfaced no PR-triggered run for that exact SHA. The corrected DATABASE_URL workflow source alone is not a CI result.
 - No application files, runtime behavior, APEX policy, evidence semantics, deployment, or PR merge state were changed in this checkpoint.
+
+
+## 2026-11-17 — OWASP reference-data mutability review and hardening
+
+- Reviewed PR #181's exported catalog/guidance APIs and found nested runtime mutability despite reference-only trust labeling. Added a recursive deep-freeze helper and applied it to the imported source catalog and OWASP guidance definitions.
+- Added regression assertions for frozen catalog root, source collection, nested topic arrays, guidance collection, guidance objects, and nested guidance arrays.
+- Changes committed sequentially on `codex/owasp-knowledge-integration-v4`; latest exact head: `9cdf32e430e629384f4080385e594ad407bd78de`. Read-back confirmed code and tests.
+- No exact-head CI run is available: PR #181 is based on `agent-coordination`, while the focused TypeScript workflow is supplied separately by still-open PR #180 and is not in that base. Therefore no test/typecheck pass is claimed. Keep PR #181 validation-blocked until its exact head is tested through the established runner.
+- No Orchestrator wiring, APEX/East semantics, permissions, runtime behavior, or merge state changed.
