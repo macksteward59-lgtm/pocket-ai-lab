@@ -31,7 +31,8 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     @MainActor
     private func makeLoadedDispatcher(
         root: URL,
-        beforeSessionResolution: (@MainActor () async -> Void)? = nil
+        beforeSessionResolution: (@MainActor () async -> Void)? = nil,
+        beforeNavigationCleanup: (@MainActor () async -> Void)? = nil
     ) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
         let modelDirectory = root.appendingPathComponent("Models", isDirectory: true)
         try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
@@ -68,7 +69,8 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             trustedURL: URL(string: "https://workspace.example.test/app")!,
             runtimeDependency: composition.dependency,
             modelCatalogStore: catalog,
-            beforeSessionResolution: beforeSessionResolution
+            beforeSessionResolution: beforeSessionResolution,
+            beforeNavigationCleanup: beforeNavigationCleanup
         )
         return (dispatcher, lease.session.id, composition)
     }
@@ -409,6 +411,50 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             isMainFrame: true
         )
         XCTAssertEqual(status["ok"] as? Bool, true)
+    }
+
+    @MainActor
+    func testNewDocumentCannotAuthorizeWhileNavigationCleanupIsPending() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let gate = DispatcherResolutionGate()
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(
+            root: root,
+            beforeNavigationCleanup: { await gate.pauseIfArmed() }
+        )
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+
+        await gate.arm()
+        let navigation = Task { await dispatcher.navigationStarted() }
+        await gate.waitUntilEntered()
+
+        let blocked = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": UUID().uuidString
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(blocked["ok"] as? Bool, false)
+        XCTAssertEqual(blocked["error"] as? String, "runtime_not_ready")
+
+        await gate.resume()
+        await navigation.value
+
+        let allowedAfterCleanup = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": UUID().uuidString
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(allowedAfterCleanup["ok"] as? Bool, true)
     }
 
     @MainActor
