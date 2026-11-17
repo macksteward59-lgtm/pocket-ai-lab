@@ -3148,3 +3148,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Exact-head iOS LlamaEngine run #44125349459 is building pinned llama.cpp. Runner setup, checkout, Xcode discovery, CMake/Ninja installation, and pinned build-artifact restore passed; pinned simulator/macOS build is in progress.
 - Swift fail-closed typecheck, device framework link, simulator boot, Director package validation, app build/XCTest, simulator XCTest, GGUF download, and macOS XCTest remain pending.
 - Updated Phase B board. Current native validation is still incomplete; no physical iPhone Air acceptance and no merge.
+
+
+## 2026-11-17 — Re-hash model after challenge consumption
+
+- Found a remaining TOCTOU window: generation verified the GGUF before awaiting host challenge consumption, but the file could be modified while that actor call was suspended.
+- Fixed `RuntimeController.generate` in `49c738c0dd20f84d07d6d48af0f055e4a44a9d91`: after challenge acceptance, verify the exact session/readiness; re-hash the model file off actor; clear readiness if verification fails; honor cancellation; and revalidate session/readiness again after the detached hash await before inference.
+- Added deterministic `testModelFileMutationDuringChallengeConsumptionInvalidatesReadiness` in `005ac8ee131f8a036f13a7e01ca6caff40176353`. It mutates one byte while challenge consumption is paused, restores the original modification timestamp and preserves file size, then asserts `.modelFileChanged` and readiness invalidation.
+- Previous iOS run #44125349459 on `8b546de57dde29b722cbbcfaabafd7cb29454c0b` passed pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, device framework link, simulator boot, and Director package validation. Native app build was cancelled on branch advance; app XCTest, simulator XCTest, and GGUF smoke were skipped.
+- Current-head iOS run #44129072799 is queued for `005ac8ee131f8a036f13a7e01ca6caff40176353`; current-head Intelligence CI #44129054825 is running.
+- PR #174 remains draft and unmerged; physical iPhone Air acceptance remains outstanding.
