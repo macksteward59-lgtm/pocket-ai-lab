@@ -74,6 +74,7 @@ Current exact-head CI evidence:
 - iOS engine simulator XCTest has completed successfully. The pinned smoke GGUF download and path setup have also completed successfully. macOS XCTest is now in_progress; final runner evidence remains pending.
 - Companion Intelligence CI #43981072947 passed on the exact PR head.
 - The overall iOS run remains in_progress. Simulator tests and GGUF setup are green, but macOS XCTest and final runner evidence are not complete; do not claim an overall workflow pass or physical iPhone Air acceptance.
+- A fresh poll at 2026-11-17 00:12 UTC still shows the macOS XCTest step in_progress; runner evidence and post-job checkout remain pending. Attempted job-log retrieval returned GitHub's temporary-log `BlobNotFound` response, so the test's internal output is not currently inspectable. Continue polling the same run rather than inferring a result or launching a duplicate.
 
 ### 1.3 Grok Workspace and ExploitGym archive slice — PR #165
 
