@@ -221,7 +221,10 @@ export async function runEastTaskWithLifecycle(
   }
 
   while (true) {
-    throwIfAborted(signal);
+    if (signal?.aborted) {
+      await coordinator.cancelTask(lifecycleTaskId);
+      throw cancellationError();
+    }
     const claim = await coordinator.claimNextStep(lifecycleTaskId);
     if (!claim) break;
     try {
