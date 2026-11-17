@@ -84,6 +84,9 @@ public actor RuntimeController {
     private let fileHasher: @Sendable (URL) async throws -> String
     private var sessions: [String: ActiveSession] = [:]
     private var unloadingSessions: Set<String> = []
+    // Invalidates generation attempts suspended before their native task is registered.
+    private var generationLifecycle: UInt64 = 0
+    private var generationDrainCount = 0
 
     public init(
         runtime: NativeInferenceRuntime,
@@ -250,6 +253,8 @@ public actor RuntimeController {
         temperature: Double = 0.2,
         maxOutputBytes: Int = 64_000
     ) async throws -> RuntimeGenerationRecord {
+        guard generationDrainCount == 0 else { throw CancellationError() }
+        let requestLifecycle = generationLifecycle
         guard !unloadingSessions.contains(sessionId),
               var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
         let now = clock()
@@ -269,6 +274,10 @@ public actor RuntimeController {
             active.readiness = nil
             sessions[sessionId] = active
             throw error
+        }
+        try Task.checkCancellation()
+        guard generationLifecycle == requestLifecycle, generationDrainCount == 0 else {
+            throw CancellationError()
         }
         guard (1...1_048_576).contains(maxOutputBytes) else {
             throw RuntimeControllerError.invalidRequest
@@ -295,9 +304,12 @@ public actor RuntimeController {
             sessionId: sessionId
         )
         guard challengeAccepted else { throw RuntimeControllerError.unauthorizedChallenge }
-        // Cancellation can arrive while challenge consumption is suspended.
-        // Do not start inference for a request the caller has already stopped.
+        // Cancellation or navigation can arrive while challenge consumption is
+        // suspended, before this request has an inference Task in generations.
         try Task.checkCancellation()
+        guard generationLifecycle == requestLifecycle, generationDrainCount == 0 else {
+            throw CancellationError()
+        }
 
         // Actor methods are reentrant across the challenge-store await above.
         // A concurrent disconnect/unload may have released this lease while
@@ -328,6 +340,10 @@ public actor RuntimeController {
             throw error
         }
         try Task.checkCancellation()
+
+        guard generationLifecycle == requestLifecycle, generationDrainCount == 0 else {
+            throw CancellationError()
+        }
 
         // verifyFile itself awaits an off-actor hash. Revalidate session and
         // readiness once more after that suspension before starting inference.
@@ -398,6 +414,12 @@ public actor RuntimeController {
     /// drain. Used when the trusted workspace navigates or is torn down.
     @discardableResult
     public func cancelAllGenerations() async -> Int {
+        // Advance before the first await so suspended pre-inference attempts
+        // cannot resume and register a native generation after this drain.
+        generationLifecycle &+= 1
+        generationDrainCount += 1
+        defer { generationDrainCount -= 1 }
+
         let pending = sessions.flatMap { sessionId, active in
             active.generations.keys.map { (sessionId, $0) }
         }
