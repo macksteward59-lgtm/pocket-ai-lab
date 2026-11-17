@@ -2984,3 +2984,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Confirmed WorkspaceView has no WKScriptMessageHandler; XcodeGen already includes ApexBridge source and tests in the native app/test targets.
 - Recorded implementation order: mandatory host challenge consumption before generation; no bypassable public generation path; frame-derived main-frame WebKit dispatcher; teardown/session invalidation; consequential model actions remain blocked pending parameter-bound native approval.
 - No application code changed, no PR merged, no action enabled, and no physical iPhone Air acceptance claimed.
+
+
+## 2026-11-17 — PR #169 mandatory runtime challenge consumption
+
+- Created branch `codex/runtime-challenge-enforcement` from PR #168 exact head `ab6f290702018023edaec800f59bfec422f24bc9`.
+- Updated RuntimeController to require an injected host-owned BridgeChallengeStore and trusted workspace URL; generation now consumes the challenge bound to page origin, request UUID, and runtime session before inference starts.
+- Added `unauthorizedChallenge` and tests for fabricated nonce rejection and one-use replay rejection; existing test generations now use genuine challenges.
+- Opened draft PR #169, exact head `47a2a63bfb3eea8755746a67b052298ee3b8efb0`, correctly stacked on PR #168 branch `codex/bridgegate-host-approval-hardening-ci`.
+- Exact-head iOS LlamaEngine CI run #43995918805 started; first job poll shows runner setup / Show Xcode in progress and all later gates pending. No test pass claimed.
+- This closes direct controller generation without challenge-store consumption. WebKit frame-derived origin dispatch and challenge invalidation on navigation/session replacement/teardown remain unimplemented. Consequential model actions remain blocked.
+- No merge or physical iPhone Air acceptance.
