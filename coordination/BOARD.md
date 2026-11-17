@@ -298,9 +298,9 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 ## 2026-11-17 — East provider cancellation follow-up
 
 - ChatGPT owns the focused East provider-cancellation follow-up in draft PR [#188](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/188), branch `codex/east-provider-cancellation`, based on PR #157 branch `codex/whole-product-execution-integration` at `8ee13921ac648915c3447b65e14120f29f89d786`.
-- Current exact head: `7349a396f045f076256c73ff6c9dff11bb631a18`.
+- Current exact head: `23a64ef3668da74c789dba33aeeb7d2684784631`.
 - Adds optional `AbortSignal` propagation through `EastPlatformRuntime.executeAgent` / `runDeliberation`, `Orchestrator.executeTask`, and `InferenceProvider.generate`.
 - Active provider promises are awaited to settlement before session/model-router lease release. Late results after abort are discarded before MessageBus publication; Orchestrator checks cancellation before the post-deliberation episodic-memory write.
 - Focused regression proves caller remains pending until the provider settles and that the late result is neither published nor stored.
-- Exact-head Pocket AI Lab CI [#44185815067](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44185815067) completed successfully: JavaScript syntax, TypeScript build, and full configured test step passed.
+- Exact-head Pocket AI Lab CI [#44186203351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44186203351) completed successfully: JavaScript syntax, TypeScript build, and full configured test step passed. The regression also asserts the model-router reservation remains present during the unresolved provider call and is released only after provider settlement.
 - This is cooperative cancellation. A provider that ignores AbortSignal is not force-killed; caller waits for it to settle. No hard-stop guarantee, production RLS, APEX authorization, or physical iPhone acceptance is claimed. PR remains draft/open/unmerged.
