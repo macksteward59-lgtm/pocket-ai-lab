@@ -331,3 +331,6 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - `TaskLifecycleCoordinator.cancelTask` is explicitly documented as state-only; hosts must stop/drain active workers before calling it. The East lifecycle adapter is the integrated signal -> provider drain -> durable cancel path.
 - Exact-head CI [#44188004686](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44188004686) completed successfully: JavaScript syntax, TypeScript build, and the full configured test step passed.
 - Safety boundary: cooperative cancellation cannot prove remote inference host GPU work stopped; no APEX authorization, signed Evidence, tenant RLS, physical iPhone acceptance, or merge is claimed.
+
+
+- Follow-up exact head `ebb047c958034071044702ae9b12329e8aea98e3` adds a PostgreSQL-store coordinator-restart regression: a drained cancellation persists as terminal, remains terminal after a fresh coordinator loads the same namespace, rejects the stale attempt, and cannot be claimed again. The test uses the transactional fake DB adapter, not a live PostgreSQL service. Exact-head CI [#44188338518](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44188338518) is running; do not mark the new head green until it completes.
