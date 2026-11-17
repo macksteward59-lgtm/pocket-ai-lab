@@ -44,35 +44,39 @@ final class BridgeGateTests: XCTestCase {
             "attemptId": "attempt-1",
             "challengeNonce": "0123456789abcdef"
         ]
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: false), .accepted)
+        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted), .accepted)
 
         var shortNonce = body
         shortNonce["challengeNonce"] = "short"
-        XCTAssertEqual(BridgeGate.parse(shortNonce, page: page, trusted: trusted, consequentialAuthorized: false), .invalidMessage)
+        XCTAssertEqual(BridgeGate.parse(shortNonce, page: page, trusted: trusted), .invalidMessage)
 
         var extraKey = body
         extraKey["privateKey"] = "must-not-cross-the-bridge"
-        XCTAssertEqual(BridgeGate.parse(extraKey, page: page, trusted: trusted, consequentialAuthorized: false), .invalidMessage)
+        XCTAssertEqual(BridgeGate.parse(extraKey, page: page, trusted: trusted), .invalidMessage)
     }
 
-    func testLoadRequiresHostOwnedConsequentialAuthorization() {
+    func testConsequentialActionsRemainBlockedUntilNativeApprovalCoordinatorExists() {
         let page = URL(string: "https://workspace.example.test")!
         let trusted = page
-        let body: [String: Any] = [
-            "id": UUID().uuidString,
-            "action": "loadModel",
-            "model": "local-model-1",
+        let actions: [[String: Any]] = [
+            ["id": UUID().uuidString, "action": "importModel", "model": "local-model-1", "artifactId": "artifact-1"],
+            ["id": UUID().uuidString, "action": "loadModel", "model": "local-model-1"],
+            ["id": UUID().uuidString, "action": "unloadModel", "sessionId": UUID().uuidString]
         ]
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: false), .authorizationRequired)
-        XCTAssertEqual(BridgeGate.parse(body, page: page, trusted: trusted, consequentialAuthorized: true), .accepted)
+        for body in actions {
+            XCTAssertEqual(
+                BridgeGate.parse(body, page: page, trusted: trusted),
+                .authorizationRequired
+            )
+        }
     }
 
     func testUntrustedOriginAndMissingRequiredFieldsFailClosed() {
         let trusted = URL(string: "https://workspace.example.test")!
         let foreign = URL(string: "https://attacker.example.test")!
         let body: [String: Any] = ["id": UUID().uuidString, "action": "getRuntimeStatus"]
-        XCTAssertEqual(BridgeGate.parse(body, page: foreign, trusted: trusted, consequentialAuthorized: false), .untrustedOrigin)
-        XCTAssertEqual(BridgeGate.parse(["id": UUID().uuidString, "action": "generate"], page: trusted, trusted: trusted, consequentialAuthorized: false), .invalidMessage)
+        XCTAssertEqual(BridgeGate.parse(body, page: foreign, trusted: trusted), .untrustedOrigin)
+        XCTAssertEqual(BridgeGate.parse(["id": UUID().uuidString, "action": "generate"], page: trusted, trusted: trusted), .invalidMessage)
     }
 }
 
@@ -434,6 +438,35 @@ final class BridgeChallengeStoreTests: XCTestCase {
             requestId: requestId, sessionId: sessionId
         )
         XCTAssertFalse(consumed)
+    }
+
+    func testInvalidateAllRevokesOutstandingChallenges() async throws {
+        let store = try BridgeChallengeStore()
+        let trusted = URL(string: "https://workspace.example.test")!
+        let firstRequest = UUID().uuidString
+        let secondRequest = UUID().uuidString
+        let sessionId = UUID().uuidString
+        let firstNonce = try await store.issue(
+            page: trusted, trusted: trusted,
+            requestId: firstRequest, sessionId: sessionId
+        )
+        let secondNonce = try await store.issue(
+            page: trusted, trusted: trusted,
+            requestId: secondRequest, sessionId: sessionId
+        )
+
+        await store.invalidateAll()
+
+        let firstConsumed = await store.consume(
+            firstNonce, page: trusted, trusted: trusted,
+            requestId: firstRequest, sessionId: sessionId
+        )
+        let secondConsumed = await store.consume(
+            secondNonce, page: trusted, trusted: trusted,
+            requestId: secondRequest, sessionId: sessionId
+        )
+        XCTAssertFalse(firstConsumed)
+        XCTAssertFalse(secondConsumed)
     }
 
     func testChallengeCannotBeIssuedForUntrustedOriginOrInvalidBinding() async throws {
