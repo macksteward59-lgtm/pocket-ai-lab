@@ -2836,3 +2836,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - This is hosted Intel macOS CI; generic iOS linking is not physical-device execution. No actual GGUF generation, physical iPhone Air test, or production signing is claimed.
 - No PR #164 source edits, cancellation, restart, merge, or approval. PR #165 remains draft and its exact-head CI has passed; it remains stacked on #164.
 - Traceability rule: do not mark any requirement verified solely from compile/link/build gates. Map requirement-specific XCTest and model-generation evidence only after those gates complete.
+
+
+## 2026-11-17 00:02 UTC — PR #164 XCTest runner status is inconclusive
+
+- Re-polled PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`, iOS run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), check-run `ios-llamaengine` started at `2026-11-16T23:39:05Z`.
+- Native app build step 13 completed successfully. Native app XCTest step 14 remains reported `in_progress` after more than 20 minutes, although workflow YAML sets `timeout-minutes: 20` on that step. The job/run status has not advanced and GitHub job-log retrieval returns `BlobNotFound`. Treat this as a stale/inconclusive runner/check-run state, not a test pass or confirmed test failure.
+- Subsequent iOS simulator XCTest, pinned GGUF download, macOS smoke XCTest, and runner evidence steps have not started. No model generation evidence exists for this exact PR #164 head.
+- The exact-SHA companion Intelligence CI passed; it is not a substitute for iOS LlamaEngine gates.
+- No cancellation or rerun was initiated. This is intentionally left untouched pending owner direction because a rerun/cancel changes the active validation attempt. No source, trust, or authorization changes.
