@@ -22,6 +22,8 @@ export interface EastLifecycleRunOptions {
   /** Stable, caller-owned id for the durable lifecycle record. */
   lifecycleTaskId: string;
   objective: string;
+  /** Caller-owned cancellation signal. Active inference drains before the durable task is cancelled. */
+  signal?: AbortSignal;
 }
 
 export interface EastLifecycleRunResult {
@@ -127,7 +129,8 @@ function assertCompatibleLifecycle(task: TaskRecord, objective: string, eastTask
 export async function runEastTaskWithLifecycle(
   options: EastLifecycleRunOptions
 ): Promise<EastLifecycleRunResult> {
-  const { coordinator, east, eastTaskId, lifecycleTaskId, objective } = options;
+  const { coordinator, east, eastTaskId, lifecycleTaskId, objective, signal } = options;
+  throwIfAborted(signal);
   if (!coordinator || !east || typeof eastTaskId !== "string" || !eastTaskId.trim() ||
       typeof lifecycleTaskId !== "string" || !lifecycleTaskId.trim() ||
       typeof objective !== "string" || !objective.trim()) {
@@ -218,9 +221,11 @@ export async function runEastTaskWithLifecycle(
   }
 
   while (true) {
+    throwIfAborted(signal);
     const claim = await coordinator.claimNextStep(lifecycleTaskId);
     if (!claim) break;
     try {
+      throwIfAborted(signal);
       let result: string;
       let refs: string[] = [];
       if (claim.stepId === "assign-core-agents") {
@@ -228,11 +233,13 @@ export async function runEastTaskWithLifecycle(
         result = captureCheckpoint("assign-core-agents");
       } else if (claim.stepId.startsWith("execute-")) {
         const agentId = claim.stepId.slice("execute-".length);
-        const messageId = await east.executeAgent(eastTaskId, agentId);
+        const messageId = await east.executeAgent(eastTaskId, agentId, { signal });
+        throwIfAborted(signal);
         result = captureCheckpoint("execute-" + agentId);
         refs = ["east-message:" + messageId];
       } else if (claim.stepId === "deliberate") {
-        const deliberation = await east.runDeliberation(eastTaskId);
+        const deliberation = await east.runDeliberation(eastTaskId, { signal });
+        throwIfAborted(signal);
         if (typeof deliberation.synthesis !== "string" || !deliberation.synthesis.trim()) {
           throw new Error("East deliberation returned an empty synthesis");
         }
@@ -243,13 +250,16 @@ export async function runEastTaskWithLifecycle(
         refs = evidenceRefs;
       } else if (claim.stepId === "record-unverified-proposal") {
         if (!synthesis.trim()) throw new Error("East deliberation returned no synthesis");
+        throwIfAborted(signal);
         const accepted = await east.commitTaskEvidence(eastTaskId, synthesis);
+        throwIfAborted(signal);
         if (accepted !== false) throw new Error("East evidence gate violated its non-authorizing contract");
         result = captureCheckpoint("record-unverified-proposal");
         refs = evidenceRefs;
       } else {
         throw new Error("Unknown East lifecycle step " + claim.stepId);
       }
+      throwIfAborted(signal);
       await coordinator.completeStep({
         taskId: lifecycleTaskId,
         stepId: claim.stepId,
@@ -258,6 +268,12 @@ export async function runEastTaskWithLifecycle(
         evidenceRefs: refs
       });
     } catch (error) {
+      if (signal?.aborted) {
+        // East's inference API settles only after the provider has drained.
+        // Persist cancellation after that boundary, never while provider work is live.
+        await coordinator.cancelTask(lifecycleTaskId);
+        throw cancellationError();
+      }
       await coordinator.failStep({
         taskId: lifecycleTaskId,
         stepId: claim.stepId,
@@ -284,4 +300,16 @@ export async function runEastTaskWithLifecycle(
     apexDecision: eastResult.apexDecision,
     evidenceGate: eastResult.evidenceGate
   };
+}
+
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  throw cancellationError();
+}
+
+function cancellationError(): Error {
+  const error = new Error("East lifecycle execution was cancelled after active inference drained");
+  error.name = "AbortError";
+  return error;
 }
