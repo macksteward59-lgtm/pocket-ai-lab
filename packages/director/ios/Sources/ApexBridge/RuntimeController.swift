@@ -516,7 +516,9 @@ public actor RuntimeController {
             readinessTask.cancel()
             _ = try? await readinessTask.value
         }
-        let requestIDs = Array(sessions[sessionId]?.generations.keys ?? Dictionary<String, Task<String, Error>>().keys)
+        // Unload must drain preparation-stage requests too; they may not yet
+        // appear in ActiveSession.generations but still hold this session's lease.
+        let requestIDs = Array(generationAttempts[sessionId]?.keys ?? Dictionary<String, Task<RuntimeGenerationRecord, Error>>().keys)
         for requestId in requestIDs {
             _ = await cancelGeneration(sessionId: sessionId, requestId: requestId)
         }
