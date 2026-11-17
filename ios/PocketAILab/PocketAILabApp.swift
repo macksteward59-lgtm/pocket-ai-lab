@@ -52,7 +52,7 @@ final class NativeRuntimeComposition: ObservableObject {
                 maxConcurrentRequests: 1
             )
             self.runtime = runtime
-            self.dependency = .shared(runtime)
+            self.dependency = .shared(NativeModelSessionService(runtime: runtime))
             self.status = "One app-scoped native runtime is active."
         } catch {
             self.runtime = nil
