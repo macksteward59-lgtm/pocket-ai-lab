@@ -801,7 +801,7 @@ struct LocalChatView: View {
     @StateObject private var model: LocalChatModel
 
     @MainActor
-    init(runtimeDependency: LocalChatRuntimeDependency = .createForTesting) {
+    init(runtimeDependency: LocalChatRuntimeDependency) {
         _model = StateObject(wrappedValue: LocalChatModel(runtimeDependency: runtimeDependency))
     }
     @State private var mode: LocalInteractionMode = .chat
