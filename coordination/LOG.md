@@ -2866,3 +2866,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The iOS engine simulator XCTest step is now `in_progress`; pinned GGUF download/path validation, macOS inference smoke, and runner evidence remain pending.
 - Overall iOS workflow remains `in_progress`. No overall pass, pinned-GGUF model generation, or physical iPhone Air acceptance is claimed.
 - Refreshed `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md` and `coordination/BOARD.md` to replace the previous stale-XCTest checkpoint with the newly observed step state. No source code, PR state, merge, cancellation, rerun, or trust-boundary change.
+
+
+## 2026-11-16 UTC — PR #164 simulator and pinned GGUF gates passed
+
+- Re-polled exact-head iOS run #43981080474 for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Newly completed successfully: iOS engine simulator XCTest, pinned smoke GGUF download, and macOS smoke-test GGUF path setup. Previously completed: native app build and app XCTest.
+- macOS XCTest is now `in_progress`; final runner evidence remains pending. Overall workflow is still `in_progress`; no end-to-end CI pass or physical iPhone Air acceptance is claimed.
+- Updated `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md` and `coordination/BOARD.md` with the observed step transitions. No application source, PR state, trust policy, merge, cancellation, or rerun was changed.
