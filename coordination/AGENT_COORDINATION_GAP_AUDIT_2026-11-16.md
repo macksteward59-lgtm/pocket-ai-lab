@@ -219,3 +219,32 @@ A later poll confirms the PR #168 and PR #164 native workflows remain active, wi
 - PR descriptions #164 and #168 were refreshed with these exact-head checkpoints.
 
 No overall native workflow pass, physical iPhone Air acceptance, WebKit dispatcher implementation, or PR merge is claimed.
+
+
+
+## 12. Runtime challenge enforcement and CI stall recheck — 2026-11-17
+
+A fresh source and workflow poll confirms the security boundary is still incomplete and the two native CI runs have not reached terminal conclusions.
+
+### Exact-head workflow state
+- PR #168 head `ab6f290702018023edaec800f59bfec422f24bc9`, run [#43991941724](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991941724): job is `in_progress`; the latest job listing shows “Validate restored Director bridge package manifest” in progress. Native app build/XCTest, simulator XCTest, pinned GGUF download, macOS XCTest, and runner evidence remain pending.
+- PR #164 head `482b364cb362b86224c3399ce16ce51a1c06c738`, run [#43991837435](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43991837435): native app XCTest remains `in_progress`; simulator XCTest, pinned GGUF download, macOS XCTest, and runner evidence remain pending.
+- The Actions run records' `updated_at` values have not advanced since the initial job starts. Treat both as potentially stalled/inconclusive. Do not mark them passed or failed without terminal evidence.
+
+### Challenge-enforcement finding
+Re-inspected `RuntimeController.swift`, `BridgeChallengeStore.swift`, `BridgeGate.swift`, `WorkspaceView.swift`, and the XcodeGen `ios/project.yml` on PR #168's exact head.
+
+- `BridgeChallengeStore.consume` correctly enforces origin/request/session binding, expiry, and one-use consumption when it is called.
+- `RuntimeController.generate` does not hold or call the challenge store. It checks only that `challengeNonce` is a well-formed token and then copies it into `RuntimeGenerationRecord`.
+- Existing runtime-controller XCTest fixtures call `generate` directly with fabricated nonce strings, demonstrating that challenge consumption is not currently a mandatory controller/dispatch precondition.
+- `PrivateWorkspaceWebView.Coordinator` remains navigation-only; `WKWebViewConfiguration` registers no script message handler.
+- `ios/project.yml` includes the ApexBridge source and tests in the native app/test targets, so a focused native dispatcher can be added through the existing app/package composition, but lifecycle/session injection must be identified before implementation.
+
+### Required implementation order
+1. Introduce a host-owned generation authorization boundary that consumes the one-use challenge against the origin derived from WebKit frame metadata, the request UUID, and the active runtime session **before** invoking native generation.
+2. Ensure no public generation entry point can bypass that boundary with a nonce-shaped string. Adapt existing tests to issue and consume genuine host challenges; add direct-bypass regression coverage.
+3. Install a main-frame-only WebKit message/reply handler. Reject subframes, foreign origins, malformed/unknown fields, oversized payloads, replay, expiry, wrong request/session, and navigation/session teardown.
+4. Invalidate outstanding challenges on navigation, workspace teardown, and runtime session replacement.
+5. Keep import/load/unload denied until a separate native approval coordinator binds the exact action and parameters to a one-use host approval. Do not conflate this approval with signing, receipts, attestation, or APEX authorization.
+
+No code was changed in this audit update. No PR was merged, no consequential action was enabled, and no physical iPhone Air acceptance is claimed.
