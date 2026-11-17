@@ -3505,3 +3505,13 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 
 - PR #186 (`codex/workspace-native-chat-abort-race`) remains a separate native Workspace bridge fix; exact-head CI [#44183512449](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183512449) passed on `0f44072cb8c58f3d9cef1f943e8fcab4dd0198a6`.
 - New draft PR #189 ([readiness-state fix](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/189)) stacks on #186 and requires exact controller-session readiness plus shared local lease before showing Workspace as ready. It is outside the East cancellation branch; no changes made. Its workflow was still in progress at the latest check.
+
+
+## 2026-11-17 — East cancellation adapter and durable lifecycle integration
+
+- PR [#188](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/188) remains draft/open/unmerged. Branch `codex/east-provider-cancellation`; latest recorded head `b0cb700b8dcf17b300f6d0fe0fad3bd3aca1cddf`; base `codex/whole-product-execution-integration` at `8ee13921ac648915c3447b65e14120f29f89d786`.
+- Added optional caller cancellation to `RemoteInferenceProvider`, distinguishing timeout from caller abort; llama.cpp HTTP body and SSE readers now reject when cancellation arrives after response headers, after cancelling/draining the reader.
+- `runEastTaskWithLifecycle` now accepts a caller signal, forwards it into East agent/deliberation execution, persists cancellation only after the East operation settles, prevents subsequent step claims, and preserves already-completed lifecycle state if a late abort arrives. Restart test verifies a cancelled inference attempt is not replayed.
+- `TaskLifecycleCoordinator.cancelTask` is explicitly documented as state-only; hosts must stop/drain active workers before calling it. The East lifecycle adapter is the integrated signal -> provider drain -> durable cancel path.
+- Exact-head CI [#44188004686](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44188004686) is still running at this update. Syntax and TypeScript build passed; the full configured test step is in progress. Do not mark validated until terminal success.
+- Safety boundary: cooperative cancellation cannot prove remote inference host GPU work stopped; no APEX authorization, signed Evidence, tenant RLS, physical iPhone acceptance, or merge is claimed.
