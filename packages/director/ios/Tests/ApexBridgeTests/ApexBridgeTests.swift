@@ -154,6 +154,33 @@ private actor SlowLlamaEngine: ApexBridge.LlamaEngine {
     func wasDrained(_ requestId: String) -> Bool { drainedRequests.contains(requestId) }
 }
 
+private actor CountingLlamaEngine: ApexBridge.LlamaEngine {
+    private var nonReadinessGenerationCalls = 0
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        if request.prompt.contains("readiness probe") {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(Token(text: "ready", isComplete: true))
+                continuation.finish()
+            }
+        }
+        nonReadinessGenerationCalls += 1
+        return AsyncThrowingStream { continuation in
+            continuation.yield(Token(text: "unexpected inference", isComplete: true))
+            continuation.finish()
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {}
+    func unload(sessionId: String) async {}
+    func nonReadinessGenerationCount() -> Int { nonReadinessGenerationCalls }
+}
+
 private actor BlockingDrainLlamaEngine: ApexBridge.LlamaEngine {
     private var generationStarted = false
     private var generationStartedContinuation: CheckedContinuation<Void, Never>?
@@ -665,6 +692,76 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertEqual(afterDrain.activeLeaseCount, 0)
         XCTAssertEqual(afterDrain.activeUseCount, 0)
         XCTAssertTrue(afterDrain.loadedModelIDs.isEmpty)
+    }
+
+    func testCancelAllInvalidatesGenerationSuspendedDuringChallengeConsumption() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-navigation-cancel-race-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "navigation-cancel-race-model",
+            name: "Navigation cancel race model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let engine = CountingLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = PausingChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "This must not start after navigation cancellation.",
+                requestId: UUID().uuidString,
+                conversationRequestId: "navigation-cancel-race",
+                attemptId: "navigation-cancel-race-attempt",
+                challengeNonce: String(repeating: "b", count: 32),
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        await challengeStore.waitUntilConsumeStarted()
+
+        let cancelledCount = await controller.cancelAllGenerations()
+        XCTAssertEqual(cancelledCount, 0, "The request is intentionally suspended before it registers a native generation task.")
+        await challengeStore.resumeConsume(true)
+
+        do {
+            _ = try await generation.value
+            XCTFail("A generation suspended during challenge consumption must be invalidated by cancelAllGenerations.")
+        } catch is CancellationError {
+            // Expected: the lifecycle epoch changed while challenge consumption was suspended.
+        } catch {
+            XCTFail("Expected CancellationError, received: \\(error)")
+        }
+
+        let inferenceCalls = await engine.nonReadinessGenerationCount()
+        XCTAssertEqual(inferenceCalls, 0, "No native inference call may begin after the navigation drain.")
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeLeaseCount, 1, "Navigation cancellation must preserve the controller's loaded session lease.")
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        await controller.disconnect()
     }
 
     func testDisconnectDuringChallengeConsumptionPreventsInference() async throws {
