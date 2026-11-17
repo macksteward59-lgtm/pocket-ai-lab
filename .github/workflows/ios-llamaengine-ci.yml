@@ -11,6 +11,8 @@ on:
       - codex/bridgegate-host-approval-hardening-ci
       # Allow the WebKit dispatcher follow-on to run native Swift/XCTest CI.
       - codex/app-scoped-runtime-composition
+      # Allow test-only follow-ons stacked on the WebKit dispatcher to run native Swift/XCTest CI.
+      - codex/webkit-readonly-dispatcher-rebased
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
