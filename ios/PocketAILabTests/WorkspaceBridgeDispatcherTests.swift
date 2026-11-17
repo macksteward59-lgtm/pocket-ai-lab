@@ -458,6 +458,61 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testOlderNavigationCleanupCannotReleaseNewerNavigationBarrier() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let gate = SequencedNavigationGate()
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(
+            root: root,
+            beforeNavigationCleanup: { await gate.pauseIfArmed() }
+        )
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        await gate.arm(pausing: [1, 2])
+        let olderNavigation = Task { await dispatcher.navigationStarted() }
+        await gate.waitUntilEntered(1)
+        let newerNavigation = Task { await dispatcher.navigationStarted() }
+        await gate.waitUntilEntered(2)
+
+        // Let the older cleanup finish first. Its generation is stale and it
+        // must not clear the barrier owned by the still-pending newer navigation.
+        await gate.resume(1)
+        await olderNavigation.value
+        let blockedWhileNewerCleanupPending = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": UUID().uuidString
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(blockedWhileNewerCleanupPending["ok"] as? Bool, false)
+        XCTAssertEqual(blockedWhileNewerCleanupPending["error"] as? String, "runtime_not_ready")
+
+        await gate.resume(2)
+        await newerNavigation.value
+        let allowedAfterNewestCleanup = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": UUID().uuidString
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(allowedAfterNewestCleanup["ok"] as? Bool, true)
+    }
+
+    @MainActor
     func testDispatcherInvalidationReleasesOnlyItsOwnSharedRuntimeLease() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -527,6 +582,45 @@ private actor DispatcherStubEngine: LlamaEngine {
     func unload(sessionId: String) async {}
 }
 
+
+private actor SequencedNavigationGate {
+    private var invocationCount = 0
+    private var pausedInvocations: Set<Int> = []
+    private var enteredInvocations: Set<Int> = []
+    private var enteredWaiters: [Int: CheckedContinuation<Void, Never>] = [:]
+    private var resumeWaiters: [Int: CheckedContinuation<Void, Never>] = [:]
+
+    func arm(pausing invocations: Set<Int>) {
+        invocationCount = 0
+        pausedInvocations = invocations
+        enteredInvocations.removeAll()
+        enteredWaiters.removeAll()
+        resumeWaiters.removeAll()
+    }
+
+    func pauseIfArmed() async {
+        invocationCount += 1
+        let invocation = invocationCount
+        guard pausedInvocations.contains(invocation) else { return }
+        enteredInvocations.insert(invocation)
+        enteredWaiters.removeValue(forKey: invocation)?.resume()
+        await withCheckedContinuation { continuation in
+            resumeWaiters[invocation] = continuation
+        }
+    }
+
+    func waitUntilEntered(_ invocation: Int) async {
+        if enteredInvocations.contains(invocation) { return }
+        await withCheckedContinuation { continuation in
+            enteredWaiters[invocation] = continuation
+        }
+    }
+
+    func resume(_ invocation: Int) {
+        pausedInvocations.remove(invocation)
+        resumeWaiters.removeValue(forKey: invocation)?.resume()
+    }
+}
 
 private actor DispatcherResolutionGate {
     private var armed = false
