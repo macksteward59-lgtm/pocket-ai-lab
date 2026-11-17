@@ -192,3 +192,7 @@ The October 29 conversation recovery yielded the complete original M01–M42 nam
 - The later lifecycle/evaluation primitives may be reviewed as engineering references, but their taxonomy and metadata are not substitutes for original module mappings or Authorization Engine policy.
 - Detailed evidence and blob SHAs: coordination/HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md.
 - No module mappings or per-module permissions were inferred; no application code or authorization behavior changed.
+
+## Live coordination refresh — 2026-11-17
+
+The latest exact-head reconciliation is recorded in `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md`, section 21. Key deltas: PR #164, #168, and #169 have exact-head native CI success on their currently fetched heads; PR #174's current native run is pending; PR #171 has no exact-head PR-triggered run surfaced; PR #175's passing web run is on a head based on an older PR #174 commit and must be rebased/reconciled; PR #180's focused test-runner check passed, while PR #181 has no exact-head run. The audit remains documentation-only. No physical iPhone Air acceptance, WebKit end-to-end production acceptance, APEX authorization, or original M01–M42 source-body recovery is claimed.
