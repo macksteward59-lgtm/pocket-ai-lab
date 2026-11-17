@@ -74,7 +74,7 @@ Current exact-head CI evidence:
 - iOS engine simulator XCTest has completed successfully. The pinned smoke GGUF download and path setup have also completed successfully. macOS XCTest is now in_progress; final runner evidence remains pending.
 - Companion Intelligence CI #43981072947 passed on the exact PR head.
 - The overall iOS run remains in_progress. Simulator tests and GGUF setup are green, but macOS XCTest and final runner evidence are not complete; do not claim an overall workflow pass or physical iPhone Air acceptance.
-- A fresh poll after 00:12 UTC shows macOS XCTest, runner-evidence recording, and post-job checkout all completed successfully. The enclosing job's `Complete job` step remains in_progress and the workflow run still reports `in_progress` with no conclusion. The earlier job-log `BlobNotFound` limitation remains, but is no longer blocking interpretation of the XCTest result; do not call the workflow fully green until GitHub reports a terminal run conclusion.
+- Exact-head run #43981080474 subsequently reached a terminal `success` conclusion at 2026-11-17 00:14:27 UTC. The `ios-llamaengine` check is completed successfully, including macOS XCTest, runner-evidence recording, and post-job checkout. Exact-head PR checks now show iOS LlamaEngine success plus two Intelligence workflow successes (#43981072947 and #43983044172). This clears the hosted CI gate for this PR head only; it does not prove physical iPhone Air inference or complete WebKit bridge functionality.
 
 ### 1.3 Grok Workspace and ExploitGym archive slice — PR #165
 
