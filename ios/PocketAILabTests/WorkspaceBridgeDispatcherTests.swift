@@ -669,8 +669,14 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertNil((response["data"] as? [String: Any])?["output"])
         XCTAssertEqual(afterDrain.activeLeaseCount, 1)
         XCTAssertEqual(afterDrain.activeUseCount, 0)
-        XCTAssertEqual(afterDrain.loadedModelIDs, [service.activeLeases()[0].model.id])
-        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID])
+        let retainedLocalAILeases = service.activeLeases()
+        let retainedLocalAILease = try XCTUnwrap(
+            retainedLocalAILeases.first,
+            "The Local AI consumer lease must remain active after Workspace teardown."
+        )
+        XCTAssertEqual(retainedLocalAILeases.count, 1)
+        XCTAssertEqual(afterDrain.loadedModelIDs, [retainedLocalAILease.model.id])
+        XCTAssertEqual(retainedLocalAILease.session.id, sessionID)
     }
 
     @MainActor
