@@ -1,4 +1,4 @@
-import { OWASP_KNOWLEDGE_CATALOG, type KnowledgeAgentId } from "./index";
+import { deepFreeze, OWASP_KNOWLEDGE_CATALOG, type KnowledgeAgentId } from "./index";
 
 export type OwaspGuidanceControl = {
   id: string;
@@ -15,7 +15,7 @@ export type OwaspGuidanceControl = {
  * These notes are untrusted reference material, not policy or tool permissions.
  * Each item points back to an exact source entry in the versioned catalog.
  */
-export const OWASP_GUIDANCE: readonly OwaspGuidanceControl[] = [
+export const OWASP_GUIDANCE: readonly OwaspGuidanceControl[] = deepFreeze<OwaspGuidanceControl[]>([
   {
     id: "AGENT-TOOL-BOUNDARY",
     sourceId: "OWASP-AI-AGENT",
@@ -165,7 +165,7 @@ export const OWASP_GUIDANCE: readonly OwaspGuidanceControl[] = [
     ],
     agents: ["engineer", "security-analyst", "ios-specialist", "critic", "validator"]
   }
-];
+]);
 
 const catalogIds = new Set(OWASP_KNOWLEDGE_CATALOG.sources.map(source => source.id));
 
