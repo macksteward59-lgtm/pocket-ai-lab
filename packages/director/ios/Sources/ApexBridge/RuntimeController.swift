@@ -160,6 +160,8 @@ public actor RuntimeController {
     /// A successful file import, model load, or health endpoint alone is not readiness.
     @discardableResult
     public func readiness(sessionId: String) async throws -> ModelReport {
+        guard generationDrainCount == 0 else { throw CancellationError() }
+        let requestLifecycle = generationLifecycle
         guard !unloadingSessions.contains(sessionId),
               var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
         guard active.readinessTaskId == nil else { throw RuntimeControllerError.duplicateRequest }
@@ -175,6 +177,9 @@ public actor RuntimeController {
         do {
             try await verifyFile(active)
             try Task.checkCancellation()
+            guard generationLifecycle == requestLifecycle, generationDrainCount == 0 else {
+                throw CancellationError()
+            }
         } catch {
             if var latest = sessions[sessionId], latest.readinessTaskId == token {
                 latest.readiness = nil
@@ -419,6 +424,14 @@ public actor RuntimeController {
         generationLifecycle &+= 1
         generationDrainCount += 1
         defer { generationDrainCount -= 1 }
+
+        // Readiness probes are native inference too. Cancel and await every
+        // registered probe before allowing navigation cleanup to finish. A probe
+        // still hashing its model file is invalidated by the lifecycle epoch above
+        // and will fail its post-hash check before registering native work.
+        let readinessTasks = sessions.values.compactMap(\.readinessTask)
+        for task in readinessTasks { task.cancel() }
+        for task in readinessTasks { _ = try? await task.value }
 
         let pending = sessions.flatMap { sessionId, active in
             active.generations.keys.map { (sessionId, $0) }
