@@ -269,3 +269,9 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - PR #162 exact-head PostgreSQL integration workflow [#44182281169](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281169) failed before its integration test ran. Retrieved job logs show the migration step invoked `psql --set ...` without a usable host/database argument, so psql attempted the runner's local Unix socket and failed: `/var/run/postgresql/.s.PGSQL.5432` did not exist. The PostgreSQL service container itself became healthy. Companion general Intelligence CI [#44182281206](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281206) passed syntax, type-check/build, and tests.
 - PR #162 branch advanced concurrently to `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3` after the failing workflow checked out `165594b26598955f219529b12aa79ca2cec8a372`. No edits were made to that branch; re-check the latest workflow file/head before proposing a fix. Exact-head validation for the newer commit was not surfaced.
 - PR #185 remains diverged from PR #174 (1 ahead / 13 behind) and must be reconciled before stack validation. No merges or physical-device acceptance.
+
+
+### Correction — East migration workflow root cause resolved from exact commit comparison
+
+- Compared the failing run's checked-out workflow at `165594b26598955f219529b12aa79ca2cec8a372` with the current PR #162 head `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The failing revision omitted `psql "$DATABASE_URL"` and therefore used the runner's local Unix socket. The current head's workflow explicitly passes `"$DATABASE_URL"`, addressing the observed connection-target defect.
+- No additional code edit was made by this coordination pass. Exact-head CI for `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3` has not yet surfaced; the real PostgreSQL integration test remains unverified until that run passes.
