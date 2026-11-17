@@ -130,7 +130,13 @@
       throw makeError("invalid_generation_challenge", "The native host did not issue a valid generation challenge.");
     }
 
-    const record = await request("generate", {
+    if (options.signal && options.signal.aborted) {
+      throw makeError("generation_cancelled", "Generation was cancelled before native inference started.");
+    }
+    if (typeof options.onRequest === "function") {
+      options.onRequest({ sessionId, requestId });
+    }
+    const generationPromise = request("generate", {
       sessionId,
       prompt,
       requestId,
@@ -140,6 +146,28 @@
       maxTokens,
       temperature
     });
+    let record;
+    if (options.signal && typeof options.signal.addEventListener === "function") {
+      let abortListener;
+      const abortPromise = new Promise((resolve, reject) => {
+        abortListener = async () => {
+          try {
+            await cancelGeneration(sessionId, requestId);
+            reject(makeError("generation_cancelled", "Native generation was cancelled and drained."));
+          } catch (error) {
+            reject(makeError("generation_cancel_failed", error && error.message));
+          }
+        };
+        options.signal.addEventListener("abort", abortListener, { once: true });
+      });
+      try {
+        record = await Promise.race([generationPromise, abortPromise]);
+      } finally {
+        options.signal.removeEventListener("abort", abortListener);
+      }
+    } else {
+      record = await generationPromise;
+    }
     if (record.runtimeSessionId !== sessionId || typeof record.output !== "string") {
       throw makeError("runtime_session_mismatch", "The generation result did not match the active native session.");
     }
