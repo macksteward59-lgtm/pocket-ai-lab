@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist/intelligence"
+  },
+  "include": ["packages/intelligence/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
