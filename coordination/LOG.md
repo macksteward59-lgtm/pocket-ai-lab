@@ -3078,3 +3078,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Corrected the test to submit `refreshedGenerationBody`. Commit `4682f4a271e170081f96b91f7d997487e0a69ec9`; test-only change.
 - Fresh exact-head iOS run #44122576415 has been created and is queued (job #134177697892). Run #44122327312 targets the preceding commit and is not evidence for the current head.
 - No production code changed. Keep challenge invalidation and one-use replay rejection intact; do not weaken the test to accept the old nonce. Await exact-head CI before further native changes or merge.
+
+
+## 2026-11-17 — PR #174 exact-head CI progress checkpoint
+
+- Exact current head `4682f4a271e170081f96b91f7d997487e0a69ec9`, run #44122576415, job #134177697892.
+- Runner setup, Xcode discovery, dependency installation, pinned llama.cpp artifact restore, and pinned llama.cpp simulator/macOS build have passed. The fail-closed Swift typecheck step is currently in progress.
+- Device framework link, simulator selection/boot, Director bridge manifest, app build, native app XCTest, engine simulator XCTest, GGUF download/path validation, and macOS XCTest have not yet run.
+- The active job log endpoint currently returns BlobNotFound; this is an unavailable log artifact, not evidence of a test failure. Continue using job step summaries for status and do not infer a cause.
+- Board updated. PR #174 remains draft; no merge or physical-device acceptance.
