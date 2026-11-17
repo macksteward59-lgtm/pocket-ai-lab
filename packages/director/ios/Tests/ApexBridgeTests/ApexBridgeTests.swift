@@ -537,6 +537,71 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 
+    func testCancellationDuringChallengeConsumptionDoesNotStartInference() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-cancel-race-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "cancel-race-model",
+            name: "Cancel race model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let runtime = try NativeInferenceRuntime(
+            engine: StubLlamaEngine(),
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = PausingChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "This must not reach inference after cancellation.",
+                requestId: UUID().uuidString,
+                conversationRequestId: "cancel-race",
+                attemptId: "cancel-race-attempt",
+                challengeNonce: String(repeating: "b", count: 32),
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        await challengeStore.waitUntilConsumeStarted()
+        generation.cancel()
+        await challengeStore.resumeConsume(true)
+
+        do {
+            _ = try await generation.value
+            XCTFail("A cancelled request must not start inference after challenge consumption.")
+        } catch is CancellationError {
+            // Expected: cancellation was observed before native inference began.
+        } catch {
+            XCTFail("Expected CancellationError, received: \\(error)")
+        }
+
+        let report = await controller.reports().first
+        XCTAssertEqual(report?.sessionId, sessionID)
+        XCTAssertFalse(report?.canGenerate ?? true)
+        await controller.disconnect()
+    }
+
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
         let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
