@@ -52,7 +52,8 @@ export type EastPlatformErrorCode =
   | "not_assigned"
   | "inference_denied"
   | "evidence_rejected"
-  | "apex_closed";
+  | "apex_closed"
+  | "cancelled";
 
 export type EastEvidenceRejectionReason = "invalid_shape" | "attempt_mismatch" | "nonce_reuse";
 
@@ -153,8 +154,8 @@ export interface EastPlatformRuntime {
   readonly memory: MemoryManager;
   createAgentTask(objective: string): string;
   assignAgent(taskId: string, agentId: string): string;
-  executeAgent(taskId: string, agentId: string): Promise<string>;
-  runDeliberation(taskId: string): Promise<{ synthesis: string; evidence: string[] }>;
+  executeAgent(taskId: string, agentId: string, options?: { signal?: AbortSignal }): Promise<string>;
+  runDeliberation(taskId: string, options?: { signal?: AbortSignal }): Promise<{ synthesis: string; evidence: string[] }>;
   /**
    * Stores matching deliberation text as unverified memory when the device
    * evidence candidate is absent or only `candidate_only`.
@@ -287,7 +288,9 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
       put({ ...task, assignments: [...task.assignments, assignment], authorized: false });
       return task.id;
     },
-    async executeAgent(taskId, agentId) {
+    async executeAgent(taskId, agentId, options = {}) {
+      const signal = options.signal;
+      throwIfAborted(signal);
       const task = requireTask(taskId);
       if (!task.assignments.some(assignment => assignment.agentId === agentId)) {
         throw new EastPlatformError("not_assigned", "Agent " + agentId + " is not assigned to " + task.id);
@@ -304,6 +307,7 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           []
         );
         selectedId = selected.id;
+        throwIfAborted(signal);
         sessionId = orchestrator.agents.startSession(agentId, task.id, selected.id);
         orchestrator.agents.updateStatus(sessionId, "running");
         const prior = orchestrator.bus.getThread(task.id);
@@ -319,7 +323,10 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
             "Model output is not permission, approval, or an authorization receipt."
           ].join("\n"),
           contextMessages: [...prior]
-        });
+        }, { signal });
+        // Wait for the provider promise to settle before publishing or releasing
+        // the model/session lease. A late result is discarded after cancellation.
+        throwIfAborted(signal);
         const published = publishAnalysis(orchestrator, task.id, agentId, prior.length, result);
         orchestrator.agents.updateStatus(sessionId, "complete");
         return published.messageId;
@@ -328,6 +335,9 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           throw new EastPlatformError("inference_denied", "Agent execution changed the thread while failing", { cause: error });
         }
         if (error instanceof EastPlatformError) throw error;
+        if (signal?.aborted || (error instanceof Error && error.name === "AbortError")) {
+          throw new EastPlatformError("cancelled", "Agent execution was cancelled after provider drain", { cause: error });
+        }
         throw new EastPlatformError(
           "inference_denied",
           error instanceof Error ? error.message : "Agent execution was denied",
@@ -338,7 +348,9 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
         if (selectedId) orchestrator.router.release(selectedId);
       }
     },
-    async runDeliberation(taskId) {
+    async runDeliberation(taskId, options = {}) {
+      const signal = options.signal;
+      throwIfAborted(signal);
       const task = requireTask(taskId);
       const missing = EAST_DELIBERATION_AGENTS.filter(
         agentId => !task.assignments.some(assignment => assignment.agentId === agentId)
@@ -352,8 +364,12 @@ export function createEastPlatform(deps: EastPlatformDependencies): EastPlatform
           id: task.id,
           objective: task.objective,
           requiredCapabilities: []
-        });
+        }, { signal });
+        throwIfAborted(signal);
       } catch (error) {
+        if (signal?.aborted || (error instanceof Error && error.name === "AbortError")) {
+          throw new EastPlatformError("cancelled", "Deliberation was cancelled after provider drain", { cause: error });
+        }
         throw new EastPlatformError(
           "inference_denied",
           error instanceof Error ? error.message : "Deliberation was denied",
@@ -660,4 +676,12 @@ function copyNonceHistory(
     rows.push({ attempt_id: record.attempt_id, challenge_nonce: record.challenge_nonce });
   }
   return rows;
+}
+
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  const error = new Error("Inference cancelled");
+  error.name = "AbortError";
+  throw error;
 }
