@@ -2,6 +2,12 @@ import SwiftUI
 import PocketLlamaEngine
 import os
 
+enum LocalChatRuntimeDependency {
+    case shared(NativeInferenceRuntime)
+    case unavailable(String)
+    case createForTesting
+}
+
 @MainActor
 final class LocalChatModel: ObservableObject {
     @Published var modelURL: URL?
@@ -31,6 +37,7 @@ final class LocalChatModel: ObservableObject {
     private var artifactFingerprint: ModelArtifactFingerprint?
 
     init(
+        runtimeDependency: LocalChatRuntimeDependency = .createForTesting,
         engine: any LlamaEngine = LlamaCppMetalBackend(requireMetal: true),
         modelDirectory: URL? = nil,
         conversationStore: LocalConversationStore = LocalConversationStore(),
@@ -46,21 +53,29 @@ final class LocalChatModel: ObservableObject {
             .appendingPathComponent("Models", isDirectory: true)
         self.modelDirectory = resolvedModelDirectory
         self.modelCatalogStore = modelCatalogStore ?? LocalModelCatalogStore(modelDirectory: resolvedModelDirectory)
-        do {
-            let configuration = try ModelPoolConfiguration(
-                maxResidentMemoryMB: 4_096,
-                maxLoadedModels: 1,
-                minimumFreeMemoryMB: 512
-            )
-            runtime = try NativeInferenceRuntime(
-                engine: engine,
-                poolConfiguration: configuration,
-                availableMemoryMB: availableMemoryMB,
-                maxConcurrentRequests: 1
-            )
-        } catch {
+        switch runtimeDependency {
+        case .shared(let sharedRuntime):
+            runtime = sharedRuntime
+        case .unavailable(let message):
             runtime = nil
-            status = "Native inference runtime configuration failed: \(error.localizedDescription)"
+            status = message
+        case .createForTesting:
+            do {
+                let configuration = try ModelPoolConfiguration(
+                    maxResidentMemoryMB: 4_096,
+                    maxLoadedModels: 1,
+                    minimumFreeMemoryMB: 512
+                )
+                runtime = try NativeInferenceRuntime(
+                    engine: engine,
+                    poolConfiguration: configuration,
+                    availableMemoryMB: availableMemoryMB,
+                    maxConcurrentRequests: 1
+                )
+            } catch {
+                runtime = nil
+                status = "Native inference runtime configuration failed: \(error.localizedDescription)"
+            }
         }
 
         let probe = LlamaCppMetalBackend.probe()
@@ -783,7 +798,12 @@ private enum LocalInteractionMode: String, CaseIterable, Identifiable {
 }
 
 struct LocalChatView: View {
-    @StateObject private var model = LocalChatModel()
+    @StateObject private var model: LocalChatModel
+
+    @MainActor
+    init(runtimeDependency: LocalChatRuntimeDependency = .createForTesting) {
+        _model = StateObject(wrappedValue: LocalChatModel(runtimeDependency: runtimeDependency))
+    }
     @State private var mode: LocalInteractionMode = .chat
     @State private var showImporter = false
     @State private var prompt = ""
