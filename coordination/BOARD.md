@@ -134,3 +134,10 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 - PR #164 exact head `482b364cb362b86224c3399ce16ce51a1c06c738`: run #43991837435 has passed pinned build, fail-closed typecheck, generic iOS engine link, and simulator selection; simulator boot is in progress.
 - WorkspaceView still has no WKScriptMessageHandler; RuntimeController does not consume BridgeChallengeStore challenges. Consequential actions remain blocked by PR #168.
 - Next: implement and test the host-side WebKit dispatcher only after the challenge/approval boundary is enforceable. No physical iPhone Air acceptance or PR merge is claimed.
+
+
+## Bridge CI follow-up — 2026-11-17
+
+- PR #168 run #43991941724: pinned llama.cpp build, fail-closed Swift typecheck, generic iOS engine link passed; simulator boot in progress; companion Intelligence #43991924464 passed.
+- PR #164 run #43991837435: pinned build, fail-closed typecheck, generic iOS link, simulator boot, bridge manifest validation, native app build passed; native app XCTest in progress.
+- PR descriptions refreshed with these exact-head checkpoints. WebKit dispatch remains unimplemented; physical iPhone Air acceptance remains outstanding.
