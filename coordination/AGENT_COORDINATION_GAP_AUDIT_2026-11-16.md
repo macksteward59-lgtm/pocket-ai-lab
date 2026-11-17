@@ -8,7 +8,7 @@
 
 The project has progressed from disconnected foundations toward an integrated native iOS product. The most important current work is the native Agent Team/runtime base (PR #156), the Director/APEX bridge integration (PR #164), and the isolated Grok Workspace/ExploitGym archive restoration (PR #165).
 
-None of these is merged. PR #164's current iOS run is inconclusive/stale at native app XCTest; later simulator XCTest and pinned-GGUF/macOS inference gates have not been observed. No physical iPhone Air acceptance is established.
+None of these is merged. PR #164's repaired exact-head iOS run has advanced through native app build/XCTest, iOS simulator XCTest, pinned-GGUF download, and smoke-path setup; macOS XCTest is currently in progress and runner evidence is pending. The workflow remains in progress, and no physical iPhone Air acceptance is established.
 
 The requirements traceability matrix remains the authoritative audit ledger. Its last recorded baseline is 316 requirements: 184 unassessed, 85 implemented-unverified, 37 partial, 10 blocked, zero verified, and zero missing. This audit does not silently change those counts or mark broad requirements complete based on PR descriptions.
 
@@ -96,7 +96,7 @@ PR #162 adds worker ownership fencing to lifecycle attempts. Its previously reco
 
 | Priority | Gap | Required completion evidence |
 |---|---|---|
-| P0 | PR #164 iOS run is inconclusive/stale | Fresh, completed exact-head iOS workflow with app XCTest, engine simulator XCTest, GGUF download/path checks, macOS inference smoke, and runner evidence |
+| P0 | PR #164 exact-head iOS workflow is still running | Complete macOS XCTest and runner evidence on exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`; investigate the runner-log `BlobNotFound` limitation if the job stalls; require an overall successful conclusion |
 | P0 | Native bridge has no WebKit message/action dispatch | Trusted-origin handler, schema validation, one-use challenge consumption, approval coordination, deny/replay/expiry tests; no bypass of APEX |
 | P0 | No physical iPhone Air acceptance | Signed/installable build, actual local model import/load/token generation, cancellation/unload, offline operation, restart recovery, device/runtime/model identity evidence |
 | P1 | Agent collaboration is currently sequential | Explicitly accepted sequential operating design or separately tested bounded multi-session/parallel orchestration; demonstrate genuine distinct role inference and disagreement/revision |
@@ -125,7 +125,7 @@ PR #162 adds worker ownership fencing to lifecycle attempts. Its previously reco
 
 ## 4. Next execution sequence
 
-1. Recheck PR #164 exact-head run #43981080474 and its job/check state. Do not infer success from the stale in-progress state; do not cancel or rerun without recording the state transition and reason.
+1. Recheck PR #164 exact-head run #43981080474 and its job/check state. macOS XCTest is the remaining active test gate, with runner evidence pending. Do not infer success until the overall workflow concludes; do not cancel or rerun without recording the state transition and reason.
 2. Once #164 validation is resolved, review the complete native bridge diff and close the WebKit/approval integration gap in a separately scoped change with explicit tests.
 3. Validate PR #156's native coordinator/runtime path against the real model smoke gates; inspect sequential multi-role output, exact per-role model identity, cancellation, lease release, and app history persistence.
 4. Revalidate PR #165's dependency on the accepted #164 base; keep the archive slice isolated.
