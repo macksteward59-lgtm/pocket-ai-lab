@@ -3477,3 +3477,14 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - Changes committed sequentially on `codex/owasp-knowledge-integration-v4`; latest exact head: `9cdf32e430e629384f4080385e594ad407bd78de`. Read-back confirmed code and tests.
 - No exact-head CI run is available: PR #181 is based on `agent-coordination`, while the focused TypeScript workflow is supplied separately by still-open PR #180 and is not in that base. Therefore no test/typecheck pass is claimed. Keep PR #181 validation-blocked until its exact head is tested through the established runner.
 - No Orchestrator wiring, APEX/East semantics, permissions, runtime behavior, or merge state changed.
+
+
+## 2026-11-17 — East provider cancellation propagation implemented and validated
+
+- Created focused branch `codex/east-provider-cancellation` stacked on PR #157's exact head `8ee13921ac648915c3447b65e14120f29f89d786`; opened draft PR [#188](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/188).
+- Added optional AbortSignal support to the Orchestrator inference-provider contract and `executeTask`; East `executeAgent` and `runDeliberation` now expose and forward the signal.
+- Preserved drain-before-release: the caller awaits the provider promise, then checks cancellation before publishing; finally releases the agent session and router lease only after provider settlement. A late result is discarded. The Orchestrator checks cancellation before writing the final unverified episodic memory.
+- Added `src/east/platform.test.ts` regression for abort during an unresolved provider call; asserts the call remains pending until provider settlement, then rejects with `cancelled`, with no MessageBus publication and no memory write.
+- Added `docs/implementation/east-provider-cancellation.md` to document cooperative cancellation and provider obligations.
+- Exact head `7349a396f045f076256c73ff6c9dff11bb631a18`; exact-head Pocket AI Lab CI [#44185815067](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44185815067) passed all steps, including syntax, TypeScript build, and test suite.
+- Limitation: AbortSignal is cooperative. Providers that ignore it may continue until their promise settles; callers wait rather than prematurely release a live lease. This does not establish physical iPhone acceptance, production RLS, or APEX authorization. No merge.
