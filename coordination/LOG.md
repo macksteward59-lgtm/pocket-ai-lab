@@ -2936,3 +2936,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Removed the Boolean parameter. The parser now returns authorizationRequired unconditionally for importModel, loadModel, and unloadModel. Updated regression tests for all three.
 - Opened draft PR #167, exact head e9418da92d6ed06afedc946dff97841f30002c4d. Exact-head workflow query returned no PR-triggered runs. This is not yet CI-validated.
 - No WebKit handler, host approval coordinator, import/load/unload implementation, signing, receipt, APEX authorization, merge, or device acceptance was added.
+
+
+## 2026-11-17 UTC — PR #167 CI routing gap confirmed
+
+- Queried GitHub Actions check-runs for exact head e9418da92d6ed06afedc946dff97841f30002c4d.
+- Intelligence workflow run #43991447842 completed successfully. Its jobs were Node.js syntax, type-check/build, and tests; it is not native iOS validation.
+- Inspected .github/workflows/ios-llamaengine-ci.yml. Its pull_request target-branch filter lists main and codex/native-product-experience-integration, not PR #167's base codex/bridge-native-runtime-integration.
+- Consequently the iOS workflow did not run for PR #167. The Swift source and XCTest edits remain unverified by iOS CI. PR body updated to state this explicitly.
+- Next action: arrange an exact-head iOS validation path without weakening CI or misreporting the Intelligence check. Physical iPhone acceptance remains outstanding.
