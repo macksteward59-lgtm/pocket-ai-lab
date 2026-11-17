@@ -123,3 +123,6 @@ Ownership is tracked here. A collaborator must push a claim before changing impl
 
 
 | ChatGPT | PR #167 CI routing gap: Intelligence workflow passes, but iOS LlamaEngine workflow is skipped because pull_request base-branch filters omit codex/bridge-native-runtime-integration. | codex/bridgegate-host-approval-hardening | blocked-validation | 2026-11-17 | PR #167 body corrected. Swift/XCTest changes remain unverified. Fix workflow trigger coverage on the stacked base or validate through an approved equivalent before considering the source change tested. |
+
+
+| ChatGPT | PR #168 CI-routable fail-closed BridgeGate hardening; PR #167 superseded/closed without merge. iOS workflow branch filter extended on PR #164 base. | codex/bridgegate-host-approval-hardening-ci | validation-running | 2026-11-17 | PR #168 exact head ab6f290702018023edaec800f59bfec422f24bc9. iOS run #43991941724 started for PR #168; PR #164 refreshed iOS run #43991837435 also in progress. Await exact-head Swift/XCTest results. |
