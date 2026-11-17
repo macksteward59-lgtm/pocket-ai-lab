@@ -414,6 +414,60 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testNavigationBarrierIsRaisedSynchronouslyBeforeCleanupIsScheduled() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let gate = DispatcherResolutionGate()
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(
+            root: root,
+            beforeNavigationCleanup: { await gate.pauseIfArmed() }
+        )
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        await gate.arm()
+        let navigationGeneration = try XCTUnwrap(dispatcher.beginNavigation())
+
+        // This message is handled before asynchronous cleanup is even scheduled.
+        // The synchronous barrier must already prevent a new document from
+        // obtaining a generation challenge.
+        let blocked = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": UUID().uuidString
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(blocked["ok"] as? Bool, false)
+        XCTAssertEqual(blocked["error"] as? String, "runtime_not_ready")
+
+        let cleanup = Task { await dispatcher.finishNavigation(navigationGeneration) }
+        await gate.waitUntilEntered()
+        await gate.resume()
+        await cleanup.value
+
+        let allowedAfterCleanup = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": UUID().uuidString
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(allowedAfterCleanup["ok"] as? Bool, true)
+    }
+
+    @MainActor
     func testNewDocumentCannotAuthorizeWhileNavigationCleanupIsPending() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }

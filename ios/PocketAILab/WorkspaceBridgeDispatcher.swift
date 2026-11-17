@@ -59,13 +59,19 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         }
     }
 
-    /// A same-origin page navigation must invalidate outstanding one-use
-    /// challenges without permanently disabling the new document's bridge.
-    func navigationStarted() async {
-        guard isActive else { return }
+    /// Raises the navigation barrier synchronously before WebKit can deliver
+    /// messages from the next document. The returned generation owns cleanup.
+    func beginNavigation() -> UInt64? {
+        guard isActive else { return nil }
         lifecycleGeneration &+= 1
-        let navigationGeneration = lifecycleGeneration
         navigationCleanupPending = true
+        return lifecycleGeneration
+    }
+
+    /// Performs asynchronous invalidation and cancellation for the navigation
+    /// generation that synchronously raised the barrier.
+    func finishNavigation(_ navigationGeneration: UInt64) async {
+        guard isActive, lifecycleGeneration == navigationGeneration else { return }
         await beforeNavigationCleanup?()
         guard isActive, lifecycleGeneration == navigationGeneration else { return }
         guard let challengeStore else {
@@ -79,6 +85,12 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         _ = await runtimeController?.cancelAllGenerations()
         guard isActive, lifecycleGeneration == navigationGeneration else { return }
         navigationCleanupPending = false
+    }
+
+    /// Test and non-WebKit callers retain a single awaited navigation operation.
+    func navigationStarted() async {
+        guard let navigationGeneration = beginNavigation() else { return }
+        await finishNavigation(navigationGeneration)
     }
 
     func invalidate() {

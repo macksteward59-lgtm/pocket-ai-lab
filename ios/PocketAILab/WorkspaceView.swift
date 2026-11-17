@@ -182,7 +182,11 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            Task { await dispatcher.navigationStarted() }
+            // Raise the lifecycle barrier synchronously in WebKit's callback.
+            // Cleanup may suspend, but the new document cannot authorize work
+            // while that cleanup is pending.
+            guard let navigationGeneration = dispatcher.beginNavigation() else { return }
+            Task { await dispatcher.finishNavigation(navigationGeneration) }
         }
 
         func webView(
