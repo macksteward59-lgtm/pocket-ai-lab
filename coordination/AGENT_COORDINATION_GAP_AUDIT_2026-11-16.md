@@ -64,6 +64,7 @@ Critical remaining bridge gap:
 - No runtime-control action is enabled.
 - Host-side approval coordination remains a prerequisite.
 - Challenge storage exists as a primitive but is not connected to WebKit dispatch.
+- Additional security detail confirmed by source inspection: `RuntimeController.generate` validates only the challenge nonce's string format and records it in the unsigned candidate; it does not call `BridgeChallengeStore.consume` or independently prove nonce binding/one-use/expiry. Therefore the future trusted host dispatcher must consume the nonce and validate the exact origin, request UUID, and runtime session before it calls `generate`. Direct calls to the controller with a fabricated but well-formed nonce are not challenge-authorized.
 - Therefore this is not yet a complete working web/native action bridge and must not be described as one.
 
 Current exact-head CI evidence:
