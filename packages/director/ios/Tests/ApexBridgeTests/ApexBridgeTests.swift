@@ -1131,11 +1131,12 @@ final class RuntimeControllerTests: XCTestCase {
         let sessionID = try XCTUnwrap(loaded.sessionId)
         _ = try await controller.readiness(sessionId: sessionID)
 
+        let requestID = UUID().uuidString
         let generation = Task {
             try await controller.generate(
                 sessionId: sessionID,
                 prompt: "This must not reach inference after cancellation.",
-                requestId: UUID().uuidString,
+                requestId: requestID,
                 conversationRequestId: "cancel-race",
                 attemptId: "cancel-race-attempt",
                 challengeNonce: String(repeating: "b", count: 32),
@@ -1143,8 +1144,15 @@ final class RuntimeControllerTests: XCTestCase {
             )
         }
         await challengeStore.waitUntilConsumeStarted()
-        generation.cancel()
+        let cancellation = Task {
+            await controller.cancelGeneration(sessionId: sessionID, requestId: requestID)
+        }
+        // Give the controller actor an opportunity to mark the registered request
+        // cancelled before releasing the deliberately suspended challenge consume.
+        await Task.yield()
         await challengeStore.resumeConsume(true)
+        let cancellationConfirmed = await cancellation.value
+        XCTAssertTrue(cancellationConfirmed, "A preparation-stage request must be discoverable and drained by its exact request ID.")
 
         do {
             _ = try await generation.value
