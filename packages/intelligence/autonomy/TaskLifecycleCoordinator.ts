@@ -602,7 +602,8 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
         step.currentAttempt = null;
         appendEvent(next, "step.cancelled", now, {
           stepId: step.id,
-          ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {})
+          ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {}),
+          resultingStepStatus: step.status
         });
       }
     }
