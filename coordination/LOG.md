@@ -2972,3 +2972,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #168 exact-head run #43991941724 advanced through pinned llama.cpp build, fail-closed Swift typecheck, and generic iOS engine link; simulator boot is in progress. Companion Intelligence #43991924464 passed.
 - PR #164 exact-head run #43991837435 advanced through simulator boot, bridge package validation, and native app build; native app XCTest is in progress.
 - Refreshed PR #164 and #168 descriptions with current exact-head state. Remaining gates are explicitly pending; no overall pass or device acceptance claimed.
+
+
+
+## 2026-11-17 — Runtime challenge enforcement and CI stall recheck
+
+- Re-polled exact-head iOS jobs for PR #168 (#43991941724) and PR #164 (#43991837435). #168 remains in Director bridge package manifest validation; #164 remains in native app XCTest. Simulator XCTest, pinned GGUF/macOS checks, and final runner evidence are pending on both.
+- GitHub Actions run metadata has not advanced since initial job starts. Treat both as potentially stalled/inconclusive; no pass/failure conclusion and no rerun/cancellation initiated.
+- Re-read BridgeChallengeStore, RuntimeController, BridgeGate, WorkspaceView, and ios/project.yml at PR #168's exact head.
+- Confirmed BridgeChallengeStore implements binding/expiry/one-use checks, but RuntimeController.generate does not consume it; generate accepts a format-valid fabricated nonce and records it in an unsigned candidate.
+- Confirmed WorkspaceView has no WKScriptMessageHandler; XcodeGen already includes ApexBridge source and tests in the native app/test targets.
+- Recorded implementation order: mandatory host challenge consumption before generation; no bypassable public generation path; frame-derived main-frame WebKit dispatcher; teardown/session invalidation; consequential model actions remain blocked pending parameter-bound native approval.
+- No application code changed, no PR merged, no action enabled, and no physical iPhone Air acceptance claimed.
