@@ -478,3 +478,19 @@ Use one row per requirement or a stable requirement group. Expand groups into in
 ---
 
 **Scope note:** This handoff consolidates the product requirements recovered from prior project discussions and the repository's existing architecture direction. It intentionally does not invent the original M01–M42 names, assert that historical PRs are currently merged, or claim that previously reported CI/device gates remain current. The repository audit must establish those facts against the current branch and commit.
+
+
+## 19. Advanced security research and vulnerability analysis
+
+- [ ] Provide a dedicated Security Research workflow combining the Security Analyst, Researcher, Engineer, Critic, and Validator roles.
+- [ ] Support sourced research plans, artifact provenance, vulnerability hypotheses, reproducibility records, severity analysis, remediation, and responsible-disclosure reports.
+- [ ] Include Operation Triangulation as a defensive historical case study for multi-stage mobile exploit-chain analysis, trust boundaries, forensic evidence, patch timelines, and mitigations; distinguish public facts from unknowns and hypotheses.
+- [ ] Support bounty-program-specific planning, including Microsoft Windows Insider Preview bounty eligibility, exact build/channel scope, exclusions, safe-harbor terms, reproduction requirements, and disclosure rules.
+- [ ] Require explicit structured authorization for every active target; never infer permission from a bounty listing, product name, agent consensus, or available tool.
+- [ ] Keep passive research, isolated lab reproduction, and externally authorized testing as separate execution classes.
+- [ ] Isolate untrusted samples and prohibit automatic execution on the user's iPhone or other production devices.
+- [ ] Preserve task/attempt provenance, artifact hashes, agent/model identity, timestamps, confidence, limitations, reviewer outcome, and report versions.
+- [ ] Require APEX authorization and East/e3 durable task controls for consequential testing; retain human approval for state-changing or externally interacting actions.
+- [ ] Test fail-closed behavior for out-of-scope targets, ambiguous authorization, exclusions, unsafe sample handling, cancellation, and unsupported claims.
+
+**Detailed requirements:** [ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md](ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md). This is a requirements addition only; no security testing or exploit execution is authorized or claimed.
