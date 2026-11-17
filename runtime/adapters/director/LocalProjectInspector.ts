@@ -47,7 +47,7 @@ export class LocalProjectInspector implements ProjectInspector {
     let totalBytes = 0;
     for (const relative of [...new Set(requested)]) {
       const loaded = await this.readEligibleTextFile(relative);
-      if (!loaded || totalBytes + loaded.byteLength > MAX_TOTAL_BYTES) continue;
+      if (!loaded || loaded.reason === "file_too_large" || totalBytes + loaded.byteLength > MAX_TOTAL_BYTES) continue;
       const content = loaded.content;
       totalBytes += loaded.byteLength;
       inspected.push(relative);
@@ -150,6 +150,7 @@ export class LocalProjectInspector implements ProjectInspector {
     { content: ""; byteLength: 0; reason: "file_too_large" } |
     undefined
   > {
+    if (!TEXT_EXTENSIONS.has(path.extname(relative).toLowerCase())) return undefined;
     const candidate = path.resolve(this.root, relative);
     if (candidate !== this.root && !candidate.startsWith(this.root + path.sep)) {
       throw new Error("Project inspection path escaped the workspace");
