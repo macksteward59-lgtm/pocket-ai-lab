@@ -3166,3 +3166,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - iOS LlamaEngine run #44129072799 is still pending with no runner job allocated; no current-head native compile/XCTest result yet.
 - Current head includes the post-challenge GGUF re-hash and deterministic same-size/restored-timestamp mutation regression.
 - Updated Phase B board. PR #174 remains draft and unmerged.
+
+
+## 2026-11-17 — Coordination overlap check
+
+- Compared PR #174 and PR #175 changed-file lists. No file paths overlap: PR #174 owns the native iOS WebKit dispatcher/runtime controller and native tests; PR #175 owns the web workspace client, bridge adapter, service worker, and web tests.
+- PR #171 remains the shared-runtime owner and is still open at head `90b4e2b408fd98d418bff729c8e8d208fe13463f`; PR #174 remains stacked on that exact base.
+- Current-head Intelligence CI #44129054825 passed. Current-head iOS run #44129072799 remains pending with no job allocated as of this check.
