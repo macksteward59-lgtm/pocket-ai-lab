@@ -15,6 +15,8 @@ on:
       - codex/app-scoped-runtime-composition
       # Allow test-only follow-ons stacked on the WebKit dispatcher to run native Swift/XCTest CI.
       - codex/webkit-readonly-dispatcher-rebased
+      # Allow request-scoped native cancellation follow-ons to run Swift/XCTest CI.
+      - codex/runtime-request-attempt-registry
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
