@@ -3131,3 +3131,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Corrected the test expectation: readiness should remain valid after pre-inference cancellation; the controller is explicitly disconnected at test end.
 - Current PR head: `8b546de57dde29b722cbbcfaabafd7cb29454c0b`. Current-head Intelligence CI #44125334631 is running. iOS run #44125287074 targeted preceding head `85396e2db6c372bcd4f2b41f0af2f210f146a295` and was cancelled on branch advance; awaiting a current-head iOS run. No current-head native validation is claimed.
 - Updated PR #174 validation and coordination board. Draft remains open; no merge, physical-device acceptance, APEX authorization, or signed evidence.
+
+
+## 2026-11-17 — Current-head native CI restarted
+
+- Confirmed PR #174 current head `8b546de57dde29b722cbbcfaabafd7cb29454c0b`.
+- Exact-head iOS LlamaEngine run #44125349459 is now running for that commit. Runner setup, checkout, and Xcode discovery passed; CMake/Ninja installation is in progress. All subsequent native build, app XCTest, simulator XCTest, and GGUF/macOS smoke gates remain pending.
+- Intelligence CI #44125334631 is on the same current head; dependency install, advisory reporting, JavaScript syntax, and TypeScript build passed; tests are running.
+- Earlier run #44125287074 targeted the prior commit and was cancelled after the branch advanced. It is not counted as current-head evidence.
+- Updated the Phase B board with the current exact-head iOS run. PR remains draft and unmerged.
