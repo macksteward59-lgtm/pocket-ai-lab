@@ -73,3 +73,56 @@ def test_unsupported_format_is_rejected_by_the_orchestrator():
         assert "unsupported" in str(exc)
     else:
         raise AssertionError("unsupported format must fail closed")
+
+
+def test_allowlist_rejects_malformed_entries_instead_of_silently_ignoring_them():
+    import pytest
+
+    invalid_entries = [
+        "https://app.example.com",  # scheme is not enforced by host/port policy
+        "app..example.com",
+        "-bad.example.com",
+        "app.example.com:70000",
+        "app.example.com/path",
+        "user:pass@app.example.com",
+        "*.127.0.0.1",
+    ]
+    for entry in invalid_entries:
+        with pytest.raises(ValueError, match="invalid allowlist entry"):
+            TargetAllowlistPolicy([entry])
+
+
+def test_allowlist_supports_exact_ports_and_subdomain_only_wildcards():
+    policy = TargetAllowlistPolicy(["*.example.com:8443", "192.0.2.10"])
+    from ai_integrator.domain.models import AssetContext
+
+    subdomain, _ = policy.apply(AssetContext(
+        target_uri="https://api.example.com:8443", base_domain="API.EXAMPLE.COM",
+        port=8443,
+    ))
+    apex, _ = policy.apply(AssetContext(
+        target_uri="https://example.com:8443", base_domain="example.com",
+        port=8443,
+    ))
+    wrong_port, _ = policy.apply(AssetContext(
+        target_uri="https://api.example.com:443", base_domain="api.example.com",
+        port=443,
+    ))
+    ip, _ = policy.apply(AssetContext(
+        target_uri="https://192.0.2.10", base_domain="192.0.2.10",
+    ))
+    assert subdomain.is_in_scope is True
+    assert apex.is_in_scope is False
+    assert wrong_port.is_in_scope is False
+    assert ip.is_in_scope is True
+
+
+def test_invalid_asset_host_fails_closed():
+    policy = TargetAllowlistPolicy(["example.com"])
+    from ai_integrator.domain.models import AssetContext
+
+    asset, violation = policy.apply(AssetContext(
+        target_uri="https://example.com", base_domain="example..com",
+    ))
+    assert asset.is_in_scope is False
+    assert violation is not None
