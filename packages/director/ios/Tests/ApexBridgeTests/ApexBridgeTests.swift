@@ -753,7 +753,7 @@ final class RuntimeControllerTests: XCTestCase {
         } catch is CancellationError {
             // Expected: the lifecycle epoch changed while challenge consumption was suspended.
         } catch {
-            XCTFail("Expected CancellationError, received: \\(error)")
+            XCTFail("Expected CancellationError, received: \(error)")
         }
 
         let inferenceCalls = await engine.nonReadinessGenerationCount()
