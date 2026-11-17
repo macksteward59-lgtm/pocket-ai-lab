@@ -280,6 +280,10 @@ public actor RuntimeController {
             throw RuntimeControllerError.duplicateRequest
         }
         guard !consumeCancellationTombstone(sessionId: sessionId, requestId: requestId) else {
+            // The cancelled request identity is spent even though its generation
+            // task never started. Prevent a replay from reusing the still-unconsumed
+            // challenge with the same request ID.
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
             throw CancellationError()
         }
         guard generationAttempts[sessionId]?[requestId] == nil else {
