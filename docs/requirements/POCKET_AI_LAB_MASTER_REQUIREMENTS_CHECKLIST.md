@@ -51,6 +51,22 @@
 - [ ] Provide user-configurable notifications for completion, failure, interruption, and approval requests.
 - [ ] Clearly distinguish unavailable, degraded, offline, paused, queued, running, failed, and completed states.
 
+## Original six-layer security capability framework
+
+The canonical six layer names recovered from the owner's November 1, 2026 conversation are:
+1. Reconnaissance and Intelligence
+2. Threat Modeling and Risk Assessment
+3. Penetration Testing and Analysis
+4. Infrastructure and Application Security
+5. Detection and Response
+6. Engineering and Continuous Improvement
+
+Governance: one central Director selects modules; the separate Authorization Engine controls invocation; restricted skills remain unexecuted absent authorization; Critic and Validator are advisory, not authorizers; local stand-in changes require explicit human approval; materially changed operations require new approval.
+
+Original execution tiers: T0 Observe; T1 Assess; T2 Modify; T3 High-impact; T4 Prohibited. Do not infer individual module tier assignments from names.
+
+The exact M01–M42 names, descriptions, and per-layer assignments have not yet been returned by the conversation-memory search. Preserve this known framework and continue source retrieval; do not fabricate missing registry entries.
+
 ## 2. Director/APEX governance and authorization
 
 - [ ] Keep Director/APEX as the governance and orchestration authority, separate from model-generated intelligence.
