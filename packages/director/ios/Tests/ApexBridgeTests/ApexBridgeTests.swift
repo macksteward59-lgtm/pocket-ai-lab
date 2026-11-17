@@ -935,7 +935,7 @@ final class RuntimeControllerTests: XCTestCase {
         } catch is CancellationError {
             // Expected: cancelAllGenerations advanced the lifecycle epoch before the hash resumed.
         } catch {
-            XCTFail("Expected CancellationError, received: \\(error)")
+            XCTFail("Expected CancellationError, received: \(error)")
         }
 
         let replayAccepted = await challengeStore.consume(
