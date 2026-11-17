@@ -325,3 +325,24 @@ Added `docs/requirements/ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md` and section
 ### 15.4 Coordination discipline
 
 The `agent-coordination` branch remains documentation-only. Application implementation belongs on isolated feature branches with exact-head CI and review. The master checklist and traceability ledger remain evidence-driven; no broad requirement is marked verified solely because a PR exists or hosted CI passes.
+
+
+---
+
+## 16. App-scoped runtime ownership decision — 2026-11-17
+
+A source-level review of `ios/PocketAILab/LocalChatView.swift`, `WorkspaceView.swift`, `PocketAILabApp.swift`, `RuntimeController.swift`, and `NativeInferenceRuntime.swift` confirms the following:
+- `LocalChatModel` constructs its own `NativeInferenceRuntime` and retains a `ModelPoolLease`.
+- `WorkspaceView` constructs a `WKWebView` but does not install a script-message handler or receive an app-scoped runtime/session dependency.
+- `RuntimeController` can own exact leases when instantiated with a runtime, but the app composition root does not yet connect that controller to the Local AI runtime.
+- Each `NativeInferenceRuntime` owns its own ModelPool and InferenceScheduler; a second instance is a second resource authority.
+
+Added `docs/architecture/ADR-001-app-scoped-native-runtime-ownership.md` to define a single app-scoped composition root and session/lease owner. This is a proposed architecture decision and implementation plan, not an implemented code change.
+
+Next implementation sequence:
+1. Establish one stable app-lifetime runtime container.
+2. Move model/session/lease transitions behind one service shared by Local AI, Workspace, Runtime Status, and evaluation.
+3. Add the WebKit dispatcher only after shared ownership is in place.
+4. Derive origin and main-frame status from WebKit frame metadata, issue/consume one-use host challenges, and invalidate them on navigation/disconnect/session replacement/teardown.
+5. Preserve APEX authorization; import/load/unload remain denied pending native approval coordinator.
+6. Prove single runtime/pool/scheduler/lease ownership in tests, then run hosted CI and physical iPhone Air acceptance separately.
