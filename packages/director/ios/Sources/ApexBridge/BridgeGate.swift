@@ -18,6 +18,7 @@ public enum BridgeGate {
         "validateModel": ["id", "action", "model"],
         "loadModel": ["id", "action", "model"],
         "checkReadiness": ["id", "action", "sessionId"],
+        "authorizeGeneration": ["id", "action", "sessionId", "requestId"],
         "generate": ["id", "action", "sessionId", "prompt", "requestId", "conversationRequestId", "attemptId", "challengeNonce", "maxTokens", "temperature"],
         "cancelGeneration": ["id", "action", "sessionId", "requestId"],
         "unloadModel": ["id", "action", "sessionId"]
@@ -30,6 +31,7 @@ public enum BridgeGate {
         "validateModel": ["id", "action", "model"],
         "loadModel": ["id", "action", "model"],
         "checkReadiness": ["id", "action", "sessionId"],
+        "authorizeGeneration": ["id", "action", "sessionId", "requestId"],
         "generate": ["id", "action", "sessionId", "prompt", "requestId", "conversationRequestId", "attemptId", "challengeNonce"],
         "cancelGeneration": ["id", "action", "sessionId", "requestId"],
         "unloadModel": ["id", "action", "sessionId"]
@@ -83,6 +85,11 @@ public enum BridgeGate {
             }
         case "checkReadiness", "unloadModel":
             guard let sessionId = body["sessionId"] as? String, validUUID(sessionId) else {
+                return .invalidMessage
+            }
+        case "authorizeGeneration":
+            guard let sessionId = body["sessionId"] as? String, validUUID(sessionId),
+                  let requestId = body["requestId"] as? String, validUUID(requestId) else {
                 return .invalidMessage
             }
         case "cancelGeneration":
