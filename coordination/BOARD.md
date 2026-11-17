@@ -252,3 +252,11 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - No open issues were returned by the repository issue search. Repository metadata currently reports `public`; no visibility, settings, secrets, permissions, or main-branch changes were made.
 - Conversation sources actually accessible: this run's current conversation, summary-level prior ChatGPT context, and repository handoff/coordination/requirements documents plus current PR/commit/CI records. Full verbatim prior chat transcripts were not available. The historical source-recovery audit still marks the October 29 full M01–M42 descriptions and exact per-module tier/permission mapping as unrecovered; do not infer them.
 - No merge, deployment, production database/RLS configuration, signed iPhone build, physical installation, or on-device inference was performed or claimed.
+
+
+## 2026-11-17 — Follow-up verification after dispatcher navigation test
+
+- Rechecked PR #174 branch head: still `ce07e17f917c283ef1b13b548ee554601ffc10fe`; no newer commit was present. Inspected `WorkspaceBridgeDispatcher.swift` and its test at that exact SHA. The new overlapping-navigation test pauses two cleanup operations, lets the older finish first, asserts authorization remains blocked while the newer cleanup is pending, then verifies the newest cleanup restores the expected bridge state. This is source inspection, not a test pass.
+- Exact-head iOS run [#44167047921](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44167047921) remains `in_progress`. The pinned llama.cpp build, fail-closed Swift typecheck, and physical-iOS framework link are successful; simulator boot remains the active step. Native app build, app XCTest, simulator XCTest, and GGUF/macOS smoke steps remain pending. Job-log download returned GitHub `BlobNotFound`; no failure cause is inferred.
+- Recomputed PR #185 against current PR #174: still diverged, now 1 commit ahead / 8 behind. Its six-file web-only delta remains isolated; do not merge until rebased onto the current native head and exact-head web CI passes.
+- No merge, physical iPhone Air acceptance, signed evidence, runtime trust, or APEX authorization is claimed.
