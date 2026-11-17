@@ -3305,3 +3305,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #181 remains validation-blocked: its branch has no exact-head workflow run, and the only relevant workflow is not in the shared base because it is supplied by PR #180. No duplicate workflow was added to #181.
 - Checked GitHub commit history for the four November 1 source leads (`src/lib/compliance/director.ts`, `modes.ts`, `orchestrator.ts`, and `src/components/compliance/console.tsx`); the current repository history API returned no commits for those paths. This does not establish that the original conversation source never existed; it means this repository history did not recover it.
 - No PR merge, app implementation, APEX authorization, runtime behavior, or physical device acceptance changed.
+
+
+## 2026-11-17 — Artifact contract refreshed to latest coordination base
+
+- The shared coordination branch advanced while the artifact hardening work was being recorded. Rebuilt the feature branch from the latest base `1899752f3fa5e169f179668b96ebc07ee5098f84`, carrying forward only the four owned implementation files and not the stale board/log snapshots.
+- The artifact parser and 23-test suite are unchanged from the code head that passed workflow #44159409496. A fresh exact-head workflow is required because the refreshed base may alter dependencies or build context.
+- Feature head after clean rebase: `ba3620cdcb0282e40ab98d33f4cf647e892d853b`, 1 ahead / 0 behind at synchronization. No merge or authorization change.
