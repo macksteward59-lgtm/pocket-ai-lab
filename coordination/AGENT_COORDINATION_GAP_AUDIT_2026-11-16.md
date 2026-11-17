@@ -248,3 +248,20 @@ Re-inspected `RuntimeController.swift`, `BridgeChallengeStore.swift`, `BridgeGat
 5. Keep import/load/unload denied until a separate native approval coordinator binds the exact action and parameters to a one-use host approval. Do not conflate this approval with signing, receipts, attestation, or APEX authorization.
 
 No code was changed in this audit update. No PR was merged, no consequential action was enabled, and no physical iPhone Air acceptance is claimed.
+
+
+## 13. Mandatory runtime challenge consumption — PR #169 — 2026-11-17
+
+A focused implementation follow-on now enforces challenge consumption inside the native RuntimeController rather than relying on a future caller to remember to consume the store.
+
+- PR: [#169](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/169), draft/open.
+- Branch: `codex/runtime-challenge-enforcement`.
+- Exact head: `47a2a63bfb3eea8755746a67b052298ee3b8efb0`.
+- Base: PR #168 branch `codex/bridgegate-host-approval-hardening-ci`, exact base `ab6f290702018023edaec800f59bfec422f24bc9`.
+- `RuntimeController` now requires a host-owned `BridgeChallengeStore` and trusted workspace URL at construction. Each generation call includes page URL context; before inference starts, the controller consumes the challenge against the trusted origin, request UUID, and active runtime session. Failure returns `unauthorizedChallenge`.
+- Existing runtime tests now use host-issued challenges. New regression coverage rejects fabricated nonce strings and replays of a consumed challenge.
+- Exact-head iOS LlamaEngine run [#43995918805](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43995918805) started. At first poll the job was in runner setup / Show Xcode; no Swift typecheck or XCTest gate had completed. Await exact-head workflow completion.
+- This closes the direct RuntimeController bypass identified in the previous audit. It does not install the WebKit message handler: the future dispatcher must derive the origin from `WKScriptMessage.frameInfo.securityOrigin`, reject subframes, and pass host-verified frame context. The page URL parameter is context, not independent proof of origin.
+- Import/load/unload remain blocked by PR #168. No approval coordinator, signing, receipts, attestation, APEX authorization, physical iPhone Air acceptance, or merge is claimed.
+
+Implementation review still required: verify all native controller construction sites and the exact-head Swift/XCTest results; then implement the frame-derived WebKit dispatcher and lifecycle invalidation as a separate reviewed slice.
