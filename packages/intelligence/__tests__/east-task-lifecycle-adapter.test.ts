@@ -196,7 +196,8 @@ describe("runEastTaskWithLifecycle", () => {
       orchestrator: {} as EastPlatformRuntime["orchestrator"],
       memory: {} as EastPlatformRuntime["memory"]
     } as unknown as EastPlatformRuntime;
-    const coordinator = new TaskLifecycleCoordinator({ store: new InMemoryTaskLifecycleStore() });
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({ store });
     const controller = new AbortController();
     const pending = runEastTaskWithLifecycle({
       coordinator, east, eastTaskId: eastTask.id, lifecycleTaskId: "lifecycle-cancel",
@@ -224,6 +225,15 @@ describe("runEastTaskWithLifecycle", () => {
     });
     expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
     expect(cancelled.steps.filter(step => step.status === "succeeded")).toHaveLength(1);
+
+    // A fresh coordinator must observe the terminal cancellation and refuse
+    // to replay the in-flight inference step after restart.
+    const restartedCoordinator = new TaskLifecycleCoordinator({ store });
+    await expect(runEastTaskWithLifecycle({
+      coordinator: restartedCoordinator, east, eastTaskId: eastTask.id,
+      lifecycleTaskId: "lifecycle-cancel", objective: eastTask.objective
+    })).rejects.toThrow("Existing East lifecycle is terminal: cancelled");
+    expect(restartedCoordinator.getTask("lifecycle-cancel").status).toBe("cancelled");
   });
 
 });
