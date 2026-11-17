@@ -523,3 +523,15 @@ No PR was merged. No physical iPhone Air acceptance is claimed. No APEX authoriz
 - PR #185 head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f` completed Pocket AI Lab CI [#44162270273](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44162270273) with conclusion **success**. The job completed dependency installation, JS syntax checks, TypeScript build, and the repository's configured `npm test` command.
 - PR #185's base remains PR #174's current fetched head `beac6964aa4eda8d370b32ffa3ae565745b4e062`; PR #174 native workflow #44161924371 remains in progress. Thus the web slice is green, but the complete native+web stack is not yet validated.
 - The cancellation fix's regression test is included in the full npm test run. This is hosted CI only, not physical iPhone Air acceptance.
+
+
+## 22. Native dispatcher navigation cancellation race
+
+
+## Native Workspace bridge navigation cancellation review — 2026-11-17
+
+- Refreshed PR #174: current head `e159dee0c381ef61a2f311a53f44969988159cbe`, base PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`. The exact-head iOS run [#44163444351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44163444351) is pending; no result is claimed.
+- Source review confirmed the lifecycle-generation/navigation-cleanup barrier around dispatcher session resolution and challenge issuance. The new RuntimeController tests cover disconnect and caller cancellation while challenge consumption is suspended.
+- A remaining race is reported on PR #174: navigation does not disconnect the RuntimeController session. If a request has already consumed its challenge but is suspended in the post-consumption file hash before it registers in `ActiveSession.generations`, navigation's `cancelAllGenerations()` may see no registered generation and return; the request can then proceed to inference. The dispatcher's post-call epoch check only suppresses the reply. A deterministic dispatcher-to-controller navigation test and cancellation barrier are requested before enabling this path.
+- PR #185 remains open/draft at head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, but its base is still `beac6964aa4eda8d370b32ffa3ae565745b4e062`, now one commit behind PR #174. Rebase/reconcile it onto the eventual reviewed #174 head and rerun exact-head web CI; do not treat the stack as current or merge either PR.
+- No application code was changed in this coordination pass. No merge, APEX authorization, signed receipt, or physical iPhone Air acceptance is claimed.
