@@ -2874,3 +2874,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Newly completed successfully: iOS engine simulator XCTest, pinned smoke GGUF download, and macOS smoke-test GGUF path setup. Previously completed: native app build and app XCTest.
 - macOS XCTest is now `in_progress`; final runner evidence remains pending. Overall workflow is still `in_progress`; no end-to-end CI pass or physical iPhone Air acceptance is claimed.
 - Updated `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md` and `coordination/BOARD.md` with the observed step transitions. No application source, PR state, trust policy, merge, cancellation, or rerun was changed.
+
+
+## 2026-11-17 00:10 UTC — PR #164 macOS XCTest is the remaining active gate
+
+- Re-polled exact-head iOS run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job `133697485358`, for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Confirmed successful completion of steps 1–17: pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS engine link, simulator selection/boot, Director bridge manifest validation, native app build, native app XCTest, iOS engine simulator XCTest, pinned GGUF download, and smoke-path setup. macOS XCTest step 18 is `in_progress`; runner evidence step 19 is pending; post-checkout cleanup is pending.
+- Workflow run remains `in_progress` with no conclusion. Job-log retrieval still returns GitHub `BlobNotFound`, so the macOS XCTest output/cause cannot be independently inspected. This is not an overall CI pass and does not prove physical iPhone Air acceptance.
+- Updated the coordination audit and board to replace the obsolete stale-XCTest/pending-simulator status with the latest observed step state. No application source, PR state, workflow cancellation/rerun, merge, approval, or APEX/East trust boundary changed.
