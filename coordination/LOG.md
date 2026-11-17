@@ -3320,3 +3320,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #180 current head `fe25b0a43151f71c23ee8d673788a18187e019c8` has exact-head TypeScript run #44159541367 success. PR #181 current head `46894868049c124808a06e7d0a4d94b89ca82cd1` has no PR-triggered run surfaced; its catalog/context tests remain validation-blocked.
 - Reconfirmed that the October 29 M01–M42 source body has not been retrieved; only response metadata confirms descriptions and mappings exist. The later 44-entry/five-layer catalog is not the original taxonomy.
 - Updated the gap audit, board, and log only. No application code, authorization policy, merge state, or requirement verification status changed. Hosted CI is not physical iPhone Air acceptance.
+
+
+## 2026-11-17 — Workspace native-client cancellation repair
+
+- Reviewed PR #174 lifecycle race fixes and PR #175's native client integration. Confirmed PR #175 remained based on old dispatcher head `48a6fabea107cc587327bf1782caef14aeefdab7`, while the current PR #174 head advanced; the comparison showed a diverged stack.
+- Identified the AbortSignal race in `apps/web/nativeBridge.js`: the request callback could abort synchronously before the abort listener was installed.
+- Created replacement branch `codex/workspace-native-chat-client-rebased` from PR #174 head `beac6964aa4eda8d370b32ffa3ae565745b4e062`, carried forward the six web-client files, registered cancellation before generation dispatch, rechecked abort state, and added deterministic synchronous-abort coverage.
+- Opened draft PR #185 at head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`. No exact-head web workflow run had surfaced at the time of this log entry. PR #175 remains open/stale; do not merge it.
+- Updated coordination board and gap audit. No native runtime, APEX, signing, authorization, or physical-device acceptance changes.
