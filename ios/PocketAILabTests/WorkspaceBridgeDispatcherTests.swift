@@ -252,7 +252,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         refreshedGenerationBody["challengeNonce"] = refreshedNonce
 
         let generation = await dispatcher.handle(
-            body: generationBody,
+            body: refreshedGenerationBody,
             frameOrigin: trustedOrigin,
             isMainFrame: true
         )
