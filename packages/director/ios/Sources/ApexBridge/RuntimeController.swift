@@ -235,7 +235,7 @@ public actor RuntimeController {
               prompt.utf8.count <= 32_768 else {
             throw RuntimeControllerError.invalidRequest
         }
-        do { try verifyFile(active) }
+        do { try await verifyFile(active) }
         catch {
             active.readiness = nil
             sessions[sessionId] = active
