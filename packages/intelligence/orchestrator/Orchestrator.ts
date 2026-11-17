@@ -227,6 +227,7 @@ export class Orchestrator {
       }
     );
 
+    throwIfAborted(signal);
     if (!deliberation.finalSynthesis) {
       throw new Error("The synthesis agent did not produce a valid completion payload");
     }
