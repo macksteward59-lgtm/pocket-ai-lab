@@ -15,3 +15,11 @@ export {
   type KnowledgeAgentId,
   type OwaspKnowledgeSource
 } from "./knowledge";
+export {
+  OWASP_GUIDANCE,
+  getOwaspGuidanceForAgent,
+  getOwaspGuidanceForSource,
+  getOwaspGuidanceForTopics,
+  getOwaspGuidanceTrust,
+  type OwaspGuidanceControl
+} from "./knowledge/owaspGuidance";
