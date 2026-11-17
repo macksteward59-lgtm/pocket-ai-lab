@@ -458,6 +458,43 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testDispatcherInvalidationReleasesOnlyItsOwnSharedRuntimeLease() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let (dispatcher, sessionID, composition) = try await makeLoadedDispatcher(root: root)
+        guard case .shared(let service) = composition.dependency,
+              let runtime = composition.runtime else {
+            throw XCTSkip("Shared runtime composition unavailable in test fixture.")
+        }
+
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        let beforeInvalidation = await runtime.snapshot()
+        XCTAssertEqual(beforeInvalidation.activeLeaseCount, 2, "Local AI and Workspace controller must own distinct consumer leases.")
+        XCTAssertEqual(service.activeLeases().count, 1)
+
+        dispatcher.invalidate()
+
+        let deadline = Date().addingTimeInterval(5)
+        var afterInvalidation = await runtime.snapshot()
+        while afterInvalidation.activeLeaseCount != 1, Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+            afterInvalidation = await runtime.snapshot()
+        }
+
+        XCTAssertEqual(afterInvalidation.activeLeaseCount, 1, "Workspace teardown must release its controller lease.")
+        XCTAssertEqual(afterInvalidation.activeUseCount, 0)
+        XCTAssertEqual(afterInvalidation.loadedModelIDs, [service.activeLeases()[0].model.id], "The Local AI lease must keep the shared native model resident.")
+        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID], "Workspace teardown must not release the Local AI consumer's exact session lease.")
+    }
+
+    @MainActor
     func testInvalidationDisablesAllFurtherMessages() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
