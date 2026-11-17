@@ -3488,3 +3488,14 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - Added `docs/implementation/east-provider-cancellation.md` to document cooperative cancellation and provider obligations.
 - Exact head `23a64ef3668da74c789dba33aeeb7d2684784631`; exact-head Pocket AI Lab CI [#44186203351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44186203351) passed all steps, including syntax, TypeScript build, and test suite. Strengthened the regression to assert the model-router reservation remains held during the unresolved provider call and is released only after settlement.
 - Limitation: AbortSignal is cooperative. Providers that ignore it may continue until their promise settles; callers wait rather than prematurely release a live lease. This does not establish physical iPhone acceptance, production RLS, or APEX authorization. No merge.
+
+
+## 2026-11-17 — OWASP provenance/type audit and PR status correction
+
+- Refreshed PR #181 after concurrent branch advances. It is open/unmerged at `c69ced4535d331748eddfac2a105a863262094dc`, 5 commits ahead / 0 behind its coordination base, with the intended nine feature paths.
+- Verified every one of the eight catalog blob hashes against the corresponding file fetched from OWASP/CheatSheetSeries at immutable commit `7af0ef1b745f1a38ce905c00c5a592d5b3a515a9`; all eight matched. Source URLs are revision-pinned; attribution/license metadata records CC-BY-SA-4.0.
+- Found a type-contract defect: the catalog interface omitted `repository.revision` although tests read it, and omitted the JSON license metadata. Added both to `OwaspCatalog.repository` in `packages/intelligence/knowledge/index.ts`, commit `c69ced4535d331748eddfac2a105a863262094dc`; read-back verified the correction.
+- No PR-triggered workflow run exists for the updated #181 head. PR #180's focused TypeScript workflow passed on #180's separate head `fe25b0a43151f71c23ee8d673788a18187e019c8`; that is not #181 evidence. #181 remains validation-blocked pending exact-head tests.
+- Status correction: PR #162 is still open and unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The populated `merge_commit_sha` property did not mean it was merged; `merged=false` and `merged_at=null`.
+- PR #174 exact-head iOS run #44180080060 is successful on all 19 steps; PR #174 remains open/unmerged. PR #185 remains open/unmerged and diverged from #174 (1 ahead / 13 behind), so its six-file Workspace web change still needs careful reconciliation and fresh web CI.
+- No merge, deployment, APEX policy change, evidence authority change, or physical-device acceptance occurred.
