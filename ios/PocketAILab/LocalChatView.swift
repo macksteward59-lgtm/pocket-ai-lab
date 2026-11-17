@@ -98,6 +98,18 @@ final class LocalChatModel: ObservableObject {
 
     var isModelLoaded: Bool { lease != nil }
 
+    /// Workspace reads the same app-scoped owner as Local AI. This is status
+    /// only: WebKit dispatch remains disabled until its host coordinator lands.
+    var workspaceBridgeRuntimeStatus: String {
+        guard runtime != nil else {
+            return "Native runtime unavailable. Workspace generation is disabled."
+        }
+        guard lease != nil else {
+            return "No active local model session. Load a model in Local AI; WebKit dispatch is not enabled yet."
+        }
+        return "Local model session is active and shared with the Workspace tab. WebKit dispatch is not enabled yet."
+    }
+
 
     var evaluationAttempts: [NativeEvaluationAttempt] {
         evaluationEvents.compactMap(\.payload.attempt)
@@ -783,7 +795,7 @@ private enum LocalInteractionMode: String, CaseIterable, Identifiable {
 }
 
 struct LocalChatView: View {
-    @StateObject private var model = LocalChatModel()
+    @EnvironmentObject private var model: LocalChatModel
     @State private var mode: LocalInteractionMode = .chat
     @State private var showImporter = false
     @State private var prompt = ""
