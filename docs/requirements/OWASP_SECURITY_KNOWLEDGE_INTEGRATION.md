@@ -6,6 +6,8 @@
 
 ## 1. Design decision
 
+**Source license:** The OWASP Cheat Sheet Series repository identifies its material as Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0). Preserve attribution and applicable ShareAlike terms for any redistributed source text or adapted material. See [OWASP LICENSE.md](https://github.com/OWASP/CheatSheetSeries/blob/master/LICENSE.md). The catalog records this license and the source URLs.
+
 OWASP material is versioned reference knowledge, not executable policy. Pocket AI Lab must retrieve relevant guidance for the current task, preserve its source provenance, and keep it subordinate to product policy and APEX authorization.
 
 The existing architecture remains intact:
