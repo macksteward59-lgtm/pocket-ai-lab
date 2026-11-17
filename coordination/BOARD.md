@@ -275,3 +275,12 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 
 - Compared the failing run's checked-out workflow at `165594b26598955f219529b12aa79ca2cec8a372` with the current PR #162 head `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The failing revision omitted `psql "$DATABASE_URL"` and therefore used the runner's local Unix socket. The current head's workflow explicitly passes `"$DATABASE_URL"`, addressing the observed connection-target defect.
 - No additional code edit was made by this coordination pass. Exact-head CI for `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3` has not yet surfaced; the real PostgreSQL integration test remains unverified until that run passes.
+
+
+## 2026-11-17 — Native dispatcher exact-head CI completed; stacked web client requires reconciliation
+
+- PR #174 remains open and unmerged at exact head `8209c4784a1a715199dcb1ba5322241f5b24105a`.
+- Exact-head iOS workflow [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060) completed successfully. All 19 job steps passed, including pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic physical-iOS framework link, native app build, native app XCTest, iOS simulator XCTest, pinned GGUF download, smoke-path setup, and macOS XCTest.
+- This is hosted CI evidence only. It does not establish physical iPhone Air acceptance, production runtime trust, Ed25519 signed evidence, device attestation, APEX authorization, or consequential-action approval.
+- PR #185 remains open/unmerged at `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, based on older PR #174 head `beac6964aa4eda8d370b32ffa3ae565745b4e062`. Compare against current #174 head reports diverged: 1 commit ahead / 13 behind, with six web files changed. A blind copy/rebase risks overwriting upstream web changes; reconcile file-by-file and run fresh exact-head web CI before considering the stack current.
+- PR #162 remains open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. No PR-triggered workflow run is currently surfaced for that exact SHA in the latest check; do not infer a pass from the earlier migration workflow correction. Its ownership fencing remains concurrency control, not authentication, tenant isolation/RLS, or APEX authorization.
