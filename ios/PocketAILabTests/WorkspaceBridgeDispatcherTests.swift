@@ -57,7 +57,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             quantization: entry.quantization
         )
         let composition = NativeRuntimeComposition(
-            engine: DispatcherStubEngine(),
+            engine: engine,
             availableMemoryMB: { 4_096 }
         )
         let runtime = try XCTUnwrap(composition.runtime)
