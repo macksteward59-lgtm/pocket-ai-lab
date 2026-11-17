@@ -13,9 +13,16 @@ async function health(){
    const selected=models.find(model=>model&&model.selected===true);
    const sessions=Array.isArray(status.activeLocalSessions)?status.activeLocalSessions:[];
    const active=selected&&sessions.find(session=>session&&session.modelId===selected.id);
+   const controllerSessions=Array.isArray(status.controllerSessions)?status.controllerSessions:[];
+   const controllerSession=active&&controllerSessions.find(session=>
+    session&&session.modelId===selected.id&&session.sessionId===active.sessionId
+   );
+   const nativeReady=status.runtimeAvailable===true&&!!active&&
+    !!controllerSession&&controllerSession.canGenerate===true&&
+    controllerSession.sharedLocalLeaseActive===true;
    const hint=document.querySelector(".privacy-hint");
    if(selected)state.model=selected.name||selected.id;
-   if(status.runtimeAvailable&&active){
+   if(nativeReady){
     setConnection(true,"iPhone native model ready");
     if(hint)hint.textContent="◉ Prompts are processed by this iPhone's native runtime";
    }else{
