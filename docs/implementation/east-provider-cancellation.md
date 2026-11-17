@@ -149,3 +149,25 @@ A second pass compared the repository's actual package start command with the Ea
 This is a stronger, concrete integration gap than merely not finding a host-owned cancellation controller: the visible deploy path and the runtime-bound compile path are distinct. The source snapshot does not establish how the default e3 package's platform declarations receive concrete implementations at deployment/runtime. It may be supplied by external workspace configuration or a platform mechanism outside this repository, so do not conclude that deployment is broken solely from this absence. But do not claim that the runtime-bound implementation is active in the deployed e3 task until the external binding mechanism is identified and tested.
 
 **Required verification:** inspect the deployed e3 workspace configuration and exact SDK version; identify how each declared platform function is bound; prove the binding resolves to the intended `EastPlatformRuntime` and provider instance; then prove the same host owns the e3 run handle and can coordinate cancellation/drain. The compiled-task integration test currently exercises `compilePocketAILabTask(runtime)` directly and does not exercise `npm start` / `e3 workspace deploy` / `e3 dataflow run`.
+
+### Confirmed e3 custom-platform registration gap — exact project metadata
+
+The upstream East project authoring guide provides the missing registration contract. For a project-owned Node platform function used inside an e3 task:
+
+1. The package must expose a `./platform` subpath whose default export is the `PlatformFunction[]` implementation array.
+2. The task must declare the project's custom platform in its runner: `{ runtime: "east-node", platforms: [{ custom: "<exact package.json name>" }] }`.
+3. The custom package name must be scoped, and the platform function's dotted name must byte-match between its East declaration and implementation.
+4. Existing projects must add the `./platform` package export and build it before `e3 dataflow run`.
+
+Against that contract, the current Pocket AI Lab branch has these concrete omissions:
+
+- Root `package.json` declares `"name": "pocket-ai-lab"` (unscoped), has no `exports` map, and the start script does not run a build before deploying/running.
+- There is no `src/platform/index.ts` module or `./platform` subpath export in the root package metadata.
+- `src/east/index.ts` creates five project-owned platform declarations (createAgentTask, assignAgent, executeAgent, runDeliberation, commitTaskEvidence), but `e3.task("pocketAILabTask", ..., pocketAILabTaskFunction)` has no runner configuration naming a custom platform.
+- The concrete implementations exist in `bindEastPlatform(runtime)`, but they are not exported as a package-level `PlatformFunction[]` for the e3 Node runner. The separate `compilePocketAILabTask(runtime)` helper compiles in-process for tests; it is not a substitute for the e3 runner's custom-platform package contract.
+
+This is now a source-confirmed deployment wiring gap, not merely an unknown external runtime composition root. Based on the inspected e3 authoring contract, the deployed task is at risk of failing at execution with a missing project platform function. I have not run the deploy against the user's actual environment, so this is a static source diagnosis rather than a reproduced runtime error.
+
+**Implementation is held at a naming decision:** the e3 contract requires a scoped package name and exact self-reference. The repository currently uses the unscoped private package name `pocket-ai-lab`; selecting a scope and changing the root package identity affects package resolution and should not be guessed. Once that scope is approved, implement the standard project platform module, export it through `package.json#exports["./platform"]`, configure the task's `runner.platforms` entry with that exact package name, and ensure the build precedes deployment/run. Keep all five East function names identical across declarations and implementations. Add a smoke test that exercises the real e3 deploy/run path and asserts the platform functions resolve; retain the existing in-process compile tests as a separate layer.
+
+Upstream authoring references: [East project skill](https://github.com/elaraai/east-workspace/blob/main/libs/east-plugin/skills/east-project/SKILL.md) and [East platform-function guidance](https://github.com/elaraai/east-workspace/blob/main/libs/east/SKILL.md). These are upstream main-branch docs, not a substitute for pinning the repository's actual installed e3/east package versions.
