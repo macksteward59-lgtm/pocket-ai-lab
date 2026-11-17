@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  OWASP_GUIDANCE,
+  getOwaspGuidanceForAgent,
+  getOwaspGuidanceForSource,
+  getOwaspGuidanceForTopics,
+  getOwaspGuidanceTrust
+} from "../knowledge/owaspGuidance";
+import {
   OWASP_KNOWLEDGE_CATALOG,
   getOwaspSource,
   getOwaspSourcesForAgent,
@@ -29,4 +36,12 @@ assert.ok(getOwaspSourcesForTopics(["rag-poisoning"]).some(source => source.id =
 assert.deepEqual(getOwaspSourcesForTopics(["topic-that-does-not-exist"]), []);
 assert.equal(isOwaspReferenceUntrusted("unknown-source"), true);
 
-console.log("OWASP knowledge catalog checks passed.");
+assert.equal(OWASP_GUIDANCE.length, 8);
+assert.ok(getOwaspGuidanceForAgent("security-analyst").length >= 6);
+assert.ok(getOwaspGuidanceForSource("OWASP-AGENT-EVIDENCE").some(item => item.id === "EXECUTION-EVIDENCE-REVIEW"));
+assert.ok(getOwaspGuidanceForTopics(["rag-poisoning"]).some(item => item.id === "PROMPT-INJECTION-BOUNDARY"));
+assert.equal(getOwaspGuidanceTrust("OWASP-AI-AGENT"), "untrusted-reference");
+assert.equal(getOwaspGuidanceTrust("unknown-source"), "untrusted-reference");
+assert.ok(OWASP_GUIDANCE.every(item => item.controls.length > 0 && item.validation.length > 0));
+
+console.log("OWASP knowledge catalog and guidance checks passed.");
