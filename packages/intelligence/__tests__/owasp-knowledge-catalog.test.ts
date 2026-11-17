@@ -19,6 +19,9 @@ assert.equal(OWASP_KNOWLEDGE_CATALOG.schemaVersion, 1);
 assert.equal(OWASP_KNOWLEDGE_CATALOG.repository.name, "OWASP/CheatSheetSeries");
 assert.match(OWASP_KNOWLEDGE_CATALOG.repository.revision, /^[a-f0-9]{40}$/);
 assert.equal(OWASP_KNOWLEDGE_CATALOG.sources.length, 8);
+assert.ok(Object.isFrozen(OWASP_KNOWLEDGE_CATALOG));
+assert.ok(Object.isFrozen(OWASP_KNOWLEDGE_CATALOG.sources));
+assert.ok(Object.isFrozen(OWASP_KNOWLEDGE_CATALOG.sources[0].topics));
 
 for (const source of OWASP_KNOWLEDGE_CATALOG.sources) {
   assert.match(source.id, /^OWASP-/);
@@ -38,6 +41,10 @@ assert.deepEqual(getOwaspSourcesForTopics(["topic-that-does-not-exist"]), []);
 assert.equal(isOwaspReferenceUntrusted("unknown-source"), true);
 
 assert.equal(OWASP_GUIDANCE.length, 8);
+assert.ok(Object.isFrozen(OWASP_GUIDANCE));
+assert.ok(Object.isFrozen(OWASP_GUIDANCE[0]));
+assert.ok(Object.isFrozen(OWASP_GUIDANCE[0].controls));
+assert.ok(Object.isFrozen(getOwaspGuidanceForAgent("security-analyst")[0].agents));
 assert.ok(getOwaspGuidanceForAgent("security-analyst").length >= 6);
 assert.ok(getOwaspGuidanceForSource("OWASP-AGENT-EVIDENCE").some(item => item.id === "EXECUTION-EVIDENCE-REVIEW"));
 assert.ok(getOwaspGuidanceForTopics(["rag-poisoning"]).some(item => item.id === "PROMPT-INJECTION-BOUNDARY"));
