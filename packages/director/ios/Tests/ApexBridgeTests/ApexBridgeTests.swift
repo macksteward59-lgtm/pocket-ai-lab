@@ -1198,6 +1198,39 @@ final class RuntimeControllerTests: XCTestCase {
         await controller.disconnect()
     }
 
+    func testLateCancellationDoesNotClaimCompletedGenerationWasCancelled() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 4_400))
+        let (controller, _, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+        let requestID = UUID().uuidString
+        let nonce = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+
+        let record = try await controller.generate(
+            sessionId: sessionID,
+            prompt: "Complete before cancellation arrives.",
+            requestId: requestID,
+            conversationRequestId: "late-cancel",
+            attemptId: "late-cancel-attempt",
+            challengeNonce: nonce,
+            pageURL: trustedWorkspaceURL
+        )
+        XCTAssertEqual(record.output, "answer")
+
+        let cancelled = await controller.cancelGeneration(sessionId: sessionID, requestId: requestID)
+        XCTAssertFalse(cancelled, "A completed generation must not be reported as cancelled merely because its caller has not yet processed the result.")
+        await controller.disconnect()
+    }
+
     func testCancellationDeliveredBeforeGenerationBlocksExactRequest() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_500))
         let (controller, runtime, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
