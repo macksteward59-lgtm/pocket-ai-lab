@@ -243,3 +243,9 @@ Remaining recovery boundary (important):
 - The lifecycle lease and attempt ID are durable coordination metadata, not proof of provider generation identity or settlement. There is no durable provider generation ID, cancel-by-generation operation, settlement query, or remote stop receipt in this integration.
 
 **Conclusion:** the existing adapter/coordinator is a sound bounded in-process lifecycle seam and should be extended, not replaced. It is not yet a restart-safe provider supervisor. Before enabling crash recovery for inference steps, add a provider/host reconciliation contract and a durable uncertain outcome (or equivalent quarantine record), preserving single-attempt behavior until reconciliation proves retry is safe. A lease expiry alone must never be interpreted as provider cancellation or generation completion.
+
+### Host composition-root check
+
+A targeted read of `apps/web/server.mjs`, `runtime/lab/server.ts`, and `runtime/lab/session.ts` found no references to `TaskLifecycleCoordinator`, `TaskLifecycleStore`, `InMemoryTaskLifecycleStore`, or `runEastTaskWithLifecycle`. Therefore these inspected web/lab entrypoints do not currently demonstrate production composition of the East lifecycle adapter or injection of a durable lifecycle store. This is a scoped source finding, not proof that no other host or deployment outside these files exists.
+
+The production-readiness checklist explicitly says `InMemoryTaskLifecycleStore` is test/ephemeral only and requires atomic persistence plus cross-process concurrency control, versioning, durable lease ownership, and schema migration. No production store implementation or host wiring was established in this audit. Treat the adapter as an available integration seam, not an active production supervisor, until a concrete host composition root and durable store are identified and tested.
