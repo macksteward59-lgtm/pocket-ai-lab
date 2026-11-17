@@ -513,7 +513,10 @@ final class PocketAILabTests: XCTestCase {
     }
 
     func testWorkspaceWebViewReloadsOnlyForExplicitOpenRequests() {
-        let coordinator = PrivateWorkspaceWebView.Coordinator(trustedURL: URL(string: "https://workspace.example")!)
+        let coordinator = PrivateWorkspaceWebView.Coordinator(
+            trustedURL: URL(string: "https://workspace.example")!,
+            runtimeDependency: .createForTesting
+        )
         let firstRequest = UUID()
         XCTAssertTrue(coordinator.shouldLoad(firstRequest))
         XCTAssertFalse(coordinator.shouldLoad(firstRequest))
