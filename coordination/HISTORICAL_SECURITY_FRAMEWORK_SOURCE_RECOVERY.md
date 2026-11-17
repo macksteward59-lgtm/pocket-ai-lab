@@ -113,3 +113,39 @@ These are recovered framework-level rules. They do not supply a module-by-module
 ## Evidence discipline
 
 No module-to-layer mapping, module-specific tier, permission class, action definition, or approval rule has been inferred in this audit. No application code, runtime behavior, Authorization Engine behavior, CI status, or physical-device acceptance status was changed by this work.
+
+
+## Additional historical-tree recovery — 2026-11-17
+
+A Git data API tree inspection succeeded where the earlier path-by-path fetches had not. It establishes that a later, related Director/skills implementation exists under a different package layout.
+
+### Located historical branch and tree
+
+- Branch: `codex/skill-lifecycle-rubric-binding`
+- Branch head: `0c47c333d8a7f4a7d24ff63a3e990fd52a8f4bd0`
+- Recursive tree was complete (`truncated=false`; 428 entries).
+- The original paths `src/lib/compliance/director.ts`, `src/lib/compliance/orchestrator.ts`, `src/lib/compliance/providers.ts`, and `src/lib/compliance/modes.ts` are not present in this tree.
+- A related package exists at `packages/intelligence/skills/`, with a different model and purpose.
+
+### Recovered files and exact blob SHAs
+
+| Path | Blob SHA | What it establishes |
+|---|---|---|
+| `packages/intelligence/skills/catalog.ts` | `603f3d17cc9d46d143a143b3e9c1d98f2ff183c9` | Later 44-entry capability catalog; explicitly says it covers layers 1–5 of an Agency Security Skills matrix. |
+| `packages/intelligence/skills/SkillRegistry.ts` | `4003c52aa47bdb7d0d793ad70a1ade7095aa55b7` | Skill metadata, layer 1–5, specialist/core-agent ownership, ecosystem and lab-only metadata; explicitly says skills grant no tool access or permission. |
+| `packages/intelligence/skills/SkillLifecycle.ts` | `4a7788cdc7b79e9af4d6759e673ce7cc04e8d7cd` | Proposed/researching/drafted/evaluating/approved/active/deprecated/quarantined lifecycle, artifact and evaluation digests, source review, independent verification, and human approval-bound promotion. |
+| `packages/intelligence/security/ComplianceMapper.ts` | `5873e4061af9221561895b07fcd6963cf87a3bc3` | Finding-to-documentation control labels; report is explicitly `authorized: false`, and warnings are not authorization. |
+| `docs/implementation/skill-evaluation-rubric-binding.md` | `5e426a6eca5cf74832b5bd6043838c0116fa4d41` | Requires an evaluation's rubric digest to match the immutable skill artifact's rubric; explicitly does not alter APEX authorization, East/e3, or evidence authority. |
+| `docs/implementation/director-skill-lifecycle-and-program-gates.md` | `0d49e24f19b98e361d411fd7f6f734a4e3e40e54` | Later program-evaluation design with separate eligibility, research-readiness, and authorization outputs; authorization defaults false. |
+
+### Important distinction — do not merge these frameworks
+
+The catalog contains **44 entries**, not the original 42. It has **five layers**, not the original six. Its topics and ownership model include a Microsoft-focused research specialization and AI/browser security topics. It is a later capability taxonomy, not evidence of the original M01–M42 mapping or descriptions.
+
+The later lifecycle code is still useful as a candidate engineering reference for skill provenance, immutable artifacts, assessment evidence, independent validation, and human-reviewed promotion. It must remain conceptually separate from target/action Authorization Engine decisions. The catalog's `labOnly` field is descriptive metadata; it does not itself authorize lab or live-target actions.
+
+The ComplianceMapper is also not the missing original Authorization Engine: its output type hardcodes `authorized: false` and maps findings to documentation labels only.
+
+### Current conclusion
+
+This historical tree recovered a related, later skills subsystem, but **did not recover** the original November 1 `src/lib/compliance/*` implementation or the exact original 42-module descriptions, six-layer assignments, module tiers, permission classes, or approval matrix. No mappings are inferred from the five-layer/44-entry catalog.
