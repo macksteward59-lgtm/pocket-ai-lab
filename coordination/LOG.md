@@ -3249,3 +3249,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #180's exact-head run #44143460216 is successful for its former head `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; it is not carried forward as proof for a newly synchronized head. PR #181 still has no exact-head run.
 - Updated the board to state the current resynchronization and validation requirement. Next, synchronize both feature branches after this board update so the base remains stable; do not make another base documentation change until after their exact-head runs are recorded elsewhere or the next audit.
 - No merges, application changes, or scope changes were made.
+
+
+## 2026-11-17 — Original six-layer framework recovered from conversation memory
+
+- Corrected the earlier handoff: the original six layer titles were present in the owner's November 1, 2026 ChatGPT discussion and have now been restored.
+- Canonical layers: Reconnaissance and Intelligence; Threat Modeling and Risk Assessment; Penetration Testing and Analysis; Infrastructure and Application Security; Detection and Response; Engineering and Continuous Improvement.
+- Restored governance: one central Director selects modules; Authorization Engine controls invocation; restricted skills remain unexecuted absent authorization; Critic/Validator are advisory only; local stand-in changes require explicit human approval; materially changed operations require new approval.
+- Restored tier labels: T0 Observe, T1 Assess, T2 Modify, T3 High-impact, T4 Prohibited. Individual module tier mappings are not inferred.
+- The memory search still did not return exact M01–M42 names/descriptions/assignments. It surfaced a historical reference to “Director and the 42 checks” at `src/lib/compliance/director.ts`; that path was not found at that location on the current coordination branch. Treat it as a historical retrieval lead, not an authoritative current file.
+- Updated the complete product handoff and master requirements checklist. No implementation or requirement verification status was changed.
+- Next retrieval target: original November 1 conversation content / historical `director.ts` implementation and tests to recover all 42 entries verbatim.
