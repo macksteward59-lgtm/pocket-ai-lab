@@ -159,3 +159,17 @@ The next code change must be a separately reviewed implementation with focused o
 
 
 **Audit correction (2026-11-17):** The original P0 row above was refreshed after the exact-head workflow reached terminal success; the historical run narrative is retained for audit chronology. The current remaining P0 is physical iPhone Air acceptance plus the unimplemented WebKit dispatcher. PR #166 is a documentation-only contract, not dispatcher implementation or runtime validation.
+
+
+## 7. BridgeGate consequential-action hardening — PR #167
+
+A focused fail-closed source change is now proposed in PR #167.
+
+- Branch: codex/bridgegate-host-approval-hardening
+- Exact head: e9418da92d6ed06afedc946dff97841f30002c4d
+- Base: PR #164 exact head 6661bf655edef85e94fa1f363fcf54a33f20233c
+- BridgeGate.parse no longer accepts a caller-provided consequentialAuthorized Boolean.
+- importModel, loadModel, and unloadModel are denied unconditionally with authorizationRequired until a native host approval coordinator exists.
+- Focused tests assert all three actions remain blocked.
+
+PR #167 is draft. The exact-head workflow query returned no PR-triggered workflow runs, so this change is not yet CI-validated. It does not implement approval or WebKit dispatch and does not enable consequential actions. Keep it separate from PR #164 until its exact-head iOS tests pass and the mergeability state is understood.
