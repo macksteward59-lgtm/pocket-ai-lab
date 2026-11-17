@@ -537,6 +537,78 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 
+    func testModelFileMutationDuringChallengeConsumptionInvalidatesReadiness() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-model-file-race-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "model-file-race-model",
+            name: "Model file race model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let runtime = try NativeInferenceRuntime(
+            engine: StubLlamaEngine(),
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = PausingChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "A changed model file must not pass authorization.",
+                requestId: UUID().uuidString,
+                conversationRequestId: "model-file-race",
+                attemptId: "model-file-race-attempt",
+                challengeNonce: String(repeating: "c", count: 32),
+                pageURL: trustedWorkspaceURL
+            )
+        }
+
+        await challengeStore.waitUntilConsumeStarted()
+        let originalAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
+        let originalModifiedAt = try XCTUnwrap(originalAttributes[.modificationDate] as? Date)
+        let handle = try FileHandle(forWritingTo: modelURL)
+        try handle.seek(toOffset: 8)
+        try handle.write(contentsOf: Data([0x58]))
+        try handle.close()
+        try FileManager.default.setAttributes(
+            [.modificationDate: originalModifiedAt],
+            ofItemAtPath: modelURL.path
+        )
+        await challengeStore.resumeConsume(true)
+
+        do {
+            _ = try await generation.value
+            XCTFail("A same-size model rewrite with restored modification time must block inference.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .modelFileChanged)
+        }
+
+        let report = await controller.reports().first
+        XCTAssertFalse(report?.canGenerate ?? true)
+        await controller.disconnect()
+    }
+
     func testCancellationDuringChallengeConsumptionDoesNotStartInference() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
