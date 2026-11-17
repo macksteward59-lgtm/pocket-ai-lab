@@ -42,7 +42,18 @@ interface OwaspCatalog {
   invariants: string[];
 }
 
-export const OWASP_KNOWLEDGE_CATALOG = catalog as unknown as OwaspCatalog;
+/** Freeze imported reference data recursively so consumers cannot mutate provenance or trust labels. */
+export function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const key of Object.keys(value as Record<string, unknown>)) {
+      deepFreeze((value as Record<string, unknown>)[key]);
+    }
+  }
+  return value;
+}
+
+export const OWASP_KNOWLEDGE_CATALOG = deepFreeze(catalog as unknown as OwaspCatalog);
 
 export function getOwaspSource(sourceId: string): OwaspKnowledgeSource | undefined {
   return OWASP_KNOWLEDGE_CATALOG.sources.find(source => source.id === sourceId);
