@@ -3297,3 +3297,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Validation dependency identified: `.github/workflows/intelligence-tests.yml` is supplied by PR #180 and is not in the shared base. Therefore PR #181 cannot receive that workflow's pull_request run until the workflow becomes part of the base branch. No duplicate workflow was added to PR #181, and no ownership boundary was crossed.
 - Personal-context source retrieval was attempted for the original November 1 six-layer / M01–M42 source. It returned no original descriptions or exact module-to-layer/T0–T4 assignments; it confirms the November 1 conversation references the app files `src/components/compliance/console.tsx`, `src/lib/compliance/providers.ts`, `modes.ts`, `director.ts` (Director and 42 checks), and `orchestrator.ts`, but does not provide the missing registry content. No mappings were inferred.
 - No PR merged, no application code or authorization behavior changed, and no requirement was marked verified.
+
+
+## 2026-11-17 — Test-runner exact-head result and historical source check
+
+- PR #180 exact-head workflow #44159182683 completed with conclusion `success` on `e525e36d792e7ff4590f6093320bc69d8a6df288`. The focused TypeScript test-runner scope is validation-passed.
+- PR #181 remains validation-blocked: its branch has no exact-head workflow run, and the only relevant workflow is not in the shared base because it is supplied by PR #180. No duplicate workflow was added to #181.
+- Checked GitHub commit history for the four November 1 source leads (`src/lib/compliance/director.ts`, `modes.ts`, `orchestrator.ts`, and `src/components/compliance/console.tsx`); the current repository history API returned no commits for those paths. This does not establish that the original conversation source never existed; it means this repository history did not recover it.
+- No PR merge, app implementation, APEX authorization, runtime behavior, or physical device acceptance changed.
