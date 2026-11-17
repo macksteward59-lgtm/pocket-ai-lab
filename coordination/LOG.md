@@ -3197,3 +3197,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - The earlier broad root build exposed two pre-existing East compile errors in `src/east/index.ts`: `@elaraai/e3` has no named export `e3`, and the selected `BlockBuilder` type has no `$0`. East files were not changed. Added a focused intelligence tsconfig to avoid changing East ownership or behavior.
 - Refreshed the test-runner work onto latest `agent-coordination` head `19fe3296ad30a1a2e3d27787d70327b6b5f903ab`, creating `codex/typescript-test-runner-v2` and draft PR #180. Compare shows 3 commits ahead, 0 behind, with only package.json, tsconfig.intelligence.json, and the dedicated workflow changed.
 - Closed PR #179 as superseded; nothing was merged from it. Exact-head CI for PR #180 is pending. The passing CI evidence above is from the prior branch head, not the new PR #180 head.
+
+## 2026-11-17 — OWASP knowledge branch refresh
+
+- Recreated the OWASP knowledge integration on current `agent-coordination` head `dcfb1f01cb7591469bcb7af75a02ee68011d4dbf` as `codex/owasp-knowledge-integration-v4` to avoid carrying forward stale coordination-file snapshots from v3.
+- Reapplied the OWASP requirements document, source catalog, guidance records, context builder, exports, and two focused tests. Preserved the current base's `packages/intelligence/index.ts` content and appended only the OWASP exports; enabled `resolveJsonModule` in the current base tsconfig.
+- No Orchestrator, APEX, East, native runtime, memory, or MessageBus implementation changed. OWASP context remains reference-only/untrusted and is not yet wired into `Orchestrator.executeTask()`.
+- Validation remains pending on this new branch. The focused test workflow is proposed separately in PR #180 and is not yet present on `agent-coordination`; the passing PR #180 run is not evidence for these OWASP tests.
