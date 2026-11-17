@@ -3112,3 +3112,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Intelligence CI #44124408403 has passed dependency installation/advisory reporting, JavaScript syntax, and TypeScript build; its test step is still running.
 - Prior iOS run #44122576415 remains attached to previous head `4682f4a271e170081f96b91f7d997487e0a69ec9`; it is not current-head evidence.
 - Coordination board and PR validation describe this distinction. No merge, physical-device test, APEX authorization, Ed25519 signature, or signed evidence receipt.
+
+
+## 2026-11-17 — OWASP knowledge integration continuation
+
+- Recreated the feature branch from the latest `agent-coordination` head `1989866aff7339eb80e6f06f1cdbe47936d22d9a` after detecting that the earlier draft had diverged from six newer base commits.
+- New branch: `codex/owasp-knowledge-integration-v2`.
+- Added concise source-linked OWASP guidance records for agent tool boundaries, prompt injection, MCP/tool-server boundaries, execution evidence, threat modeling, secrets, OAuth, and iOS client security.
+- Added retrieval helpers by agent, source, and topic; exported the catalog and guidance from the intelligence package.
+- Re-applied the OWASP requirements and source catalog to the current base without overwriting concurrent coordination changes.
+- No APEX, native runtime, memory storage, or tool execution code was modified. The guidance is reference material, not authorization.
+- Tests are authored but not yet executed; repository test script remains a placeholder and CI validation is pending.
