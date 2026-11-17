@@ -45,8 +45,7 @@ public enum BridgeGate {
     public static func parse(
         _ body: [String: Any],
         page: URL?,
-        trusted: URL,
-        consequentialAuthorized: Bool
+        trusted: URL
     ) -> BridgeDecision {
         guard let page, sameOrigin(page, trusted: trusted) else { return .untrustedOrigin }
         guard let action = body["action"] as? String,
@@ -60,7 +59,11 @@ public enum BridgeGate {
         guard let id = body["id"] as? String, validToken(id, maxBytes: 80) else {
             return .invalidMessage
         }
-        if consequential.contains(action), !consequentialAuthorized {
+        // Consequential actions are denied by the parser itself. A Boolean
+        // supplied by a caller is not a native approval capability. A future
+        // host-owned approval coordinator must authorize these actions through
+        // a separate, parameter-bound, one-use mechanism.
+        if consequential.contains(action) {
             return .authorizationRequired
         }
 
