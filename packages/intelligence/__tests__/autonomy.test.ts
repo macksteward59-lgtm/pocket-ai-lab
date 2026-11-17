@@ -185,6 +185,53 @@ describe("TaskLifecycleCoordinator", () => {
     })).rejects.toMatchObject({ code: "stale_attempt" });
   });
 
+  it("persists an ordered append-only lifecycle event history across restart", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({
+      store,
+      now: () => new Date("2026-11-17T12:00:00.000Z"),
+      createId: (() => { let id = 0; return () => "event-attempt-" + (++id); })(),
+      workerId: "worker-event-journal"
+    });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "event-journal",
+      objective: "Retain every durable lifecycle transition",
+      steps: [{ id: "work", description: "Perform bounded work", maxAttempts: 2 }]
+    });
+    const claimed = await coordinator.claimNextStep("event-journal");
+    await coordinator.failStep({
+      taskId: "event-journal", stepId: "work", attemptId: claimed!.attemptId,
+      error: "Transient provider failure", retryable: true
+    });
+    const retry = await coordinator.claimNextStep("event-journal");
+    const completed = await coordinator.completeStep({
+      taskId: "event-journal", stepId: "work", attemptId: retry!.attemptId,
+      result: "Completed after one retry"
+    });
+
+    expect(completed.events.map(event => event.type)).toEqual([
+      "task.created", "step.claimed", "step.failed", "step.claimed",
+      "step.completed", "task.completed"
+    ]);
+    expect(completed.events.map(event => event.sequence)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(completed.events[1]).toMatchObject({
+      eventId: "event-journal:2", stepId: "work",
+      attemptId: claimed!.attemptId, ownerId: "worker-event-journal"
+    });
+    expect(completed.events[2]).toMatchObject({
+      type: "step.failed", uncertain: false, attemptId: claimed!.attemptId
+    });
+
+    const snapshot = await store.load();
+    snapshot[0].events[0].type = "task.failed";
+    expect(coordinator.getTask("event-journal").events[0].type).toBe("task.created");
+
+    const restarted = new TaskLifecycleCoordinator({ store, workerId: "worker-after-restart" });
+    await restarted.init();
+    expect(restarted.getTask("event-journal").events).toEqual(completed.events);
+  });
+
   it("marks expired single-attempt work uncertain and never auto-replays it after restart", async () => {
     let milliseconds = Date.parse("2026-11-17T12:00:00.000Z");
     const now = () => new Date(milliseconds);
