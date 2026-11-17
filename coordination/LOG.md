@@ -3332,3 +3332,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 
 - Follow-up validation: PR #185 exact-head Pocket AI Lab CI #44162270273 completed successfully, including JS syntax, TypeScript build, and the full configured npm test command. PR #174 remained at base head `beac6964aa4eda8d370b32ffa3ae565745b4e062` with native iOS workflow #44161924371 still in progress. Web slice is green; full native-plus-web stack and physical iPhone acceptance remain open.
+
+
+## 2026-11-17 — Native Workspace bridge navigation cancellation review
+
+
+## Native Workspace bridge navigation cancellation review — 2026-11-17
+
+- Refreshed PR #174: current head `e159dee0c381ef61a2f311a53f44969988159cbe`, base PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`. The exact-head iOS run [#44163444351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44163444351) is pending; no result is claimed.
+- Source review confirmed the lifecycle-generation/navigation-cleanup barrier around dispatcher session resolution and challenge issuance. The new RuntimeController tests cover disconnect and caller cancellation while challenge consumption is suspended.
+- A remaining race is reported on PR #174: navigation does not disconnect the RuntimeController session. If a request has already consumed its challenge but is suspended in the post-consumption file hash before it registers in `ActiveSession.generations`, navigation's `cancelAllGenerations()` may see no registered generation and return; the request can then proceed to inference. The dispatcher's post-call epoch check only suppresses the reply. A deterministic dispatcher-to-controller navigation test and cancellation barrier are requested before enabling this path.
+- PR #185 remains open/draft at head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, but its base is still `beac6964aa4eda8d370b32ffa3ae565745b4e062`, now one commit behind PR #174. Rebase/reconcile it onto the eventual reviewed #174 head and rerun exact-head web CI; do not treat the stack as current or merge either PR.
+- No application code was changed in this coordination pass. No merge, APEX authorization, signed receipt, or physical iPhone Air acceptance is claimed.
