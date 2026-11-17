@@ -301,3 +301,45 @@ test("native cancellation drain wins when generation completes during cancellati
   await assert.rejects(generation, error => error.code === "generation_cancelled");
   assert.equal(calls.filter(call => call.action === "cancelGeneration").length, 1);
 });
+
+
+test("native chat does not report cancellation when the host returns cancelled false", async () => {
+  const calls = [];
+  const bridge = loadBridge(async message => {
+    calls.push(message);
+    switch (message.action) {
+      case "getRuntimeStatus":
+        return reply(message, { runtimeAvailable: true, activeLocalSessions: [{ modelId: MODEL_ID, sessionId: UUID }] });
+      case "listModels":
+        return reply(message, { models: [{ id: MODEL_ID, selected: true }] });
+      case "checkReadiness":
+        return reply(message, { canGenerate: true, sessionId: UUID });
+      case "authorizeGeneration":
+        return reply(message, {
+          challengeNonce: "0123456789abcdef0123456789abcdef",
+          requestId: message.requestId,
+          sessionId: message.sessionId
+        });
+      case "generate":
+        return new Promise(() => {});
+      case "cancelGeneration":
+        return reply(message, { cancelled: false });
+      default:
+        throw new Error("Unexpected action: " + message.action);
+    }
+  });
+
+  const controller = new AbortController();
+  const generation = bridge.generate("Cancellation must be confirmed.", {
+    signal: controller.signal
+  });
+  while (!calls.some(call => call.action === "generate")) {
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  controller.abort();
+  await assert.rejects(generation, error => error.code === "generation_cancel_not_confirmed");
+  const cancellation = calls.find(call => call.action === "cancelGeneration");
+  assert.ok(cancellation);
+  assert.equal(cancellation.sessionId, UUID);
+  assert.match(cancellation.requestId, /^[0-9a-f-]{36}$/i);
+});
