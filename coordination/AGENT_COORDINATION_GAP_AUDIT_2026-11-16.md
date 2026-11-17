@@ -70,9 +70,9 @@ Current exact-head CI evidence:
 - Run #43981080474 remains reported in progress overall; its native app build and native app XCTest steps have now completed successfully.
 - Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS engine link, simulator selection/boot, Director bridge package validation, and native app build for simulator and generic iOS targets have passed.
 - Native app XCTest completed successfully on the exact head.
-- iOS engine simulator XCTest is now in_progress; pinned GGUF download/path validation, macOS inference smoke, and final runner evidence remain pending.
+- iOS engine simulator XCTest has completed successfully. The pinned smoke GGUF download and path setup have also completed successfully. macOS XCTest is now in_progress; final runner evidence remains pending.
 - Companion Intelligence CI #43981072947 passed on the exact PR head.
-- The overall iOS run remains in_progress; do not claim an overall workflow pass or model generation until the remaining gates complete.
+- The overall iOS run remains in_progress. Simulator tests and GGUF setup are green, but macOS XCTest and final runner evidence are not complete; do not claim an overall workflow pass or physical iPhone Air acceptance.
 
 ### 1.3 Grok Workspace and ExploitGym archive slice — PR #165
 
