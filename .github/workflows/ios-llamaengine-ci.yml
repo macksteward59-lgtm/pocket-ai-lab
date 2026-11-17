@@ -7,6 +7,8 @@ on:
       - codex/native-product-experience-integration
       # Allow stacked Director bridge PRs to receive native Swift/XCTest CI.
       - codex/bridge-native-runtime-integration
+      # Allow the next stacked runtime-challenge PR to receive native Swift/XCTest CI.
+      - codex/bridgegate-host-approval-hardening-ci
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
