@@ -3279,3 +3279,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Rechecked PR #180: current head `419e006ca0ad5ed40386b540ba4bc7e4b46681e4`, base `8025680f732a55b00b52e07e765c1d6d25bd200b`, 1 ahead / 0 behind, exactly three owned files. Exact-head workflow #44153786406 completed successfully. This validates the focused TypeScript runner only.
 - Rechecked PR #181: current head `9956428091446d9408b765b19c2881cec0edd7bd`, same base, 1 ahead / 0 behind, exactly nine OWASP feature files. No exact-head workflow run exists; PR #180's passing workflow does not validate #181. The OWASP context builder remains reference-only and is not connected to `Orchestrator.executeTask()`.
 - Updated coordination board, gap audit, and the single affected traceability row. No application code, APEX authorization, runtime behavior, PR state, merge state, or physical-device acceptance was changed.
+
+
+## 2026-11-17 — Feature branches resynchronized after coordination updates
+
+- After the coordination documentation commits, refreshed PR #180 and PR #181 to the current `agent-coordination` head `94e8242f3f13a9c78c402b17a3bb964935ae0722` using tree overlays that preserved only their owned feature paths.
+- PR #180 now points to `ccaefbd66704266c6c53f4abc78ed3042273a8fa`, compares 1 ahead / 0 behind, and contains exactly the three test-runner files. Exact-head workflow #44158613191 completed successfully.
+- PR #181 now points to `b29f7402bc7b23aa1356613d7b856cccf827538e`, compares 1 ahead / 0 behind, and contains exactly the nine OWASP feature files. No exact-head workflow run is present for this head; #180's passing run is not transferable evidence.
+- No PR merge, application behavior change, Orchestrator integration, or authorization change was performed.
