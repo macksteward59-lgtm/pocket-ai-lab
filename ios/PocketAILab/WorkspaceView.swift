@@ -25,6 +25,7 @@ struct WorkspaceView: View {
                     .font(.caption2).foregroundStyle(.secondary).padding(.horizontal)
                 if let loadURL {
                     PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID, localChatModel: localChatModel)
+                        .id(loadRequestID)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     VStack(spacing: 10) {
