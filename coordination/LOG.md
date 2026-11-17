@@ -3372,3 +3372,10 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 
 - A later poll of iOS workflow #44163980153 superseded the earlier in-progress snapshot: the native app generation/build step completed with `cancelled`; app XCTest, simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest were skipped. The run/job had not yet exposed a final conclusion when checked. The pinned llama.cpp build, fail-closed Swift typecheck, physical-device framework link, simulator boot, and Director package-manifest validation remain successful completed steps only.
 - Job-log retrieval returned `BlobNotFound`, so the cancellation cause is unknown and is not attributed to a branch update or infrastructure without evidence. This run is not a passing native build/test result. A fresh exact-head run is required after the branch/test changes are settled.
+
+
+## 2026-11-17 — Post-challenge hash cancellation regression verified in source
+
+PR #174 added commit `b6a9b68c4c6e3ffee2ec0a41c08518b2784b1a0c`, with `ThirdCallPausingFileHasher` and `testCancelAllInvalidatesGenerationSuspendedDuringPostChallengeFileHash`. The test pauses the third hash call (after readiness and pre-challenge verification), proves the challenge has already been consumed, runs `cancelAllGenerations()` while the native generation task is not registered, resumes the hash, expects cancellation, rejects nonce replay, asserts zero native inference calls, and verifies the model lease remains held. Source coverage gap is closed; exact-head test execution is still pending.
+
+Exact-head iOS workflow #44166303330 is currently in progress on this commit. The preceding run #44166043070 was cancelled. PR #185 compares as diverged from current PR #174 base (1 ahead / 7 behind); its six-file web client delta requires reconciliation and fresh web CI. No merge or device acceptance.
