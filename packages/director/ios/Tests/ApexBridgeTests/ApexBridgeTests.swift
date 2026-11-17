@@ -258,10 +258,16 @@ private actor PausingChallengeStore: BridgeChallengeConsuming {
         requestId: String,
         sessionId: String
     ) async -> Bool {
-        await withCheckedContinuation { continuation in
-            consumeContinuation = continuation
-            startedContinuation?.resume()
-            startedContinuation = nil
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                consumeContinuation = continuation
+                startedContinuation?.resume()
+                startedContinuation = nil
+            }
+        } onCancel: {
+            // Cancellation of the request task releases this deterministic test
+            // gate just as a real challenge store would eventually settle its IO.
+            Task { await self.resumeConsume(true) }
         }
     }
 
@@ -1147,10 +1153,8 @@ final class RuntimeControllerTests: XCTestCase {
         let cancellation = Task {
             await controller.cancelGeneration(sessionId: sessionID, requestId: requestID)
         }
-        // Give the controller actor an opportunity to mark the registered request
-        // cancelled before releasing the deliberately suspended challenge consume.
-        await Task.yield()
-        await challengeStore.resumeConsume(true)
+        // The challenge-store fixture resumes its suspended consume only after
+        // the request task receives cancellation, making the drain assertion deterministic.
         let cancellationConfirmed = await cancellation.value
         XCTAssertTrue(cancellationConfirmed, "A preparation-stage request must be discoverable and drained by its exact request ID.")
 
