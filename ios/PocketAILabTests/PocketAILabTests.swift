@@ -403,6 +403,29 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(model.trustStatus, "Unverified")
     }
 
+    @MainActor
+    func testWorkspaceReadsTheSharedLocalChatRuntimeStateWithoutEnablingDispatch() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let model = makeLocalChatModel(engine: FingerprintTestEngine(), root: root)
+
+        XCTAssertTrue(model.workspaceBridgeRuntimeStatus.contains("No active local model session"))
+        XCTAssertTrue(model.workspaceBridgeRuntimeStatus.contains("not enabled yet"))
+
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        XCTAssertTrue(model.isModelLoaded)
+        XCTAssertTrue(model.workspaceBridgeRuntimeStatus.contains("active and shared"))
+        XCTAssertTrue(model.workspaceBridgeRuntimeStatus.contains("not enabled yet"))
+
+        await model.unloadModel()
+        XCTAssertFalse(model.isModelLoaded)
+        XCTAssertTrue(model.workspaceBridgeRuntimeStatus.contains("No active local model session"))
+    }
+
     func testWorkspaceURLsRequireAHostAndSecureScheme() {
         XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "https://workspace.example")!))
         XCTAssertTrue(isAllowedWorkspaceURL(URL(string: "http://localhost:8080")!))
