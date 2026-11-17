@@ -373,3 +373,21 @@ Extended PR #171 with `NativeModelSessionService` on `codex/app-scoped-runtime-c
 Current PR #171 head: `be517ff613ff822fe649623ffe36ea0512b1dcab`. Current exact-head validation: Pocket AI Lab CI run #44093487773 and iOS LlamaEngine CI run #44093503567 are in progress; previous native workflow attempts on superseded heads were cancelled and are not counted as failures or passes.
 
 Remaining ADR-001 gaps: Workspace does not yet receive the shared service; Runtime Status still reports compile-time probe information rather than live app-scoped pool/scheduler snapshots; RuntimeController and BridgeChallengeStore are not yet composed with the same runtime/session authority; WebKit has no script-message dispatcher; challenge invalidation and native approval coordinator remain outstanding. Physical iPhone Air acceptance is still required. This update does not mark Phase A fully accepted until exact-head CI completes.
+
+---
+
+## 19. Phase B — WebKit read-only ingress on app-scoped runtime — 2026-11-17
+
+PR #173 (`codex/webkit-readonly-dispatcher`) is a follow-on stacked on PR #171's app-scoped runtime composition. During implementation, a parallel PR #171 was discovered already implementing app-lifetime runtime ownership and centralized exact ModelPool lease management. The duplicate PR #172 was closed as superseded; its duplicate ownership changes were not carried forward.
+
+PR #173 currently:
+- Injects the existing `LocalChatRuntimeDependency` from `NativeRuntimeComposition` into Workspace; it does not create a second runtime or ModelPool.
+- Installs a `WKScriptMessageHandlerWithReply` under the fixed `pocketAILab` name in the page content world.
+- Derives origin from `WKScriptMessage.frameInfo.securityOrigin`; requires main-frame messages; validates with `BridgeGate.parse`; rejects unknown fields/actions, foreign origins, malformed values, and payloads larger than 40 KiB.
+- Enables only read-only `getRuntimeStatus` and `listModels`. Status uses the shared `NativeModelSessionService.snapshot()`; model inventory comes from the private local catalog and excludes file paths and raw file hashes.
+- Removes the handler and invalidates the dispatcher at WebView teardown. A new request identity recreates the WebView when the trusted workspace is changed.
+- Keeps readiness, validation, generation, cancellation, import, load, and unload disabled. This is not yet the full WebKit bridge.
+
+Validation snapshot at exact PR #173 head `b716ef8f358dc4819e96bc5e1edeae3b8faaee7c`: Intelligence CI #44093922426 passed; iOS LlamaEngine CI #44093929443 is still running at pinned llama.cpp build. Exact-head native app build/XCTest/simulator/GGUF/macOS gates remain pending. Hosted CI is not physical iPhone Air acceptance.
+
+Next required phase: make the app-scoped runtime/session service the single source of truth for both local chat and `RuntimeController`; attach or transfer the exact lease without duplicate acquisition; issue and consume a host-owned challenge bound to WebKit frame origin, request UUID, and active runtime session before inference; invalidate challenges on navigation, teardown, workspace close, and session replacement; test expiry/replay/wrong-origin/wrong-session and cancellation. Keep consequential import/load/unload disabled until parameter-bound native approval exists. Preserve APEX as sole authorization authority; no signed receipts, attestation, or device acceptance is implied by this read-only dispatcher.
