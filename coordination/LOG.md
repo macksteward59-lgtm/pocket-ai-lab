@@ -2845,3 +2845,15 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Subsequent iOS simulator XCTest, pinned GGUF download, macOS smoke XCTest, and runner evidence steps have not started. No model generation evidence exists for this exact PR #164 head.
 - The exact-SHA companion Intelligence CI passed; it is not a substitute for iOS LlamaEngine gates.
 - No cancellation or rerun was initiated. This is intentionally left untouched pending owner direction because a rerun/cancel changes the active validation attempt. No source, trust, or authorization changes.
+
+
+## 2026-11-16 UTC — native agent coordination gap audit committed
+
+- Inspected the master requirements handoff, the 316-row traceability matrix, the active coordination board/log, and native Agent Team/runtime source at PR #156's exact base head `31bdc57b8812243279097899fecd2c938a96e78f`.
+- Confirmed source-level capabilities: bounded sequential native role orchestration (maximum eight steps), optional per-role model routing, exact ModelPool lease lifecycle for routed generation, shared NativeInferenceRuntime scheduling, bounded prompts/outputs, typed linked messages, and local task-history persistence. The local history store marks a task interrupted after restart and does not auto-resume it.
+- Recorded key limitations: current native app composition uses one resident model and one concurrent request; the native coordinator is sequential rather than parallel; local task history is not the durable East/e3 workflow engine; model capability labels are not permissions; physical iPhone Air behavior remains unverified.
+- Rechecked PR #164 exact-head run #43981080474 for `6661bf655edef85e94fa1f363fcf54a33f20233c`: native app build passed, but app XCTest remains reported in_progress beyond its configured 20-minute timeout. Job-log retrieval returns BlobNotFound. Later simulator XCTest, pinned-GGUF download/path, macOS inference smoke, and runner evidence remain pending. Treat the run as stale/inconclusive, not a pass or diagnosed failure. Companion Intelligence CI #43981072947 passed.
+- Rechecked PR #165: exact-head CI #43983284394 passed, including desktop archive suite 17/17; PR remains draft/open and stacked on #164.
+- Recorded unresolved bridge gap: PR #164 does not install WKScriptMessageHandler/Web-to-native action dispatch, does not consume challenges through WebKit, and does not enable runtime-control actions; host-side approval coordination remains prerequisite.
+- Recorded further gaps: current-head CI for PR #162 is not established; live PostgreSQL/RLS remains unproven; authoritative original six-layer M01-M42 registry remains unavailable; physical iPhone Air install/inference/offline/resource/thermal/battery acceptance remains outstanding.
+- Added `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md`, refreshed the PR #164 status and audit link in `coordination/BOARD.md`, and preserved the existing 316-row inventory counts. No checklist item was marked verified; no application code, APEX/East trust policy, PR state, merge, cancellation, rerun, or physical-device state was changed.
