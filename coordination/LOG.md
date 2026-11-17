@@ -3166,3 +3166,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - iOS LlamaEngine run #44129072799 is still pending with no runner job allocated; no current-head native compile/XCTest result yet.
 - Current head includes the post-challenge GGUF re-hash and deterministic same-size/restored-timestamp mutation regression.
 - Updated Phase B board. PR #174 remains draft and unmerged.
+
+
+## 2026-11-17 — OWASP knowledge integration v3 continuation
+
+- Recreated the OWASP integration branch as `codex/owasp-knowledge-integration-v3` from current `agent-coordination` head `7bffc0567cb63e6f8d1874179dfffc7808000476`; v2 had become 12 commits behind and diverged.
+- Ported the eight-source catalog, source-linked guidance, requirements mapping, and catalog tests onto the fresh base.
+- Added `knowledge/owaspContext.ts`: deterministic agent/topic filtering with source provenance and explicit untrusted-reference handling. Added focused context-builder tests and package exports.
+- No Orchestrator, APEX, East, native runtime, or memory implementation files changed. No tool permission or authorization is granted by this reference bundle.
+- Validation remains pending: the repository has no checked-in GitHub Actions workflow on this branch and root `npm test` remains a placeholder. Do not mark tests or CI passed.
