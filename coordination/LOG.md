@@ -3366,3 +3366,9 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Rechecked PR #162 East worker-ownership follow-on: its previously passing workflow is on an older head, and no exact-head workflow run surfaced for `1db0345938ac029c3742a391c51ad7027d57e3bc`. It remains unverified at current head; no code changes or ownership-boundary changes were made.
 - PR #185 remains a web-only draft stacked on an older PR #174 commit. Its prior web CI result does not validate the updated native stack; rebase/reconcile and exact-head web validation remain required.
 - No application code changed, no PR merged, and no physical iPhone Air acceptance, signed evidence, or APEX authorization is claimed.
+
+
+## 2026-11-17 — Native app build cancellation correction
+
+- A later poll of iOS workflow #44163980153 superseded the earlier in-progress snapshot: the native app generation/build step completed with `cancelled`; app XCTest, simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest were skipped. The run/job had not yet exposed a final conclusion when checked. The pinned llama.cpp build, fail-closed Swift typecheck, physical-device framework link, simulator boot, and Director package-manifest validation remain successful completed steps only.
+- Job-log retrieval returned `BlobNotFound`, so the cancellation cause is unknown and is not attributed to a branch update or infrastructure without evidence. This run is not a passing native build/test result. A fresh exact-head run is required after the branch/test changes are settled.
