@@ -29,7 +29,10 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
-    private func makeLoadedDispatcher(root: URL) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
+    private func makeLoadedDispatcher(
+        root: URL,
+        beforeSessionResolution: (@MainActor () async -> Void)? = nil
+    ) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
         let modelDirectory = root.appendingPathComponent("Models", isDirectory: true)
         try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
         let modelURL = modelDirectory.appendingPathComponent("dispatcher-test.gguf")
@@ -64,7 +67,8 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         let dispatcher = WorkspaceBridgeDispatcher(
             trustedURL: URL(string: "https://workspace.example.test/app")!,
             runtimeDependency: composition.dependency,
-            modelCatalogStore: catalog
+            modelCatalogStore: catalog,
+            beforeSessionResolution: beforeSessionResolution
         )
         return (dispatcher, lease.session.id, composition)
     }
@@ -276,6 +280,47 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testInFlightSessionResolutionCannotAuthorizeAfterInvalidation() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let gate = DispatcherResolutionGate()
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(
+            root: root,
+            beforeSessionResolution: { await gate.pauseIfArmed() }
+        )
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+
+        // Establish the shared controller session before arming the deterministic pause.
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        await gate.arm()
+        let request = Task {
+            await dispatcher.handle(
+                body: [
+                    "id": UUID().uuidString,
+                    "action": "authorizeGeneration",
+                    "sessionId": sessionID,
+                    "requestId": UUID().uuidString
+                ],
+                frameOrigin: trustedOrigin,
+                isMainFrame: true
+            )
+        }
+        await gate.waitUntilEntered()
+        dispatcher.invalidate()
+        await gate.resume()
+
+        let response = await request.value
+        XCTAssertEqual(response["ok"] as? Bool, false)
+        XCTAssertEqual(response["error"] as? String, "runtime_not_ready")
+    }
+
+    @MainActor
     func testInvalidationDisablesAllFurtherMessages() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -306,4 +351,37 @@ private actor DispatcherStubEngine: LlamaEngine {
     func cancel(sessionId: String, requestId: String) async {}
     func cancelAndWait(sessionId: String, requestId: String) async {}
     func unload(sessionId: String) async {}
+}
+
+
+private actor DispatcherResolutionGate {
+    private var armed = false
+    private var entered = false
+    private var enteredWaiter: CheckedContinuation<Void, Never>?
+    private var resumeWaiter: CheckedContinuation<Void, Never>?
+
+    func arm() { armed = true }
+
+    func pauseIfArmed() async {
+        guard armed else { return }
+        armed = false
+        entered = true
+        enteredWaiter?.resume()
+        enteredWaiter = nil
+        await withCheckedContinuation { continuation in
+            resumeWaiter = continuation
+        }
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { continuation in
+            enteredWaiter = continuation
+        }
+    }
+
+    func resume() {
+        resumeWaiter?.resume()
+        resumeWaiter = nil
+    }
 }
