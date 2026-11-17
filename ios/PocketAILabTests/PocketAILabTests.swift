@@ -91,6 +91,28 @@ final class PocketAILabTests: XCTestCase {
         XCTAssertEqual(unloadedSessions, ["fingerprint-session"])
     }
 
+    @MainActor
+    func testUnavailableAppRuntimeDoesNotCreatePerViewFallback() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        try validGGUFHeader().write(to: source)
+        let engine = FingerprintTestEngine()
+        let model = LocalChatModel(
+            runtimeDependency: .unavailable("App-scoped runtime initialization failed closed."),
+            engine: engine,
+            modelDirectory: root.appendingPathComponent("models", isDirectory: true)
+        )
+
+        try await model.importModel(from: source)
+        await model.loadModel()
+
+        let loadCount = await engine.loadCount()
+        XCTAssertEqual(loadCount, 0, "An unavailable shared runtime must not trigger a second per-view runtime.")
+        XCTAssertFalse(model.isModelLoaded)
+        XCTAssertTrue(model.status.contains("shared native inference runtime is unavailable"))
+    }
+
     func testUnavailableProbeNeverClaimsMetalReady() {
         let probe = LlamaCppMetalBackend.probe()
         if !probe.linked { XCTAssertFalse(probe.metalDeviceUsable) }
