@@ -81,6 +81,7 @@ public actor RuntimeController {
     public let runtimeIdentity: String
     private let readinessTTL: TimeInterval
     private let clock: @Sendable () -> Date
+    private let fileHasher: @Sendable (URL) async throws -> String
     private var sessions: [String: ActiveSession] = [:]
     private var unloadingSessions: Set<String> = []
 
@@ -92,7 +93,8 @@ public actor RuntimeController {
         trustedWorkspaceURL: URL,
         runtimeVersion: String = "pocket-ai-lab-native/1",
         readinessTTL: TimeInterval = 120,
-        clock: @escaping @Sendable () -> Date = { Date() }
+        clock: @escaping @Sendable () -> Date = { Date() },
+        fileHasher: (@Sendable (URL) async throws -> String)? = nil
     ) throws {
         guard !deviceId.isEmpty, deviceId.utf8.count <= 128,
               !runtimeIdentity.isEmpty, runtimeIdentity.utf8.count <= 128,
@@ -108,6 +110,11 @@ public actor RuntimeController {
         self.runtimeVersion = runtimeVersion
         self.readinessTTL = readinessTTL
         self.clock = clock
+        self.fileHasher = fileHasher ?? { url in
+            try await Task.detached(priority: .utility) {
+                try Self.sha256File(url)
+            }.value
+        }
     }
 
     @discardableResult
@@ -153,15 +160,37 @@ public actor RuntimeController {
         guard !unloadingSessions.contains(sessionId),
               var active = sessions[sessionId] else { throw RuntimeControllerError.unknownSession }
         guard active.readinessTaskId == nil else { throw RuntimeControllerError.duplicateRequest }
-        do { try await verifyFile(active) }
-        catch {
-            active.readiness = nil
-            sessions[sessionId] = active
+
+        // Reserve the readiness attempt before verifyFile suspends. Actor
+        // reentrancy must not allow a second caller to pass the same nil check.
+        let token = UUID().uuidString
+        active.readiness = nil
+        active.readinessTaskId = token
+        active.readinessTask = nil
+        sessions[sessionId] = active
+
+        do {
+            try await verifyFile(active)
+        } catch {
+            if var latest = sessions[sessionId], latest.readinessTaskId == token {
+                latest.readiness = nil
+                latest.readinessTaskId = nil
+                latest.readinessTask = nil
+                sessions[sessionId] = latest
+            }
             throw error
         }
-        active.readiness = nil
-        let token = UUID().uuidString
-        let lease = active.lease
+
+        // verifyFile awaits an off-actor hash. Unload may have removed and
+        // released this session while hashing; never start a stale probe.
+        guard !unloadingSessions.contains(sessionId),
+              var latest = sessions[sessionId],
+              latest.lease.session.id == sessionId,
+              latest.readinessTaskId == token else {
+            throw RuntimeControllerError.unknownSession
+        }
+
+        let lease = latest.lease
         let runtime = self.runtime
         let request = GenerationRequest(
             prompt: "Pocket AI Lab native runtime readiness probe. Return one token.",
@@ -169,9 +198,8 @@ public actor RuntimeController {
             temperature: 0
         )
         let task = Task { try await runtime.generate(lease: lease, request: request, maxOutputBytes: 256) }
-        active.readinessTaskId = token
-        active.readinessTask = task
-        sessions[sessionId] = active
+        latest.readinessTask = task
+        sessions[sessionId] = latest
 
         do {
             let output = try await withTaskCancellationHandler {
@@ -184,26 +212,26 @@ public actor RuntimeController {
                 throw RuntimeControllerError.emptyGeneration
             }
             guard !unloadingSessions.contains(sessionId),
-                  var latest = sessions[sessionId],
-                  latest.readinessTaskId == token else {
+                  var completed = sessions[sessionId],
+                  completed.readinessTaskId == token else {
                 throw RuntimeControllerError.unknownSession
             }
             let checkedAt = clock()
-            latest.readiness = Readiness(
+            completed.readiness = Readiness(
                 healthCheckId: UUID().uuidString,
                 checkedAt: checkedAt,
                 expiresAt: checkedAt.addingTimeInterval(readinessTTL)
             )
-            latest.readinessTaskId = nil
-            latest.readinessTask = nil
-            sessions[sessionId] = latest
+            completed.readinessTaskId = nil
+            completed.readinessTask = nil
+            sessions[sessionId] = completed
             return report(for: sessionId, now: checkedAt)
         } catch {
-            if var latest = sessions[sessionId], latest.readinessTaskId == token {
-                latest.readinessTaskId = nil
-                latest.readinessTask = nil
-                latest.readiness = nil
-                sessions[sessionId] = latest
+            if var current = sessions[sessionId], current.readinessTaskId == token {
+                current.readinessTaskId = nil
+                current.readinessTask = nil
+                current.readiness = nil
+                sessions[sessionId] = current
             }
             throw error
         }
@@ -458,9 +486,7 @@ public actor RuntimeController {
         // proves byte identity. Re-hash before readiness and generation so a
         // same-size rewrite with restored timestamps cannot retain readiness.
         let expectedHash = active.fileHash
-        let currentHash = try await Task.detached(priority: .utility) {
-            try Self.sha256File(url)
-        }.value
+        let currentHash = try await fileHasher(url)
         guard currentHash == expectedHash else { throw RuntimeControllerError.modelFileChanged }
     }
 
