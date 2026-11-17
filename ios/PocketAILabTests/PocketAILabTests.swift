@@ -82,11 +82,13 @@ final class PocketAILabTests: XCTestCase {
 
         XCTAssertTrue(first.isModelLoaded)
         XCTAssertTrue(second.isModelLoaded)
-        XCTAssertEqual(await engine.loadCount(), 1, "Both consumers must resolve through the same ModelPool.")
+        let loadCount = await engine.loadCount()
+        XCTAssertEqual(loadCount, 1, "Both consumers must resolve through the same ModelPool.")
 
         await first.unloadModel()
         await second.unloadModel()
-        XCTAssertEqual(await engine.unloadedSessionIDs(), ["fingerprint-session"])
+        let unloadedSessions = await engine.unloadedSessionIDs()
+        XCTAssertEqual(unloadedSessions, ["fingerprint-session"])
     }
 
     func testUnavailableProbeNeverClaimsMetalReady() {
