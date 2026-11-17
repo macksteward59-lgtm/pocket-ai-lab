@@ -303,6 +303,39 @@ private actor PausingFileHasher {
     }
 }
 
+private actor ThirdCallPausingFileHasher {
+    private let expectedHash: String
+    private var callCount = 0
+    private var continuation: CheckedContinuation<String, Error>?
+    private var startedContinuation: CheckedContinuation<Void, Never>?
+
+    init(expectedHash: String) {
+        self.expectedHash = expectedHash
+    }
+
+    func hash() async throws -> String {
+        callCount += 1
+        guard callCount == 3 else { return expectedHash }
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            startedContinuation?.resume()
+            startedContinuation = nil
+        }
+    }
+
+    func waitUntilThirdCallStarted() async {
+        if callCount >= 3, continuation != nil { return }
+        await withCheckedContinuation { continuation in
+            startedContinuation = continuation
+        }
+    }
+
+    func resume() {
+        continuation?.resume(returning: expectedHash)
+        continuation = nil
+    }
+}
+
 final class RuntimeControllerTests: XCTestCase {
     private let trustedWorkspaceURL = URL(string: "https://workspace.example.test/app")!
 
@@ -761,6 +794,100 @@ final class RuntimeControllerTests: XCTestCase {
         let snapshot = await runtime.snapshot()
         XCTAssertEqual(snapshot.activeLeaseCount, 1, "Navigation cancellation must preserve the controller's loaded session lease.")
         XCTAssertEqual(snapshot.activeUseCount, 0)
+        await controller.disconnect()
+    }
+
+    func testCancelAllInvalidatesGenerationSuspendedDuringPostChallengeFileHash() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-post-challenge-hash-race-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let expectedHash = Self.sha256(modelURL)
+        let hasher = ThirdCallPausingFileHasher(expectedHash: expectedHash)
+        let descriptor = ModelDescriptor(
+            id: "post-challenge-hash-race-model",
+            name: "Post challenge hash race model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let engine = CountingLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = try BridgeChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL,
+            fileHasher: { _ in try await hasher.hash() }
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: expectedHash,
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestID = UUID().uuidString
+        let nonce = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "This must not start after navigation during the post-challenge hash.",
+                requestId: requestID,
+                conversationRequestId: "post-challenge-hash-navigation",
+                attemptId: "post-challenge-hash-navigation-attempt",
+                challengeNonce: nonce,
+                pageURL: trustedWorkspaceURL
+            )
+        }
+
+        // Hash calls one and two cover readiness and pre-challenge verification.
+        // The third call is the post-consumption re-hash; reaching this gate proves
+        // the real one-use challenge has already been accepted.
+        await hasher.waitUntilThirdCallStarted()
+
+        let cancelledCount = await controller.cancelAllGenerations()
+        XCTAssertEqual(cancelledCount, 0, "No native generation Task is registered while the post-challenge hash is suspended.")
+        await hasher.resume()
+
+        do {
+            _ = try await generation.value
+            XCTFail("A generation suspended in the post-challenge hash must not start after navigation cancellation.")
+        } catch is CancellationError {
+            // Expected: cancelAllGenerations advanced the lifecycle epoch before the hash resumed.
+        } catch {
+            XCTFail("Expected CancellationError, received: \\(error)")
+        }
+
+        let replayAccepted = await challengeStore.consume(
+            nonce,
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+        XCTAssertFalse(replayAccepted, "The paused post-challenge hash is reached only after the one-use nonce was consumed.")
+
+        let inferenceCalls = await engine.nonReadinessGenerationCount()
+        XCTAssertEqual(inferenceCalls, 0, "No native inference call may begin after navigation cancellation.")
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeLeaseCount, 1, "Navigation cancellation must preserve the controller's loaded session lease.")
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        XCTAssertEqual(snapshot.loadedModelIDs, [descriptor.id])
         await controller.disconnect()
     }
 
