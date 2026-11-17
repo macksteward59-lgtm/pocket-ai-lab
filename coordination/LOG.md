@@ -2907,3 +2907,12 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - GitHub still reports the job's `Complete job` step and overall workflow as `in_progress`, with no terminal conclusion. Do not mark PR #164's overall iOS workflow green until the run concludes.
 - The previous log-download `BlobNotFound` issue remains a diagnostic limitation, but the explicit XCTest step conclusion is now `success`.
 - Updated the audit, board, and log only. No source, PR state, workflow rerun/cancellation, merge, or trust-boundary change.
+
+
+## 2026-11-17 00:14 UTC — PR #164 exact-head hosted CI fully passed
+
+- GitHub check-runs API now reports `ios-llamaengine` completed with `success` for exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`; workflow run #43981080474 reached terminal success at 00:14:27 UTC.
+- The iOS job passed pinned llama.cpp build, fail-closed typecheck, generic iOS link, simulator boot, Director package validation, native app build/XCTest, simulator XCTest, pinned GGUF download/path setup, macOS XCTest, runner evidence recording, and post-job checkout.
+- Both exact-head Intelligence checks #43981072947 and #43983044172 also passed. PR #164's currently surfaced hosted check set is green (3/3).
+- This closes the hosted CI gate for this exact commit only. No physical iPhone Air run, on-device model generation, or WebKit dispatch integration is demonstrated. The challenge-consumption/dispatcher gap remains open.
+- Refreshed the coordination audit, board, and log. No application source, PR state, merge, or trust-boundary change.
