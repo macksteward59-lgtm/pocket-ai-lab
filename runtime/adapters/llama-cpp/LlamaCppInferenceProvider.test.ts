@@ -587,6 +587,46 @@ describe("llama.cpp HTTP backend", () => {
   });
 });
 
+
+  it("classifies cancellation after HTTP response headers while reading a body", async () => {
+    let headersSent!: () => void;
+    const ready = new Promise<void>(resolve => { headersSent = resolve; });
+    await withServer(async (_captured, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.flushHeaders();
+      headersSent();
+      await new Promise(() => {});
+    }, async baseUrl => {
+      const provider = createLlamaCppInferenceProvider({ baseUrl, timeoutMs: 5_000 });
+      const controller = new AbortController();
+      const pending = provider.generate(baseRequest(), { signal: controller.signal });
+      await ready;
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ code: "cancelled" });
+    });
+  });
+
+  it("classifies cancellation after SSE headers while waiting for the first token", async () => {
+    let headersSent!: () => void;
+    const ready = new Promise<void>(resolve => { headersSent = resolve; });
+    await withServer(async (_captured, response) => {
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.flushHeaders();
+      headersSent();
+      await new Promise(() => {});
+    }, async baseUrl => {
+      const provider = createLlamaCppInferenceProvider({ baseUrl, timeoutMs: 5_000 });
+      const controller = new AbortController();
+      const pending = provider.generateStream(baseRequest(), {
+        signal: controller.signal,
+        onPreview: () => undefined
+      });
+      await ready;
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ code: "cancelled" });
+    });
+  });
+
 const liveBaseUrl = process.env.LLAMACPP_BASE_URL;
 describe.skipIf(!liveBaseUrl)("llama.cpp live server", () => {
   it("generates an independent analysis against LLAMACPP_BASE_URL", async () => {
