@@ -3287,3 +3287,13 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - PR #180 now points to `ccaefbd66704266c6c53f4abc78ed3042273a8fa`, compares 1 ahead / 0 behind, and contains exactly the three test-runner files. Exact-head workflow #44158613191 completed successfully.
 - PR #181 now points to `b29f7402bc7b23aa1356613d7b856cccf827538e`, compares 1 ahead / 0 behind, and contains exactly the nine OWASP feature files. No exact-head workflow run is present for this head; #180's passing run is not transferable evidence.
 - No PR merge, application behavior change, Orchestrator integration, or authorization change was performed.
+
+
+## 2026-11-17 — Resynchronization against latest coordination base
+
+- Current coordination base at synchronization: `ad6f936973ee1425e1532facf8016564476410f1`.
+- PR #180 refreshed to `e525e36d792e7ff4590f6093320bc69d8a6df288`, 1 ahead / 0 behind, exactly three owned test-runner paths. Exact-head workflow #44159182683 was in progress at the time of inspection; result not yet established.
+- PR #181 refreshed to `34cf8973267d50a30fa14382d6406733f4c21d94`, 1 ahead / 0 behind, exactly nine owned OWASP feature paths. No exact-head run exists.
+- Validation dependency identified: `.github/workflows/intelligence-tests.yml` is supplied by PR #180 and is not in the shared base. Therefore PR #181 cannot receive that workflow's pull_request run until the workflow becomes part of the base branch. No duplicate workflow was added to PR #181, and no ownership boundary was crossed.
+- Personal-context source retrieval was attempted for the original November 1 six-layer / M01–M42 source. It returned no original descriptions or exact module-to-layer/T0–T4 assignments; it confirms the November 1 conversation references the app files `src/components/compliance/console.tsx`, `src/lib/compliance/providers.ts`, `modes.ts`, `director.ts` (Director and 42 checks), and `orchestrator.ts`, but does not provide the missing registry content. No mappings were inferred.
+- No PR merged, no application code or authorization behavior changed, and no requirement was marked verified.
