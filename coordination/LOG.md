@@ -3204,3 +3204,14 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Reapplied the OWASP requirements document, source catalog, guidance records, context builder, exports, and two focused tests. Preserved the current base's `packages/intelligence/index.ts` content and appended only the OWASP exports; enabled `resolveJsonModule` in the current base tsconfig.
 - No Orchestrator, APEX, East, native runtime, memory, or MessageBus implementation changed. OWASP context remains reference-only/untrusted and is not yet wired into `Orchestrator.executeTask()`.
 - Validation remains pending on this new branch. The focused test workflow is proposed separately in PR #180 and is not yet present on `agent-coordination`; the passing PR #180 run is not evidence for these OWASP tests.
+
+
+## 2026-11-17 — Complete product vision and engineering handoff consolidated
+
+- Added `coordination/POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md` as the consolidated handoff for the owner's Pocket AI Lab vision and the current repository integration state.
+- Covers native iOS/offline-first/model-independent product goals; five operating modes; eight permanent agents and dynamic specialists; genuine bounded multi-agent deliberation; six-layer/42-module registry recovery; Director/APEX, East/e3, ExploitGym, Grok Workspace, BridgeGate, RuntimeController, LlamaEngine, and Evidence ownership; app-scoped runtime and WebKit challenge contract; durable workflow recovery; four memory classes; research/OWASP provenance; resource budgets; acceptance gates; priority roadmap; definition of done; and owner handoffs.
+- Updated `coordination/BOARD.md` with the handoff pointer and immediate integration gates. This is documentation-only synchronization.
+- Preserved `docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md` and the 316-row `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md` as separate authorities. The last recorded inventory (184 unassessed, 85 implemented-unverified, 37 partial, 10 blocked, 0 verified, 0 missing) is not reclassified by this documentation change.
+- Current evidence cautions retained: PR #171 owns shared app-scoped runtime; PR #174 owns native challenge-gated WebKit dispatch; PR #175 owns web client integration; exact-head native CI must be re-polled; hosted checks are not physical iPhone Air acceptance. PR #181 OWASP context remains unconnected to `Orchestrator.executeTask()`; PR #180 exact-head workflow status must be checked. East live PostgreSQL/RLS evidence and original M01–M42 registry remain open.
+- No application code, tests, APEX authorization, signing, attestation, merge, or device acceptance was performed or claimed.
+- **Next action:** all contributors read the complete handoff and reconcile exact PR heads/CI and non-overlapping file ownership before taking another implementation slice.
