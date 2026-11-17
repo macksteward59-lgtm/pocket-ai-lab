@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const state = { model: "model not connected", busy: false };
+const state = { model: "model not connected", busy: false, abortController: null, activeNativeRequest: null };
 const views = ["chat","agents","memory","activity","settings"];
 function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
@@ -102,7 +102,14 @@ async function sendMessage(text){
  try{
   if(nativeAvailable){
    output.textContent="Checking the iPhone's native model readiness…";
-   const record=await bridge.generate(text,{maxTokens:256,temperature:0.7});
+   state.abortController=new AbortController();
+   $("stop").classList.remove("hidden");
+   const record=await bridge.generate(text,{
+    maxTokens:256,
+    temperature:0.7,
+    signal:state.abortController.signal,
+    onRequest:request=>{state.activeNativeRequest=request;}
+   });
    output.textContent=record.output||"The native model returned an empty response.";
   }else{
    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});
@@ -111,18 +118,21 @@ async function sendMessage(text){
   }
  }catch(error){
   if(nativeAvailable){
-   output.textContent="The iPhone native runtime could not complete this request. No server fallback was attempted. "+error.message;
+   output.textContent=error.code==="generation_cancelled"
+    ?"Generation cancelled. The native runtime completed its cancellation and drain."
+    :"The iPhone native runtime could not complete this request. No server fallback was attempted. "+error.message;
   }else{
    output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";
   }
- }finally{state.busy=false;$("send").disabled=false;health();}
+ }finally{state.busy=false;state.abortController=null;state.activeNativeRequest=null;$("stop").classList.add("hidden");$("send").disabled=false;health();}
 }
+$("stop").addEventListener("click",()=>state.abortController?.abort());
 $("composer").addEventListener("submit",e=>{e.preventDefault();sendMessage($("prompt").value);});
 $("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("composer").requestSubmit();}});
 document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $("settings-shortcut").addEventListener("click",()=>setView("settings"));
-$("new-chat").addEventListener("click",()=>{$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
+$("new-chat").addEventListener("click",()=>{state.abortController?.abort();$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
 $("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
 $("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
 $("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});
