@@ -8,7 +8,7 @@
 
 The project has progressed from disconnected foundations toward an integrated native iOS product. The most important current work is the native Agent Team/runtime base (PR #156), the Director/APEX bridge integration (PR #164), and the isolated Grok Workspace/ExploitGym archive restoration (PR #165).
 
-None of these is merged. PR #164's repaired exact-head iOS run has advanced through native app build/XCTest, iOS simulator XCTest, pinned-GGUF download, and smoke-path setup; macOS XCTest is currently in progress and runner evidence is pending. The workflow remains in progress, and no physical iPhone Air acceptance is established.
+None of these is merged. PR #164's repaired exact-head iOS run #43981080474 completed successfully at 2026-11-17 00:14:27 UTC, and its two companion Intelligence checks also passed. This clears hosted CI for that exact PR head only; no physical iPhone Air acceptance or WebKit action bridge is established. PR #166 now records the separate trusted-dispatcher implementation contract.
 
 The requirements traceability matrix remains the authoritative audit ledger. Its last recorded baseline is 316 requirements: 184 unassessed, 85 implemented-unverified, 37 partial, 10 blocked, zero verified, and zero missing. This audit does not silently change those counts or mark broad requirements complete based on PR descriptions.
 
@@ -98,7 +98,7 @@ PR #162 adds worker ownership fencing to lifecycle attempts. Its previously reco
 
 | Priority | Gap | Required completion evidence |
 |---|---|---|
-| P0 | PR #164 exact-head iOS workflow is still running | Complete macOS XCTest and runner evidence on exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`; investigate the runner-log `BlobNotFound` limitation if the job stalls; require an overall successful conclusion |
+| P0 | PR #164 hosted CI passed, but no physical iPhone Air acceptance | Install and run the exact integrated build on iPhone Air; verify local model import/load/token generation, cancellation/unload, offline operation, restart recovery, and device/runtime/model identity evidence |
 | P0 | Native bridge has no WebKit message/action dispatch | Trusted-origin handler, schema validation, one-use challenge consumption, approval coordination, deny/replay/expiry tests; no bypass of APEX |
 | P0 | No physical iPhone Air acceptance | Signed/installable build, actual local model import/load/token generation, cancellation/unload, offline operation, restart recovery, device/runtime/model identity evidence |
 | P1 | Agent collaboration is currently sequential | Explicitly accepted sequential operating design or separately tested bounded multi-session/parallel orchestration; demonstrate genuine distinct role inference and disagreement/revision |
@@ -156,3 +156,6 @@ The contract requires a native host dispatcher to derive origin from `WKScriptMe
 PR #166 is draft and documentation-only. The exact-head workflow query returned no workflow runs, so there is no runtime/test validation claim. No WebKit handler has been implemented or enabled. This is not a complete bridge and does not change the status of PR #164's runtime implementation or physical iPhone Air acceptance.
 
 The next code change must be a separately reviewed implementation with focused origin, frame, schema, challenge replay/expiry/binding, approval, cancellation, and teardown tests. The challenge must be consumed before generation; validation must not be an optional callback that callers can bypass.
+
+
+**Audit correction (2026-11-17):** The original P0 row above was refreshed after the exact-head workflow reached terminal success; the historical run narrative is retained for audit chronology. The current remaining P0 is physical iPhone Air acceptance plus the unimplemented WebKit dispatcher. PR #166 is a documentation-only contract, not dispatcher implementation or runtime validation.
