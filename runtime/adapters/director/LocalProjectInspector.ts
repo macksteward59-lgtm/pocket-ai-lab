@@ -1,3 +1,13 @@
+export interface SourceReferenceVerification {
+  status: "verified" | "unverified";
+  path: string;
+  occurrenceCount: number;
+  startLine?: number;
+  endLine?: number;
+  reason?: "invalid_reference" | "unsupported_file_type" | "file_unavailable" |
+    "file_too_large" | "quote_not_found" | "ambiguous_match" | "line_range_mismatch";
+}
+
 import { realpath, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { ProjectAnalysis, ProjectInspector } from "../../../packages/intelligence/director/DirectorCapabilities";
@@ -36,21 +46,10 @@ export class LocalProjectInspector implements ProjectInspector {
     const findings: ProjectAnalysis["findings"] = [];
     let totalBytes = 0;
     for (const relative of [...new Set(requested)]) {
-      const extension = path.extname(relative).toLowerCase();
-      if (!TEXT_EXTENSIONS.has(extension)) continue;
-      const candidate = path.resolve(this.root, relative);
-      if (candidate !== this.root && !candidate.startsWith(this.root + path.sep)) {
-        throw new Error("Project inspection path escaped the workspace");
-      }
-      let actual: string;
-      try { actual = await realpath(candidate); } catch { continue; }
-      if (actual !== this.root && !actual.startsWith(this.root + path.sep)) {
-        throw new Error("Project inspection symlink escaped the workspace");
-      }
-      const metadata = await stat(actual);
-      if (!metadata.isFile() || metadata.size > MAX_FILE_BYTES || totalBytes + metadata.size > MAX_TOTAL_BYTES) continue;
-      const content = await readFile(actual, "utf8");
-      totalBytes += Buffer.byteLength(content, "utf8");
+      const loaded = await this.readEligibleTextFile(relative);
+      if (!loaded || totalBytes + loaded.byteLength > MAX_TOTAL_BYTES) continue;
+      const content = loaded.content;
+      totalBytes += loaded.byteLength;
       inspected.push(relative);
       const lines = content.split(/\r?\n/);
       for (let index = 0; index < lines.length; index += 1) {
@@ -66,7 +65,6 @@ export class LocalProjectInspector implements ProjectInspector {
         }
       }
     }
-
     return {
       summary: inspected.length
         ? "Read-only inspection covered " + inspected.length + " file(s): " + inspected.join(", ") + "."
@@ -75,4 +73,99 @@ export class LocalProjectInspector implements ProjectInspector {
       inspectedAt: new Date().toISOString()
     };
   }
+  /**
+   * Verify an exact excerpt against a bounded file inside this inspector's
+   * already-confined workspace. This confirms source presence only; it does
+   * not establish exploitability, reachability, authenticity, or authorization.
+   */
+  async verifySourceReference(input: {
+    path: string;
+    quote: string;
+    startLine?: number;
+    endLine?: number;
+  }): Promise<SourceReferenceVerification> {
+    const relative = input?.path;
+    const quote = input?.quote;
+    const invalid = (): SourceReferenceVerification => ({
+      status: "unverified", path: typeof relative === "string" ? relative : "",
+      occurrenceCount: 0, reason: "invalid_reference"
+    });
+    if (typeof relative !== "string" || !relative.trim() || relative.length > 1024 ||
+        path.isAbsolute(relative) || relative.split(/[\\/]/).includes("..") ||
+        typeof quote !== "string" || !quote.length || quote.length > 8192 ||
+        (input.startLine !== undefined && (!Number.isSafeInteger(input.startLine) || input.startLine < 1)) ||
+        (input.endLine !== undefined && (!Number.isSafeInteger(input.endLine) || input.endLine < 1)) ||
+        (input.startLine !== undefined && input.endLine !== undefined && input.startLine > input.endLine)) {
+      return invalid();
+    }
+    const extension = path.extname(relative).toLowerCase();
+    if (!TEXT_EXTENSIONS.has(extension)) {
+      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "unsupported_file_type" };
+    }
+    const loaded = await this.readEligibleTextFile(relative);
+    if (!loaded) {
+      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "file_unavailable" };
+    }
+    if (loaded.reason === "file_too_large") {
+      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "file_too_large" };
+    }
+
+    const content = loaded.content.replace(/\r\n?/g, "\n");
+    const exactQuote = quote.replace(/\r\n?/g, "\n");
+    const occurrences: Array<{ startLine: number; endLine: number }> = [];
+    let offset = 0;
+    while (offset <= content.length - exactQuote.length) {
+      const found = content.indexOf(exactQuote, offset);
+      if (found < 0) break;
+      const before = content.slice(0, found);
+      const through = content.slice(found, found + exactQuote.length);
+      const startLine = before.split("\n").length;
+      const endLine = startLine + (through.match(/\n/g)?.length ?? 0);
+      occurrences.push({ startLine, endLine });
+      offset = found + 1;
+      if (occurrences.length > 100) break;
+    }
+    if (!occurrences.length) {
+      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "quote_not_found" };
+    }
+    const matching = occurrences.filter(item =>
+      (input.startLine === undefined || item.startLine === input.startLine) &&
+      (input.endLine === undefined || item.endLine === input.endLine));
+    if (matching.length === 1 && occurrences.length === 1) {
+      return { status: "verified", path: relative, occurrenceCount: 1, ...matching[0] };
+    }
+    if (matching.length === 1) {
+      return { status: "verified", path: relative, occurrenceCount: occurrences.length, ...matching[0] };
+    }
+    return {
+      status: "unverified", path: relative, occurrenceCount: occurrences.length,
+      reason: matching.length > 1 ? "ambiguous_match" :
+        (occurrences.length > 1 && input.startLine === undefined && input.endLine === undefined
+          ? "ambiguous_match" : "line_range_mismatch")
+    };
+  }
+
+  private async readEligibleTextFile(relative: string): Promise<
+    { content: string; byteLength: number; reason?: never } |
+    { content: ""; byteLength: 0; reason: "file_too_large" } |
+    undefined
+  > {
+    const candidate = path.resolve(this.root, relative);
+    if (candidate !== this.root && !candidate.startsWith(this.root + path.sep)) {
+      throw new Error("Project inspection path escaped the workspace");
+    }
+    let actual: string;
+    try { actual = await realpath(candidate); } catch { return undefined; }
+    if (actual !== this.root && !actual.startsWith(this.root + path.sep)) {
+      throw new Error("Project inspection symlink escaped the workspace");
+    }
+    const metadata = await stat(actual);
+    if (!metadata.isFile()) return undefined;
+    if (metadata.size > MAX_FILE_BYTES) return { content: "", byteLength: 0, reason: "file_too_large" };
+    const content = await readFile(actual, "utf8");
+    const byteLength = Buffer.byteLength(content, "utf8");
+    if (byteLength > MAX_FILE_BYTES) return { content: "", byteLength: 0, reason: "file_too_large" };
+    return { content, byteLength };
+  }
+
 }
