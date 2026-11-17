@@ -395,7 +395,7 @@ The active follow-on is PR #174 (`codex/webkit-readonly-dispatcher-rebased`), st
 
 ### Validation snapshot
 
-Exact PR #174 head at this update: `a1a60c39ce12c2b1e5408bb79fe87dfd10f34f5d`. iOS LlamaEngine CI #44111771628 is queued for that exact head; Pocket AI Lab CI #44111746838 is running. The earlier iOS run #44093929443 failed XCTest compilation due three app-scoped runtime fixture issues (two initializer argument-order errors and one missing runtime dependency); those fixtures were corrected in the parent PR #171 branch and carried into the clean follow-on. Prior Pocket AI Lab CI #44111500667 passed on an earlier `ac29e06` head, not the current exact head. Do not treat these as final validation until the current exact-head jobs complete.
+Exact PR #174 head at this update: `48a6fabea107cc587327bf1782caef14aeefdab7`. Intelligence CI passed; iOS LlamaEngine CI #44112233207 is running at pinned llama.cpp build. The earlier iOS run #44093929443 failed XCTest compilation due three app-scoped runtime fixture issues (two initializer argument-order errors and one missing runtime dependency); those fixtures were corrected in the parent PR #171 branch and carried into the clean follow-on. Prior Pocket AI Lab CI #44111500667 passed on an earlier `ac29e06` head, not the current exact head. Do not treat these as final validation until the current exact-head jobs complete.
 
 ### Remaining bridge gates
 
