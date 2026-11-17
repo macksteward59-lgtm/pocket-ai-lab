@@ -51,6 +51,13 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         }
     }
 
+    /// A same-origin page navigation must invalidate outstanding one-use
+    /// challenges without permanently disabling the new document's bridge.
+    func navigationStarted() {
+        guard isActive, let challengeStore else { return }
+        Task { await challengeStore.invalidateAll() }
+    }
+
     func invalidate() {
         guard isActive else { return }
         isActive = false
@@ -122,6 +129,10 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 data["activeUseCount"] = snapshot.activeUseCount
                 if let runtimeController {
                     let reports = await runtimeController.reports()
+                    data["generationEnabled"] = reports.contains(where: { $0.canGenerate })
+                    data["dispatcherMode"] = reports.contains(where: { $0.canGenerate })
+                        ? "challenge-gated"
+                        : "read-only-until-ready"
                     data["controllerSessions"] = reports.map { report in
                         [
                             "modelId": report.id,
@@ -300,6 +311,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
             let catalog = try modelCatalogStore.load()
             guard let selectedID = catalog.selectedModelID,
                   let entry = catalog.entries.first(where: { $0.id == selectedID }) else {
+                await challengeStore?.invalidateAll()
                 await runtimeController.disconnect()
                 return nil
             }
@@ -314,6 +326,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
             guard let localLease = service.activeLeases().first(where: {
                 $0.model == descriptor && $0.session.modelId == entry.id
             }) else {
+                await challengeStore?.invalidateAll()
                 await runtimeController.disconnect()
                 return nil
             }
@@ -326,6 +339,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 return sessionId
             }
 
+            await challengeStore?.invalidateAll()
             await runtimeController.disconnect()
             let report = try await runtimeController.load(
                 model: descriptor,
