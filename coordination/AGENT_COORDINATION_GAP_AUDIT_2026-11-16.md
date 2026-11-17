@@ -553,3 +553,30 @@ No PR was merged. No physical iPhone Air acceptance is claimed. No APEX authoriz
 ## 22. Native bridge post-challenge hash regression and current CI — 2026-11-17
 
 PR #174 now includes `testCancelAllInvalidatesGenerationSuspendedDuringPostChallengeFileHash` at commit `b6a9b68c4c6e3ffee2ec0a41c08518b2784b1a0c`. Source inspection confirms it pauses the post-consumption file hash, completes cancellation while no native generation task is registered, resumes hashing, expects cancellation, verifies one-use challenge replay rejection, asserts zero native inference calls, and checks the shared model lease remains held. The previously identified post-hash test-coverage gap is therefore closed in source, pending exact-head execution. Exact-head iOS workflow #44166303330 is in progress; prior run #44166043070 on the preceding commit was cancelled. PR #185 is 1 commit ahead / 7 behind the current PR #174 base and must be reconciled before stack acceptance. No physical iPhone Air acceptance, signed evidence, or APEX authorization is claimed.
+
+
+## 23. Current PR reconciliation and prioritized gaps — 2026-11-17
+
+### Verified in this refresh
+
+- PR #174 current head: `ce07e17f917c283ef1b13b548ee554601ffc10fe`. The post-challenge file-hash cancellation test from commit `b6a9b68c4c6e3ffee2ec0a41c08518b2784b1a0c` is in the branch. A later unannounced commit on the same branch adds an overlapping navigation-cleanup barrier test in a different test file. Latest exact-head iOS run #44167047921 is still in progress; prior run #44166303330 was cancelled after branch advancement.
+- PR #162 current head: `be8f014ce90bce6266aae4ee64d76f353c7d08ff`. New test covers durable `uncertain=true` and no auto-reclaim after restart for expired single-attempt side effects. No exact-head workflow or combined status exists.
+- PR #132 real PostgreSQL 16 integration run #43846062218 succeeded for the migration, row-lock/CAS, namespace isolation, rollback, concurrent stale-writer behavior, and actual TypeScript adapter. This is ephemeral CI database validation, not production database or RLS evidence.
+- PR #135 exact-head iOS run #43797547712 succeeded through pinned llama.cpp, app build, app XCTest, simulator XCTest, GGUF setup, and macOS XCTest. PR #157, #159, and #164 exact-head iOS runs #43957233723, #43957567346, and #43991837435 also succeeded on hosted infrastructure.
+
+### Prioritized gaps
+
+1. **PR #174/#171 native bridge integration:** finish exact-head run #44167047921 and inspect every app/simulator/macOS test result. PR #171 is the base and currently reports non-mergeable with no exact-head workflow; reconcile that base before treating PR #174 as integration-ready. Keep generation disabled until all cancellation, navigation, shared-lease, and fail-closed tests pass.
+2. **East/e3 ownership and persistence:** PR #162's new uncertainty regression is unverified because its exact head has no workflow/status. Add real PostgreSQL coverage for worker-owner persistence and foreign-worker completion to the existing PG16 integration path; the current #162 fake-DB test does not prove that boundary. Preserve the distinction between worker fencing and authentication/authorization.
+3. **East production crash recovery:** the lifecycle adapter still uses checkpointed task/message state, not an append-only event log. Provider cancellation propagation, provider idempotency/result retrieval or transactional outbox, durable MemoryStore, tenant RLS, and production PostgreSQL/TLS/backup/key operations remain open. No production DB/RLS claim.
+4. **Workspace web client stack:** PR #175 and #185 are stale against current PR #174. Rebase the better #185 candidate and rerun web tests against the exact current native base; do not merge the stale PRs.
+5. **Native catalog/self-evaluation integration:** PR #135 hosted validation is green, but PR #133 is 4 commits behind current PR #115 and has no exact-head run. PR #115's current iOS run was cancelled after app XCTest; simulator and GGUF/macOS smoke did not finish. Reconcile catalog and evaluation on one current base, then re-run the full native matrix.
+6. **Integration branch duplication:** PR #157/#159 diverge 84 ahead / 27 behind; PR #131/#132 diverge 17 ahead / 10 behind. Preserve the best validated mainline candidate and cherry-pick only reviewed, non-overlapping changes; do not combine either pair wholesale.
+7. **Physical device:** no signed iPhone Air archive/install, on-device generation, memory/thermal/battery acceptance, or offline acceptance evidence is present. Hosted macOS and simulator results are not physical-device results.
+8. **Historical security framework source:** full verbatim prior chats were not available in this run. The current accessible chat context is summary-level. The source-recovery audit still lacks the October 29 full M01–M42 descriptions and exact six-layer/module tier-permission assignments; do not infer mappings.
+
+### Coordination and safety
+
+- The current coordination records contain a single ChatGPT ownership claim for the WebKit dispatcher and East owner-fencing work. A new same-branch PR #174 commit appeared without a separate active-agent announcement; this run stopped editing that branch after detecting the concurrent advance. No repository instruction was treated as authority to bypass security.
+- No open GitHub issues were returned in the repository search. Repository metadata reports public. No merge, main-branch edit, settings/secrets/visibility change, deployment, production database action, or physical-device test occurred.
+- Accessible project-history sources were the current conversation, summary-level prior context, the consolidated product handoff, the source-recovery audit, coordination board/log, master requirements and traceability docs, and live GitHub PR/commit/CI records. Full verbatim historical ChatGPT conversations were not accessible.
