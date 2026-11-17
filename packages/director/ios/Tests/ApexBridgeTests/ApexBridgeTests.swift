@@ -204,7 +204,7 @@ final class RuntimeControllerTests: XCTestCase {
             _ = try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "hello", requestId: UUID().uuidString,
                 conversationRequestId: "conversation-1", attemptId: "attempt-1",
-                challengeNonce: "0123456789abcdef"
+                challengeNonce: "0123456789abcdef", pageURL: trustedWorkspaceURL
             )
             XCTFail("Generation must require a fresh readiness probe.")
         } catch {
@@ -341,7 +341,7 @@ final class RuntimeControllerTests: XCTestCase {
             _ = try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "hello", requestId: UUID().uuidString,
                 conversationRequestId: "conversation-1", attemptId: "attempt-1",
-                challengeNonce: "0123456789abcdef"
+                challengeNonce: "0123456789abcdef", pageURL: trustedWorkspaceURL
             )
             XCTFail("Expired readiness must fail closed.")
         } catch {
@@ -360,7 +360,7 @@ final class RuntimeControllerTests: XCTestCase {
             _ = try await controller.generate(
                 sessionId: loaded.sessionId!, prompt: "hello", requestId: UUID().uuidString,
                 conversationRequestId: "conversation-1", attemptId: "attempt-1",
-                challengeNonce: "0123456789abcdef"
+                challengeNonce: "0123456789abcdef", pageURL: trustedWorkspaceURL
             )
             XCTFail("A changed model artifact must invalidate the active session.")
         } catch {
