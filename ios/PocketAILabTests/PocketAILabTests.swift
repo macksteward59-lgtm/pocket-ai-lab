@@ -54,13 +54,13 @@ final class PocketAILabTests: XCTestCase {
             runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
-            modelCatalogStore: catalog,
             conversationStore: LocalConversationStore(
                 fileURL: root.appendingPathComponent("first-history.json")
             ),
             agentTaskHistoryStore: LocalAgentTaskHistoryStore(
                 fileURL: root.appendingPathComponent("first-tasks.json")
-            )
+            ),
+            modelCatalogStore: catalog
         )
         try await first.importModel(from: source)
 
@@ -68,13 +68,13 @@ final class PocketAILabTests: XCTestCase {
             runtimeDependency: composition.dependency,
             engine: engine,
             modelDirectory: modelDirectory,
-            modelCatalogStore: catalog,
             conversationStore: LocalConversationStore(
                 fileURL: root.appendingPathComponent("second-history.json")
             ),
             agentTaskHistoryStore: LocalAgentTaskHistoryStore(
                 fileURL: root.appendingPathComponent("second-tasks.json")
-            )
+            ),
+            modelCatalogStore: catalog
         )
 
         await first.loadModel()
