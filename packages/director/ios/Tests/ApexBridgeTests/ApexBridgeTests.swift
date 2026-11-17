@@ -1271,6 +1271,21 @@ final class RuntimeControllerTests: XCTestCase {
             XCTFail("Expected CancellationError, received: \(error)")
         }
 
+        do {
+            _ = try await controller.generate(
+                sessionId: sessionID,
+                prompt: "A replay must not revive the cancelled request identity.",
+                requestId: requestID,
+                conversationRequestId: "cancel-before-generate-replay",
+                attemptId: "cancel-before-generate-replay-attempt",
+                challengeNonce: nonce,
+                pageURL: trustedWorkspaceURL
+            )
+            XCTFail("A request ID consumed by early cancellation must remain retired, even while its challenge is unused.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .duplicateRequest)
+        }
+
         let report = await controller.reports().first
         XCTAssertEqual(report?.sessionId, sessionID)
         XCTAssertTrue(report?.canGenerate ?? false, "A rejected cancelled request must not invalidate the model's readiness.")
