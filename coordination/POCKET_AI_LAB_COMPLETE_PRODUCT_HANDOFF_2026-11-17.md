@@ -110,13 +110,50 @@ Bound rounds, tokens, context, latency, tool calls, memory, concurrency, and tot
 
 Use typed, validated, immutable message envelopes with stable message IDs, sender/recipient, task ID, timestamp, content type, bounded payload, trust classification, and evidence references. Provide correlation and parent/child links, deduplication, ordering rules, cancellation propagation, and audit events. Message transport must not become an authorization channel.
 
-## 5. Six-layer / 42-module framework
+## 5. Original six-layer / 42-module framework
 
-The owner has repeatedly specified a six-layer, 42-module capability framework. It is a registry of capabilities, not a requirement for 42 agents.
+The six layer names are recovered from the owner's original November 1, 2026 ChatGPT discussion. This is the original security capability framework, not a newly designed taxonomy and not a requirement for 42 separate agents.
 
-**Critical source-recovery blocker:** the authoritative original M01–M42 registry (exact names, descriptions, and layer assignments) must be recovered from the original source archive, repository history, or owner's source material. Do not invent, renumber, silently rename, or infer the 42 IDs. Preserve the exact registry once recovered.
+### 5.1 Canonical layer names
 
-For every module, record stable ID, layer, name, purpose, inputs/outputs, dependencies, permission class, execution class, resource budget, owner, version, lifecycle, tests, and implementation mapping. Map modules to the five operating modes and define allowed/denied combinations. Restricted modules remain disabled unless the relevant policy explicitly authorizes their use. Protected local stand-in changes require human confirmation. Add compatibility, health, versioning, deprecation, rollback, and permission-isolation tests.
+1. **Layer 1 — Reconnaissance and Intelligence**
+2. **Layer 2 — Threat Modeling and Risk Assessment**
+3. **Layer 3 — Penetration Testing and Analysis**
+4. **Layer 4 — Infrastructure and Application Security**
+5. **Layer 5 — Detection and Response**
+6. **Layer 6 — Engineering and Continuous Improvement**
+
+### 5.2 Original governance and module-selection rules
+
+- One central **Director** selects the relevant modules for a task; agents do not independently activate arbitrary modules.
+- The separate **Authorization Engine** controls whether a selected module may actually be invoked. Selection is not authorization.
+- Restricted skills remain unexecuted unless explicitly authorized by the applicable policy and approval path.
+- **Critic** and **Validator** provide independent advisory assessments. Neither can authorize testing or override the Authorization Engine.
+- Changes to a local stand-in or protected local implementation require explicit human approval.
+- A change in scope or material alteration to an approved operation requires a new approval; approval does not automatically transfer to the changed operation.
+- Agent consensus, model output, a module's presence in the registry, and a successful dry run do not grant permission.
+
+### 5.3 Original tiered execution model
+
+The original discussion identifies five tiers:
+
+| Tier | Original label | Required interpretation |
+|---|---|---|
+| T0 | Observe | Observation only; no modification or active test is implied |
+| T1 | Assess | Analysis and assessment; no modification is implied |
+| T2 | Modify | Modification-capable work; requires the applicable authorization boundary |
+| T3 | High-impact | High-impact operations; explicit elevated authorization and human approval are required |
+| T4 | Prohibited | Prohibited operations; do not execute |
+
+These are the recovered tier labels and governing distinctions. The exact per-module tier assignments, approval matrix, and detailed action definitions must be taken from the original registry/source conversation when recovered; do not infer them from module names.
+
+### 5.4 M01–M42 registry recovery status
+
+The six canonical layer titles and the governance/tier rules above are now recovered and recorded. The personal-context search did not return the exact 42 module names, M01–M42 descriptions, or their individual assignments. Therefore those entries remain **source text not yet recovered**, not an invitation to reconstruct them.
+
+A prior conversation also referenced **“Director and the 42 checks”** at `src/lib/compliance/director.ts`. That is a useful retrieval lead, not proof that the current branch contains the original registry; the path was not present at that location on `agent-coordination` when checked. Search the relevant historical conversation and repository commits/branches for the original implementation before writing the module rows.
+
+When recovered, preserve exact IDs, names, layer assignments, and descriptions verbatim. Then add inputs/outputs, dependencies, permission class, execution tier, resource budget, owner, version, lifecycle, tests, and implementation mapping as separately labeled metadata. Map modules to operating modes without allowing a mode to weaken authorization.
 
 ## 6. Architecture and subsystem ownership
 
