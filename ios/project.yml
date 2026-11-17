@@ -38,14 +38,34 @@ targets:
     dependencies:
       - package: PocketLlamaEngine
         product: PocketLlamaEngine
+      - target: ApexBridge
+  ApexBridge:
+    type: framework
+    platform: iOS
+    sources:
+      - path: ../packages/director/ios/Sources/ApexBridge
+    dependencies:
+      - package: PocketLlamaEngine
+        product: PocketLlamaEngine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.apexbridge
+        PRODUCT_MODULE_NAME: ApexBridge
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: true
+        SKIP_INSTALL: true
   PocketAILabTests:
     type: bundle.unit-test
     platform: iOS
     hostApplication: PocketAILab
     sources:
       - path: PocketAILabTests
+      - path: ../packages/director/ios/Tests/ApexBridgeTests
     dependencies:
       - target: PocketAILab
+      - target: ApexBridge
       - package: PocketLlamaEngine
         product: PocketLlamaEngine
     settings:
