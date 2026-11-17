@@ -440,6 +440,35 @@ final class BridgeChallengeStoreTests: XCTestCase {
         XCTAssertFalse(consumed)
     }
 
+    func testInvalidateAllRevokesOutstandingChallenges() async throws {
+        let store = try BridgeChallengeStore()
+        let trusted = URL(string: "https://workspace.example.test")!
+        let firstRequest = UUID().uuidString
+        let secondRequest = UUID().uuidString
+        let sessionId = UUID().uuidString
+        let firstNonce = try await store.issue(
+            page: trusted, trusted: trusted,
+            requestId: firstRequest, sessionId: sessionId
+        )
+        let secondNonce = try await store.issue(
+            page: trusted, trusted: trusted,
+            requestId: secondRequest, sessionId: sessionId
+        )
+
+        await store.invalidateAll()
+
+        let firstConsumed = await store.consume(
+            firstNonce, page: trusted, trusted: trusted,
+            requestId: firstRequest, sessionId: sessionId
+        )
+        let secondConsumed = await store.consume(
+            secondNonce, page: trusted, trusted: trusted,
+            requestId: secondRequest, sessionId: sessionId
+        )
+        XCTAssertFalse(firstConsumed)
+        XCTAssertFalse(secondConsumed)
+    }
+
     func testChallengeCannotBeIssuedForUntrustedOriginOrInvalidBinding() async throws {
         let trusted = URL(string: "https://workspace.example.test")!
         let foreign = URL(string: "https://attacker.example.test")!
