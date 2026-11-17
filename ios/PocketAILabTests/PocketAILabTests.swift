@@ -33,6 +33,62 @@ final class PocketAILabTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testMultipleLocalChatConsumersShareOneAppScopedRuntimePool() async throws {
+        let root = try makeTemporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("model.gguf")
+        let modelDirectory = root.appendingPathComponent("models", isDirectory: true)
+        try validGGUFHeader().write(to: source)
+
+        let engine = FingerprintTestEngine()
+        let catalog = LocalModelCatalogStore(
+            fileURL: root.appendingPathComponent("ModelCatalog.json"),
+            modelDirectory: modelDirectory
+        )
+        let composition = NativeRuntimeComposition(
+            engine: engine,
+            availableMemoryMB: { 4_096 }
+        )
+        let first = LocalChatModel(
+            runtimeDependency: composition.dependency,
+            engine: engine,
+            modelDirectory: modelDirectory,
+            modelCatalogStore: catalog,
+            conversationStore: LocalConversationStore(
+                fileURL: root.appendingPathComponent("first-history.json")
+            ),
+            agentTaskHistoryStore: LocalAgentTaskHistoryStore(
+                fileURL: root.appendingPathComponent("first-tasks.json")
+            )
+        )
+        try await first.importModel(from: source)
+
+        let second = LocalChatModel(
+            runtimeDependency: composition.dependency,
+            engine: engine,
+            modelDirectory: modelDirectory,
+            modelCatalogStore: catalog,
+            conversationStore: LocalConversationStore(
+                fileURL: root.appendingPathComponent("second-history.json")
+            ),
+            agentTaskHistoryStore: LocalAgentTaskHistoryStore(
+                fileURL: root.appendingPathComponent("second-tasks.json")
+            )
+        )
+
+        await first.loadModel()
+        await second.loadModel()
+
+        XCTAssertTrue(first.isModelLoaded)
+        XCTAssertTrue(second.isModelLoaded)
+        XCTAssertEqual(await engine.loadCount(), 1, "Both consumers must resolve through the same ModelPool.")
+
+        await first.unloadModel()
+        await second.unloadModel()
+        XCTAssertEqual(await engine.unloadedSessionIDs(), ["fingerprint-session"])
+    }
+
     func testUnavailableProbeNeverClaimsMetalReady() {
         let probe = LlamaCppMetalBackend.probe()
         if !probe.linked { XCTAssertFalse(probe.metalDeviceUsable) }
