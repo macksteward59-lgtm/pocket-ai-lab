@@ -230,7 +230,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         case "authorizeGeneration":
             guard let requestedSession = message["sessionId"] as? String,
                   let requestId = message["requestId"] as? String,
-                  let sessionId = await ensureControllerSession(),
+                  let sessionId = await ensureControllerSession(lifecycleGeneration: requestGeneration),
                   requestedSession == sessionId,
                   let runtimeController,
                   let challengeStore,
@@ -270,7 +270,7 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                   let conversationRequestId = message["conversationRequestId"] as? String,
                   let attemptId = message["attemptId"] as? String,
                   let challengeNonce = message["challengeNonce"] as? String,
-                  let sessionId = await ensureControllerSession(),
+                  let sessionId = await ensureControllerSession(lifecycleGeneration: requestGeneration),
                   requestedSession == sessionId,
                   let frameOrigin,
                   let runtimeController else {
@@ -315,12 +315,15 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
         case "cancelGeneration":
             guard let requestedSession = message["sessionId"] as? String,
                   let requestId = message["requestId"] as? String,
-                  let sessionId = await ensureControllerSession(),
+                  let sessionId = await ensureControllerSession(lifecycleGeneration: requestGeneration),
                   requestedSession == sessionId,
                   let runtimeController else {
                 return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
             }
             let cancelled = await runtimeController.cancelGeneration(sessionId: sessionId, requestId: requestId)
+            guard isActive, lifecycleGeneration == requestGeneration else {
+                return Self.error("bridge_unavailable", id: messageID)
+            }
             return ["id": messageID, "ok": true, "data": ["cancelled": cancelled]]
 
         default:
