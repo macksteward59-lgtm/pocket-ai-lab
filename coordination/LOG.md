@@ -2899,3 +2899,11 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 - Retried job-log retrieval; GitHub returned `BlobNotFound`. The test output therefore remains unavailable, and no failure cause or success can be inferred.
 - Updated the gap audit and coordination board with this observation. No app code, PR state, workflow cancellation/rerun, merge, or trust boundary changed.
 - Separately reviewed PR #162 current head `1db0345938ac029c3742a391c51ad7027d57e3bc`: its PostgreSQL concurrency tests use a deterministic fake database adapter, and no PR-triggered workflow run surfaced for that exact commit. Existing board/audit status remains correct: exact-head CI and live ephemeral PostgreSQL integration are still required before acceptance.
+
+
+## 2026-11-17 UTC — PR #164 macOS XCTest and runner evidence passed
+
+- Re-polled exact-head run #43981080474 (`6661bf655edef85e94fa1f363fcf54a33f20233c`). macOS XCTest, `Record what this runner actually did`, and `Post Check out source` are now completed successfully.
+- GitHub still reports the job's `Complete job` step and overall workflow as `in_progress`, with no terminal conclusion. Do not mark PR #164's overall iOS workflow green until the run concludes.
+- The previous log-download `BlobNotFound` issue remains a diagnostic limitation, but the explicit XCTest step conclusion is now `success`.
+- Updated the audit, board, and log only. No source, PR state, workflow rerun/cancellation, merge, or trust-boundary change.
