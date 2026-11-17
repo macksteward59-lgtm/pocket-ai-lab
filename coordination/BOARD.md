@@ -196,3 +196,10 @@ The October 29 conversation recovery yielded the complete original M01–M42 nam
 ## Live coordination refresh — 2026-11-17
 
 The latest exact-head reconciliation is recorded in `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md`, section 21. Key deltas: PR #164, #168, and #169 have exact-head native CI success on their currently fetched heads; PR #174's current native run is pending; PR #171 has no exact-head PR-triggered run surfaced; PR #175's passing web run is on a head based on an older PR #174 commit and must be rebased/reconciled; PR #180's focused test-runner check passed, while PR #181 has no exact-head run. The audit remains documentation-only. No physical iPhone Air acceptance, WebKit end-to-end production acceptance, APEX authorization, or original M01–M42 source-body recovery is claimed.
+
+
+## Workspace native-client replacement stack — 2026-11-17
+
+| Owner | Area/files | Branch | Status | Updated (UTC) | Notes |
+|---|---|---|---|---|---|
+| ChatGPT | Rebase Workspace native chat client onto the current native dispatcher base and close the AbortSignal listener-registration race. Files: `apps/web/nativeBridge.js`, `apps/web/test/native-bridge.test.mjs`, plus the five existing Workspace shell/client files. No native dispatcher/runtime/APEX changes. | `codex/workspace-native-chat-client-rebased` | in-progress | 2026-11-17 | Draft PR [#185](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/185), head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, based on PR #174 branch head `beac6964aa4eda8d370b32ffa3ae565745b4e062`. Adds listener-before-dispatch ordering, a post-registration abort recheck, and a deterministic synchronous-`onRequest` abort regression test. Exact-head web CI has not yet surfaced. PR #175 remains open but its base is stale and it retains the cancellation race; do not merge #175. Reconcile/rebase #185 if PR #174 advances. |
