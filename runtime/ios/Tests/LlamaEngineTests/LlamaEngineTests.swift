@@ -99,6 +99,64 @@ final class LlamaEngineTests: XCTestCase {
         }
     }
 
+    func testPinnedGgufCancellationBeforeStreamConsumptionIsNotErased() async throws {
+        guard let path = SmokePath.path else {
+            throw XCTSkip("No smoke GGUF path is configured for this run.")
+        }
+        guard FileManager.default.isReadableFile(atPath: path) else {
+            if SmokePath.required {
+                XCTFail("Smoke GGUF is not readable at \\(path)")
+            }
+            throw XCTSkip("Smoke GGUF is not readable in this process.")
+        }
+
+        let probe = LlamaCppMetalBackend.probe()
+        let engine = LlamaCppMetalBackend(requireMetal: probe.metalDeviceUsable)
+        let session = try await engine.load(model: sampleModel(path: path))
+        defer { Task { await engine.unload(sessionId: session.id) } }
+
+        let cancelledRequestID = UUID().uuidString
+        let pendingStream = try await engine.generate(
+            session: session,
+            request: GenerationRequest(
+                requestId: cancelledRequestID,
+                prompt: "Generate a long continuation for cancellation testing.",
+                maxTokens: 256,
+                temperature: 0
+            )
+        )
+
+        // Cancel before attaching a stream consumer. The native task has been
+        // published, but it may not yet have entered pocket_llama_generate.
+        // Its cancellation flag must survive that later C entry point.
+        await engine.cancelAndWait(sessionId: session.id, requestId: cancelledRequestID)
+        do {
+            for try await _ in pendingStream {
+                XCTFail("A pre-consumption cancellation must not publish output.")
+            }
+            XCTFail("The cancelled stream must finish with cancellation.")
+        } catch LlamaEngineError.cancelled {
+            // Expected whether cancellation arrived before or during C decode.
+        } catch {
+            XCTFail("Expected native cancellation, received: \\(error)")
+        }
+
+        let nextStream = try await engine.generate(
+            session: session,
+            request: GenerationRequest(
+                requestId: UUID().uuidString,
+                prompt: "The capital of France is",
+                maxTokens: 8,
+                temperature: 0
+            )
+        )
+        var nextOutput = ""
+        for try await token in nextStream {
+            nextOutput += token.text
+        }
+        XCTAssertFalse(nextOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
     func testPinnedGgufSmokeGeneration() async throws {
         guard let path = SmokePath.path else {
             throw XCTSkip("No smoke GGUF path is configured for this run.")
