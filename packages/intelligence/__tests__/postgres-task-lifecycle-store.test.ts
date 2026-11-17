@@ -220,4 +220,36 @@ describe("PostgresTaskLifecycleStore", () => {
     const store = new PostgresTaskLifecycleStore(new FakePostgresDatabase(), "workspace-unloaded");
     await expect(store.save([])).rejects.toMatchObject({ code: "store_not_loaded" });
   });
+
+  it("persists a drained cancellation as terminal across coordinator restart", async () => {
+    const database = new FakePostgresDatabase();
+    const first = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, "workspace-cancelled")
+    });
+    await first.init();
+    await first.createTask(definition("cancelled-task"));
+    const claim = await first.claimNextStep("cancelled-task");
+    expect(claim).not.toBeNull();
+
+    // This tests the durable state transition itself. Worker/provider drain is
+    // enforced by EastTaskLifecycleAdapter before it calls cancelTask.
+    const cancelled = await first.cancelTask("cancelled-task");
+    expect(cancelled.status).toBe("cancelled");
+    expect(cancelled.steps[0].currentAttempt).toBeNull();
+
+    const restarted = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, "workspace-cancelled")
+    });
+    await restarted.init();
+    expect(restarted.getTask("cancelled-task")).toMatchObject({
+      status: "cancelled",
+      steps: [{ status: "cancelled", currentAttempt: null }]
+    });
+    expect(await restarted.claimNextStep("cancelled-task")).toBeNull();
+    await expect(restarted.completeStep({
+      taskId: "cancelled-task", stepId: claim!.stepId, attemptId: claim!.attemptId,
+      result: "late result after cancellation"
+    })).rejects.toMatchObject({ code: "stale_attempt" });
+  });
+
 });
