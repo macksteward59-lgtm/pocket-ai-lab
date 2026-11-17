@@ -43,7 +43,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-llamaengine-${{ github.ref }}
+  # Push and pull_request events for the same PR head share one native build slot.
+  group: ios-llamaengine-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
