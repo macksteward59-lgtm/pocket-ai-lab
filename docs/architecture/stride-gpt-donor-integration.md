@@ -66,3 +66,17 @@ Do not introduce LiteLLM, a required cloud inference path, a second model router
 ## Explicit non-decisions
 
 This note does not approve copying code, add a dependency, create an implementation branch, authorize a scan, change agent roles, change the six-layer/42-module inventory, redefine APEX or East contracts, or claim that any donor feature is production-ready in Pocket AI Lab.
+
+## D-02 prototype status — 2026-11-17
+
+Draft PR [#198](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/198) extends the existing `runtime/adapters/director/LocalProjectInspector` rather than introducing a parallel filesystem sandbox. The existing adapter already validates relative paths, resolves real paths within its workspace root, rejects symlink escapes, restricts text extensions, and bounds file/aggregate reads.
+
+The prototype adds exact excerpt presence checks, 1-based line ranges, occurrence counts, ambiguity handling, and stable unverified reasons. Its result remains an untrusted source-location check only.
+
+- Branch: `codex/stride-source-reference-verifier`
+- Base: `main` at `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`
+- Current head at handoff: `e232ab66b0698bab9b033050641b01e0deffaef1`
+- Files: `runtime/adapters/director/LocalProjectInspector.ts`, `runtime/adapters/director/LocalProjectInspector.test.ts`
+- Validation: tests have not been executed; no exact-head workflow run or combined status was surfaced when checked. Draft/unvalidated.
+
+Do not proceed to D-04 until D-02's exact-head tests and independent review are complete. No Director command schema, evidence authority, APEX/East contract, or tool permission is changed by this prototype.
