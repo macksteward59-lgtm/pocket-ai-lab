@@ -259,7 +259,10 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         let refreshedData = try XCTUnwrap(refreshedAuthorization["data"] as? [String: Any])
         let refreshedNonce = try XCTUnwrap(refreshedData["challengeNonce"] as? String)
         var refreshedGenerationBody = generationBody
-        refreshedGenerationBody["requestId"] = refreshedRequestID
+        // The authorization message used the canonical UUID spelling. The
+        // generation message deliberately uses lowercase to prove that bridge
+        // identity binding is based on the UUID value, not its textual casing.
+        refreshedGenerationBody["requestId"] = refreshedRequestID.lowercased()
         refreshedGenerationBody["attemptId"] = refreshedAttemptID
         refreshedGenerationBody["challengeNonce"] = refreshedNonce
 
@@ -271,6 +274,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(generation["ok"] as? Bool, true)
         let generationData = try XCTUnwrap(generation["data"] as? [String: Any])
         XCTAssertEqual(generationData["output"] as? String, "stub")
+        XCTAssertEqual(generationData["requestId"] as? String, refreshedRequestID)
         XCTAssertEqual(generationData["runtimeSessionId"] as? String, sessionID)
         XCTAssertEqual(generationData["authorized"] as? Bool, false)
 
