@@ -25,7 +25,7 @@ function harness(options: { leaseMs?: number; maxConcurrentSteps?: number; worke
     maxConcurrentSteps: options.maxConcurrentSteps,
     leaseMs: options.leaseMs,
     steps: [
-      { id: "inspect", description: "Inspect the current implementation", maxAttempts: 2 },
+      { id: "inspect", description: "Inspect the current implementation", maxAttempts: 2, uncertainOnExpiredLease: false },
       { id: "implement", description: "Implement the selected improvement", dependsOn: ["inspect"], maxAttempts: 2 },
       { id: "verify", description: "Verify the integrated result", dependsOn: ["implement"], maxAttempts: 1 }
     ]
@@ -296,7 +296,7 @@ describe("TaskLifecycleCoordinator", () => {
       taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "foreign completion"
     })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
     await expect(foreign.failStep({
-      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, error: "foreign failure"
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, error: "foreign failure", outcome: "definitive"
     })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
 
     const completed = await h.coordinator.completeStep({
@@ -399,7 +399,7 @@ describe("TaskLifecycleCoordinator", () => {
       await coordinator.createTask({
         id, objective: "Recover one task without disturbing another",
         leaseMs: 1_000,
-        steps: [{ id: "work", description: "Work", maxAttempts: 2 }]
+        steps: [{ id: "work", description: "Work", maxAttempts: 2, uncertainOnExpiredLease: false }]
       });
       await coordinator.claimNextStep(id);
     }
@@ -492,7 +492,7 @@ describe("TaskLifecycleCoordinator", () => {
     await coordinator.init();
     await coordinator.createTask({
       id: "retry-restore", objective: "Restore a retryable failure",
-      steps: [{ id: "one", description: "One step", maxAttempts: 2 }]
+      steps: [{ id: "one", description: "One step", maxAttempts: 2, uncertainOnExpiredLease: false }]
     });
     const claim = await coordinator.claimNextStep("retry-restore");
     await coordinator.failStep({
@@ -574,7 +574,7 @@ describe("TaskLifecycleCoordinator", () => {
     await coordinator.init();
     await coordinator.createTask({
       id: "invalid-pending-budget", objective: "Reject exhausted pending work",
-      steps: [{ id: "one", description: "One step", maxAttempts: 2 }]
+      steps: [{ id: "one", description: "One step", maxAttempts: 2, uncertainOnExpiredLease: false }]
     });
 
     const exhausted = store.load();
@@ -693,6 +693,57 @@ describe("TaskLifecycleCoordinator", () => {
     resultStore.save(resultSnapshot);
     await expect(new TaskLifecycleCoordinator({ store: resultStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
+  });
+
+
+  it("keeps an unknown provider outcome uncertain even when the step has retry budget", async () => {
+    const h = harness({ leaseMs: 1_000 });
+    await h.coordinator.init();
+    await h.create();
+    const claim = await h.coordinator.claimNextStep("task-1");
+    const failed = await h.coordinator.failStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
+      error: "Connection dropped after dispatch", outcome: "unknown", retryable: true
+    });
+    expect(failed.steps[0]).toMatchObject({ status: "failed", uncertain: true, currentAttempt: null });
+    expect(failed.steps[0].lastError).toContain("operator reconciliation required");
+    expect(await h.coordinator.claimNextStep("task-1")).toBeNull();
+  });
+
+  it("does not erase a live sibling lease when another parallel step fails", async () => {
+    const h = harness({ maxConcurrentSteps: 2 });
+    await h.coordinator.init();
+    await h.coordinator.createTask({
+      id: "parallel-failure", objective: "Preserve active work until its owner settles",
+      maxConcurrentSteps: 2,
+      steps: [
+        { id: "first", description: "First independent step", maxAttempts: 1 },
+        { id: "second", description: "Second independent step", maxAttempts: 1 },
+        { id: "join", description: "Join results", dependsOn: ["first", "second"] }
+      ]
+    });
+    const [first, second] = await Promise.all([
+      h.coordinator.claimNextStep("parallel-failure"),
+      h.coordinator.claimNextStep("parallel-failure")
+    ]);
+    const afterFailure = await h.coordinator.failStep({
+      taskId: "parallel-failure", stepId: first!.stepId, attemptId: first!.attemptId,
+      error: "Definitive local failure", outcome: "definitive", retryable: false
+    });
+    expect(afterFailure.status).toBe("running");
+    expect(afterFailure.steps.find(step => step.id === "second")).toMatchObject({
+      status: "running", currentAttempt: { id: second!.attemptId }
+    });
+    expect(await h.coordinator.claimNextStep("parallel-failure")).toBeNull();
+
+    const settled = await h.coordinator.completeStep({
+      taskId: "parallel-failure", stepId: second!.stepId, attemptId: second!.attemptId,
+      result: "Sibling settled after first failure"
+    });
+    expect(settled.status).toBe("failed");
+    expect(settled.steps.find(step => step.id === "second")?.status).toBe("succeeded");
+    expect(settled.steps.find(step => step.id === "join")?.status).toBe("cancelled");
+    expect(settled.steps.some(step => step.currentAttempt !== null)).toBe(false);
   });
 
   it("rejects unknown and duplicate dependencies and out-of-range controls", async () => {
