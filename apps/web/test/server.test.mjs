@@ -119,6 +119,22 @@ test("static app shell is served", async () => withServer(async url => {
   assert.equal(html.includes('id="model"'), false);
 }));
 
+test("the optional iOS native bridge is served before the app controller and cached offline", async () => withServer(async url => {
+  const shell = await fetch(url + "/");
+  const html = await shell.text();
+  assert.equal(shell.status, 200);
+  assert.ok(html.indexOf("/nativeBridge.js") >= 0);
+  assert.ok(html.indexOf("/nativeBridge.js") < html.indexOf("/app.js"));
+
+  const bridge = await fetch(url + "/nativeBridge.js");
+  assert.equal(bridge.status, 200);
+  assert.match(bridge.headers.get("content-type") || "", /javascript/);
+  assert.match(await bridge.text(), /authorizeGeneration/);
+
+  const worker = await fetch(url + "/sw.js");
+  assert.match(await worker.text(), /"\/nativeBridge.js"/);
+}));
+
 test("chat uses the llama.cpp provider and does not send an API key", async () => withServer(async url => {
   const original = globalThis.fetch;
   let captured;
