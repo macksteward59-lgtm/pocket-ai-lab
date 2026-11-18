@@ -629,6 +629,15 @@ public actor RuntimeController {
             + retiredGenerationRequests.values.reduce(0) { $0 + $1.count }
         // Fail closed: never acknowledge cancellation that cannot be retained.
         guard alreadyTracked || count < maximumTrackedGenerationRequests else { return false }
+
+        // Transfer an existing reservation instead of counting the same identity
+        // in both sets. Actor isolation keeps this transition atomic with reserve.
+        if alreadyTracked {
+            authorizedGenerationRequests[sessionId]?.remove(requestId)
+            if authorizedGenerationRequests[sessionId]?.isEmpty == true {
+                authorizedGenerationRequests.removeValue(forKey: sessionId)
+            }
+        }
         retiredGenerationRequests[sessionId, default: []].insert(requestId)
         return true
     }
