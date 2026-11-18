@@ -29,6 +29,8 @@ on:
     branches:
       - main
       - ios/private-iphone-test-hybrid
+      # Keep the refreshed cancellation/drain integration branch under native XCTest CI.
+      - codex/integration-cancellation-drain-197-195-refresh
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
