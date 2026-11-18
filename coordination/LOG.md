@@ -3881,3 +3881,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Source basis: PR #187 current TaskLifecycleCoordinator and PostgresTaskLifecycleStore. Current code confirms failStep uncertainty is coupled to uncertainOnExpiredLease; recoverExpiredLeases can requeue without supervisor settlement; refreshTaskStatus invalidates live sibling attempts; cancelTask clears running attempts before external settlement. Postgres store strictly accepts schema v1 and has no migration path. These findings were already documented in PR #187 conversation; no duplicate comments were posted.
 - Exact-head PR #203 workflow #44373747684 advanced through native app build and is currently running iOS simulator XCTest. PR #197 new-head workflow #44375389228 was cancelled during native app build; prior green result is stale for that head.
 - Updated coordination BOARD in commit `5aa0137c12429a059d5dedfe8c0a8a2953245df8`. No application source/schema changed, no PR merged/closed, and no authority or branch protection changed. Simulator CI is not physical-device acceptance.
+
+
+## 2026-11-18 — PR #198 source-reference diff review
+
+- Inspected the complete PR #198 patch. It adds exact excerpt matching, line-range checks, duplicate/ambiguous-match handling, input/path/type validation, and corresponding tests. Its own documentation correctly limits the outcome to source presence.
+- Confirmed the patch does not wire `verifySourceReference()` into the shared `ProjectInspector` interface, DirectorCommandRouter, or command schema; no end-to-end D-04 reference binding is established.
+- Confirmed its reader still uses `realpath` → `stat` → `readFile`, retaining the parent-directory TOCTOU gap and whole-file buffering before the byte-length check. PR #200's bounded descriptor reader is not part of #198's diff, and #200 itself still lacks pinned-root/component-relative confinement.
+- Posted the review finding to issue #202 (comment ID 6989309833). PR #198 remains unmerged; D-04 integration remains blocked pending the host containment decision, implementation, and independent review.
+- Updated `coordination/STRIDE-D02-CAPABILITY-DESIGN.md` section 13.1.3. No application code changed, no PR merged, and no APEX/East/Evidence/BridgeGate/runtime authority changed.
