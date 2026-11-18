@@ -804,3 +804,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Added the readiness document to the PostgreSQL integration workflow path filter.
 - Exact-head PostgreSQL 16 run `44402327930` passed; its job log contains both worker-ownership and legacy expiry-policy migration success messages. Exact-head general CI `44402327972` passed including type-check/build and full tests.
 - Independent review and the stacked #204 dependency remain outstanding. No merge.
+
+
+## 2026-11-18 — PR #212 expanded cancel-all fan-out coverage
+
+- Current PR head `402495492793a4aea857c58ef15681c2a448c399` adds an assertion that cancel-all returns 0 for a request already retired/owned by unload while still waiting for that captured task's drain. This makes the distinction between newly retired request identities and already-unloading work explicit.
+- Exact-head general CI push run `44402478883` passed syntax, type-check/build, and tests.
+- Exact-head native pull_request run `44402486542` is in progress on macOS Intel. Runner setup, Xcode detection, build tools, and pinned llama.cpp cache restore passed; pinned llama.cpp build is active. XCTest has not started.
+- A second exact-head native push run `44402478874` is queued. Earlier native runs were cancelled as the branch advanced; they are not passes.
+- PR remains draft/unmerged pending native XCTest completion and independent review.
