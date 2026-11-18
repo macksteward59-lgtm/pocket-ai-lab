@@ -3756,3 +3756,10 @@ Disposition:
 - PR #200 now links issue #202 and remains draft/unmerged. Exact-head Intelligence CI run #44369945652 remains green for head `947c1ac289f70779e336fde6dd9e6c687f191a07`.
 - Security review status remains unchanged: no independent PR review has been submitted. The issue requires a decision on directory-relative no-follow primitives, workspace identity pinning, adversarial replacement tests, and documented residual limitations.
 - No source code or authorization boundary changed in this checkpoint. PR #198/#200 remain unmerged; D-02 acceptance and D-04 remain blocked.
+
+## 2026-11-18 — PR #200 filesystem threat-model review finding
+
+- Inspected PR #200's full diff and exact-head CI job details. The `intelligence` job completed successfully: dependency install/advisory reporting, syntax check, TypeScript build/type-check, and tests all passed. No submitted reviews or inline threads were present at the time of inspection.
+- Posted a security review gate as PR #200 conversation comment [#6988170021](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/200#issuecomment-6988170021): `realpath(candidate)` followed by `open(actual, O_NOFOLLOW)` does not pin parent directory components. A concurrent actor able to rename/replace a parent directory may race the canonical-path check. Existing tests cover file growth and final-component symlink handling, not parent-directory replacement.
+- This is a concrete TOCTOU threat-model gap requiring independent review. It is not a blanket assertion of exploitability. Resolve by descriptor-relative/root-confined traversal with explicit platform support and regression coverage, or explicitly enforce a trusted non-concurrently-mutable workspace assumption at the capability boundary. Rechecking path strings immediately before open does not close the race.
+- PR #200 remains open/unmerged, without independent approval. PR #198 remains open/unmerged; integration is blocked until this security gate and the feature/remediation stack are reconciled. No code, authority, or branch-protection changes made.
