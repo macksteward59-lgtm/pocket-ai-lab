@@ -3,6 +3,8 @@ import WebKit
 import ApexBridge
 
 struct WorkspaceView: View {
+    let runtimeDependency: LocalChatRuntimeDependency
+
     @AppStorage("workspaceURL") private var workspaceURL = ""
     @State private var address = ""
     @State private var loadURL: URL?
@@ -20,8 +22,11 @@ struct WorkspaceView: View {
                     Button("Open", action: openWorkspace).buttonStyle(.borderedProminent)
                 }.padding(.horizontal)
                 Text(validationMessage).font(.caption).foregroundStyle(.secondary).padding(.horizontal)
+                Text(workspaceRuntimeStatus)
+                    .font(.caption2).foregroundStyle(.secondary).padding(.horizontal)
                 if let loadURL {
-                    PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID)
+                    PrivateWorkspaceWebView(url: loadURL, requestID: loadRequestID, runtimeDependency: runtimeDependency)
+                        .id(loadRequestID)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     VStack(spacing: 10) {
@@ -41,6 +46,17 @@ struct WorkspaceView: View {
                 address = workspaceURL
                 openWorkspace()
             }
+        }
+    }
+
+    private var workspaceRuntimeStatus: String {
+        switch runtimeDependency {
+        case .shared:
+            return "Connected to the app-scoped native runtime. Generation stays disabled until the exact Local AI session passes readiness and receives a one-use host challenge. Generated output remains an unsigned evidence candidate, not authorization."
+        case .unavailable:
+            return "Native runtime unavailable. Workspace commands are disabled."
+        case .createForTesting:
+            return "No app-scoped runtime dependency. Workspace commands are disabled."
         }
     }
 
@@ -95,14 +111,20 @@ func isAllowedWorkspaceURL(_ url: URL) -> Bool {
 struct PrivateWorkspaceWebView: UIViewRepresentable {
     let url: URL
     let requestID: UUID
+    let runtimeDependency: LocalChatRuntimeDependency
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(trustedURL: url)
+        Coordinator(trustedURL: url, runtimeDependency: runtimeDependency)
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
+        config.userContentController.addScriptMessageHandler(
+            context.coordinator,
+            contentWorld: .page,
+            name: WorkspaceBridgeDispatcher.messageHandlerName
+        )
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         _ = context.coordinator.shouldLoad(requestID)
@@ -117,18 +139,54 @@ struct PrivateWorkspaceWebView: UIViewRepresentable {
         webView.load(URLRequest(url: url))
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate {
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        webView.configuration.userContentController.removeScriptMessageHandler(
+            forName: WorkspaceBridgeDispatcher.messageHandlerName,
+            contentWorld: .page
+        )
+        coordinator.invalidate()
+        webView.navigationDelegate = nil
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandlerWithReply {
         private let trustedURL: URL
+        private let dispatcher: WorkspaceBridgeDispatcher
         private(set) var lastRequestID: UUID?
 
-        init(trustedURL: URL) {
+        init(trustedURL: URL, runtimeDependency: LocalChatRuntimeDependency) {
             self.trustedURL = trustedURL
+            self.dispatcher = WorkspaceBridgeDispatcher(trustedURL: trustedURL, runtimeDependency: runtimeDependency)
+        }
+
+        func invalidate() {
+            dispatcher.invalidate()
+        }
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage,
+            replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void
+        ) {
+            dispatcher.userContentController(
+                userContentController,
+                didReceive: message,
+                replyHandler: replyHandler
+            )
         }
 
         func shouldLoad(_ requestID: UUID) -> Bool {
             guard lastRequestID != requestID else { return false }
             lastRequestID = requestID
             return true
+        }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            // Raise the lifecycle barrier synchronously in WebKit's callback.
+            // Cleanup may suspend, but the new document cannot authorize work
+            // while that cleanup is pending.
+            guard let navigationGeneration = dispatcher.beginNavigation() else { return }
+            Task { await dispatcher.finishNavigation(navigationGeneration) }
         }
 
         func webView(

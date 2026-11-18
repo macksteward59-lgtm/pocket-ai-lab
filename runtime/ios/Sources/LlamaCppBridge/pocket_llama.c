@@ -70,6 +70,7 @@ int pocket_llama_inspect_gguf(
     return POCKET_LLAMA_ERR_NOT_LINKED;
 }
 
+void pocket_llama_reset_cancel(pocket_llama * engine) { (void) engine; }
 void pocket_llama_request_cancel(pocket_llama * engine) { (void) engine; }
 void pocket_llama_offload(const pocket_llama * engine, int * requested, int * layers, int * total) {
     (void) engine;
@@ -462,6 +463,11 @@ cleanup:
     return result;
 }
 
+void pocket_llama_reset_cancel(pocket_llama * engine) {
+    if (!engine) return;
+    atomic_store(&engine->cancel, 0);
+}
+
 void pocket_llama_request_cancel(pocket_llama * engine) {
     if (!engine) return;
     atomic_store(&engine->cancel, 1);
@@ -550,7 +556,6 @@ int pocket_llama_generate(
     }
 
     pthread_mutex_lock(&engine->mu);
-    atomic_store(&engine->cancel, 0);
 
     const struct llama_vocab * vocab = llama_model_get_vocab(engine->model);
     if (!vocab) {

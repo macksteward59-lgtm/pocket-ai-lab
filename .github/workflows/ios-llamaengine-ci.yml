@@ -9,10 +9,14 @@ on:
       - codex/bridge-native-runtime-integration
       # Allow the next stacked runtime-challenge PR to receive native Swift/XCTest CI.
       - codex/bridgegate-host-approval-hardening-ci
-      # Keep the app-scoped runtime PR eligible after its base branch advances.
+      # Keep the runtime challenge base branch eligible after its CI-only advance.
       - codex/runtime-challenge-enforcement
       # Allow the WebKit dispatcher follow-on to run native Swift/XCTest CI.
       - codex/app-scoped-runtime-composition
+      # Allow test-only follow-ons stacked on the WebKit dispatcher to run native Swift/XCTest CI.
+      - codex/webkit-readonly-dispatcher-rebased
+      # Allow request-scoped native cancellation follow-ons to run Swift/XCTest CI.
+      - codex/runtime-request-attempt-registry
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
@@ -38,6 +42,8 @@ permissions:
   contents: read
 
 concurrency:
+  # Keep push and pull_request event refs independent; otherwise the paired
+  # events for one PR update can cancel each other's native validation run.
   group: ios-llamaengine-${{ github.ref }}
   cancel-in-progress: true
 
