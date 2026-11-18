@@ -3858,3 +3858,9 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Confirmed both new-definition and legacy-record fallback for missing expiry policy are conservative (`uncertainOnExpiredLease: true`); all seven autonomy-test failStep calls include explicit `definitive` or `unknown` classification.
 - Exact-head workflow lookup remains empty and commit combined status has no checks. No tests executed locally. Compile/typecheck, including any other consumers of the changed failStep input, remains unverified.
 - PR remains draft/open/unmerged. No default-branch change, merge, authority change, or branch-protection change.
+
+
+## 2026-11-18 — PR #203 / #204 validation poll
+
+- PR #203 workflow #44373747684 passed Director bridge manifest validation and native Pocket AI Lab app build; native app XCTest is now in progress. Simulator XCTest and remaining smoke/evidence steps have not completed.
+- PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` remains open/draft/unmerged with no workflow runs and no combined status checks at poll time. No local tests executed. Its changes remain unvalidated pending CI/typecheck.
