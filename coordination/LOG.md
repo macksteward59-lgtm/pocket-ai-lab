@@ -4156,3 +4156,10 @@ Accessible history this run: current conversation instructions and recent projec
 - Verified exact-head general CI run `44399801682`: the `intelligence` job completed successfully through syntax check, type-check/build, and tests on `244a728330f06c8294328d58115ac6b0f55602fc`.
 - Exact-head native iOS run `44399814043` completed as `startup_failure` with zero jobs; no XCTest ran. General CI success is not a substitute for native XCTest.
 - PR #212 remains open/draft/unmerged, 7 commits ahead of its merged base with only the two intended Swift source/test files changed. No source change or merge.
+
+
+## 2026-11-18 — PR #212 two-phase cancel-all follow-up claimed
+
+- Reconciled `agent-coordination` at `088945fbcd30d3d34ab01e9f92ec959a209e6def` and rechecked PR #212 branch `codex/fix-cancelall-unload-drain-20261118` at `75fd1626ba5535351039113ccb4ed0f1e1f7e0c9`. The branch's intervening commit only adds the branch to the iOS workflow's push trigger; exact-head native run `44400986303` is pending.
+- Source review found a separate fan-out ordering gap: `cancelAllGenerations()` awaits `cancelGeneration()` within its loop, while `cancelGeneration()` awaits the native drain. A slow first generation can therefore delay cancellation of other captured requests. Implement the operation in two phases: atomically retire/cancel all eligible exact task handles first, then await every captured task. Do not release any model lease or inference use-pin early.
+- Claimed only `RuntimeController.swift` and `ApexBridgeTests.swift` on the existing PR #212 feature branch. Add deterministic coverage with two concurrent generations and independently held native drain gates. No APEX/Evidence/BridgeGate/attestation/authorization change; no merge or approval.
