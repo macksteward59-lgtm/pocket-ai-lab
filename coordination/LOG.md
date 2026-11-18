@@ -4133,3 +4133,12 @@ Accessible history this run: current conversation instructions and recent projec
 - Replaced the scheduler-dependent `Task.sleep(50ms)` in PR #212 with an explicit checked-continuation handshake. The internal observer is unset by default, is signaled after cancel-all handles the captured attempt and immediately before awaiting its task, and is cleared by the test after drain completes.
 - New exact PR head `244a728330f06c8294328d58115ac6b0f55602fc`; PR remains draft/unmerged. Posted PR comment `6991900777` describing the change. The GitHub workflow lookup has not yet surfaced a run for this new head, so exact-head CI and native XCTest remain pending and no pass is claimed.
 - No merge, trust/authority change, physical-device acceptance, or production cancellation acceptance.
+
+
+## 2026-11-18 — PR #212 CI queue refresh and duplicate-branch correction
+
+- Exact PR #212 head remains `244a728330f06c8294328d58115ac6b0f55602fc`. Workflow run `44399814043` is queued; jobs endpoint currently returns no jobs. The prior cancelled job is not a validation result. No exact-head native XCTest/general CI pass is claimed.
+- PR #212 review listing contains only COMMENTED reviews from the repository owner account; do not represent these as independent approval.
+- PR #201 is closed unmerged because its changed-file blob SHAs are identical to PR #200's implementation. PR #200 remains the sole retained review path for this bounded-read work and still has unresolved parent-directory replacement exposure.
+- Issue #202 remains open; supported OS matrix and root-pinned host helper vs enforced immutable snapshot decision are not selected. Design document remains proposal only.
+- No merge, authority change, physical-device acceptance, or D-02/D-04 acceptance.
