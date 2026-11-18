@@ -70,3 +70,22 @@ The reference ID is a content-addressed lookup key, not a signature, attestation
 ## 8. Gate
 
 This document is a design proposal, not approval to change shared interfaces. Keep PR #198 limited to the adapter-level verifier pending independent review. Do not start D-04 until the Director entry point, content-bound identity, task/workspace scoping, stale-reference behavior, and independent review of D-02 are accepted. No APEX/East/Evidence trust contract is changed by this proposal.
+
+
+## 9. East task identity and persistence trace — 2026-11-18
+
+A read-only trace of the current default-branch implementations establishes the following:
+
+- `DirectorCommandRouter` already requires `DirectorCommandContext.taskId` for dispatch and uses it for task-bound mutations such as memory changes, tool activation/retirement, and device actions.
+- The current `analyze-project` command dispatches only the command object to `DirectorCapabilities.analyzeProject`. The `taskId` is not forwarded to that capability or to `ProjectInspector.inspect`. A Director-facing source-verification entry point therefore needs explicit task-context propagation; it must not infer task identity from model output.
+- `src/east/platform.ts` creates task IDs through `createAgentTask` and stores `EastTaskRecord` values in a process-local `Map<string, EastTaskRecord>`. `getTask(taskId)` returns a defensive snapshot. The current task record includes objective, assignments, synthesis, evidenceRefs, evidenceGate, apexDecision, and `authorized: false`; it has no source-reference catalog or general artifact-store port.
+- East's current `commitTaskEvidence` path writes matching deliberation text to `MemoryManager` as episodic memory with `verified: false` and sourceRefs copied from existing deliberation references. This is not a source-reference artifact API, and it must not be repurposed to persist verified source-reference records or imply verification/authorization.
+- The inspected East platform runtime itself is in-memory. The inspected interface exposes no general durable artifact store. Other task-lifecycle/PostgreSQL work exists elsewhere in the repository, but no source-reference artifact contract was established by this trace; do not assume it is interchangeable with this East runtime or add a second store.
+
+### Design consequence
+
+The smallest safe first integration is a task-context-aware Director capability plus a host-owned, immutable, task-scoped catalog whose lifecycle is explicit. The task ID must come from the existing trusted Director dispatch context. The host adapter must own workspace identity and source snapshot reads. Model proposals cannot choose task IDs, workspace IDs, reference IDs, or persistence scope.
+
+For the initial integration, treat the catalog as ephemeral and process-local unless a separately reviewed, existing durable artifact contract is identified and explicitly adopted. Do not write source-reference records through `MemoryManager` or overload `EastTaskRecord.evidenceRefs`: those fields have existing deliberation/evidence semantics. If later persistence is required, define a narrow artifact interface and restart/revalidation behavior in a separate design review before implementation.
+
+This trace does not approve shared-interface changes. It narrows the open design decision: task identity is already available at the Director router, but the current project-analysis path drops it; current East task storage is in-memory and has no source-reference artifact store. D-04 remains blocked until the capability contract, task/workspace scoping, catalog lifecycle, and independent D-02 review are accepted.
