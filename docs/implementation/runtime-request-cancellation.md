@@ -46,7 +46,7 @@ When the session is active and the request ID is a valid UUID, the controller ca
 
 The matching generation fails with cancellation before preparation, challenge consumption, or inference. If the tombstone cannot be recorded, cancellation is not confirmed.
 
-### Cancellation after completion
+### Cancellation after attempt settlement
 
 A dispatched generation attempt is retired when its request task settles, whether it succeeds or fails during preparation, challenge validation, or inference. The controller retains a bounded finished-attempt marker for up to 30 seconds (maximum 512 entries). A late cancellation returns false while that marker remains. This prevents a settled request from being reported as cancelled merely because its caller has not yet processed the result. A fresh attempt after an authorization failure must use a new requestId and a new attemptId; the consumed or invalidated request identity is never replayed. A cancellation delivered before generation registration is likewise retired when its one-use tombstone is consumed.
 
