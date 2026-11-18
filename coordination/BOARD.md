@@ -597,3 +597,14 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #204 does not solve the separate cancellation ordering issue: `cancelTask()` still clears live attempts immediately. It also does not add a durable external-execution supervisor, provider/e3 correlation, restart reconciliation, schema-v2 migration, or production e3 wiring. Keep these gates open; do not merge #204 as complete production cancellation/recovery.
 - PR #203 exact-head workflow #44373747684 has progressed past iOS simulator XCTest and is now running XCTest on macOS; final workflow result and subsequent evidence steps remain pending.
 - This continuation changed coordination documentation only. No application code/schema changed, no PR merged/closed, and no authority or branch protection changed.
+
+
+## 2026-11-18 — D-02 / native CI coordination poll
+
+- PR #198 source-reference diff review is recorded in design section 13.1.3 and issue #202 comment `6989309833`. #198 remains open/unmerged; its excerpt verifier still uses the path-based whole-file reader and is not wired into the Director command/interface or D-04.
+- PR #200 remains open/draft/unmerged. Its bounded descriptor read does not pin the root or prevent intermediate parent-directory replacement. Issue #202 remains open with no owner decision or independent reviewer response.
+- PR #201 is closed unmerged; do not use its historical green run as current acceptance evidence.
+- PR #197 exact head `87b88af77339491bcbd32d25e52edf911ac1b5f2` has iOS LlamaEngine run #44378631020 in progress at native app generation/build; app XCTest, simulator XCTest, GGUF smoke and macOS XCTest remain pending.
+- PR #203 exact head `6b71ff6da2b8fe6970042884a48dedf8a78694d3` has run #44373747684 in progress at macOS XCTest; prior steps have advanced, but the workflow has not completed.
+- PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` has no PR-triggered workflow run returned by the current exact-head lookup. Its CI/typecheck remains unverified.
+- No merge, approval, application-code change, D-02 acceptance, D-04 binding, or authority/branch-protection change occurred. iOS simulator/macOS CI is not physical iPhone acceptance.
