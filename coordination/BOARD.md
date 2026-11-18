@@ -748,3 +748,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #197's post-merge UUID-casing review note is already covered in the merged source: RuntimeController canonicalizes request UUIDs before registry use, BridgeChallengeStore canonicalizes request/session UUIDs, and `testRequestIdentityReservationCanonicalizesUUIDCase` plus `testChallengeBindingCanonicalizesRequestAndSessionUUIDCase` prove the collision/replay behavior. No duplicate patch is warranted.
 - PR #200 and issue #202 remain blocked: the root/parent-component replacement race is unresolved, and issue #202 has no accepted host-containment/platform decision or independent review response. Keep #198/#200 unmerged; no D-02/D-04 acceptance.
 - No merge, authority change, physical-device acceptance, production e3 cancellation, or production RLS/deployment claim in this checkpoint.
+
+
+## 2026-11-18 — PR #212 deterministic cancel-all regression
+
+- PR #212 current head: `244a728330f06c8294328d58115ac6b0f55602fc`, still open/draft/unmerged; base remains merged PR #197 head `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`.
+- Replaced the test's fixed 50 ms sleep with a checked-continuation handshake. An internal, nil-by-default test observer fires after cancel-all has processed the captured attempt and immediately before awaiting task settlement. The test waits for this exact point, asserts the barrier is still blocked while native drain is held, releases drain, then clears the observer.
+- PR #212 comment `6991900777` records the revision. Exact-head CI/native XCTest is not yet visible for `244a728...`; no test pass is claimed.
+- No merge or authority change. Physical-device acceptance remains separate.
