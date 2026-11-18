@@ -1,10 +1,54 @@
 const $ = (id) => document.getElementById(id);
-const state = { model: "model not connected", busy: false };
+const state = { model: "model not connected", busy: false, abortController: null, activeNativeRequest: null };
 const views = ["chat","agents","memory","activity","settings"];
 function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
-function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
-async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
+function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":label;}
+async function health(){
+ const bridge=window.PocketAILabNativeBridge;
+ if(bridge&&bridge.isAvailable()){
+  try{
+   const [status,catalog]=await Promise.all([bridge.getRuntimeStatus(),bridge.listModels()]);
+   const models=Array.isArray(catalog.models)?catalog.models:[];
+   const selected=models.find(model=>model&&model.selected===true);
+   const sessions=Array.isArray(status.activeLocalSessions)?status.activeLocalSessions:[];
+   const active=selected&&sessions.find(session=>session&&session.modelId===selected.id);
+   const controllerSessions=Array.isArray(status.controllerSessions)?status.controllerSessions:[];
+   const controllerSession=active&&controllerSessions.find(session=>
+    session&&session.modelId===selected.id&&session.sessionId===active.sessionId
+   );
+   const nativeReady=status.runtimeAvailable===true&&!!active&&
+    !!controllerSession&&controllerSession.canGenerate===true&&
+    controllerSession.sharedLocalLeaseActive===true;
+   const hint=document.querySelector(".privacy-hint");
+   if(selected)state.model=selected.name||selected.id;
+   if(nativeReady){
+    setConnection(true,"iPhone native model ready");
+    if(hint)hint.textContent="◉ Prompts are processed by this iPhone's native runtime";
+   }else{
+    const statusLabel=!status.runtimeAvailable
+     ?"iPhone native runtime unavailable"
+     :!selected
+      ?"Select a model in Local AI"
+      :!active
+       ?"Load the selected model in Local AI"
+       :"Native session not ready for Workspace";
+    setConnection(false,statusLabel);
+    if(hint)hint.textContent=active
+     ?"◉ The selected model is loaded, but Workspace has not verified a ready native controller session"
+     :"◉ Open Local AI and load the selected model to enable native Workspace chat";
+   }
+  }catch(error){
+   setConnection(false,"iPhone native runtime unavailable");
+   const hint=document.querySelector(".privacy-hint");
+   if(hint)hint.textContent="◉ Native runtime status could not be verified";
+  }
+  return;
+ }
+ try{
+  const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}
+ }catch{setConnection(false,"Server unavailable");}
+}
 let agentController=null;
 async function checkAgentHealth(){
  const status=$("agent-status");
@@ -64,13 +108,47 @@ $("agent-form").addEventListener("submit",async event=>{
 });
 $("agent-stop").addEventListener("click",()=>agentController?.abort());
 
-async function sendMessage(text){if(!text.trim()||state.busy)return; $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";state.busy=true;$("send").disabled=true;const output=appendMessage("assistant","Connecting to your configured model…");try{const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");output.textContent=data.reply||"The model returned an empty response."; }catch(error){output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";}finally{state.busy=false;$("send").disabled=false;health();}}
+async function sendMessage(text){
+ if(!text.trim()||state.busy)return;
+ $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";
+ state.busy=true;$("send").disabled=true;
+ const output=appendMessage("assistant","Connecting to your configured model…");
+ const bridge=window.PocketAILabNativeBridge;
+ const nativeAvailable=!!(bridge&&bridge.isAvailable());
+ try{
+  if(nativeAvailable){
+   output.textContent="Checking the iPhone's native model readiness…";
+   state.abortController=new AbortController();
+   $("stop").classList.remove("hidden");
+   const record=await bridge.generate(text,{
+    maxTokens:256,
+    temperature:0.7,
+    signal:state.abortController.signal,
+    onRequest:request=>{state.activeNativeRequest=request;}
+   });
+   output.textContent=record.output||"The native model returned an empty response.";
+  }else{
+   const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});
+   const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");
+   output.textContent=data.reply||"The model returned an empty response.";
+  }
+ }catch(error){
+  if(nativeAvailable){
+   output.textContent=error.code==="generation_cancelled"
+    ?"Generation cancelled. The native runtime completed its cancellation and drain."
+    :"The iPhone native runtime could not complete this request. No server fallback was attempted. "+error.message;
+  }else{
+   output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";
+  }
+ }finally{state.busy=false;state.abortController=null;state.activeNativeRequest=null;$("stop").classList.add("hidden");$("send").disabled=false;health();}
+}
+$("stop").addEventListener("click",()=>state.abortController?.abort());
 $("composer").addEventListener("submit",e=>{e.preventDefault();sendMessage($("prompt").value);});
 $("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("composer").requestSubmit();}});
 document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $("settings-shortcut").addEventListener("click",()=>setView("settings"));
-$("new-chat").addEventListener("click",()=>{$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
+$("new-chat").addEventListener("click",()=>{state.abortController?.abort();$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
 $("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
 $("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
 $("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});

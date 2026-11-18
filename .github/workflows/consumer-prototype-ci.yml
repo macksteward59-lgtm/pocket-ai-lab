@@ -1,7 +1,7 @@
 name: Consumer prototype CI
 on:
   push:
-    branches: [main, "codex/consumer-prototype-foundation"]
+    branches: [main, "codex/consumer-prototype-foundation", "codex/**"]
   pull_request:
     branches: [main]
 jobs:
