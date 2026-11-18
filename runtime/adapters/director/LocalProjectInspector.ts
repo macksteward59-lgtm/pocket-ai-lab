@@ -115,16 +115,29 @@ export class LocalProjectInspector implements ProjectInspector {
 
     const content = loaded.content.replace(/\r\n?/g, "\n");
     const exactQuote = quote.replace(/\r\n?/g, "\n");
+    const lineStarts = [0];
+    for (let index = 0; index < content.length; index += 1) {
+      if (content[index] === "\n") lineStarts.push(index + 1);
+    }
+    const lineForOffset = (target: number): number => {
+      let low = 0;
+      let high = lineStarts.length;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (lineStarts[middle] <= target) low = middle + 1;
+        else high = middle;
+      }
+      return low;
+    };
     const occurrences: Array<{ startLine: number; endLine: number }> = [];
     let offset = 0;
     while (offset <= content.length - exactQuote.length) {
       const found = content.indexOf(exactQuote, offset);
       if (found < 0) break;
-      const before = content.slice(0, found);
-      const through = content.slice(found, found + exactQuote.length);
-      const startLine = before.split("\n").length;
-      const endLine = startLine + (through.match(/\n/g)?.length ?? 0);
-      occurrences.push({ startLine, endLine });
+      occurrences.push({
+        startLine: lineForOffset(found),
+        endLine: lineForOffset(found + exactQuote.length - 1)
+      });
       offset = found + 1;
     }
     if (!occurrences.length) {
