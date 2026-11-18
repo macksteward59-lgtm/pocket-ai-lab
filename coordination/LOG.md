@@ -4076,3 +4076,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Explicit boundary: this is not provider cancellation, does not prove a native request stopped, and does not infer settlement from process exit. The host must still invoke the provider's cancellation contract and await drain before releasing model/session resources. Unknown outcomes remain uncertain and terminal.
 - Exclusions: no e3 platform schema/API, provider implementation, APEX authority, Evidence signing, BridgeGate, RLS, attestation, or authorization changes. No production persistence or physical-device claim.
 - This commit records ownership only; no cancellation implementation has been changed.
+
+
+## 2026-11-18 — East cancellation persistence review and PostgreSQL coverage extension
+
+- PR #213's first exact-head implementation passed general CI and the ephemeral PostgreSQL worker-ownership workflow at `54672f3231616957797c46eee73ac69548bc3807`, but review against `EAST-LIFECYCLE-REMEDIATION-PLAN.md` identified a compatibility concern: the initial implementation added a new `cancellationRequestedAt` field to each JSONB task record without a PostgreSQL snapshot schema migration.
+- Before treating the branch as complete, the implementation is being tightened to derive cancellation intent from the already-persisted bounded event journal (`task.cancel_requested`) rather than add another task-record field. This preserves the existing snapshot shape and keeps the state transition atomic with its event.
+- Extend the real PostgreSQL 16 integration script to verify cancellation request persistence, no-new-claim behavior, owner-fenced `settleCancelledStep`, and terminal cancellation after every active owner drains. This is test coverage only; no external-execution record, provider/e3 supervisor, RLS, or production database is being claimed.
+- PR #213 remains draft/unmerged. Keep the owner-lease and provider-drain boundaries intact; do not infer provider settlement from expiry, process exit, HTTP disconnect, or an AbortSignal.
