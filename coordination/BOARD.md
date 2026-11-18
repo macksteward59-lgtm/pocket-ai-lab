@@ -536,3 +536,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 
 
 - Contract precision follow-up: the completed source snapshot now exposes an immutable decoded string, raw byte count, and SHA-256 of the exact raw bytes; it does not expose a mutable Uint8Array or live file handle. Directory handles remain owned by the host session and are closed by session lifecycle. Design update commit `708024ebfbc015da8b216cd58d259e1447b6f90f`.
+
+
+## 2026-11-18 — Director host integration inventory
+
+- **Verified integration seam:** `apps/web/directorRuntime.ts` creates `LocalProjectInspector` from `workspaceRoot ?? process.cwd()` and injects it into `DirectorCapabilities`; `DirectorCommandRouter` dispatches `analyze-project` through the `ProjectInspector.inspect()` interface.
+- **Still missing:** an opaque host-registered workspace identity/pinned root session and a native confined reader. The new PR #198 excerpt verifier is not exposed through the shared interface or command contract; existing inspection wiring does not imply source-reference verification or D-04 integration.
+- **CI/platform evidence:** Node intelligence CI is Linux/Node 22; Windows/macOS desktop launchers are explicitly untested; macOS iOS workflow validates Swift/iOS simulator/macOS targets, not the Node filesystem adapter. No Windows containment CI or production desktop support matrix found.
+- Design inventory recorded in section 13.1.1, commit `11f9502397a00eb861e6411a167a3b7c29437ea0`. No native code or platform claim approved.
+- **Gate unchanged:** PR #200 stays draft/unmerged pending parent-race design and independent review; PR #198 stays unmerged; D-04 source-reference identity integration remains blocked.
