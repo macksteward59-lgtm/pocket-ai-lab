@@ -31,6 +31,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     @MainActor
     private func makeLoadedDispatcher(
         root: URL,
+        engine: any LlamaEngine = DispatcherStubEngine(),
         beforeSessionResolution: (@MainActor () async -> Void)? = nil,
         beforeNavigationCleanup: (@MainActor () async -> Void)? = nil
     ) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
@@ -56,7 +57,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             quantization: entry.quantization
         )
         let composition = NativeRuntimeComposition(
-            engine: DispatcherStubEngine(),
+            engine: engine,
             availableMemoryMB: { 4_096 }
         )
         let runtime = try XCTUnwrap(composition.runtime)
