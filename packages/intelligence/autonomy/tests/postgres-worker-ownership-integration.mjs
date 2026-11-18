@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import {
+  InMemoryTaskLifecycleStore,
   TaskLifecycleCoordinator,
   TaskLifecycleError
 } from "../TaskLifecycleCoordinator.ts";
@@ -35,6 +36,91 @@ const database = {
     }
   }
 };
+
+
+async function verifyLegacyExpiryPolicyMigration() {
+  const namespace = "legacy-expiry-" + randomUUID();
+  const legacyTaskId = "legacy-task-" + randomUUID();
+  const mutationTaskId = "migration-trigger-" + randomUUID();
+
+  try {
+    // Produce a valid current task, then serialize the exact pre-versioned
+    // shape that existed before expiryPolicyVersion was introduced.
+    const seedCoordinator = new TaskLifecycleCoordinator({
+      store: new InMemoryTaskLifecycleStore(),
+      workerId: "legacy-seed-" + randomUUID()
+    });
+    await seedCoordinator.init();
+    const legacy = structuredClone(await seedCoordinator.createTask({
+      id: legacyTaskId,
+      objective: "Migrate a persisted pre-versioned multi-attempt task",
+      steps: [{
+        id: "external-effect",
+        description: "A prior multi-attempt step with an ambiguous persisted false default",
+        maxAttempts: 3,
+        uncertainOnExpiredLease: false
+      }]
+    }));
+    delete legacy.expiryPolicyVersion;
+    legacy.steps[0].uncertainOnExpiredLease = false;
+
+    // Seed real JSONB, not the fake SQL adapter, at a nonzero record version.
+    await pool.query(
+      `INSERT INTO pocket_task_lifecycle_snapshots
+        (namespace, schema_version, record_version, payload, updated_at)
+       VALUES ($1, 1, 7, $2::jsonb, CURRENT_TIMESTAMP)`,
+      [namespace, JSON.stringify([legacy])]
+    );
+
+    const migrated = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, namespace),
+      workerId: "legacy-reader-" + randomUUID()
+    });
+    await migrated.init();
+
+    expectLegacyMigration(migrated.getTask(legacyTaskId));
+
+    // Initialization normalizes only the in-memory view. The persisted row
+    // remains untouched until a normal lifecycle mutation performs the CAS write.
+    const beforeMutation = await pool.query(
+      "SELECT record_version FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
+      [namespace]
+    );
+    assert.equal(Number(beforeMutation.rows[0]?.record_version), 7);
+
+    await migrated.createTask({
+      id: mutationTaskId,
+      objective: "Trigger a normal lifecycle snapshot write after legacy normalization",
+      steps: [{ id: "inspect", description: "Persist the normalized legacy snapshot" }]
+    });
+
+    const afterMutation = await pool.query(
+      "SELECT record_version, payload FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
+      [namespace]
+    );
+    assert.equal(Number(afterMutation.rows[0]?.record_version), 8);
+    const stored = typeof afterMutation.rows[0]?.payload === "string"
+      ? JSON.parse(afterMutation.rows[0].payload)
+      : afterMutation.rows[0]?.payload;
+    assert.ok(Array.isArray(stored));
+    const storedLegacy = stored.find(record => record.id === legacyTaskId);
+    assert.ok(storedLegacy, "the original legacy task must remain in the persisted snapshot");
+    assert.equal(storedLegacy.expiryPolicyVersion, 1);
+    assert.equal(storedLegacy.steps[0].uncertainOnExpiredLease, true);
+
+    console.log("East PostgreSQL legacy expiry-policy migration checks passed");
+  } finally {
+    await pool.query(
+      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = ANY($1)",
+      [[namespace, cancellationNamespace]]
+    );
+  }
+}
+
+function expectLegacyMigration(task) {
+  assert.equal(task.expiryPolicyVersion, 1);
+  assert.equal(task.steps[0].uncertainOnExpiredLease, true);
+}
 
 async function main() {
   const namespace = "worker-fence-" + randomUUID();
@@ -250,10 +336,11 @@ async function main() {
     );
 
     console.log("East PostgreSQL worker-ownership, cancellation-drain, and event-journal checks passed");
+    await verifyLegacyExpiryPolicyMigration();
   } finally {
     await pool.query(
-      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = ANY($1)",
-      [[namespace, cancellationNamespace]]
+      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
+      [namespace]
     );
     await pool.end();
   }

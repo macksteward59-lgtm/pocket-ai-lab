@@ -6,6 +6,7 @@ on:
       - "codex/**"
     paths:
       - "packages/intelligence/autonomy/**"
+      - "docs/implementation/east-lifecycle-production-readiness.md"
       - ".github/workflows/east-worker-ownership-postgres-ci.yml"
 
 permissions:
