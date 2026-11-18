@@ -3748,3 +3748,11 @@ Disposition:
 - Compared PR #201 head `874dca55d5c7cbe7e260404327555de6e849bf58` with retained PR #200 head `947c1ac289f70779e336fde6dd9e6c687f191a07`. The commit histories diverge (two commits unique to each side from merge base `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`), but both changed-file blobs are byte-identical at both heads: `LocalProjectInspector.ts` SHA `31b540a42c934ed0867c5f302bc60df0637e3e27`; `LocalProjectInspector.test.ts` SHA `fc2db731c32ce01c9976ed4ff9c79c0e2a3f5bdf`. The comparison listed only these two changed files.
 - Posted the duplicate disposition on PR #201 and closed it unmerged (closed at 2026-11-18T18:45:28Z). No unique implementation file content was discarded. PR #200 remains the sole active review path for the same two-file remediation; its exact-head run #44369945652 passed.
 - PR #200 remains without independent review at last check. The residual parent-directory replacement limitation remains an explicit security-review gate. PR #198 remains open/unmerged with its original feature head and unsafe path-based read. No code merge, authority change, or branch-protection change was performed.
+
+
+## 2026-11-18 — Parent-directory race decision tracked
+
+- Created [issue #202](https://github.com/macksteward59-lgtm/pocket-ai-lab/issues/202) to obtain an explicit supported-platform/threat-model decision for parent-directory replacement during source-verifier path resolution.
+- PR #200 now links issue #202 and remains draft/unmerged. Exact-head Intelligence CI run #44369945652 remains green for head `947c1ac289f70779e336fde6dd9e6c687f191a07`.
+- Security review status remains unchanged: no independent PR review has been submitted. The issue requires a decision on directory-relative no-follow primitives, workspace identity pinning, adversarial replacement tests, and documented residual limitations.
+- No source code or authorization boundary changed in this checkpoint. PR #198/#200 remain unmerged; D-02 acceptance and D-04 remain blocked.
