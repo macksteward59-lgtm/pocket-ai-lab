@@ -3959,3 +3959,10 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #205 advanced to head `3f288198fefd7502201134901d4dc11348d0535f`; it adds a dispatcher-drain test and a CI branch trigger for the refreshed integration branch. No exact-head workflow run returned. Treat as unvalidated test source.
 - PR #203 remains green at exact head `6b71ff6da2b8fe6970042884a48dedf8a78694d3` via #44373747684. PR #204's legacy expiry migration and adapter-classification test requests remain open; PR #200's parent-directory race/root-confinement gate remains open.
 - No application source changed, no PR merged/approved, no branch-protection or governance/authority changes. Hosted CI/simulator results do not establish physical iPhone acceptance.
+
+
+## 2026-11-18 — PR #205 closed unmerged
+
+- Fresh metadata poll shows PR #205 is now **closed, unmerged** (closed at `2026-11-18T19:40:59Z`), still at head `3f288198fefd7502201134901d4dc11348d0535f`. Its last inspected diff contained only the dispatcher-drain XCTest and CI branch-trigger change. No PR conversation comments were returned, so the reason for closure is not established. Do not describe it as merged or assume its test was integrated; retain the patch as a donor candidate only if a future exact-head comparison establishes where it went.
+- PR #197 remains open/draft at `4840dcd201f020ec3f76724da66b75b1f730153b`, with early-cancellation reservation-capacity blocker comment [#6989513504](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/197#issuecomment-6989513504). No exact-head PR workflow run returned.
+- Coordination board/log reflect this state; no source, merge, governance, or branch-protection changes were made.
