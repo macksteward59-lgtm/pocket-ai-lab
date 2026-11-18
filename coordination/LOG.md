@@ -4015,3 +4015,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Exact-head native iOS run `44385621155` remains `in_progress`, with native app build step 13 still running and XCTest/simulator/macOS smoke steps 14–19 pending. No native CI success claim. The run metadata has not advanced since 20:20Z; recheck before interpreting as a hung runner.
 - PR #197 remains open/draft/unmerged at the same head. PR #204 and #200 remain at previously reviewed heads with unresolved migration/adapter and root-pinning blockers. PR #205 remains closed unmerged. PR #203 remains open/draft with its independent successful exact-head run.
 - No production code or trust/governance authority changed in this update.
+
+
+## 2026-11-18 — PR #197 native XCTest checkpoint
+
+- Exact PR head remains `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`; PR #197 is open/draft/unmerged.
+- Native workflow `44385621155`: native app build (step 13) and native app XCTest (step 14) completed successfully. iOS simulator XCTest (step 15) is in progress. Pinned GGUF smoke, macOS XCTest, and runner evidence remain pending.
+- General CI run `44385850893` passed on the same exact SHA. Native workflow run metadata has not refreshed since `20:20Z`; job logs are not yet available. Treat simulator stage as in progress, not failed or passed.
+- Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 still lacks root-pinned component-relative traversal; issue #202 has no accepted containment decision; PR #205 closed unmerged; PR #203 remains separate with its own successful exact-head CI.
+- No production code, approval, merge, D-04 integration, or authority change in this checkpoint.
