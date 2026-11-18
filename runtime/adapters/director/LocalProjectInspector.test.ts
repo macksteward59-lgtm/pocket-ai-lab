@@ -1,8 +1,8 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, mkdir, open, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocalProjectInspector } from "./LocalProjectInspector";
+import { LocalProjectInspector, openNoFollowFile, readBoundedFileHandle } from "./LocalProjectInspector";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -142,6 +142,33 @@ describe("LocalProjectInspector", () => {
     })).resolves.toMatchObject({
       status: "unverified", occurrenceCount: 0, reason: "invalid_reference"
     });
+  });
+
+  it("bounds reads when an opened file grows after its initial size check", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-growth-race-"));
+    directories.push(root);
+    const file = path.join(root, "README.md");
+    await writeFile(file, "small");
+    const handle = await open(file, "r");
+    try {
+      expect((await handle.stat()).size).toBe(5);
+      await appendFile(file, "x".repeat(70000));
+      await expect(readBoundedFileHandle(handle, 65536)).resolves.toBeUndefined();
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it("refuses to open a symlink at the final path component", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-nofollow-"));
+    directories.push(root);
+    const target = path.join(root, "target.md");
+    const link = path.join(root, "link.md");
+    await writeFile(target, "inside");
+    const { symlink } = await import("node:fs/promises");
+    await symlink(target, link);
+    const handle = await openNoFollowFile(link);
+    expect(handle).toBeUndefined();
   });
 
 });
