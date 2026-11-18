@@ -228,11 +228,18 @@ async function main() {
     assert.equal(persistedFinal.status, "cancelled");
     assert.equal(persistedFinal.events.filter(event => event.type === "task.cancel_requested").length, 1);
     assert.equal(persistedFinal.events.filter(event => event.type === "task.cancelled").length, 1);
+    const eventTypes = persistedFinal.events.map(event => event.type);
+    const requestIndex = eventTypes.indexOf("task.cancel_requested");
+    const terminalIndex = eventTypes.lastIndexOf("task.cancelled");
+    assert.ok(requestIndex >= 0 && terminalIndex > requestIndex);
+    assert.equal(eventTypes.includes("task.completed"), false);
+    assert.equal(eventTypes.includes("task.failed"), false);
     for (const claim of [first, second]) {
-      assert.ok(persistedFinal.events.some(event =>
+      const settlementIndex = persistedFinal.events.findIndex(event =>
         event.type === "step.cancelled" && event.attemptId === claim.attemptId &&
         event.ownerId === cancellationOwnerId
-      ));
+      );
+      assert.ok(settlementIndex > requestIndex && settlementIndex < terminalIndex);
     }
     await assert.rejects(
       cancellationOwner.completeStep({
