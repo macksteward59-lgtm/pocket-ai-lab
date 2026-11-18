@@ -690,3 +690,13 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Deterministic tests now cover unload during blocked native `cancelAndWait` (lease and inference use-pin remain held) and generation suspended during challenge consumption. Targeted follow-up review posted to PR #197. Exact-head workflow run `44385621155` is queued; earlier runs `44385127350` and `44385602976` were cancelled/superseded and are not validation for this head. Keep PR draft pending all stages and independent review.
 - PR #204 remains blocked on legacy serialized-task migration and adapter-level outcome tests; PR #200 remains blocked on parent-component/root-pinning race; issue #202 has no host-containment decision. PR #203 exact-head run `44373747684` remains successful.
 - No application source, governance authority, signing, or branch protection changed in this coordination update.
+
+
+## 2026-11-18 — PR #197 exact-head CI checkpoint
+
+- Current PR #197 head remains `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d` (open/draft/unmerged).
+- Exact-head general workflow run `44385608967` (`Pocket AI Lab CI`, run 3094) completed successfully: dependency install/advisory reporting, JavaScript syntax, type-check/build, and tests all passed.
+- Exact-head native iOS workflow run `44385621155` (run 561) remains in progress. Steps 1–12 completed successfully, including pinned llama.cpp build, fail-closed typecheck, physical-device linking, simulator boot, and Director bridge manifest validation. Step 13 native app build is still running; native app XCTest, iOS simulator XCTest, GGUF smoke setup, macOS XCTest, and evidence recording remain pending. No native pass claim yet.
+- PR #205 is now closed unmerged at head `3f288198fefd7502201134901d4dc11348d0535f`; it is not an active integration PR and its former validation statements do not validate PR #197's latest head. PR #203 remains open/draft with exact-head successful run `44373747684`.
+- PR #204 still has no exact-head workflow run and its legacy-record migration plus adapter-level failure tests remain outstanding. D-02 issue #202 has no recorded host-containment decision; PR #200 remains blocked on parent-component/root-pinning race resistance.
+- No PR merged/approved; no production code or authority boundaries changed in this coordination checkpoint.
