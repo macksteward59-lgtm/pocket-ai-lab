@@ -71,12 +71,12 @@ This note does not approve copying code, add a dependency, create an implementat
 
 Draft PR [#198](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/198) extends the existing `runtime/adapters/director/LocalProjectInspector` rather than introducing a parallel filesystem sandbox. The existing adapter already validates relative paths, resolves real paths within its workspace root, rejects symlink escapes, restricts text extensions, and bounds file/aggregate reads.
 
-The prototype adds exact excerpt presence checks, 1-based line ranges, occurrence counts, ambiguity handling, and stable unverified reasons. Its result remains an untrusted source-location check only.
+The prototype adds exact excerpt presence checks, normalized relative paths, CRLF normalization, 1-based line ranges, occurrence counts without retaining match arrays, ambiguity handling, and stable unverified reasons. Its result remains an untrusted source-location check only. Regression cases include dense duplicates, malformed input, and size bounds.
 
 - Branch: `codex/stride-source-reference-verifier`
 - Base: `main` at `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`
-- Current head at handoff: `9cd7969cc8f603afffefc401f9bab796517c82f4`
+- Current head at handoff: `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`
 - Files: `runtime/adapters/director/LocalProjectInspector.ts`, `runtime/adapters/director/LocalProjectInspector.test.ts`
-- Validation: tests have not been executed; the available workflow-run lookup (PR-triggered runs only) and combined status surfaced no exact-head checks. Intelligence CI is configured for `codex/**` pushes and PRs targeting `main`, but push-run details are not exposed by that lookup. Draft/unvalidated.
+- Validation: tests have not been executed. The available workflow-run lookup (PR-triggered runs only) and combined status surfaced no exact-head checks. Intelligence CI is configured for `codex/**` pushes and PRs targeting `main`, but push-run details are not exposed by that lookup. PR #198 is still draft/unvalidated. GitHub currently reports mergeable=true and the compare is ahead 12 / behind 0; this is not a substitute for CI or review.
 
 Do not proceed to D-04 until D-02's exact-head tests and independent review are complete. No Director command schema, evidence authority, APEX/East contract, or tool permission is changed by this prototype.
