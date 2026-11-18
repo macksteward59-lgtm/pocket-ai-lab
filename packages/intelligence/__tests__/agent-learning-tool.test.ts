@@ -42,6 +42,7 @@ function makeTool(sandbox?: TrainingSandbox) {
   return new AgentLearningTool({
     evidenceReader: makeEvidenceReader(),
     trainingSandbox: sandbox,
+    trainingApprovalVerifier: { async verify() { return true; } },
     now: () => Date.parse("2026-11-18T12:00:00.000Z"),
     id: () => "id-" + (++next)
   });
@@ -58,6 +59,8 @@ async function adapterProposal(tool: AgentLearningTool) {
 }
 
 const trainingRequest = (proposalId: string): CandidateTrainingRequest => ({
+  taskId: "task-1",
+  approvalRef: "human-approval-ref",
   proposalId,
   baselineModelId: "baseline-model",
   datasetRef: "approved-dataset",
@@ -136,6 +139,22 @@ describe("AgentLearningTool", () => {
       changeKind: "retrieval", evidenceRefs: ["source"]
     });
     await expect(withSandbox.train(trainingRequest(nonTraining.proposalId))).rejects.toThrow(/Only adapter-training/);
+  });
+
+  it("requires independent approval bound to the exact training job", async () => {
+    let calls = 0;
+    const tool = new AgentLearningTool({
+      evidenceReader: makeEvidenceReader(),
+      trainingSandbox: { async run() {
+        calls += 1;
+        throw new Error("must not run");
+      } },
+      trainingApprovalVerifier: { async verify() { return false; } },
+      id: (() => { let n = 0; return () => "approval-" + (++n); })()
+    });
+    const proposal = await adapterProposal(tool);
+    await expect(tool.train(trainingRequest(proposal.proposalId))).rejects.toThrow(/approval was denied/);
+    expect(calls).toBe(0);
   });
 
   it("rejects invalid resource budgets before invoking the sandbox", async () => {
