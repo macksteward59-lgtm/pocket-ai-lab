@@ -759,6 +759,19 @@ describe("TaskLifecycleCoordinator", () => {
     expect(afterFailure.steps.find(step => step.id === "join")?.status).toBe("pending");
     expect(await h.coordinator.claimNextStep("parallel-failure")).toBeNull();
 
+    // The intermediate failed + running + pending snapshot must survive reload;
+    // a new worker may observe it but cannot adopt the still-live sibling lease.
+    const restarted = new TaskLifecycleCoordinator({
+      store: h.store, now: h.now, workerId: "worker-after-sibling-failure"
+    });
+    await restarted.init();
+    expect(restarted.getTask("parallel-failure").steps.find(step => step.id === "second"))
+      .toMatchObject({ status: "running", currentAttempt: { id: second!.attemptId } });
+    await expect(restarted.completeStep({
+      taskId: "parallel-failure", stepId: second!.stepId, attemptId: second!.attemptId,
+      result: "unauthorized lease adoption"
+    })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
+
     const settled = await h.coordinator.completeStep({
       taskId: "parallel-failure", stepId: second!.stepId, attemptId: second!.attemptId,
       result: "Sibling settled after first failure"
