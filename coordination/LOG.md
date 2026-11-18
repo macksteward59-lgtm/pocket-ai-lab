@@ -3849,3 +3849,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - CI has not been observed for the current head: workflow-run lookup returned an empty list and combined commit status returned no checks. No tests were executed locally. PR remains draft; do not infer success from branch creation or PR mergeability.
 - Follow-up review must test restart validation of failed+running state, multiple active siblings, lease expiry during drain, and exact adapter outcome semantics. This is not production e3 cancellation, provider settlement proof, distributed-store acceptance, or physical-device acceptance.
 - Coordination BOARD checkpoint updated in commit recorded in the companion BOARD entry. No app code merged, no main/default branch changed, no authority or branch protection modified.
+
+
+## 2026-11-18 — PR #204 sibling-drain restart follow-up
+
+- Advanced PR #204 to exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49`. Corrected failure handling to leave pending descendants pending while any sibling lease remains active; pending descendants are cancelled only after the last active sibling settles and task failure becomes terminal.
+- Extended the concurrent sibling regression to reload the intermediate failed + running + pending snapshot in a new coordinator. Reload succeeds; the new worker is rejected when attempting to adopt the live lease; the original lease owner settles it and terminal failure is then recorded.
+- Confirmed both new-definition and legacy-record fallback for missing expiry policy are conservative (`uncertainOnExpiredLease: true`); all seven autonomy-test failStep calls include explicit `definitive` or `unknown` classification.
+- Exact-head workflow lookup remains empty and commit combined status has no checks. No tests executed locally. Compile/typecheck, including any other consumers of the changed failStep input, remains unverified.
+- PR remains draft/open/unmerged. No default-branch change, merge, authority change, or branch-protection change.
