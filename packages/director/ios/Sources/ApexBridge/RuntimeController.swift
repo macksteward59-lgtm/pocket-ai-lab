@@ -572,13 +572,24 @@ public actor RuntimeController {
         // entry in ActiveSession.generations yet. Snapshot it only after raising the
         // lifecycle barrier; new requests now fail before registration.
         let pending = generationAttempts.flatMap { sessionId, attempts in
-            attempts.keys.map { (sessionId, $0) }
+            attempts.map { (sessionId, $0.key, $0.value) }
         }
         var cancelled = 0
-        for (sessionId, requestId) in pending {
-            if await cancelGeneration(sessionId: sessionId, requestId: requestId) {
+        for (sessionId, requestId, task) in pending {
+            let didCancel = await cancelGeneration(sessionId: sessionId, requestId: requestId)
+            if didCancel {
                 cancelled += 1
+            } else if unloadingSessions.contains(sessionId) {
+                // A concurrent unload has already closed external cancellation
+                // and owns lease release, but this drain barrier must still await
+                // the same registered task rather than treating the rejected
+                // public cancellation as proof that native work has settled.
+                task.cancel()
             }
+            // Always await the snapshot task. cancelGeneration awaits it when
+            // it owns cancellation; this also covers an already-retired request
+            // or a session whose unload is concurrently draining that task.
+            _ = try? await task.value
         }
         return cancelled
     }
