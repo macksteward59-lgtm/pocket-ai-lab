@@ -717,3 +717,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - General CI run `44385850893` passed on the same exact SHA. Native workflow run metadata has not refreshed since `20:20Z`; job logs are not yet available. Treat simulator stage as in progress, not failed or passed.
 - Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 still lacks root-pinned component-relative traversal; issue #202 has no accepted containment decision; PR #205 closed unmerged; PR #203 remains separate with its own successful exact-head CI.
 - No production code, approval, merge, D-04 integration, or authority change in this checkpoint.
+
+
+## 2026-11-18 — PR #197 simulator and smoke setup passed
+
+- Exact PR head `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d` remains open/draft/unmerged.
+- Native workflow `44385621155`: native app build, native app XCTest, iOS simulator XCTest, pinned smoke GGUF download, and macOS smoke-path setup all completed successfully. macOS XCTest (step 18) is in progress; runner-evidence recording (step 19) remains pending.
+- General CI `44385850893` passed on the same SHA. Do not call the complete native workflow successful until macOS XCTest and runner-evidence recording complete.
+- Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 root-pinned component-relative traversal outstanding; issue #202 no accepted containment decision; PR #205 closed unmerged; PR #203 separate with its own exact-head success.
+- No production code, approval, merge, D-04 integration, or authority change in this checkpoint.
