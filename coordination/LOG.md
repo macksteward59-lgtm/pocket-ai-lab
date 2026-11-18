@@ -4171,3 +4171,11 @@ Accessible history this run: current conversation instructions and recent projec
 - Exact-head general CI `44400975539` passed.
 - Exact-head native push workflow `44400975624` is in progress on macOS Intel. Job `135143572583` acquired runner and passed setup/Xcode/build-tool/cache-restore steps; pinned llama.cpp build is active. Paired PR event run `44400986303` is pending.
 - No native XCTest result yet; PR #212 remains draft/unmerged.
+
+
+## 2026-11-18 — PR #211 real PostgreSQL legacy migration regression passed
+
+- Added actual PostgreSQL JSONB legacy migration coverage and clarified lazy persistence in the readiness docs on exact head `58a4b3ac4c8a931044c7a3144c2f124168f8d898`.
+- The regression verifies missing policy version + persisted false becomes policy v1 + fail-closed true in memory; initialization does not write; the next successful task mutation increments record_version and persists normalized JSONB.
+- PostgreSQL 16 integration run `44402327930` passed; job log explicitly reports both worker-ownership/event-journal checks and legacy expiry-policy migration checks passed. General CI run `44402327972` passed.
+- PR #211 remains draft/unmerged pending independent review and upstream #204 stack gate.
