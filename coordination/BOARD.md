@@ -775,3 +775,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - The PR review comment records that GitHub's rerun-failed-jobs endpoint returned HTTP 403, `This workflow run cannot be retried`. No supported dispatch/retry action is exposed by the connected GitHub tools. A fresh pull_request-triggered native workflow attempt for the same exact head is still required; do not use the earlier test run on a different commit as evidence.
 - The deterministic cancel-all test and implementation remain unchanged; general CI was reported green in the PR comment, but this checkpoint's available workflow lookup exposes only the failed native run, so native validation remains unsatisfied.
 - PR #212 stays draft. No merge, physical-device acceptance, or release acceptance.
+
+
+## 2026-11-18 — PR #212 exact-head general CI job verified
+
+- Rechecked PR #212 head `244a728330f06c8294328d58115ac6b0f55602fc` and its base `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`; comparison is 7 commits ahead / 0 behind with only the intended RuntimeController and XCTest files changed.
+- Independently fetched general CI run `44399801682` jobs: the `intelligence` job completed successfully, including JavaScript syntax, type-check/build, and tests. This verifies the general CI green report for the exact PR head.
+- Native iOS run `44399814043` remains completed with `startup_failure` and zero jobs. No native XCTest ran. The general CI pass does not replace the required native workflow.
+- PR #212 remains open/draft/unmerged; no source changes or merge in this checkpoint.
