@@ -75,7 +75,7 @@ The prototype adds exact excerpt presence checks, 1-based line ranges, occurrenc
 
 - Branch: `codex/stride-source-reference-verifier`
 - Base: `main` at `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`
-- Current head at handoff: `a315a91fa745415dd3572d433044c16b8016dd80`
+- Current head at handoff: `9cd7969cc8f603afffefc401f9bab796517c82f4`
 - Files: `runtime/adapters/director/LocalProjectInspector.ts`, `runtime/adapters/director/LocalProjectInspector.test.ts`
 - Validation: tests have not been executed; the available workflow-run lookup (PR-triggered runs only) and combined status surfaced no exact-head checks. Intelligence CI is configured for `codex/**` pushes and PRs targeting `main`, but push-run details are not exposed by that lookup. Draft/unvalidated.
 
