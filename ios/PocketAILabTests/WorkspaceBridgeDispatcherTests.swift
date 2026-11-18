@@ -284,7 +284,10 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             isMainFrame: true
         )
         XCTAssertEqual(replay["error"] as? String, "generation_failed")
-        XCTAssertTrue((replay["detail"] as? String ?? "").contains("unauthorizedChallenge"))
+        XCTAssertTrue(
+            (replay["detail"] as? String ?? "").contains("duplicateRequest"),
+            "A settled request identity must be retired before challenge replay validation."
+        )
     }
 
     @MainActor
