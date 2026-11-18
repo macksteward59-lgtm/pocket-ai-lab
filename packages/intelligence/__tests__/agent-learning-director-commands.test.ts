@@ -56,6 +56,9 @@ describe("Director agent-learning commands", () => {
       kind: "propose-agent-learning", agentId: "engineer", objective: "Improve",
       changeKind: "unknown", evidenceRefs: ["source"]
     })).toThrow(/change kind/);
+    expect(parseDirectorCommand({
+      kind: "evaluate-agent-candidate", candidateId: "candidate-1", benchmarkVersion: "bench-v1"
+    })).toMatchObject({ kind: "evaluate-agent-candidate", candidateId: "candidate-1" });
   });
 
   it("routes proposals through the host-approved evidence reader and binds the task id", async () => {
@@ -88,6 +91,56 @@ describe("Director agent-learning commands", () => {
     });
     expect(result).toMatchObject({ candidateModelRef: "candidate-1", status: "candidate-only" });
     expect(getTrainingCalls()).toBe(1);
+  });
+
+  it("routes evaluation to the trusted runner using only a candidate id and benchmark version", async () => {
+    const learning = new AgentLearningTool({
+      evidenceReader: {
+        async readApproved({ sourceRefs }) {
+          return sourceRefs.map(sourceRef => ({
+            sourceRef, contentDigest: "digest", verifiedAt: "2026-11-18T12:00:00.000Z",
+            content: "approved", approved: true as const
+          }));
+        }
+      },
+      trainingApprovalVerifier: { async verify() { return true; } },
+      trainingSandbox: { async run() {
+        return {
+          candidateModelRef: "candidate-1", sandboxRunRef: "sandbox-1",
+          completedAt: "2026-11-18T12:05:00.000Z", metrics: { loss: 0.4 }
+        };
+      } },
+      evaluationRunner: {
+        async runPaired() {
+          const makeRun = (modelId: string, runId: string, score: number) => ({
+            modelId, runId, datasetVersion: "bench-v1", completedAt: "2026-11-18T12:10:00.000Z",
+            results: Array.from({ length: 5 }, (_, index) => ({
+              caseId: "case-" + index, score, passed: score >= 0.7,
+              safetyViolation: false, latencyMs: 100
+            }))
+          });
+          return {
+            baselineRun: makeRun("baseline-1", "baseline-run", 0.6),
+            candidateRun: makeRun("candidate-1", "candidate-run", 0.8)
+          };
+        }
+      }
+    });
+    const commands = router(learning);
+    const proposal = await commands.dispatch({ taskId: "task-eval" }, {
+      kind: "propose-agent-learning", agentId: "engineer", objective: "Train candidate",
+      changeKind: "adapter-training", evidenceRefs: ["approved:training-source"]
+    }) as { proposalId: string };
+    const candidate = await commands.dispatch({ taskId: "task-eval" }, {
+      kind: "train-agent-candidate", proposalId: proposal.proposalId, baselineModelId: "baseline-1",
+      datasetRef: "training-data", datasetVersion: "train-v1",
+      budget: { maxRuntimeSeconds: 60, maxMemoryMB: 512, maxOutputBytes: 1000000 },
+      hyperparameters: { method: "lora" }, approvalRef: "approval"
+    }) as { candidateId: string };
+    const result = await commands.dispatch({ taskId: "task-eval" }, {
+      kind: "evaluate-agent-candidate", candidateId: candidate.candidateId, benchmarkVersion: "bench-v1"
+    });
+    expect(result).toMatchObject({ status: "eligible-for-human-review" });
   });
 
   it("does not expose arbitrary execution or automatic promotion commands", () => {
