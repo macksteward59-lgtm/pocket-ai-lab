@@ -241,12 +241,16 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(invalidated["error"] as? String, "generation_failed")
         XCTAssertTrue((invalidated["detail"] as? String ?? "").contains("unauthorizedChallenge"))
 
+        // The failed attempt has retired its request and attempt identities.
+        // A fresh authorization must use a fresh pair rather than replaying them.
+        let refreshedRequestID = UUID().uuidString
+        let refreshedAttemptID = "attempt-2"
         let refreshedAuthorization = await dispatcher.handle(
             body: [
                 "id": UUID().uuidString,
                 "action": "authorizeGeneration",
                 "sessionId": sessionID,
-                "requestId": requestID
+                "requestId": refreshedRequestID
             ],
             frameOrigin: trustedOrigin,
             isMainFrame: true
@@ -255,6 +259,11 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         let refreshedData = try XCTUnwrap(refreshedAuthorization["data"] as? [String: Any])
         let refreshedNonce = try XCTUnwrap(refreshedData["challengeNonce"] as? String)
         var refreshedGenerationBody = generationBody
+        // The authorization message used the canonical UUID spelling. The
+        // generation message deliberately uses lowercase to prove that bridge
+        // identity binding is based on the UUID value, not its textual casing.
+        refreshedGenerationBody["requestId"] = refreshedRequestID.lowercased()
+        refreshedGenerationBody["attemptId"] = refreshedAttemptID
         refreshedGenerationBody["challengeNonce"] = refreshedNonce
 
         let generation = await dispatcher.handle(
@@ -265,6 +274,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(generation["ok"] as? Bool, true)
         let generationData = try XCTUnwrap(generation["data"] as? [String: Any])
         XCTAssertEqual(generationData["output"] as? String, "stub")
+        XCTAssertEqual(generationData["requestId"] as? String, refreshedRequestID)
         XCTAssertEqual(generationData["runtimeSessionId"] as? String, sessionID)
         XCTAssertEqual(generationData["authorized"] as? Bool, false)
 
@@ -278,7 +288,117 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             isMainFrame: true
         )
         XCTAssertEqual(replay["error"] as? String, "generation_failed")
-        XCTAssertTrue((replay["detail"] as? String ?? "").contains("unauthorizedChallenge"))
+        XCTAssertTrue(
+            (replay["detail"] as? String ?? "").contains("duplicateRequest"),
+            "A settled request identity must be retired before challenge replay validation."
+        )
+    }
+
+    @MainActor
+    func testCancellationBeforeAuthorizationPreventsChallengeIssuance() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(root: root)
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let requestID = UUID().uuidString
+
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        let cancellation = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "cancelGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(cancellation["ok"] as? Bool, true)
+        XCTAssertEqual((cancellation["data"] as? [String: Any])?["cancelled"] as? Bool, true)
+
+        let authorization = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(authorization["ok"] as? Bool, false)
+        XCTAssertEqual(authorization["error"] as? String, "request_retired")
+        XCTAssertNil((authorization["data"] as? [String: Any])?["challengeNonce"])
+    }
+
+    @MainActor
+    func testCancellationDeliveredBeforeGenerateBlocksExactDispatcherRequest() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(root: root)
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let requestID = UUID().uuidString
+
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        let authorization = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(authorization["ok"] as? Bool, true)
+        let authorizationData = try XCTUnwrap(authorization["data"] as? [String: Any])
+        let nonce = try XCTUnwrap(authorizationData["challengeNonce"] as? String)
+
+        // Simulate WebKit delivering the cancel message before the generate
+        // message for the same exact session/request pair.
+        let cancellation = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "cancelGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(cancellation["ok"] as? Bool, true)
+        let cancellationData = try XCTUnwrap(cancellation["data"] as? [String: Any])
+        XCTAssertEqual(cancellationData["cancelled"] as? Bool, true)
+
+        let generation = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "generate",
+                "sessionId": sessionID,
+                "prompt": "This request was cancelled before generation dispatch.",
+                "requestId": requestID,
+                "conversationRequestId": "cancel-before-dispatch",
+                "attemptId": "cancel-before-dispatch-attempt",
+                "challengeNonce": nonce
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(generation["ok"] as? Bool, false)
+        XCTAssertEqual(generation["error"] as? String, "generation_failed")
+        XCTAssertNil((generation["data"] as? [String: Any])?["output"])
     }
 
     @MainActor

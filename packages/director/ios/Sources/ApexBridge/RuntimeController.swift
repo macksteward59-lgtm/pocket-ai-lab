@@ -83,6 +83,23 @@ public actor RuntimeController {
     private let clock: @Sendable () -> Date
     private let fileHasher: @Sendable (URL) async throws -> String
     private var sessions: [String: ActiveSession] = [:]
+    // Request-scoped tasks cover preparation as well as native inference. A task is
+    // inserted before its first suspension so cancellation can find it during hashing
+    // or one-use challenge consumption, not only after inference registration.
+    private var generationAttempts: [String: [String: Task<RuntimeGenerationRecord, Error>]] = [:]
+    // Distinguishes a completed request awaiting its caller's cleanup from a
+    // request that is still cancellable. A late cancel must not be acknowledged.
+    private var finishedGenerationAttempts: [String: [String: Date]] = [:]
+    private let completedGenerationAttemptTTL: TimeInterval = 30
+    private let maximumCompletedGenerationAttempts = 512
+    // Request identities remain reserved or retired for the lifetime of their
+    // runtime session. This closes authorize-after-cancel ordering and expiry races.
+    private var authorizedGenerationRequests: [String: Set<String>] = [:]
+    private var retiredGenerationRequests: [String: Set<String>] = [:]
+    // Distinguishes the first matching generate after a pre-registration cancel
+    // (CancellationError) from subsequent replay attempts (duplicateRequest).
+    private var preGenerationCancellationRequests: [String: Set<String>] = [:]
+    private let maximumTrackedGenerationRequests = 512
     private var unloadingSessions: Set<String> = []
     // Invalidates generation attempts suspended before their native task is registered.
     private var generationLifecycle: UInt64 = 0
@@ -246,6 +263,33 @@ public actor RuntimeController {
         }
     }
 
+    /// Reserves a one-attempt request identity before the dispatcher issues a
+    /// challenge. Actor isolation makes reservation atomic with cancellation.
+    /// Identities remain reserved until their runtime session is unloaded.
+    public func reserveGenerationRequest(sessionId: String, requestId: String) -> Bool {
+        pruneFinishedGenerationAttempts(now: clock())
+        guard let canonicalRequestId = Self.canonicalUUID(requestId),
+              sessions[sessionId] != nil,
+              !unloadingSessions.contains(sessionId),
+              !isGenerationRequestRetired(sessionId: sessionId, requestId: canonicalRequestId),
+              authorizedGenerationRequests[sessionId]?.contains(canonicalRequestId) != true else {
+            return false
+        }
+        let count = authorizedGenerationRequests.values.reduce(0) { $0 + $1.count }
+            + retiredGenerationRequests.values.reduce(0) { $0 + $1.count }
+        guard count < maximumTrackedGenerationRequests else { return false }
+        authorizedGenerationRequests[sessionId, default: []].insert(canonicalRequestId)
+        return true
+    }
+
+    /// True once cancellation or a settled generation has spent this identity.
+    public func isGenerationRequestRetired(sessionId: String, requestId: String) -> Bool {
+        guard let canonicalRequestId = Self.canonicalUUID(requestId) else { return false }
+        return retiredGenerationRequests[sessionId]?.contains(canonicalRequestId) == true
+    }
+
+    /// Registers a request-scoped task before preparation can suspend. The task
+    /// remains addressable until preparation, inference, and cleanup have settled.
     public func generate(
         sessionId: String,
         prompt: String,
@@ -258,6 +302,82 @@ public actor RuntimeController {
         temperature: Double = 0.2,
         maxOutputBytes: Int = 64_000
     ) async throws -> RuntimeGenerationRecord {
+        pruneFinishedGenerationAttempts(now: clock())
+        guard sessions[sessionId] != nil, !unloadingSessions.contains(sessionId) else {
+            throw RuntimeControllerError.unknownSession
+        }
+        guard let canonicalRequestId = Self.canonicalUUID(requestId) else {
+            throw RuntimeControllerError.invalidRequest
+        }
+        if preGenerationCancellationRequests[sessionId]?.remove(canonicalRequestId) != nil {
+            if preGenerationCancellationRequests[sessionId]?.isEmpty == true {
+                preGenerationCancellationRequests.removeValue(forKey: sessionId)
+            }
+            throw CancellationError()
+        }
+        guard !isGenerationRequestRetired(sessionId: sessionId, requestId: canonicalRequestId),
+              finishedGenerationAttempts[sessionId]?[canonicalRequestId] == nil else {
+            throw RuntimeControllerError.duplicateRequest
+        }
+        // Direct controller callers receive the same one-attempt identity
+        // protection as dispatcher-authorized callers.
+        if authorizedGenerationRequests[sessionId]?.contains(canonicalRequestId) != true {
+            guard reserveGenerationRequest(sessionId: sessionId, requestId: canonicalRequestId) else {
+                throw RuntimeControllerError.duplicateRequest
+            }
+        }
+        guard generationAttempts[sessionId]?[canonicalRequestId] == nil else {
+            throw RuntimeControllerError.duplicateRequest
+        }
+
+        // Task inherits this actor's isolation. It cannot enter performGeneration
+        // until this actor turn yields, so the exact attempt is registered first.
+        let task = Task {
+            try await self.performGeneration(
+                sessionId: sessionId,
+                prompt: prompt,
+                requestId: canonicalRequestId,
+                conversationRequestId: conversationRequestId,
+                attemptId: attemptId,
+                challengeNonce: challengeNonce,
+                pageURL: pageURL,
+                maxTokens: maxTokens,
+                temperature: temperature,
+                maxOutputBytes: maxOutputBytes
+            )
+        }
+        var attempts = generationAttempts[sessionId] ?? [:]
+        attempts[canonicalRequestId] = task
+        generationAttempts[sessionId] = attempts
+
+        do {
+            let record = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            clearGenerationAttempt(sessionId: sessionId, requestId: canonicalRequestId)
+            return record
+        } catch {
+            clearGenerationAttempt(sessionId: sessionId, requestId: canonicalRequestId)
+            throw error
+        }
+    }
+
+    private func performGeneration(
+        sessionId: String,
+        prompt: String,
+        requestId: String,
+        conversationRequestId: String,
+        attemptId: String,
+        challengeNonce: String,
+        pageURL: URL,
+        maxTokens: Int,
+        temperature: Double,
+        maxOutputBytes: Int
+    ) async throws -> RuntimeGenerationRecord {
+        defer { markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId) }
+        try Task.checkCancellation()
         guard generationDrainCount == 0 else { throw CancellationError() }
         let requestLifecycle = generationLifecycle
         guard !unloadingSessions.contains(sessionId),
@@ -408,10 +528,25 @@ public actor RuntimeController {
     /// Cancels the matching request and waits for the native runtime's drain path.
     @discardableResult
     public func cancelGeneration(sessionId: String, requestId: String) async -> Bool {
-        guard let task = sessions[sessionId]?.generations[requestId] else { return false }
-        task.cancel()
-        _ = try? await task.value
-        clearGeneration(sessionId: sessionId, requestId: requestId)
+        pruneFinishedGenerationAttempts(now: clock())
+        guard let canonicalRequestId = Self.canonicalUUID(requestId) else { return false }
+        if finishedGenerationAttempts[sessionId]?[canonicalRequestId] != nil ||
+           retiredGenerationRequests[sessionId]?.contains(canonicalRequestId) == true {
+            return false
+        }
+        guard sessions[sessionId] != nil,
+              !unloadingSessions.contains(sessionId),
+              recordRetiredGenerationRequest(sessionId: sessionId, requestId: canonicalRequestId) else {
+            return false
+        }
+        if let task = generationAttempts[sessionId]?[canonicalRequestId] {
+            task.cancel()
+            // Await the entire request task, including preparation and native drain.
+            _ = try? await task.value
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: canonicalRequestId)
+        } else {
+            preGenerationCancellationRequests[sessionId, default: []].insert(canonicalRequestId)
+        }
         return true
     }
 
@@ -433,8 +568,11 @@ public actor RuntimeController {
         for task in readinessTasks { task.cancel() }
         for task in readinessTasks { _ = try? await task.value }
 
-        let pending = sessions.flatMap { sessionId, active in
-            active.generations.keys.map { (sessionId, $0) }
+        // The request registry includes preparation-stage attempts that have no
+        // entry in ActiveSession.generations yet. Snapshot it only after raising the
+        // lifecycle barrier; new requests now fail before registration.
+        let pending = generationAttempts.flatMap { sessionId, attempts in
+            attempts.keys.map { (sessionId, $0) }
         }
         var cancelled = 0
         for (sessionId, requestId) in pending {
@@ -454,11 +592,22 @@ public actor RuntimeController {
             readinessTask.cancel()
             _ = try? await readinessTask.value
         }
-        let requestIDs = Array(sessions[sessionId]?.generations.keys ?? Dictionary<String, Task<String, Error>>().keys)
-        for requestId in requestIDs {
-            _ = await cancelGeneration(sessionId: sessionId, requestId: requestId)
+        // Unload has already closed the session to new external requests and
+        // cancellations. Drain the exact registered tasks internally rather than
+        // calling cancelGeneration(), whose public guard correctly rejects an
+        // unloading session. Keep the lease until every preparation/native task
+        // has settled.
+        let pendingAttempts = generationAttempts[sessionId] ?? [:]
+        for (requestId, task) in pendingAttempts {
+            task.cancel()
+            _ = try? await task.value
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
         }
         guard let removed = sessions.removeValue(forKey: sessionId) else { return false }
+        authorizedGenerationRequests.removeValue(forKey: sessionId)
+        retiredGenerationRequests.removeValue(forKey: sessionId)
+        preGenerationCancellationRequests.removeValue(forKey: sessionId)
+        finishedGenerationAttempts.removeValue(forKey: sessionId)
         _ = await runtime.release(removed.lease)
         _ = await runtime.unloadIdleModels()
         return true
@@ -474,6 +623,71 @@ public actor RuntimeController {
     public func reports() -> [ModelReport] {
         let now = clock()
         return sessions.keys.sorted().map { report(for: $0, now: now) }
+    }
+
+    private func recordRetiredGenerationRequest(sessionId: String, requestId: String) -> Bool {
+        if retiredGenerationRequests[sessionId]?.contains(requestId) == true {
+            return true
+        }
+        let alreadyTracked = authorizedGenerationRequests[sessionId]?.contains(requestId) == true
+        let count = authorizedGenerationRequests.values.reduce(0) { $0 + $1.count }
+            + retiredGenerationRequests.values.reduce(0) { $0 + $1.count }
+        // Fail closed: never acknowledge cancellation that cannot be retained.
+        guard alreadyTracked || count < maximumTrackedGenerationRequests else { return false }
+
+        // Transfer an existing reservation instead of counting the same identity
+        // in both sets. Actor isolation keeps this transition atomic with reserve.
+        if alreadyTracked {
+            authorizedGenerationRequests[sessionId]?.remove(requestId)
+            if authorizedGenerationRequests[sessionId]?.isEmpty == true {
+                authorizedGenerationRequests.removeValue(forKey: sessionId)
+            }
+        }
+        retiredGenerationRequests[sessionId, default: []].insert(requestId)
+        return true
+    }
+
+    private func pruneFinishedGenerationAttempts(now: Date) {
+        for sessionId in Array(finishedGenerationAttempts.keys) {
+            guard var requests = finishedGenerationAttempts[sessionId] else { continue }
+            requests = requests.filter { $0.value > now }
+            if requests.isEmpty {
+                finishedGenerationAttempts.removeValue(forKey: sessionId)
+            } else {
+                finishedGenerationAttempts[sessionId] = requests
+            }
+        }
+    }
+
+    private func markGenerationAttemptFinished(sessionId: String, requestId: String) {
+        authorizedGenerationRequests[sessionId]?.remove(requestId)
+        if authorizedGenerationRequests[sessionId]?.isEmpty == true {
+            authorizedGenerationRequests.removeValue(forKey: sessionId)
+        }
+        retiredGenerationRequests[sessionId, default: []].insert(requestId)
+        let now = clock()
+        pruneFinishedGenerationAttempts(now: now)
+        let count = finishedGenerationAttempts.values.reduce(0) { $0 + $1.count }
+        if count >= maximumCompletedGenerationAttempts,
+           let oldest = finishedGenerationAttempts.flatMap({ sessionId, requests in
+               requests.map { (sessionId, $0.key, $0.value) }
+           }).min(by: { $0.2 < $1.2 }) {
+            finishedGenerationAttempts[oldest.0]?.removeValue(forKey: oldest.1)
+            if finishedGenerationAttempts[oldest.0]?.isEmpty == true {
+                finishedGenerationAttempts.removeValue(forKey: oldest.0)
+            }
+        }
+        finishedGenerationAttempts[sessionId, default: [:]][requestId] = now.addingTimeInterval(completedGenerationAttemptTTL)
+    }
+
+    private func clearGenerationAttempt(sessionId: String, requestId: String) {
+        guard var attempts = generationAttempts[sessionId] else { return }
+        attempts.removeValue(forKey: requestId)
+        if attempts.isEmpty {
+            generationAttempts.removeValue(forKey: sessionId)
+        } else {
+            generationAttempts[sessionId] = attempts
+        }
     }
 
     private func clearGeneration(sessionId: String, requestId: String) {
@@ -573,8 +787,12 @@ public actor RuntimeController {
         }
     }
 
+    private static func canonicalUUID(_ value: String) -> String? {
+        UUID(uuidString: value)?.uuidString
+    }
+
     private static func validUUID(_ value: String) -> Bool {
-        UUID(uuidString: value) != nil
+        canonicalUUID(value) != nil
     }
 
     private static func validToken(_ value: String, minBytes: Int = 1, maxBytes: Int) -> Bool {

@@ -73,15 +73,16 @@ public actor BridgeChallengeStore: BridgeChallengeConsuming {
               let origin = Origin(page) else {
             throw BridgeChallengeError.untrustedOrigin
         }
-        guard Self.validUUID(requestId), Self.validUUID(sessionId) else {
+        guard let canonicalRequestId = Self.canonicalUUID(requestId),
+              let canonicalSessionId = Self.canonicalUUID(sessionId) else {
             throw BridgeChallengeError.invalidBinding
         }
 
         let nonce = Self.randomNonce()
         entries[nonce] = Entry(
             origin: origin,
-            requestId: requestId,
-            sessionId: sessionId,
+            requestId: canonicalRequestId,
+            sessionId: canonicalSessionId,
             expiresAt: clock().addingTimeInterval(lifetime)
         )
         return nonce
@@ -98,8 +99,8 @@ public actor BridgeChallengeStore: BridgeChallengeConsuming {
     ) -> Bool {
         guard BridgeGate.sameOrigin(page, trusted: trusted),
               let origin = Origin(page),
-              Self.validUUID(requestId),
-              Self.validUUID(sessionId),
+              let canonicalRequestId = Self.canonicalUUID(requestId),
+              let canonicalSessionId = Self.canonicalUUID(sessionId),
               var entry = entries[nonce] else { return false }
 
         guard entry.expiresAt > clock() else {
@@ -107,19 +108,32 @@ public actor BridgeChallengeStore: BridgeChallengeConsuming {
             return false
         }
         guard entry.origin == origin,
-              entry.requestId == requestId,
-              entry.sessionId == sessionId else { return false }
+              entry.requestId == canonicalRequestId,
+              entry.sessionId == canonicalSessionId else { return false }
 
         entries.removeValue(forKey: nonce)
         return true
+    }
+
+    /// Removes challenges bound to the exact spent request identity.
+    public func invalidate(requestId: String, sessionId: String) {
+        guard let canonicalRequestId = Self.canonicalUUID(requestId),
+              let canonicalSessionId = Self.canonicalUUID(sessionId) else { return }
+        entries = entries.filter {
+            $0.value.requestId != canonicalRequestId || $0.value.sessionId != canonicalSessionId
+        }
     }
 
     public func invalidateAll() {
         entries.removeAll()
     }
 
+    private static func canonicalUUID(_ value: String) -> String? {
+        UUID(uuidString: value)?.uuidString
+    }
+
     private static func validUUID(_ value: String) -> Bool {
-        UUID(uuidString: value) != nil
+        canonicalUUID(value) != nil
     }
 
     private static func randomNonce() -> String {
