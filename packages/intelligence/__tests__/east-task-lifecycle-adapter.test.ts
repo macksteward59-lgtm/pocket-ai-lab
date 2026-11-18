@@ -176,4 +176,89 @@ describe("runEastTaskWithLifecycle", () => {
     expect(coordinator.getTask("lifecycle-2").status).toBe("failed");
     expect(coordinator.getTask("lifecycle-2").steps.find(step => step.id === "execute-director")?.attempts).toBe(1);
   });
+
+  const failureCases: Array<{
+    name: string;
+    stepId: string;
+    operation: "assignAgent" | "executeAgent" | "runDeliberation" | "commitTaskEvidence";
+    agentId?: string;
+    uncertain: boolean;
+  }> = [
+    { name: "core-agent assignment", stepId: "assign-core-agents", operation: "assignAgent", uncertain: false },
+    ...EAST_DELIBERATION_AGENTS.map(agentId => ({
+      name: "provider execution " + agentId,
+      stepId: "execute-" + agentId,
+      operation: "executeAgent" as const,
+      agentId,
+      uncertain: true
+    })),
+    { name: "multi-agent deliberation", stepId: "deliberate", operation: "runDeliberation", uncertain: true },
+    { name: "evidence-gate submission", stepId: "record-unverified-proposal", operation: "commitTaskEvidence", uncertain: true }
+  ];
+
+  it.each(failureCases)("classifies $name failure at the East adapter boundary", async failureCase => {
+    const eastTaskId = "east-classification-" + failureCase.stepId;
+    const lifecycleTaskId = "lifecycle-classification-" + failureCase.stepId;
+    const objective = "Verify the East adapter's settled-outcome classification";
+    const failureMessage = "injected " + failureCase.operation + " failure";
+    const task = {
+      id: eastTaskId,
+      objective,
+      assignments: [],
+      synthesis: null,
+      evidenceRefs: [],
+      evidenceGate: { status: "not_submitted" as const },
+      apexDecision: { status: "unread" as const },
+      authorized: false as const
+    };
+    const checkpoint = {
+      version: 1 as const,
+      task,
+      messages: [],
+      evidenceMemoryCommitted: false
+    };
+    const shouldFail = (operation: string, agentId?: string): boolean =>
+      failureCase.operation === operation &&
+      (failureCase.agentId === undefined || failureCase.agentId === agentId);
+    const east = {
+      getTask: () => task,
+      checkpointTask: () => checkpoint,
+      restoreTask: () => undefined,
+      assignAgent: () => {
+        if (shouldFail("assignAgent")) throw new Error(failureMessage);
+        return eastTaskId;
+      },
+      executeAgent: async (_taskId: string, agentId: string) => {
+        if (shouldFail("executeAgent", agentId)) throw new Error(failureMessage);
+        return "message:" + agentId;
+      },
+      runDeliberation: async () => {
+        if (shouldFail("runDeliberation")) throw new Error(failureMessage);
+        return { synthesis: "Untrusted proposal only; no approval.", evidence: [] };
+      },
+      commitTaskEvidence: async () => {
+        if (shouldFail("commitTaskEvidence")) throw new Error(failureMessage);
+        return false;
+      }
+    } as unknown as EastPlatformRuntime;
+    const coordinator = new TaskLifecycleCoordinator({ store: new InMemoryTaskLifecycleStore() });
+
+    await expect(runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId, lifecycleTaskId, objective
+    })).rejects.toThrow(failureMessage);
+
+    const lifecycle = coordinator.getTask(lifecycleTaskId);
+    const failedStep = lifecycle.steps.find(step => step.id === failureCase.stepId);
+    expect(lifecycle.status).toBe("failed");
+    expect(failedStep).toMatchObject({
+      status: "failed", uncertain: failureCase.uncertain, currentAttempt: null
+    });
+    if (failureCase.uncertain) {
+      expect(failedStep?.lastError).toContain("operator reconciliation required");
+    } else {
+      expect(failedStep?.lastError).toBe(failureMessage);
+    }
+    expect(await coordinator.claimNextStep(lifecycleTaskId)).toBeNull();
+  });
+
 });
