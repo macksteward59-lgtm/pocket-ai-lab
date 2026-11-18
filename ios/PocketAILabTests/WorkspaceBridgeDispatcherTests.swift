@@ -729,7 +729,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(whileDraining.activeLeaseCount, 2)
         XCTAssertEqual(whileDraining.activeUseCount, 1)
         XCTAssertEqual(whileDraining.loadedModelIDs.count, 1)
-        XCTAssertEqual(service.activeLeases().map(\\.session.id), [sessionID])
+        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID])
         await engine.finishDrain()
         let response = await generation.value
         let deadline = Date().addingTimeInterval(5)
