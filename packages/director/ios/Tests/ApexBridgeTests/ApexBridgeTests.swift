@@ -920,8 +920,9 @@ final class RuntimeControllerTests: XCTestCase {
         // Give cancelAllGenerations an opportunity to enter while unload is
         // suspended in the same native drain. It must await the registered task.
         try await Task.sleep(nanoseconds: 50_000_000)
+        let finishedBeforeDrain = await cancellationFinished.hasFinished()
         XCTAssertFalse(
-            await cancellationFinished.hasFinished(),
+            finishedBeforeDrain,
             "cancelAllGenerations must not return while unload still owns an active native drain."
         )
 
