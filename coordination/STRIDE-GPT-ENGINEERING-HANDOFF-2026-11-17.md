@@ -124,3 +124,15 @@ There is a second dependency for D-04: the current verification result contains 
 ## D-02 capability design proposal — 2026-11-18
 
 Added [STRIDE-D02-CAPABILITY-DESIGN.md](STRIDE-D02-CAPABILITY-DESIGN.md), a design-only proposal for the Director-facing verifier entry point, content-bound reference identity, task/workspace scoping, stale-reference invalidation, and adversarial tests. It reuses the digest-binding pattern from the existing SourceEvidenceAdapter without treating the reference ID as signed evidence or authorization. No shared interface or application code changed. Owner/reviewer acceptance is still required before implementation; D-04 remains blocked.
+
+
+## 2026-11-18 — D-02 East task identity and catalog lifecycle follow-up
+
+A read-only trace of the current Director and East code resolves part of the D-02 open design question:
+
+- `DirectorCommandRouter` already receives a trusted `DirectorCommandContext.taskId`, but the `analyze-project` dispatch path currently forwards only the command object. The task identity is dropped before `DirectorCapabilities.analyzeProject` and `ProjectInspector.inspect`. Any verifier capability must receive the task ID from this existing dispatch context; it must never accept a model-proposed task ID.
+- `src/east/platform.ts` generates task IDs and keeps `EastTaskRecord` values in a process-local Map. The record has no source-reference catalog or general artifact-store port.
+- East's `commitTaskEvidence` stores deliberation text in `MemoryManager` as episodic memory with `verified: false`. This is not a durable source-reference artifact interface. Do not repurpose it for verified source-reference records or overload `EastTaskRecord.evidenceRefs`.
+- Initial D-02 catalog recommendation: immutable, host-owned, task-scoped, and ephemeral/process-local. The host owns workspace identity and snapshot reads. A separate design review is required before persistence, including identification of an existing durable artifact contract and restart/revalidation semantics.
+
+This is a design finding only. No shared interfaces, East task records, MemoryManager behavior, application code, tests, or authorization contracts were changed. PR #198 remains an adapter-level verifier pending independent review; D-04 remains blocked.
