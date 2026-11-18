@@ -681,3 +681,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #197 advanced to `a66b0749434f2b74d4d990eac923efc6cd914a8e`. Static inspection of `recordRetiredGenerationRequest` confirms an existing authorized identity is removed from the authorized set (including empty-session cleanup) before insertion into the retired set; actor isolation makes the transfer atomic. New regression reserves and cancels 511 identities, then verifies the final 512th slot remains available. This addresses the specific double-counting finding in comment `6989513504` at the inspected head.
 - Exact-head iOS workflow run `44385127350` is registered but remains pending; no job results are available yet. Do not treat prior run `44383044295` as validation of this head. PR #197 remains draft pending exact-head CI and remaining lifecycle review.
 - Follow-up static review note posted to PR #197; no approval or merge. PR #204 migration/adapter tests and D-02 root-confinement decision remain outstanding. No application source or governance authority changed.
+
+
+## 2026-11-18 — PR #197 unload drain remediation inspected
+
+- PR #197 current head: `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`. The updated `unload(sessionId:)` marks the session as unloading, cancels/awaits readiness, internally cancels/awaits each registered generation attempt, and releases the exact lease only after settlement. This avoids the prior public-cancel guard conflict.
+- Deterministic tests now cover unload during blocked native `cancelAndWait` (lease and inference use-pin remain held) and generation suspended during challenge consumption. Targeted follow-up review posted to PR #197. Exact-head workflow run `44385621155` is queued; earlier runs `44385127350` and `44385602976` were cancelled/superseded and are not validation for this head. Keep PR draft pending all stages and independent review.
+- PR #204 remains blocked on legacy serialized-task migration and adapter-level outcome tests; PR #200 remains blocked on parent-component/root-pinning race; issue #202 has no host-containment decision. PR #203 exact-head run `44373747684` remains successful.
+- No application source, governance authority, signing, or branch protection changed in this coordination update.
