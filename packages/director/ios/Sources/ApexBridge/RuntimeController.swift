@@ -579,16 +579,16 @@ public actor RuntimeController {
             let didCancel = await cancelGeneration(sessionId: sessionId, requestId: requestId)
             if didCancel {
                 cancelled += 1
-            } else if unloadingSessions.contains(sessionId) {
-                // A concurrent unload has already closed external cancellation
-                // and owns lease release, but this drain barrier must still await
-                // the same registered task rather than treating the rejected
-                // public cancellation as proof that native work has settled.
+            } else {
+                // The public per-request API can reject an already-retired
+                // request or a session whose unload has closed external
+                // cancellation. This global lifecycle barrier still owns the
+                // exact task snapshot, so it must cancel that task directly.
                 task.cancel()
             }
             // Always await the snapshot task. cancelGeneration awaits it when
-            // it owns cancellation; this also covers an already-retired request
-            // or a session whose unload is concurrently draining that task.
+            // it owns cancellation; this also covers concurrent unload and
+            // already-retired requests without returning before task settlement.
             _ = try? await task.value
         }
         return cancelled
