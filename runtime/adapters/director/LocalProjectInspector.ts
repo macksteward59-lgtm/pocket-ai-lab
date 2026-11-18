@@ -100,16 +100,17 @@ export class LocalProjectInspector implements ProjectInspector {
         (input.startLine !== undefined && input.endLine !== undefined && input.startLine > input.endLine)) {
       return invalid();
     }
-    const extension = path.extname(relative).toLowerCase();
+    const normalizedPath = path.normalize(relative);
+    const extension = path.extname(normalizedPath).toLowerCase();
     if (!TEXT_EXTENSIONS.has(extension)) {
-      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "unsupported_file_type" };
+      return { status: "unverified", path: normalizedPath, occurrenceCount: 0, reason: "unsupported_file_type" };
     }
-    const loaded = await this.readEligibleTextFile(relative);
+    const loaded = await this.readEligibleTextFile(normalizedPath);
     if (!loaded) {
-      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "file_unavailable" };
+      return { status: "unverified", path: normalizedPath, occurrenceCount: 0, reason: "file_unavailable" };
     }
     if (loaded.reason === "file_too_large") {
-      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "file_too_large" };
+      return { status: "unverified", path: normalizedPath, occurrenceCount: 0, reason: "file_too_large" };
     }
 
     const content = loaded.content.replace(/\r\n?/g, "\n");
@@ -127,19 +128,19 @@ export class LocalProjectInspector implements ProjectInspector {
       offset = found + 1;
     }
     if (!occurrences.length) {
-      return { status: "unverified", path: relative, occurrenceCount: 0, reason: "quote_not_found" };
+      return { status: "unverified", path: normalizedPath, occurrenceCount: 0, reason: "quote_not_found" };
     }
     const matching = occurrences.filter(item =>
       (input.startLine === undefined || item.startLine === input.startLine) &&
       (input.endLine === undefined || item.endLine === input.endLine));
     if (matching.length === 1 && occurrences.length === 1) {
-      return { status: "verified", path: relative, occurrenceCount: 1, ...matching[0] };
+      return { status: "verified", path: normalizedPath, occurrenceCount: 1, ...matching[0] };
     }
     if (matching.length === 1) {
-      return { status: "verified", path: relative, occurrenceCount: occurrences.length, ...matching[0] };
+      return { status: "verified", path: normalizedPath, occurrenceCount: occurrences.length, ...matching[0] };
     }
     return {
-      status: "unverified", path: relative, occurrenceCount: occurrences.length,
+      status: "unverified", path: normalizedPath, occurrenceCount: occurrences.length,
       reason: matching.length > 1 ? "ambiguous_match" :
         (occurrences.length > 1 && input.startLine === undefined && input.endLine === undefined
           ? "ambiguous_match" : "line_range_mismatch")
