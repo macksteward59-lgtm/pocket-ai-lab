@@ -217,27 +217,33 @@ describe("runEastTaskWithLifecycle", () => {
       messages: [],
       evidenceMemoryCommitted: false
     };
+    let failedOperationCalls = 0;
     const shouldFail = (operation: string, agentId?: string): boolean =>
       failureCase.operation === operation &&
       (failureCase.agentId === undefined || failureCase.agentId === agentId);
+    const injectedFailure = (operation: string, agentId?: string): void => {
+      if (!shouldFail(operation, agentId)) return;
+      failedOperationCalls += 1;
+      throw new Error(failureMessage);
+    };
     const east = {
       getTask: () => task,
       checkpointTask: () => checkpoint,
       restoreTask: () => undefined,
       assignAgent: () => {
-        if (shouldFail("assignAgent")) throw new Error(failureMessage);
+        injectedFailure("assignAgent");
         return eastTaskId;
       },
       executeAgent: async (_taskId: string, agentId: string) => {
-        if (shouldFail("executeAgent", agentId)) throw new Error(failureMessage);
+        injectedFailure("executeAgent", agentId);
         return "message:" + agentId;
       },
       runDeliberation: async () => {
-        if (shouldFail("runDeliberation")) throw new Error(failureMessage);
+        injectedFailure("runDeliberation");
         return { synthesis: "Untrusted proposal only; no approval.", evidence: [] };
       },
       commitTaskEvidence: async () => {
-        if (shouldFail("commitTaskEvidence")) throw new Error(failureMessage);
+        injectedFailure("commitTaskEvidence");
         return false;
       }
     } as unknown as EastPlatformRuntime;
@@ -259,6 +265,13 @@ describe("runEastTaskWithLifecycle", () => {
       expect(failedStep?.lastError).toBe(failureMessage);
     }
     expect(await coordinator.claimNextStep(lifecycleTaskId)).toBeNull();
+
+    // Re-entering the same failed workflow must stop at the terminal lifecycle
+    // record before invoking the failed external operation a second time.
+    await expect(runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId, lifecycleTaskId, objective
+    })).rejects.toThrow("Existing East lifecycle is terminal: failed");
+    expect(failedOperationCalls).toBe(1);
   });
 
 });
