@@ -138,3 +138,95 @@ Contract implications:
 ### Remaining decision narrowed
 
 Prefer an explicit `verify-source-reference` Director command for the first increment because the router already provides a strict structured-command boundary and the Researcher/Validator workflow needs an auditable operation. Keep the command read-only and bounded; do not expose arbitrary file reads. An internal stage remains a valid alternative if the existing Researcher pipeline can invoke the same capability with identical task context and catalog guarantees. The implementation owner should select one path after independent review rather than shipping both.
+
+
+## 11. Implementation-ready validation and identity specification (review draft)
+
+### 11.1 Command boundary
+
+The current router uses a finite `DIRECTOR_COMMAND_KINDS` list and a per-kind `DIRECTOR_COMMAND_FIELDS` allowlist. If the explicit-command option is accepted, add exactly one command shape:
+
+```ts
+| {
+    kind: "verify-source-reference";
+    path: string;
+    quote: string;
+    startLine?: number;
+    endLine?: number;
+  }
+```
+
+Add `"verify-source-reference"` to the command-kind tuple and map its exact fields in `DIRECTOR_COMMAND_FIELDS`. Do not put `taskId`, `workspaceId`, `referenceId`, `sourceSha256`, `verified`, `authority`, or `approvalRef` in the model command.
+
+Validation requirements:
+- Reject unknown keys using the existing strict field allowlist.
+- `path`: string, 1–1024 UTF-16 code units before normalization; reject blank, NUL, absolute, drive-qualified, UNC, and any `..` segment after treating both slash styles as separators. Normalize to a repository-relative POSIX path; reject a result of `.`, empty segments where ambiguous, and paths that normalize outside the workspace.
+- `quote`: string, 1–8192 UTF-16 code units; reject blank and NUL. Do not trim or Unicode-normalize the quote: exact source text must be preserved. Normalize only CRLF and lone CR to LF for comparison, matching the existing adapter behavior.
+- `startLine` and `endLine`: optional safe integers in [1, 2^31-1]. If both exist, require startLine <= endLine. A supplied line pair must select exactly one occurrence; otherwise return a stable unverified reason.
+- Reject unknown nested structures; the proposal is a flat object.
+- Limit one verifier call to one file and one quote; no globbing, recursive scan, batching, or fallback search.
+- Missing verifier configuration must fail closed with a capability-not-configured error; never fall back to model claims or generic `ProjectInspector.inspect`.
+
+### 11.2 Canonical reference ID v1
+
+Use SHA-256 over a binary encoding, not JSON serialization or delimiter-joined text. All integers are unsigned big-endian. All strings are UTF-8 without implicit trimming or Unicode normalization. The normalized relative path uses POSIX separators. Hash the exact raw file bytes before text decoding; compute quoteSha256 from the exact quote after CRLF/CR-to-LF normalization and UTF-8 encoding.
+
+Canonical byte layout:
+
+1. Domain separator: ASCII `PAL-SOURCE-REF\0v1\0`.
+2. Workspace scope: uint32 big-endian byte length, then opaque host-issued workspace-scope bytes.
+3. Task scope: uint32 big-endian byte length, then UTF-8 task ID.
+4. Normalized relative path: uint32 big-endian byte length, then UTF-8 path.
+5. Source digest: 32 raw bytes of SHA-256(exact file bytes).
+6. Start line: uint64 big-endian.
+7. End line: uint64 big-endian.
+8. Quote digest: 32 raw bytes of SHA-256(normalized quote UTF-8 bytes).
+
+The public ID is `sr1_` followed by lowercase hex SHA-256 of the complete canonical byte sequence. The prefix versions the encoding; changing any field or encoding requires a new version. The opaque workspace scope must be stable only for the lifetime of the host workspace registration and must not be an absolute path or model-visible secret. The catalog key must additionally enforce exact task/workspace equality; hash collision resistance is not a substitute for scope checks.
+
+Fixed test vector (all input bytes shown as UTF-8 unless marked raw):
+- workspace scope: `ws-test`
+- task ID: `task-1`
+- normalized path: `src/a.ts`
+- exact source bytes: `const x = 1;\n`
+- source SHA-256: `95befdd6e691d4d89031a2a2901cc74fc6242109980b060e08ddf87829924483`
+- startLine: `1`; endLine: `1`
+- normalized quote: `const x = 1;`
+- quote SHA-256: `3f41cbb303012f33212c92326b27f6cc604fd414e20315cb10f2be7f1f6bb83c`
+- canonical payload hex:
+  `50414c2d534f555243452d524546007631000000000777732d74657374000000067461736b2d31000000087372632f612e747395befdd6e691d4d89031a2a2901cc74fc6242109980b060e08ddf87829924483000000000000000100000000000000013f41cbb303012f33212c92326b27f6cc604fd414e20315cb10f2be7f1f6bb83c`
+- expected digest: `f12747d7815a377503670cfb3631c30729e101ebfd225673cb51c907817e3fed`
+- expected ID: `sr1_f12747d7815a377503670cfb3631c30729e101ebfd225673cb51c907817e3fed`
+
+Tests must assert the exact vector above and mutation sensitivity for each field independently (workspace scope, task ID, path, source bytes, start line, end line, quote). Include empty/non-ASCII path and quote vectors, plus line values at the accepted boundaries.
+
+### 11.3 Snapshot and file-race requirements
+
+The verifier must hash and match one and the same byte snapshot. Do not hash one read and match a second read. Avoid a realpath/stat/readFile-by-path sequence that permits a symlink or file replacement between checks. The implementation review must choose a platform-supported descriptor-based open/read strategy, verify the opened object is a regular file, enforce the byte limit while reading, and ensure the descriptor refers to the object whose bytes are hashed and decoded. Re-check workspace containment using the opened object's resolved identity where the platform supports it. If the host cannot establish a safe same-object snapshot, fail closed. This is a review requirement; it does not claim PR #198 currently closes this race.
+
+For `resolve`, re-open through the same host confinement adapter, hash the current exact bytes, and repeat the quote/line check. If bytes or the unique match changed, return a stable stale/unverified result and do not return a verified catalog object. A file can change immediately after resolution; consumers must treat the returned object as a snapshot-bound result and must not cache it as permanently current.
+
+### 11.4 Minimum tests by layer
+
+**Parser/router**
+- Known command accepted; unknown top-level and nested keys rejected.
+- Task/workspace/reference/digest/authority fields rejected in model payload.
+- Blank, NUL, absolute, drive, UNC, traversal, oversized path/quote rejected.
+- Line zero, negative, fractional, unsafe integer, reversed range rejected.
+- Task ID supplied only from `DirectorCommandContext`; empty task context fails before verifier invocation.
+- Exactly one verifier call; no inspector/network/process fallback.
+
+**Capability and host port**
+- Missing port fails closed.
+- Verified result only when host returns a complete valid result; capability rejects malformed adapter output.
+- Unverified results never contain reference IDs.
+- Catalog entries immutable; duplicate same-snapshot verification is idempotent.
+- Cross-task/workspace resolution fails even with copied ID.
+- Restart/eviction invalidates IDs; unknown ID is unverified, never re-derived from caller fields.
+- Stale file, symlink swap, path replacement, truncation/growth during read, non-regular file, and read error fail closed.
+- Exact bytes are hashed once and are the bytes used for matching.
+
+**Trust regression**
+- No change to Evidence.swift signing/receipt contracts, APEX approval, East authorization, BridgeGate, RuntimeController, LlamaEngine, or ToolSandbox.
+- Existing Director, East, APEX, and evidence tests remain passing.
+- D-04 cannot consume raw path/line strings as references; it must resolve host-issued IDs through the task catalog.
