@@ -294,7 +294,9 @@ public actor LlamaCppMetalBackend: LlamaEngine {
             // A stale or unrelated request must never cancel a newer generation.
             return
         }
-        generation[sessionId] = nil
+        // Keep the session occupied until finishGeneration runs after native
+        // decode has exited. Clearing this early would let a new request reset
+        // the shared C cancellation flag while the old decode is still draining.
         #if POCKET_LLAMA_LINKED
         sessions[sessionId]?.requestCancel()
         #endif
