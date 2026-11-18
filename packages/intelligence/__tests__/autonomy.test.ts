@@ -154,14 +154,14 @@ describe("TaskLifecycleCoordinator", () => {
     const first = await h.coordinator.claimNextStep("task-1");
     const retry = await h.coordinator.failStep({
       taskId: "task-1", stepId: "inspect", attemptId: first!.attemptId,
-      error: "Transient provider failure", retryable: true
+      error: "Transient provider failure", outcome: "definitive", retryable: true
     });
     expect(retry.status).toBe("ready");
     const second = await h.coordinator.claimNextStep("task-1");
     expect(second?.attemptNumber).toBe(2);
     const failed = await h.coordinator.failStep({
       taskId: "task-1", stepId: "inspect", attemptId: second!.attemptId,
-      error: "Repeated failure", retryable: true
+      error: "Repeated failure", outcome: "definitive", retryable: true
     });
     expect(failed.status).toBe("failed");
     expect(failed.steps.find(step => step.id === "implement")?.status).toBe("cancelled");
@@ -234,6 +234,28 @@ describe("TaskLifecycleCoordinator", () => {
     const restarted = new TaskLifecycleCoordinator({ store, workerId: "worker-after-restart" });
     await restarted.init();
     expect(restarted.getTask("event-journal").events).toEqual(completed.events);
+  });
+
+
+  it("treats an expired multi-attempt lease as uncertain unless safe retry is explicit", async () => {
+    let milliseconds = Date.parse("2026-11-17T12:00:00.000Z");
+    const store = new InMemoryTaskLifecycleStore();
+    const coordinator = new TaskLifecycleCoordinator({
+      store, now: () => new Date(milliseconds), workerId: "worker-expiry-default"
+    });
+    await coordinator.init();
+    await coordinator.createTask({
+      id: "expiry-default", objective: "Do not infer idempotency from a retry budget",
+      leaseMs: 1_000,
+      steps: [{ id: "publish", description: "Dispatch a potentially non-idempotent operation", maxAttempts: 3 }]
+    });
+    await coordinator.claimNextStep("expiry-default");
+    milliseconds += 1_001;
+    expect(await coordinator.recoverExpiredLeases("expiry-default")).toBe(1);
+    expect(coordinator.getTask("expiry-default").steps[0]).toMatchObject({
+      status: "failed", uncertain: true, uncertainOnExpiredLease: true
+    });
+    expect(await coordinator.claimNextStep("expiry-default")).toBeNull();
   });
 
   it("marks expired single-attempt work uncertain and never auto-replays it after restart", async () => {
@@ -497,7 +519,7 @@ describe("TaskLifecycleCoordinator", () => {
     const claim = await coordinator.claimNextStep("retry-restore");
     await coordinator.failStep({
       taskId: "retry-restore", stepId: "one", attemptId: claim!.attemptId,
-      error: "Transient failure", retryable: true
+      error: "Transient failure", outcome: "definitive", retryable: true
     });
 
     const restarted = new TaskLifecycleCoordinator({ store, createId: () => "retry-attempt-2" });
