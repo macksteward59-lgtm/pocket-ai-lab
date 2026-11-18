@@ -364,6 +364,9 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                 return Self.error("model_not_loaded_or_session_mismatch", id: messageID)
             }
             let cancelled = await runtimeController.cancelGeneration(sessionId: sessionId, requestId: requestId)
+            // Revoke any challenge already issued for this exact request, even
+            // when cancellation races after authorization but before generation.
+            await challengeStore?.invalidate(requestId: requestId, sessionId: sessionId)
             guard isActive, lifecycleGeneration == requestGeneration else {
                 return Self.error("bridge_unavailable", id: messageID)
             }
