@@ -12,7 +12,6 @@ export interface SourceReferenceVerification {
     "file_too_large" | "quote_not_found" | "ambiguous_match" | "line_range_mismatch";
 }
 
-
 const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".json", ".md", ".yml", ".yaml", ".toml", ".py", ".swift", ".sh"]);
 const DEFAULT_PATHS = ["README.md", "package.json"];
 const MAX_FILES = 100;
@@ -96,6 +95,7 @@ export class LocalProjectInspector implements ProjectInspector {
         path.isAbsolute(relative) || relative.split(/[\\/]/).includes("..") ||
         typeof quote !== "string" || !quote.length || quote.length > 8192 ||
         (input.startLine !== undefined && (!Number.isSafeInteger(input.startLine) || input.startLine < 1)) ||
+        relative.includes(String.fromCharCode(0)) ||
         (input.endLine !== undefined && (!Number.isSafeInteger(input.endLine) || input.endLine < 1)) ||
         (input.startLine !== undefined && input.endLine !== undefined && input.startLine > input.endLine)) {
       return invalid();
@@ -169,5 +169,4 @@ export class LocalProjectInspector implements ProjectInspector {
     if (byteLength > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
     return { content, byteLength };
   }
-
 }
