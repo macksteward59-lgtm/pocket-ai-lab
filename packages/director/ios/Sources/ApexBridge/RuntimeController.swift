@@ -592,11 +592,16 @@ public actor RuntimeController {
             readinessTask.cancel()
             _ = try? await readinessTask.value
         }
-        // Unload must drain preparation-stage requests too; they may not yet
-        // appear in ActiveSession.generations but still hold this session's lease.
-        let requestIDs = Array(generationAttempts[sessionId]?.keys ?? Dictionary<String, Task<RuntimeGenerationRecord, Error>>().keys)
-        for requestId in requestIDs {
-            _ = await cancelGeneration(sessionId: sessionId, requestId: requestId)
+        // Unload has already closed the session to new external requests and
+        // cancellations. Drain the exact registered tasks internally rather than
+        // calling cancelGeneration(), whose public guard correctly rejects an
+        // unloading session. Keep the lease until every preparation/native task
+        // has settled.
+        let pendingAttempts = generationAttempts[sessionId] ?? [:]
+        for (requestId, task) in pendingAttempts {
+            task.cancel()
+            _ = try? await task.value
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
         }
         guard let removed = sessions.removeValue(forKey: sessionId) else { return false }
         authorizedGenerationRequests.removeValue(forKey: sessionId)
