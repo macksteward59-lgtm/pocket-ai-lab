@@ -415,3 +415,16 @@ This checkpoint supersedes older status rows above where exact heads or workflow
 - Added implementation-ready D-02 review draft: exact `verify-source-reference` command fields and rejection rules; task identity exclusively from `DirectorCommandContext`; versioned binary canonical ID layout; fixed SHA-256 test vector; field-by-field mutation tests; same-byte-snapshot and descriptor-based file-race requirements; parser, capability, catalog, stale-reference, and trust-regression test matrix.
 - Important review finding: PR #198 currently performs `realpath`/stat followed by path-based `readFile`; the new design explicitly requires review of symlink/file-replacement races and insists hashing and matching the same byte snapshot. This is a design gate, not a claim that PR #198 already addresses it.
 - No application code, shared interfaces, tests, PR #198 head, or authorization contracts changed. D-02 remains pending independent review and acceptance of the design; D-04 remains blocked.
+
+
+## PR #198 review-thread finding — 2026-11-18
+
+A new COMMENTED review entry and one unresolved inline thread are now present on PR #198. The review author is the PR author account itself (`macksteward59-lgtm`), so this is a recorded self-review finding, **not independent review approval**.
+
+The inline finding at `LocalProjectInspector.ts:182` identifies a concrete bounded-read race: `stat()` checks file size, then path-based `readFile()` buffers the entire file; a file that grows or is replaced between those operations can exceed the intended memory/read bound before the post-read byte-length check. It also asks for symlink-replacement protection at open time and a regression test for mutation between metadata validation and content read.
+
+Disposition:
+- Treat as a valid security hardening issue, not as an independent review.
+- Required remediation: open the checked object with a no-follow strategy where supported; verify the opened descriptor is a regular file; enforce the byte ceiling during descriptor reads by reading at most `maxBytes + 1`; hash and match the same bytes; fail closed when safe containment cannot be established.
+- Add deterministic regression coverage for growth/replacement between metadata check and read. Do not claim the existing oversized-file test covers this race.
+- Keep PR #198 unmerged and D-02/D-04 gates unchanged until remediation, exact-head CI, and independent review are complete.
