@@ -3620,3 +3620,11 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - Latest implementation head: `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`. PR #198 description and coordination documentation refreshed.
 - Validation remains incomplete: no test command was executed. The available workflow lookup is explicitly PR-trigger-only and returned no runs; combined commit status returned no checks. The repository's Intelligence CI workflow includes `codex/**` push and pull-request-to-main triggers, but this connector lookup does not expose push-triggered runs. Do not claim tests passed, do not merge, and do not start D-04.
 - Next: verify the push-triggered workflow run from GitHub Actions, obtain exact-head CI for `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`, then request independent review once tests/build pass.
+
+## 2026-11-18 — D-02 exact-head CI verified
+
+- Followed the Actions run associated with PR head `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`. Pocket AI Lab CI run #3025 completed successfully; the job checked out PR merge ref `ac1ddbb71e40be9051a18cb4e56e644900f05c72`.
+- Confirmed `npm run build` (TypeScript) passed and the full `npm test` command passed. Vitest reported 68 passing package tests and 28 passing runtime/adapter tests; `LocalProjectInspector.test.ts` passed 9/9. Python suites passed (Eagle reported four skips), and the desktop suite passed 16/16.
+- The workflow's npm audit reporting step surfaced a high-severity advisory chain involving `picomatch`, `fdir`, `tinyglobby`, `vite`, and `vitest`. The workflow uses `npm audit --json ... || true`, so the advisory is non-blocking and does not indicate a failure in this PR. Track dependency remediation separately; do not expand D-02's two-file scope.
+- Updated PR #198's validation section and handoff/architecture/board records. PR is now ready for independent review, still open and unmerged. No merge performed.
+- D-04 remains blocked pending independent D-02 review and acceptance of the source-reference interface/trust boundary.
