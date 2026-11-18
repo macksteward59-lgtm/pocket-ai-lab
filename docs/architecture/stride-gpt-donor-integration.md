@@ -77,6 +77,6 @@ The prototype adds exact excerpt presence checks, normalized relative paths, CRL
 - Base: `main` at `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`
 - Current head at handoff: `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`
 - Files: `runtime/adapters/director/LocalProjectInspector.ts`, `runtime/adapters/director/LocalProjectInspector.test.ts`
-- Validation: tests have not been executed. The available workflow-run lookup (PR-triggered runs only) and combined status surfaced no exact-head checks. Intelligence CI is configured for `codex/**` pushes and PRs targeting `main`, but push-run details are not exposed by that lookup. PR #198 is still draft/unvalidated. GitHub currently reports mergeable=true and the compare is ahead 12 / behind 0; this is not a substitute for CI or review.
+- Validation: Pocket AI Lab CI run #3025 completed successfully for PR head `17ac696687bfaaba3123eccb18c9f3d03bb1c13f` (PR merge ref `ac1ddbb71e40be9051a18cb4e56e644900f05c72`). TypeScript build and full `npm test` passed; the LocalProjectInspector suite passed 9/9. GitHub reports mergeable=true and compare is ahead 12 / behind 0. PR #198 remains draft pending independent review. The non-blocking audit step reported high-severity advisories through `picomatch`/`fdir`/`tinyglobby`/`vite`/`vitest`; track separately.
 
 Do not proceed to D-04 until D-02's exact-head tests and independent review are complete. No Director command schema, evidence authority, APEX/East contract, or tool permission is changed by this prototype.
