@@ -98,8 +98,8 @@ The first isolated D-02 implementation slice has been opened as draft PR [#198](
 - Design adjustment: extend that inspector rather than create a second sandbox or independent path resolver.
 - Changed paths are limited to `runtime/adapters/director/LocalProjectInspector.ts` and `runtime/adapters/director/LocalProjectInspector.test.ts`.
 - Added exact excerpt verification, 1-based line reporting, occurrence counting, duplicate ambiguity handling, stable unverified reasons, and tests for exact match, paraphrase rejection, duplicate excerpts, line selection, traversal, unsupported files, and symlink escape.
-- Current feature-branch head: `e232ab66b0698bab9b033050641b01e0deffaef1`.
-- Validation: no test command was executed in this environment. GitHub workflow-run lookup returned no runs and combined status returned no checks for this exact head at the time of inspection. PR #198 remains draft and unvalidated.
+- Current feature-branch head: `a315a91fa745415dd3572d433044c16b8016dd80`.
+- Validation: no test command was executed in this environment. The available workflow-run lookup (which reports PR-triggered runs only) returned no PR-triggered runs, and combined status returned no checks for this exact head at the time of inspection. The mainline Intelligence CI workflow is configured for both `codex/**` pushes and pull requests targeting `main`; push-triggered run details are not exposed by that lookup. PR #198 remains draft and unvalidated.
 - Trust boundary unchanged: source presence is not exploitability, reachability, runtime behavior, authenticity, mitigation analysis, signed Evidence, attestation, APEX approval, East authorization, or trusted receipt.
 
 Next: inspect PR #198's exact diff and workflow trigger configuration, obtain exact-head CI, fix any findings, then request independent review. Do not start D-04 until the source-reference result shape is stable and this slice has passed its focused checks.
