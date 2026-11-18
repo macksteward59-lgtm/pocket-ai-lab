@@ -118,4 +118,30 @@ describe("LocalProjectInspector", () => {
     });
   });
 
+
+  it("fails closed when the selected source file exceeds the per-file byte bound", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-oversized-"));
+    directories.push(root);
+    await writeFile(path.join(root, "README.md"), "a".repeat(65537));
+    const inspector = await LocalProjectInspector.open(root);
+
+    await expect(inspector.verifySourceReference({
+      path: "README.md", quote: "a"
+    })).resolves.toMatchObject({
+      status: "unverified", occurrenceCount: 0, reason: "file_too_large"
+    });
+  });
+
+  it("rejects oversized excerpts before reading the source file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-long-quote-"));
+    directories.push(root);
+    const inspector = await LocalProjectInspector.open(root);
+
+    await expect(inspector.verifySourceReference({
+      path: "README.md", quote: "x".repeat(8193)
+    })).resolves.toMatchObject({
+      status: "unverified", occurrenceCount: 0, reason: "invalid_reference"
+    });
+  });
+
 });
