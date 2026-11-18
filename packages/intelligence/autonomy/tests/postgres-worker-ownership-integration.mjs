@@ -111,8 +111,8 @@ async function verifyLegacyExpiryPolicyMigration() {
     console.log("East PostgreSQL legacy expiry-policy migration checks passed");
   } finally {
     await pool.query(
-      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = ANY($1)",
-      [[namespace, cancellationNamespace]]
+      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
+      [namespace]
     );
   }
 }
@@ -339,8 +339,8 @@ async function main() {
     await verifyLegacyExpiryPolicyMigration();
   } finally {
     await pool.query(
-      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
-      [namespace]
+      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = ANY($1)",
+      [[namespace, cancellationNamespace]]
     );
     await pool.end();
   }
