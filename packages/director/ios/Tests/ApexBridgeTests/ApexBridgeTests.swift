@@ -309,7 +309,7 @@ private actor MultiBlockingDrainLlamaEngine: ApexBridge.LlamaEngine {
         }
     }
 
-    func drainStartedRequestIDs() -> Set<String> {
+    func startedDrainRequestIDs() -> Set<String> {
         drainStartedRequestIDs
     }
 
@@ -1134,7 +1134,7 @@ final class RuntimeControllerTests: XCTestCase {
         for requestID in canonicalRequestIDs {
             await engine.waitUntilDrainStarted(requestId: requestID)
         }
-        let drainingRequestIDs = await engine.drainStartedRequestIDs()
+        let drainingRequestIDs = await engine.startedDrainRequestIDs()
         XCTAssertEqual(drainingRequestIDs, Set(canonicalRequestIDs))
 
         let whileDraining = await runtime.snapshot()
