@@ -577,6 +577,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
   const timestamp = now.toISOString();
   return {
     id: definition.id.trim(), objective: definition.objective.trim(), status: "ready",
+    expiryPolicyVersion: CURRENT_EXPIRY_POLICY_VERSION,
     steps, maxConcurrentSteps, leaseMs, metadata: { ...metadata },
     createdAt: timestamp, updatedAt: timestamp, completedAt: null, events: []
   };
