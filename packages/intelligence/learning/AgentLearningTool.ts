@@ -228,7 +228,7 @@ export class AgentLearningTool {
     const hyperparameters = validateHyperparameters(input.hyperparameters);
     const jobId = this.id();
     const jobDigest = await digestJob({
-      jobId, proposal, baselineModelId: input.baselineModelId,
+      jobId, taskId: input.taskId, proposal, baselineModelId: input.baselineModelId,
       datasetRef: input.datasetRef, datasetVersion: input.datasetVersion,
       budget, hyperparameters
     });
@@ -292,10 +292,9 @@ export class AgentLearningTool {
         input.candidateRun.modelId !== candidate.candidateModelRef) {
       throw new Error("Evaluation runs do not match the registered baseline and candidate artifacts");
     }
-    if (input.baselineRun.datasetVersion !== candidate.datasetVersion ||
-        input.candidateRun.datasetVersion !== candidate.datasetVersion) {
-      throw new Error("Evaluation runs must use the candidate's registered dataset version");
-    }
+    // The benchmark dataset is distinct from the training dataset. The paired
+    // evaluator enforces that baseline and candidate use the same benchmark
+    // version and exact case IDs.
     const assessment = assessImprovement(input.baselineRun, input.candidateRun, input.options);
     return Object.freeze({
       candidateId: candidate.candidateId,
