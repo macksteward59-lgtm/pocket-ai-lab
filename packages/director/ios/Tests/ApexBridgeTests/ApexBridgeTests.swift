@@ -1294,6 +1294,30 @@ final class RuntimeControllerTests: XCTestCase {
         await controller.disconnect()
     }
 
+    func testCancellationRegistryFailsClosedAtCapacity() async throws {
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        for index in 0..<512 {
+            let accepted = await controller.cancelGeneration(
+                sessionId: sessionID,
+                requestId: UUID().uuidString
+            )
+            XCTAssertTrue(accepted, "Cancellation identity \(index) should fit within the registry.")
+        }
+        let overflow = await controller.cancelGeneration(
+            sessionId: sessionID,
+            requestId: UUID().uuidString
+        )
+        XCTAssertFalse(overflow, "The controller must not acknowledge an unrecordable cancellation.")
+        await controller.disconnect()
+    }
+
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
         let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)

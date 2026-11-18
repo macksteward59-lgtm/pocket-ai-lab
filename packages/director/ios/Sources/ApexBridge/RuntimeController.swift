@@ -96,6 +96,9 @@ public actor RuntimeController {
     // runtime session. This closes authorize-after-cancel ordering and expiry races.
     private var authorizedGenerationRequests: [String: Set<String>] = [:]
     private var retiredGenerationRequests: [String: Set<String>] = [:]
+    // Distinguishes the first matching generate after a pre-registration cancel
+    // (CancellationError) from subsequent replay attempts (duplicateRequest).
+    private var preGenerationCancellationRequests: [String: Set<String>] = [:]
     private let maximumTrackedGenerationRequests = 512
     private var unloadingSessions: Set<String> = []
     // Invalidates generation attempts suspended before their native task is registered.
@@ -299,6 +302,16 @@ public actor RuntimeController {
         maxOutputBytes: Int = 64_000
     ) async throws -> RuntimeGenerationRecord {
         pruneFinishedGenerationAttempts(now: clock())
+        guard sessions[sessionId] != nil, !unloadingSessions.contains(sessionId) else {
+            throw RuntimeControllerError.unknownSession
+        }
+        guard Self.validUUID(requestId) else { throw RuntimeControllerError.invalidRequest }
+        if preGenerationCancellationRequests[sessionId]?.remove(requestId) != nil {
+            if preGenerationCancellationRequests[sessionId]?.isEmpty == true {
+                preGenerationCancellationRequests.removeValue(forKey: sessionId)
+            }
+            throw CancellationError()
+        }
         guard !isGenerationRequestRetired(sessionId: sessionId, requestId: requestId),
               finishedGenerationAttempts[sessionId]?[requestId] == nil else {
             throw RuntimeControllerError.duplicateRequest
@@ -528,6 +541,8 @@ public actor RuntimeController {
             // Await the entire request task, including preparation and native drain.
             _ = try? await task.value
             markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
+        } else {
+            preGenerationCancellationRequests[sessionId, default: []].insert(requestId)
         }
         return true
     }
@@ -583,6 +598,7 @@ public actor RuntimeController {
         guard let removed = sessions.removeValue(forKey: sessionId) else { return false }
         authorizedGenerationRequests.removeValue(forKey: sessionId)
         retiredGenerationRequests.removeValue(forKey: sessionId)
+        preGenerationCancellationRequests.removeValue(forKey: sessionId)
         finishedGenerationAttempts.removeValue(forKey: sessionId)
         _ = await runtime.release(removed.lease)
         _ = await runtime.unloadIdleModels()
