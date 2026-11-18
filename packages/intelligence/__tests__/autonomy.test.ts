@@ -517,12 +517,14 @@ describe("TaskLifecycleCoordinator", () => {
       store: h.store, now: h.now, workerId: "worker-after-restart"
     });
     await restarted.init();
-    expect(restarted.getTask("task-1")).toMatchObject({
+    const resumed = restarted.getTask("task-1");
+    expect(resumed).toMatchObject({
       status: "running",
-      cancellationRequestedAt: requested.cancellationRequestedAt,
-      steps: [expect.objectContaining({
-        status: "running", currentAttempt: expect.objectContaining({ id: claim!.attemptId, ownerId: "worker-main" })
-      })]
+      cancellationRequestedAt: requested.cancellationRequestedAt
+    });
+    expect(resumed.steps.find(step => step.id === "inspect")).toMatchObject({
+      status: "running",
+      currentAttempt: { id: claim!.attemptId, ownerId: "worker-main" }
     });
     expect(await restarted.claimNextStep("task-1")).toBeNull();
     await expect(restarted.completeStep({
