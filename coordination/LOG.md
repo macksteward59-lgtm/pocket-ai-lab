@@ -4179,3 +4179,10 @@ Accessible history this run: current conversation instructions and recent projec
 - The regression verifies missing policy version + persisted false becomes policy v1 + fail-closed true in memory; initialization does not write; the next successful task mutation increments record_version and persists normalized JSONB.
 - PostgreSQL 16 integration run `44402327930` passed; job log explicitly reports both worker-ownership/event-journal checks and legacy expiry-policy migration checks passed. General CI run `44402327972` passed.
 - PR #211 remains draft/unmerged pending independent review and upstream #204 stack gate.
+
+
+## 2026-11-18 — PR #212 expanded cancel-all fan-out coverage
+
+- Exact head `402495492793a4aea857c58ef15681c2a448c399` adds a precise cancel-all return-count assertion for work already retired by unload.
+- Exact-head general CI `44402478883` passed. Native PR workflow `44402486542` is in progress on macOS Intel; pinned llama.cpp build is active, no XCTest yet. Paired push workflow `44402478874` queued. Earlier heads' native runs were cancelled on branch advancement.
+- PR #212 remains draft/unmerged pending native XCTest and independent review.
