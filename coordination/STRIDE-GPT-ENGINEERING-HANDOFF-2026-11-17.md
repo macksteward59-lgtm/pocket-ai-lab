@@ -89,3 +89,17 @@ Integration order should be D-02 schema/interface review, D-02 implementation/te
 ## Next action
 
 The next engineering action is to refresh the live board/log and select D-02 as the first isolated TypeScript prototype only if its path policy and target interfaces are still unclaimed. If those interfaces are owned or have changed, update the plan before coding rather than forcing the donor design into the current architecture.
+
+## D-02 prototype progress — 2026-11-17
+
+The first isolated D-02 implementation slice has been opened as draft PR [#198](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/198), branch `codex/stride-source-reference-verifier`, based on main commit `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`.
+
+- Existing implementation discovery: `runtime/adapters/director/LocalProjectInspector.ts` already provides bounded read-only workspace inspection, relative-path validation, realpath confinement, symlink-escape rejection, text-extension allowlisting, and per-file/aggregate byte limits.
+- Design adjustment: extend that inspector rather than create a second sandbox or independent path resolver.
+- Changed paths are limited to `runtime/adapters/director/LocalProjectInspector.ts` and `runtime/adapters/director/LocalProjectInspector.test.ts`.
+- Added exact excerpt verification, 1-based line reporting, occurrence counting, duplicate ambiguity handling, stable unverified reasons, and tests for exact match, paraphrase rejection, duplicate excerpts, line selection, traversal, unsupported files, and symlink escape.
+- Current feature-branch head: `e232ab66b0698bab9b033050641b01e0deffaef1`.
+- Validation: no test command was executed in this environment. GitHub workflow-run lookup returned no runs and combined status returned no checks for this exact head at the time of inspection. PR #198 remains draft and unvalidated.
+- Trust boundary unchanged: source presence is not exploitability, reachability, runtime behavior, authenticity, mitigation analysis, signed Evidence, attestation, APEX approval, East authorization, or trusted receipt.
+
+Next: inspect PR #198's exact diff and workflow trigger configuration, obtain exact-head CI, fix any findings, then request independent review. Do not start D-04 until the source-reference result shape is stable and this slice has passed its focused checks.
