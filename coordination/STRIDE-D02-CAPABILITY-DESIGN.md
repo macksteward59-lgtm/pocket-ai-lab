@@ -305,6 +305,25 @@ No option is approved by this assessment. PR #200 remains a bounded-read improve
 - No existing openWorkspaceFile native host port or cross-platform directory-handle helper was identified in the inspected Director adapter/docs. Do not assume one exists.
 - Accordingly, the first implementation decision is not which syscall should be called everywhere; it is to define which host platforms are actually supported for source verification. An unsupported host must return a stable unavailable result rather than silently falling back to the current weaker path walk.
 
+### 13.1.1 Concrete composition and CI inventory (verified 2026-11-18)
+
+The existing host integration point is now identified; the earlier wording should not be read as saying that Director has no project-inspection caller at all:
+
+- `apps/web/directorRuntime.ts` constructs `LocalProjectInspector.open(options.workspaceRoot ?? process.cwd())` and injects that adapter as `projectInspector` when constructing `DirectorCapabilities`.
+- `DirectorCapabilities.analyzeProject()` delegates to the injected `ProjectInspector.inspect()`; `DirectorCommandRouter` exposes the finite `analyze-project` command and dispatches it to that capability.
+- The intelligence package therefore already has a host-injected `ProjectInspector` seam and a concrete web composition root. This is the preferred place to inject a future `ConfinedWorkspaceReader`-backed adapter; native filesystem details must remain outside `packages/intelligence`.
+- The web composition currently accepts an optional caller-supplied `workspaceRoot` path and otherwise uses `process.cwd()`. That is a path-based bootstrap, not an opaque host-registered workspace identity or pinned directory session. The native design must replace/contain that trust boundary rather than forwarding this root path into a model-facing API.
+- PR #198 adds excerpt verification to the concrete `LocalProjectInspector` adapter, but its new verifier operation is not yet part of the shared `ProjectInspector` interface or the `analyze-project` command contract. Existing project-inspection wiring must not be mistaken for end-to-end source-reference verification or D-04 identity binding.
+
+**CI evidence and limits:**
+
+- `.github/workflows/intelligence-ci.yml` runs the Node/TypeScript intelligence suite on `ubuntu-latest` with Node 22. This is Linux CI evidence only.
+- The desktop launcher documentation says Linux is the archive build/smoke-test host and explicitly marks Windows/macOS entrypoints untested. No Windows filesystem-containment CI job was identified.
+- `.github/workflows/ios-llamaengine-ci.yml` runs on `macos-15-intel` and builds/tests the Swift/iOS runtime, simulator, and macOS package. It does not exercise the Node `LocalProjectInspector` filesystem boundary on macOS, does not use a physical iPhone, and is not evidence of a desktop Node native-helper implementation.
+- Accordingly, the current evidence does not establish a supported desktop OS matrix for confined source inspection. Do not infer macOS or Windows support from launcher scripts or the separate Swift workflow.
+
+This inventory narrows the implementation seam but does not change the decision gate in section 13.6.
+
 ### 13.2 Proposed host-owned API
 
 Keep native details outside packages/intelligence. A narrow host adapter may expose an opaque workspace session:
