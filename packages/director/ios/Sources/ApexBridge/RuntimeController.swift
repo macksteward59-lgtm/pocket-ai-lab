@@ -336,7 +336,6 @@ public actor RuntimeController {
         temperature: Double,
         maxOutputBytes: Int
     ) async throws -> RuntimeGenerationRecord {
-        defer { markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId) }
         try Task.checkCancellation()
         guard generationDrainCount == 0 else { throw CancellationError() }
         let requestLifecycle = generationLifecycle
@@ -479,6 +478,10 @@ public actor RuntimeController {
                 healthCheckId: currentReadiness.healthCheckId,
                 output: output
             )
+            // Only a successfully completed generation is a completed marker.
+            // Preparation/authentication failures may legitimately be retried
+            // with a freshly issued one-use challenge for this request identity.
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
         } catch {
             clearGeneration(sessionId: sessionId, requestId: requestId)
             throw error
@@ -498,6 +501,9 @@ public actor RuntimeController {
             // for the suspended hash/challenge operation to return and observe
             // cancellation; during inference it includes the engine's drain.
             _ = try? await task.value
+            // Cancellation retires the exact request identity after its task
+            // has drained, including when cancellation happened during prepare.
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
             return true
         }
 
