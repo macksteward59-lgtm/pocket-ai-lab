@@ -247,6 +247,82 @@ private actor BlockingDrainLlamaEngine: ApexBridge.LlamaEngine {
     }
 }
 
+private actor MultiBlockingDrainLlamaEngine: ApexBridge.LlamaEngine {
+    private var generationStartedRequestIDs = Set<String>()
+    private var generationStartWaiters: [String: CheckedContinuation<Void, Never>] = [:]
+    private var drainStartedRequestIDs = Set<String>()
+    private var drainStartWaiters: [String: CheckedContinuation<Void, Never>] = [:]
+    private var drainContinuations: [String: CheckedContinuation<Void, Never>] = [:]
+    private var releaseAllDrains = false
+
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        if request.prompt.contains("readiness probe") {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(Token(text: "ready", isComplete: true))
+                continuation.finish()
+            }
+        }
+        generationStartedRequestIDs.insert(request.requestId)
+        generationStartWaiters.removeValue(forKey: request.requestId)?.resume()
+        return AsyncThrowingStream { continuation in
+            let producer = Task {
+                do {
+                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                    continuation.yield(Token(text: "late", isComplete: true))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in producer.cancel() }
+        }
+    }
+
+    func cancel(sessionId: String, requestId: String) async {}
+
+    func cancelAndWait(sessionId: String, requestId: String) async {
+        drainStartedRequestIDs.insert(requestId)
+        drainStartWaiters.removeValue(forKey: requestId)?.resume()
+        guard !releaseAllDrains else { return }
+        await withCheckedContinuation { continuation in
+            drainContinuations[requestId] = continuation
+        }
+    }
+
+    func unload(sessionId: String) async {}
+
+    func waitUntilGenerationStarted(requestId: String) async {
+        if generationStartedRequestIDs.contains(requestId) { return }
+        await withCheckedContinuation { continuation in
+            generationStartWaiters[requestId] = continuation
+        }
+    }
+
+    func waitUntilDrainStarted(requestId: String) async {
+        if drainStartedRequestIDs.contains(requestId) { return }
+        await withCheckedContinuation { continuation in
+            drainStartWaiters[requestId] = continuation
+        }
+    }
+
+    func drainStartedRequestIDs() -> Set<String> {
+        drainStartedRequestIDs
+    }
+
+    func finishAllDrains() {
+        releaseAllDrains = true
+        let continuations = Array(drainContinuations.values)
+        drainContinuations.removeAll()
+        for continuation in continuations {
+            continuation.resume()
+        }
+    }
+}
+
 private actor PausingChallengeStore: BridgeChallengeConsuming {
     private var consumeContinuation: CheckedContinuation<Bool, Never>?
     private var startedContinuation: CheckedContinuation<Void, Never>?
@@ -964,6 +1040,123 @@ final class RuntimeControllerTests: XCTestCase {
             // Cancellation is expected after the native drain gate is released.
         }
 
+        let afterDrain = await runtime.snapshot()
+        XCTAssertEqual(afterDrain.activeLeaseCount, 0)
+        XCTAssertEqual(afterDrain.activeUseCount, 0)
+        XCTAssertTrue(afterDrain.loadedModelIDs.isEmpty)
+    }
+
+    func testCancelAllBroadcastsCancellationBeforeAwaitingEachNativeDrain() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 6_200))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-cancel-all-fanout-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "cancel-all-fanout-model",
+            name: "Cancel-all fan-out model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let engine = MultiBlockingDrainLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 },
+            maxConcurrentRequests: 2
+        )
+        let challengeStore = try BridgeChallengeStore(clock: { clock.now() })
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL,
+            clock: { clock.now() }
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestIDs = [UUID().uuidString, UUID().uuidString]
+        var challenges: [String] = []
+        for requestID in requestIDs {
+            challenges.append(try await challengeStore.issue(
+                page: trustedWorkspaceURL,
+                trusted: trustedWorkspaceURL,
+                requestId: requestID,
+                sessionId: sessionID
+            ))
+        }
+
+        let firstGeneration = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "Hold the first generation until cancel-all drains it.",
+                requestId: requestIDs[0],
+                conversationRequestId: "cancel-all-fanout-first",
+                attemptId: "cancel-all-fanout-first-attempt",
+                challengeNonce: challenges[0],
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        let secondGeneration = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "Hold the second generation until cancel-all drains it.",
+                requestId: requestIDs[1],
+                conversationRequestId: "cancel-all-fanout-second",
+                attemptId: "cancel-all-fanout-second-attempt",
+                challengeNonce: challenges[1],
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        let canonicalRequestIDs = requestIDs.map { $0.lowercased() }
+        for requestID in canonicalRequestIDs {
+            await engine.waitUntilGenerationStarted(requestId: requestID)
+        }
+
+        let cancellationReachedDrainWait = CancellationDrainWaitSignal()
+        await controller.setCancelAllDrainWaitObserverForTesting {
+            await cancellationReachedDrainWait.markReached()
+        }
+        let cancellation = Task { await controller.cancelAllGenerations() }
+
+        // The observer fires only after cancel-all has requested cancellation
+        // for the entire captured task set, not after the first drain settles.
+        await cancellationReachedDrainWait.waitUntilReached()
+        for requestID in canonicalRequestIDs {
+            await engine.waitUntilDrainStarted(requestId: requestID)
+        }
+        let drainingRequestIDs = await engine.drainStartedRequestIDs()
+        XCTAssertEqual(drainingRequestIDs, Set(canonicalRequestIDs))
+
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeLeaseCount, 1)
+        XCTAssertEqual(whileDraining.activeUseCount, 2)
+
+        await engine.finishAllDrains()
+        let cancelledCount = await cancellation.value
+        XCTAssertEqual(cancelledCount, 2)
+        await controller.setCancelAllDrainWaitObserverForTesting(nil)
+
+        for generation in [firstGeneration, secondGeneration] {
+            do {
+                _ = try await generation.value
+                XCTFail("A generation cancelled by the global drain must not return output.")
+            } catch {
+                // Cancellation is expected after both native drain gates settle.
+            }
+        }
+
+        let unloaded = await controller.unload(sessionId: sessionID)
+        XCTAssertTrue(unloaded)
         let afterDrain = await runtime.snapshot()
         XCTAssertEqual(afterDrain.activeLeaseCount, 0)
         XCTAssertEqual(afterDrain.activeUseCount, 0)
