@@ -608,3 +608,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #203 exact head `6b71ff6da2b8fe6970042884a48dedf8a78694d3` has run #44373747684 in progress at macOS XCTest; prior steps have advanced, but the workflow has not completed.
 - PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` has no PR-triggered workflow run returned by the current exact-head lookup. Its CI/typecheck remains unverified.
 - No merge, approval, application-code change, D-02 acceptance, D-04 binding, or authority/branch-protection change occurred. iOS simulator/macOS CI is not physical iPhone acceptance.
+
+
+## 2026-11-18 — Native CI completion and PR #197 identity finding
+
+- PR #203 exact head `6b71ff6da2b8fe6970042884a48dedf8a78694d3` workflow #44373747684 is now **completed successfully**. All listed stages passed: pinned llama.cpp build, native app build, app XCTest, iOS simulator XCTest, pinned GGUF download/smoke setup, macOS XCTest, and runner evidence recording. This is hosted CI evidence for PR #203's exact head, not physical iPhone acceptance and not a pass for PR #197's different head.
+- PR #197 exact head `87b88af77339491bcbd32d25e52edf911ac1b5f2` workflow #44378631020 remains in progress. Native dependency build, unlinked fail-closed typecheck, device linking, simulator boot, and Director bridge manifest validation have passed; native app generation/build is still running. App XCTest, simulator XCTest, GGUF smoke and macOS XCTest remain pending.
+- Static review of PR #197 found a request-identity canonicalization gap: UUID strings are validated with `UUID(uuidString:)` but registry/task dictionaries and `BridgeChallengeStore` compare the original case-sensitive strings. Upper/lowercase spellings of the same UUID can therefore be treated as different request identities across reservation, retirement, challenge binding, cancellation, and generation. The finding was posted in PR #197 discussion (comment ID `5963652952`). Required follow-up: canonicalize once at the bridge/controller identity boundary, use the canonical UUID string consistently in every registry and challenge binding, and add an uppercase/lowercase collision regression.
+- PR #197 remains draft/open/unmerged until this identity issue is addressed and exact-head CI completes. PR #204 still has no PR-triggered run returned for its current exact head; validation remains unverified.
+- No code changed, no PR merged/approved, and no authority/branch-protection changes. #203 CI success does not imply #197 success or physical-device acceptance.
