@@ -10,7 +10,7 @@ A production `TaskLifecycleStore` must provide all of the following:
 2. Cross-process compare-and-swap or row-level locking for claims, completion, cancellation, and lease recovery. The coordinator's in-process mutation queue is not a distributed lock.
 3. Monotonic record versions. A write based on an older version must fail as a conflict rather than overwrite a newer worker's state.
 4. Durable lease owner identity, attempt identity, expiry, and bounded attempt count.
-5. Explicit schema versioning and validated migrations. Unknown future versions fail closed.
+5. Explicit schema versioning and validated migrations. Unknown future versions fail closed. Expiry-policy version 1 is stored on each task; unversioned legacy snapshots migrate every step to `uncertainOnExpiredLease: true`, including records that previously persisted `false` as an implicit multi-attempt default.
 6. Encryption and access control appropriate to task prompts, agent outputs, and evidence references; logs must not copy secrets or full sensitive payloads.
 7. A transactional outbox or equivalent when lifecycle completion must trigger another durable subsystem.
 
@@ -30,7 +30,7 @@ This is concurrency fencing, not authentication or authorization. A worker ID is
 - Scope recovery to the selected task when resuming one East task; global startup recovery is a separate host operation.
 - Preserve the original attempt identifier and failure reason in the audit trail.
 - Inference-bearing steps remain single-attempt unless the provider exposes a durable idempotency key and a verifiable result-retrieval contract.
-- Every worker-reported failure must classify its outcome as `definitive` or `unknown`. Only a definitive failure may consume retry budget; an unknown outcome is terminal and requires reconciliation, regardless of retryability or the step's expiry policy.
+- Every worker-reported failure must classify its outcome as `definitive` or `unknown`. Only a definitive failure may consume retry budget; an unknown outcome is terminal and requires reconciliation, regardless of retryability or the step's expiry policy. The East adapter treats only its synchronous in-memory core-agent assignment stage as definitive; provider execution, deliberation, and evidence submission failures are unknown.
 - If a provider may have completed but the result was not durably committed, mark the step uncertain and require reconciliation. Do not blindly generate again.
 - Once any step fails, stop issuing new claims but retain all already-running sibling leases until each owner reports completion/failure or its lease expires and is reconciled. Do not erase a live sibling attempt as a side effect of terminalizing its task.
 - Persist bounded deliberation output before advancing to the evidence-gate step. Treat it as untrusted proposal text.
@@ -65,7 +65,7 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 - Definitive worker failures and unknown external outcomes are distinct; only definitive failures can retry.
 - A failure in one concurrent step cannot clear another live sibling lease; task failure becomes terminal only after active siblings settle.
 - Cancellation waits for native generation drain before lease release.
-- Schema migration, corruption, disk-full, permission, and key-unavailable cases fail closed.
+- Schema migration, corruption, disk-full, permission, and key-unavailable cases fail closed. Legacy expiry-policy migration and East adapter failure-stage tests cover the previous persisted-false shape and each provider/evidence boundary.
 - Audit events are durable and redact sensitive payloads.
 - Physical-device tests cover memory pressure, thermal pressure, process termination, and restart.
 
