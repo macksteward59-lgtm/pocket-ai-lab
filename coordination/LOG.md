@@ -3864,3 +3864,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 
 - PR #203 workflow #44373747684 passed Director bridge manifest validation and native Pocket AI Lab app build; native app XCTest is now in progress. Simulator XCTest and remaining smoke/evidence steps have not completed.
 - PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` remains open/draft/unmerged with no workflow runs and no combined status checks at poll time. No local tests executed. Its changes remain unvalidated pending CI/typecheck.
+
+
+## 2026-11-18 19:24 UTC — PR #200 diff-level security assessment
+
+- Re-read the actual PR #200 patch. Confirmed the useful bounded-read properties: final-component `O_NOFOLLOW`, descriptor `fstat` regular-file check, at-most-`maxBytes + 1` descriptor read, and deterministic descriptor close in `finally`; tests cover growth after open and final-component symlink rejection.
+- Confirmed the remaining gap in source, not merely by inference: the existing caller still resolves a full path and then opens it. No pinned root directory descriptor or component-relative parent traversal exists. Intermediate parent replacement remains possible; final-component `O_NOFOLLOW` does not establish root confinement.
+- Posted a scoped coordination finding on PR #200 (comment ID `6989272622`) stating that this is not independent review or approval and that #200 must remain draft/unmerged for confinement purposes.
+- Added section 13.1.2 to `coordination/STRIDE-D02-CAPABILITY-DESIGN.md` to distinguish the implemented bounded-read properties from the missing root-pinned reader and deterministic parent-swap tests. Commit: `f4895a9b386414526193ec6a1227f715a175c4fc`.
+- No application code or tests changed. No PR merged, D-02 accepted, D-04 enabled, or APEX/East/Evidence/BridgeGate/runtime authority altered.
