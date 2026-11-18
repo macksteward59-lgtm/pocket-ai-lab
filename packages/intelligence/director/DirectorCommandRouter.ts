@@ -10,6 +10,7 @@ import type {
   DirectorCapabilities, ResearchSource, ProjectAnalysis, MemoryImprovementProposal
 } from "./DirectorCapabilities";
 import type { ToolDirector, ToolBuildSpec } from "../tooling/ToolDirector";
+import type { AgentLearningTool, LearningChangeKind, TrainingBudget } from "../learning/AgentLearningTool";
 
 export type DirectorCommand =
   | { kind: "research"; query: string; allowedDomains?: string[]; maxSources?: number }
@@ -19,7 +20,9 @@ export type DirectorCommand =
   | { kind: "develop-tool"; spec: ToolBuildSpec }
   | { kind: "activate-tool"; toolId: string; version: number; approvalRef: string }
   | { kind: "retire-tool"; toolId: string; approvalRef: string }
-  | { kind: "use-device"; approvalRef: string; action: Parameters<DirectorCapabilities["useDevice"]>[0]["action"] };
+  | { kind: "use-device"; approvalRef: string; action: Parameters<DirectorCapabilities["useDevice"]>[0]["action"] }
+  | { kind: "propose-agent-learning"; agentId: string; objective: string; changeKind: LearningChangeKind; evidenceRefs: string[] }
+  | { kind: "train-agent-candidate"; proposalId: string; baselineModelId: string; datasetRef: string; datasetVersion: string; budget: TrainingBudget; hyperparameters: Record<string, string | number | boolean>; approvalRef: string };
 
 export interface DirectorCommandContext {
   taskId: string;
@@ -40,7 +43,7 @@ export interface DirectorCommandProvider {
 export const DIRECTOR_COMMAND_KINDS = [
   "research", "analyze-project", "propose-memory-improvements",
   "apply-memory-improvement", "develop-tool", "activate-tool",
-  "retire-tool", "use-device"
+  "retire-tool", "use-device", "propose-agent-learning", "train-agent-candidate"
 ] as const;
 
 /**
@@ -56,13 +59,16 @@ export const DIRECTOR_COMMAND_FIELDS = {
   "develop-tool": ["kind", "spec"],
   "activate-tool": ["kind", "toolId", "version", "approvalRef"],
   "retire-tool": ["kind", "toolId", "approvalRef"],
-  "use-device": ["kind", "approvalRef", "action"]
+  "use-device": ["kind", "approvalRef", "action"],
+  "propose-agent-learning": ["kind", "agentId", "objective", "changeKind", "evidenceRefs"],
+  "train-agent-candidate": ["kind", "proposalId", "baselineModelId", "datasetRef", "datasetVersion", "budget", "hyperparameters", "approvalRef"]
 } as const satisfies Record<(typeof DIRECTOR_COMMAND_KINDS)[number], readonly string[]>;
 
 export class DirectorCommandRouter {
   constructor(
     private readonly capabilities: DirectorCapabilities,
-    private readonly tooling: ToolDirector
+    private readonly tooling: ToolDirector,
+    private readonly learning?: AgentLearningTool
   ) {}
 
   /** Ask the injected model adapter for one structured proposal, then validate and dispatch it. */
@@ -114,6 +120,12 @@ export class DirectorCommandRouter {
         return this.capabilities.useDevice({
           taskId: context.taskId, approvalRef: command.approvalRef, action: command.action
         });
+      case "propose-agent-learning":
+        if (!this.learning) throw new Error("Agent learning tool is not configured");
+        return this.learning.propose({ ...command, taskId: context.taskId });
+      case "train-agent-candidate":
+        if (!this.learning) throw new Error("Agent learning tool is not configured");
+        return this.learning.train({ ...command, taskId: context.taskId });
     }
   }
 }
@@ -175,6 +187,24 @@ export function parseDirectorCommand(input: unknown): DirectorCommand {
       requireString(input.approvalRef, "approvalRef");
       requireRecord(input.action, "action");
       validateDeviceActionFields(input.action);
+      return input as unknown as DirectorCommand;
+    case "propose-agent-learning":
+      requireString(input.agentId, "agentId");
+      requireString(input.objective, "objective");
+      if (!["prompt", "retrieval", "routing", "tool-workflow", "adapter-training"].includes(String(input.changeKind))) {
+        throw new Error("Unsupported learning change kind");
+      }
+      if (!Array.isArray(input.evidenceRefs) || input.evidenceRefs.length < 1 || input.evidenceRefs.length > 50 ||
+          input.evidenceRefs.some(value => typeof value !== "string" || !value.trim() || value.length > 2048)) {
+        throw new Error("evidenceRefs must contain 1–50 bounded source references");
+      }
+      return input as unknown as DirectorCommand;
+    case "train-agent-candidate":
+      for (const field of ["proposalId", "baselineModelId", "datasetRef", "datasetVersion", "approvalRef"]) {
+        requireString(input[field], field);
+      }
+      requireRecord(input.budget, "budget");
+      requireRecord(input.hyperparameters, "hyperparameters");
       return input as unknown as DirectorCommand;
     default:
       throw new Error("Unsupported Director command: " + input.kind);
