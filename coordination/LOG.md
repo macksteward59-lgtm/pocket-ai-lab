@@ -4058,3 +4058,13 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Exact-head general CI [#44392443536](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44392443536) completed successfully on `84f16592dfd092793f77773d0854bc2f71780f69`: syntax, type-check/build, and tests passed. This supersedes the earlier PR #211 head `444aed28…` and its run `44392126156` for current validation.
 - PR #211 remains draft/unmerged and stacked on PR #204 head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49`. A refreshed exact-head update was posted on #211. No integration or authorization approval is implied.
 - PR #197 native workflow `44385621155` remains in progress on `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`: native app build, app XCTest, iOS simulator XCTest, pinned GGUF download, and smoke-path setup have passed; macOS XCTest is running and runner evidence is pending.
+
+
+## 2026-11-18 — PR #197 complete exact-head native CI pass
+
+- PR #197 head `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d` remains open/draft/unmerged. General CI run `44385850893` and native workflow run `44385621155` (run 561) both completed successfully on this exact head.
+- Native workflow passed native app build/XCTest, iOS simulator XCTest, pinned llama.cpp build/link, pinned smoke GGUF verification, macOS XCTest, and runner-evidence recording. iOS Simulator log: 82 tests, 4 skipped, 0 failures; `POCKET_LLAMA_PROBE` reports linked and Metal usable. macOS log: 82 tests, 1 skipped, 0 failures; `POCKET_LLAMA_EVALUATION_SMOKE` and `POCKET_LLAMA_SMOKE` report output, model SHA-256, lease release/unload, and Metal/offload details.
+- Runner evidence identifies the simulator as iPhone Air and explicitly states no physical iPhone was used. Hosted CI is complete; physical-device acceptance and independent review remain separate release gates.
+- PR #197 received a progress comment (ID `6990897404`) recording these exact-head results. No approval/merge.
+- Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 root-pinned component-relative traversal outstanding; issue #202 no accepted containment decision; PR #205 closed unmerged; PR #203 remains separate.
+- No production code, trust/governance authority, or D-04 integration changed in this checkpoint.
