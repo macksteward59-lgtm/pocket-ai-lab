@@ -59,6 +59,8 @@ export interface TrainingBudget {
 }
 
 export interface CandidateTrainingRequest {
+  readonly taskId: string;
+  readonly approvalRef: string;
   readonly proposalId: string;
   readonly baselineModelId: string;
   readonly datasetRef: string;
@@ -84,6 +86,19 @@ export interface CandidateTrainingResult {
   readonly sandboxRunRef: string;
   readonly completedAt: string;
   readonly metrics: Readonly<Record<string, number>>;
+}
+
+export interface TrainingApprovalRequest {
+  readonly operation: "train-candidate";
+  readonly taskId: string;
+  readonly proposalId: string;
+  readonly jobDigest: string;
+  readonly approvalRef: string;
+}
+
+export interface TrainingApprovalVerifier {
+  /** Verifies independent human approval bound to this exact training job. */
+  verify(input: TrainingApprovalRequest): boolean | Promise<boolean>;
 }
 
 export interface TrainingSandbox {
@@ -117,6 +132,7 @@ export interface CandidateAssessment {
 export interface AgentLearningToolOptions {
   readonly evidenceReader?: LearningEvidenceReader;
   readonly trainingSandbox?: TrainingSandbox;
+  readonly trainingApprovalVerifier?: TrainingApprovalVerifier;
   readonly now?: () => number;
   readonly id?: () => string;
 }
@@ -128,6 +144,7 @@ const CHANGE_KINDS: readonly LearningChangeKind[] = [
 export class AgentLearningTool {
   private readonly evidenceReader?: LearningEvidenceReader;
   private readonly trainingSandbox?: TrainingSandbox;
+  private readonly trainingApprovalVerifier?: TrainingApprovalVerifier;
   private readonly now: () => number;
   private readonly id: () => string;
   private readonly proposals = new Map<string, LearningProposal>();
@@ -136,6 +153,7 @@ export class AgentLearningTool {
   constructor(options: AgentLearningToolOptions = {}) {
     this.evidenceReader = options.evidenceReader;
     this.trainingSandbox = options.trainingSandbox;
+    this.trainingApprovalVerifier = options.trainingApprovalVerifier;
     this.now = options.now ?? (() => Date.now());
     this.id = options.id ?? (() => crypto.randomUUID());
   }
@@ -196,9 +214,10 @@ export class AgentLearningTool {
    */
   async train(input: CandidateTrainingRequest): Promise<LearningCandidate> {
     if (!this.trainingSandbox) throw new Error("Isolated training sandbox is not configured");
-    if (!input?.proposalId?.trim() || !input.baselineModelId?.trim() ||
-        !input.datasetRef?.trim() || !input.datasetVersion?.trim()) {
-      throw new Error("proposalId, baselineModelId, datasetRef, and datasetVersion are required");
+    if (!this.trainingApprovalVerifier) throw new Error("Independent training approval is not configured");
+    if (!input?.taskId?.trim() || !input.approvalRef?.trim() || !input.proposalId?.trim() ||
+        !input.baselineModelId?.trim() || !input.datasetRef?.trim() || !input.datasetVersion?.trim()) {
+      throw new Error("taskId, approvalRef, proposalId, baselineModelId, datasetRef, and datasetVersion are required");
     }
     const proposal = this.proposals.get(input.proposalId);
     if (!proposal) throw new Error("Unknown learning proposal");
@@ -208,6 +227,19 @@ export class AgentLearningTool {
     const budget = validateBudget(input.budget);
     const hyperparameters = validateHyperparameters(input.hyperparameters);
     const jobId = this.id();
+    const jobDigest = await digestJob({
+      jobId, proposal, baselineModelId: input.baselineModelId,
+      datasetRef: input.datasetRef, datasetVersion: input.datasetVersion,
+      budget, hyperparameters
+    });
+    const approved = await this.trainingApprovalVerifier.verify(Object.freeze({
+      operation: "train-candidate" as const,
+      taskId: input.taskId,
+      proposalId: proposal.proposalId,
+      jobDigest,
+      approvalRef: input.approvalRef
+    }));
+    if (approved !== true) throw new Error("Independent training approval was denied");
     const result = await this.trainingSandbox.run(Object.freeze({
       jobId,
       proposal,
@@ -279,6 +311,12 @@ export class AgentLearningTool {
   getCandidate(candidateId: string): LearningCandidate | undefined {
     return this.candidates.get(candidateId);
   }
+}
+
+async function digestJob(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function normalizeRefs(input: readonly string[]): string[] {
