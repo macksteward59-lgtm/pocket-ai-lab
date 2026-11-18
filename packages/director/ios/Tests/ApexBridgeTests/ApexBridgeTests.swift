@@ -918,7 +918,8 @@ final class RuntimeControllerTests: XCTestCase {
         let snapshot = await runtime.snapshot()
         XCTAssertEqual(snapshot.activeLeaseCount, 0, "The lease is released only after the preparation task settles.")
         XCTAssertEqual(snapshot.activeUseCount, 0)
-        XCTAssertEqual(await engine.nonReadinessGenerationCount(), 0)
+        let inferenceCalls = await engine.nonReadinessGenerationCount()
+        XCTAssertEqual(inferenceCalls, 0)
     }
 
     func testCancelAllInvalidatesGenerationSuspendedDuringChallengeConsumption() async throws {
