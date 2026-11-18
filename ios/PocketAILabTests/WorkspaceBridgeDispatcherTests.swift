@@ -241,9 +241,10 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         XCTAssertEqual(invalidated["error"] as? String, "generation_failed")
         XCTAssertTrue((invalidated["detail"] as? String ?? "").contains("unauthorizedChallenge"))
 
-        // The failed attempt has retired its request ID. A fresh authorization
-        // must use a fresh request identity rather than replaying the old one.
+        // The failed attempt has retired its request and attempt identities.
+        // A fresh authorization must use a fresh pair rather than replaying them.
         let refreshedRequestID = UUID().uuidString
+        let refreshedAttemptID = "attempt-2"
         let refreshedAuthorization = await dispatcher.handle(
             body: [
                 "id": UUID().uuidString,
@@ -259,6 +260,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         let refreshedNonce = try XCTUnwrap(refreshedData["challengeNonce"] as? String)
         var refreshedGenerationBody = generationBody
         refreshedGenerationBody["requestId"] = refreshedRequestID
+        refreshedGenerationBody["attemptId"] = refreshedAttemptID
         refreshedGenerationBody["challengeNonce"] = refreshedNonce
 
         let generation = await dispatcher.handle(
