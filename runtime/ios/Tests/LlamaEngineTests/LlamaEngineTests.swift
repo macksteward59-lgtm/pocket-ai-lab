@@ -176,7 +176,7 @@ final class LlamaEngineTests: XCTestCase {
         } catch LlamaEngineError.invalidRequest {
             // The session remains occupied until finishGeneration observes native task exit.
         } catch {
-            XCTFail("Expected the active-generation guard, received: \\(error)")
+            XCTFail("Expected the active-generation guard, received: \(error)")
         }
         await gate.resume()
         await engine.cancelAndWait(sessionId: session.id, requestId: cancelledRequestID)
