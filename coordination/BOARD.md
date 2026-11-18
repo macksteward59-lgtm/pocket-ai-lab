@@ -501,3 +501,12 @@ Disposition:
 - PR #200 remains open/unmerged, without independent approval. PR #198 remains open/unmerged; integration is blocked until this security gate and the feature/remediation stack are reconciled. No code, authority, or branch-protection changes made.
 
 Correction to the preceding PR #200 review-gate entry: the actual GitHub conversation comment ID is `6988215775` (not `6988170021`). Canonical link: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/200#issuecomment-6988215775.
+
+
+## 2026-11-18 — Source-verifier platform containment assessment
+
+- Reviewed repository runtime facts: root `package.json` declares Node.js `>=22`; the documented desktop target includes Windows and macOS. The verifier is a Node filesystem adapter, not the native Swift iOS inference runtime.
+- Checked the official Node v22 filesystem API documentation: `fsPromises.open(path, flags)` and `fsPromises.opendir(path)` are pathname-based; the documented portable `node:fs` API does not expose an `openat(dirfd, relativePath, flags)` child-open interface. Therefore, PR #200's descriptor-bounded read plus final-component `O_NOFOLLOW` must not be described as a root-handle-relative traversal guarantee. Reference: https://nodejs.org/download/release/v22.23.3/docs/api/fs.html
+- Expanded [Issue #202](https://github.com/macksteward59-lgtm/pocket-ai-lab/issues/202) into an explicit decision between (A) a reviewed native per-platform directory-handle helper with fail-closed behavior, or (B) a genuinely host-enforced immutable workspace snapshot/lease. Repeated `realpath`/`lstat` checks and advisory locks alone are not accepted as race fixes.
+- Added a platform assessment and decision matrix to `coordination/STRIDE-D02-CAPABILITY-DESIGN.md` (commit `b193cd99227730cc85f4d36a001e88d347952ab9`). No implementation option is approved yet; the independent reviewer must select based on the deployment threat model.
+- PR #200 remains draft/unmerged and PR #198 remains open/unmerged. No code or authority boundary changed. D-02 acceptance and D-04 remain blocked.
