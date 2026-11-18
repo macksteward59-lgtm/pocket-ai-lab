@@ -129,10 +129,24 @@ export interface CandidateAssessment {
   readonly status: "eligible-for-human-review" | "keep-baseline";
 }
 
+export interface PairedEvaluationRuns {
+  readonly baselineRun: EvaluationRun;
+  readonly candidateRun: EvaluationRun;
+}
+
+export interface CandidateEvaluationRunner {
+  /** Runs both artifacts against one immutable, versioned benchmark suite. */
+  runPaired(input: {
+    readonly candidate: LearningCandidate;
+    readonly benchmarkVersion: string;
+  }): Promise<PairedEvaluationRuns>;
+}
+
 export interface AgentLearningToolOptions {
   readonly evidenceReader?: LearningEvidenceReader;
   readonly trainingSandbox?: TrainingSandbox;
   readonly trainingApprovalVerifier?: TrainingApprovalVerifier;
+  readonly evaluationRunner?: CandidateEvaluationRunner;
   readonly now?: () => number;
   readonly id?: () => string;
 }
@@ -145,6 +159,7 @@ export class AgentLearningTool {
   private readonly evidenceReader?: LearningEvidenceReader;
   private readonly trainingSandbox?: TrainingSandbox;
   private readonly trainingApprovalVerifier?: TrainingApprovalVerifier;
+  private readonly evaluationRunner?: CandidateEvaluationRunner;
   private readonly now: () => number;
   private readonly id: () => string;
   private readonly proposals = new Map<string, LearningProposal>();
@@ -154,6 +169,7 @@ export class AgentLearningTool {
     this.evidenceReader = options.evidenceReader;
     this.trainingSandbox = options.trainingSandbox;
     this.trainingApprovalVerifier = options.trainingApprovalVerifier;
+    this.evaluationRunner = options.evaluationRunner;
     this.now = options.now ?? (() => Date.now());
     this.id = options.id ?? (() => crypto.randomUUID());
   }
@@ -277,6 +293,31 @@ export class AgentLearningTool {
     if (this.candidates.has(candidate.candidateId)) throw new Error("Duplicate candidate id");
     this.candidates.set(candidate.candidateId, candidate);
     return candidate;
+  }
+
+  /** Ask the trusted host runner to evaluate both artifacts on one benchmark suite. */
+  async evaluate(input: {
+    candidateId: string;
+    benchmarkVersion: string;
+    options?: AssessmentOptions;
+  }): Promise<CandidateAssessment> {
+    if (!this.evaluationRunner) throw new Error("Trusted candidate evaluation runner is not configured");
+    if (!input?.candidateId?.trim() || !input.benchmarkVersion?.trim()) {
+      throw new Error("candidateId and benchmarkVersion are required");
+    }
+    const candidate = this.candidates.get(input.candidateId);
+    if (!candidate) throw new Error("Unknown learning candidate");
+    const runs = await this.evaluationRunner.runPaired({
+      candidate,
+      benchmarkVersion: input.benchmarkVersion
+    });
+    if (!runs?.baselineRun || !runs.candidateRun) throw new Error("Evaluation runner returned incomplete paired runs");
+    return this.assess({
+      candidateId: candidate.candidateId,
+      baselineRun: runs.baselineRun,
+      candidateRun: runs.candidateRun,
+      options: input.options
+    });
   }
 
   /** Compare paired baseline/candidate runs; never promotes or deploys. */
