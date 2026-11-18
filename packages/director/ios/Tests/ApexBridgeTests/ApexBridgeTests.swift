@@ -1364,23 +1364,32 @@ final class RuntimeControllerTests: XCTestCase {
         var reserved: [String] = []
         for index in 0..<512 {
             let requestId = UUID().uuidString
-            XCTAssertTrue(
-                await controller.reserveGenerationRequest(sessionId: sessionID, requestId: requestId),
-                "Reservation \(index) should fit within the registry."
+            let accepted = await controller.reserveGenerationRequest(
+                sessionId: sessionID,
+                requestId: requestId
             )
+            XCTAssertTrue(accepted, "Reservation \(index) should fit within the registry.")
             reserved.append(requestId)
         }
 
         for (index, requestId) in reserved.enumerated() {
+            let cancelled = await controller.cancelGeneration(
+                sessionId: sessionID,
+                requestId: requestId
+            )
             XCTAssertTrue(
-                await controller.cancelGeneration(sessionId: sessionID, requestId: requestId),
+                cancelled,
                 "Cancellation \(index) must atomically transfer its reservation to retirement."
             )
         }
 
         let replacement = UUID().uuidString
+        let replacementAccepted = await controller.reserveGenerationRequest(
+            sessionId: sessionID,
+            requestId: replacement
+        )
         XCTAssertTrue(
-            await controller.reserveGenerationRequest(sessionId: sessionID, requestId: replacement),
+            replacementAccepted,
             "Transferring all 512 reservations must leave the registry at 512, not 1024."
         )
         await controller.disconnect()
