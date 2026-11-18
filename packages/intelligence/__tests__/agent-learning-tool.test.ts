@@ -171,7 +171,7 @@ describe("AgentLearningTool", () => {
     expect(calls).toBe(0);
   });
 
-  it("requires paired evaluation to match the exact registered baseline, candidate, and dataset", async () => {
+  it("requires paired evaluation to match the exact registered baseline and candidate", async () => {
     const tool = makeTool({ async run() {
       return {
         candidateModelRef: "candidate-model",
@@ -191,7 +191,7 @@ describe("AgentLearningTool", () => {
       candidateId: candidate.candidateId,
       baselineRun: run("baseline-model", "baseline-run", 0.6),
       candidateRun: { ...run("candidate-model", "candidate-run", 0.8), datasetVersion: "wrong-version" }
-    })).toThrow(/dataset version/);
+    })).toThrow(/same dataset version/);
   });
 
   it("returns human-review eligibility but never promotes a candidate", async () => {
