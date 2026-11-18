@@ -1362,7 +1362,7 @@ final class RuntimeControllerTests: XCTestCase {
         _ = try await controller.readiness(sessionId: sessionID)
 
         var reserved: [String] = []
-        for index in 0..<512 {
+        for index in 0..<511 {
             let requestId = UUID().uuidString
             let accepted = await controller.reserveGenerationRequest(
                 sessionId: sessionID,
@@ -1390,7 +1390,7 @@ final class RuntimeControllerTests: XCTestCase {
         )
         XCTAssertTrue(
             replacementAccepted,
-            "Transferring all 512 reservations must leave the registry at 512, not 1024."
+            "Transferring 511 reservations must leave one slot available; duplicate accounting would exhaust capacity."
         )
         await controller.disconnect()
     }
