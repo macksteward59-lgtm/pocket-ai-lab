@@ -202,7 +202,7 @@ describe("TaskLifecycleCoordinator", () => {
     const claimed = await coordinator.claimNextStep("event-journal");
     await coordinator.failStep({
       taskId: "event-journal", stepId: "work", attemptId: claimed!.attemptId,
-      error: "Transient provider failure", retryable: true
+      error: "Transient provider failure", outcome: "definitive", retryable: true
     });
     const retry = await coordinator.claimNextStep("event-journal");
     const completed = await coordinator.completeStep({
