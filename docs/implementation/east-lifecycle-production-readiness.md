@@ -26,11 +26,13 @@ This is concurrency fencing, not authentication or authorization. A worker ID is
 
 ## Recovery and duplicate-effect rules
 
-- Recover only expired leases. Never steal a live lease.
+- Recover only expired leases. Never steal a live lease. Expiry is an unknown external outcome by default for every step; retry after expiry requires an explicit `uncertainOnExpiredLease: false` declaration backed by an idempotency/settlement argument.
 - Scope recovery to the selected task when resuming one East task; global startup recovery is a separate host operation.
 - Preserve the original attempt identifier and failure reason in the audit trail.
 - Inference-bearing steps remain single-attempt unless the provider exposes a durable idempotency key and a verifiable result-retrieval contract.
+- Every worker-reported failure must classify its outcome as `definitive` or `unknown`. Only a definitive failure may consume retry budget; an unknown outcome is terminal and requires reconciliation, regardless of retryability or the step's expiry policy.
 - If a provider may have completed but the result was not durably committed, mark the step uncertain and require reconciliation. Do not blindly generate again.
+- Once any step fails, stop issuing new claims but retain all already-running sibling leases until each owner reports completion/failure or its lease expires and is reconciled. Do not erase a live sibling attempt as a side effect of terminalizing its task.
 - Persist bounded deliberation output before advancing to the evidence-gate step. Treat it as untrusted proposal text.
 - A completed lifecycle must be returned idempotently without re-running assignment, inference, deliberation, or evidence submission.
 - A failed or cancelled lifecycle is terminal until an explicit, separately audited operator action creates a new attempt/workflow.
@@ -60,6 +62,8 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 - Crash injection before and after every persistence boundary preserves the documented state machine.
 - A provider success followed by a persistence failure enters an uncertain state without duplicate inference.
 - Expired lease recovery is scoped and bounded; live leases remain owned.
+- Definitive worker failures and unknown external outcomes are distinct; only definitive failures can retry.
+- A failure in one concurrent step cannot clear another live sibling lease; task failure becomes terminal only after active siblings settle.
 - Cancellation waits for native generation drain before lease release.
 - Schema migration, corruption, disk-full, permission, and key-unavailable cases fail closed.
 - Audit events are durable and redact sensitive payloads.

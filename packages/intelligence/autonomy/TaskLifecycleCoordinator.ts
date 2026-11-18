@@ -16,7 +16,7 @@ export interface TaskStepDefinition {
   dependsOn?: readonly string[];
   /** Total attempts, including the first attempt. Range: 1..5. */
   maxAttempts?: number;
-  /** Expiry/failure is ambiguous and must not be replayed; defaults true for single-attempt steps. */
+  /** Expired execution is ambiguous and must not be replayed unless explicitly opted into safe retry. Defaults true. */
   uncertainOnExpiredLease?: boolean;
 }
 
@@ -255,7 +255,7 @@ export class TaskLifecycleCoordinator {
     return this.mutate(async () => {
       this.requireInitialized();
       const task = this.requireTask(taskId);
-      if (isTerminal(task.status)) return null;
+      if (isTerminal(task.status) || task.steps.some(step => step.status === "failed")) return null;
       const now = this.now();
       const active = task.steps.filter(step => step.status === "running").length;
       if (active >= task.maxConcurrentSteps) return null;
@@ -351,6 +351,8 @@ export class TaskLifecycleCoordinator {
     attemptId: string;
     error: string;
     retryable?: boolean;
+    /** Whether the external operation is known to have failed or may have completed. */
+    outcome: "definitive" | "unknown";
   }): Promise<TaskRecord> {
     return this.mutate(async () => {
       this.requireInitialized();
@@ -358,10 +360,12 @@ export class TaskLifecycleCoordinator {
       const now = this.now();
       const updated = cloneTask(task);
       const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
-      if (typeof input.error !== "string" || !input.error.trim() || (input.retryable !== undefined && typeof input.retryable !== "boolean")) {
-        throw new TaskLifecycleError("invalid_error", "A failure reason and boolean retryable flag are required");
+      if (typeof input.error !== "string" || !input.error.trim() ||
+          (input.retryable !== undefined && typeof input.retryable !== "boolean") ||
+          (input.outcome !== "definitive" && input.outcome !== "unknown")) {
+        throw new TaskLifecycleError("invalid_error", "A failure reason, valid outcome classification, and optional boolean retryable flag are required");
       }
-      const outcomeUncertain = step.uncertainOnExpiredLease === true;
+      const outcomeUncertain = input.outcome === "unknown";
       const normalizedError = input.error.trim().slice(0, 2_000);
       step.lastError = outcomeUncertain
         ? "Provider outcome may be uncertain; operator reconciliation required: " + normalizedError.slice(0, 1_900)
@@ -429,7 +433,7 @@ export class TaskLifecycleCoordinator {
           if (step.status !== "running" || !step.currentAttempt) continue;
           if (Date.parse(step.currentAttempt.leaseExpiresAt) > now.getTime()) continue;
           const expiredAttempt = step.currentAttempt;
-          const outcomeUncertain = step.uncertainOnExpiredLease === true;
+          const outcomeUncertain = step.uncertainOnExpiredLease !== false;
           step.lastError = outcomeUncertain
             ? "Execution lease expired before completion; provider outcome is uncertain and requires operator reconciliation"
             : "Execution lease expired before completion";
@@ -529,7 +533,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     if (step.uncertainOnExpiredLease !== undefined && typeof step.uncertainOnExpiredLease !== "boolean") {
       throw new TaskLifecycleError("invalid_step", "uncertainOnExpiredLease must be a boolean");
     }
-    const uncertainOnExpiredLease = step.uncertainOnExpiredLease ?? (maxAttempts === 1);
+    const uncertainOnExpiredLease = step.uncertainOnExpiredLease ?? true;
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) {
       throw new TaskLifecycleError("invalid_attempt_limit", "Step maxAttempts must be from 1 to 5");
     }
@@ -593,10 +597,15 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
   if (task.status === "cancelled") return task;
   const next = cloneTask(task);
   if (next.steps.some(step => step.status === "failed")) {
-    next.status = "failed";
-    // A terminal task cannot retain live leases or runnable descendants.
+    // Stop issuing new work immediately, but retain active sibling leases until
+    // their owners report settlement. A failed sibling cannot erase live work.
+    if (next.steps.some(step => step.status === "running")) {
+      next.status = "running";
+    } else {
+      next.status = "failed";
+    }
     for (const step of next.steps) {
-      if (step.status === "pending" || step.status === "running") {
+      if (next.status === "failed" && (step.status === "pending" || step.status === "running")) {
         const attempt = step.currentAttempt;
         step.status = "cancelled";
         step.currentAttempt = null;
@@ -715,7 +724,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
       task.steps.some(step => step.status === "running" &&
         step.dependsOn.some(id => task.steps.find(dep => dep.id === id)?.status !== "succeeded")) ||
       (task.status === "ready" && (runningCount > 0 || hasFailed || hasCancelled || allSucceeded || task.completedAt !== null)) ||
-      (task.status === "running" && (runningCount === 0 || hasFailed || hasCancelled || task.completedAt !== null)) ||
+      (task.status === "running" && (runningCount === 0 || hasCancelled || task.completedAt !== null)) ||
       (task.status === "completed" && (!allSucceeded || !validTimestamp(task.completedAt))) ||
       (task.status === "failed" && (!hasFailed || runningCount > 0 ||
         task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
@@ -733,7 +742,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     steps: task.steps.map(step => ({
       ...step,
       uncertain: step.uncertain ?? false,
-      uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? (step.maxAttempts === 1)
+      uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? true
     }))
   });
 }

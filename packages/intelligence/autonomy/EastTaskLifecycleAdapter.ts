@@ -269,6 +269,7 @@ export async function runEastTaskWithLifecycle(
         stepId: claim.stepId,
         attemptId: claim.attemptId,
         error: error instanceof Error ? error.message : "East lifecycle step failed",
+        outcome: claim.stepId === "assign-core-agents" ? "definitive" : "unknown",
         retryable: false
       });
       throw error;
