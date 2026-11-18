@@ -570,21 +570,26 @@ final class RuntimeControllerTests: XCTestCase {
             model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
         )
         let requestID = UUID().uuidString
-        XCTAssertTrue(await controller.reserveGenerationRequest(
+        let firstReservation = await controller.reserveGenerationRequest(
             sessionId: loaded.sessionId!, requestId: requestID.uppercased()
-        ))
-        XCTAssertFalse(await controller.reserveGenerationRequest(
+        )
+        XCTAssertTrue(firstReservation)
+        let alternateReservation = await controller.reserveGenerationRequest(
             sessionId: loaded.sessionId!, requestId: requestID.lowercased()
-        ))
-        XCTAssertTrue(await controller.cancelGeneration(
+        )
+        XCTAssertFalse(alternateReservation)
+        let cancelled = await controller.cancelGeneration(
             sessionId: loaded.sessionId!, requestId: requestID.lowercased()
-        ))
-        XCTAssertTrue(await controller.isGenerationRequestRetired(
+        )
+        XCTAssertTrue(cancelled)
+        let retired = await controller.isGenerationRequestRetired(
             sessionId: loaded.sessionId!, requestId: requestID.uppercased()
-        ))
-        XCTAssertFalse(await controller.reserveGenerationRequest(
+        )
+        XCTAssertTrue(retired)
+        let replayReservation = await controller.reserveGenerationRequest(
             sessionId: loaded.sessionId!, requestId: requestID
-        ))
+        )
+        XCTAssertFalse(replayReservation)
         _ = await controller.unload(sessionId: loaded.sessionId!)
     }
 
@@ -1534,13 +1539,14 @@ final class BridgeChallengeStoreTests: XCTestCase {
             requestId: requestID.uppercased(),
             sessionId: sessionID.uppercased()
         )
-        XCTAssertTrue(await store.consume(
+        let consumedAcrossCase = await store.consume(
             nonce,
             page: page,
             trusted: page,
             requestId: requestID.lowercased(),
             sessionId: sessionID.lowercased()
-        ))
+        )
+        XCTAssertTrue(consumedAcrossCase)
 
         let secondNonce = try await store.issue(
             page: page,
@@ -1549,13 +1555,14 @@ final class BridgeChallengeStoreTests: XCTestCase {
             sessionId: sessionID
         )
         await store.invalidate(requestId: requestID.lowercased(), sessionId: sessionID.lowercased())
-        XCTAssertFalse(await store.consume(
+        let consumedAfterInvalidation = await store.consume(
             secondNonce,
             page: page,
             trusted: page,
             requestId: requestID.uppercased(),
             sessionId: sessionID.uppercased()
-        ))
+        )
+        XCTAssertFalse(consumedAfterInvalidation)
     }
 
     func testChallengeIsBoundToOriginRequestAndSessionAndConsumedOnce() async throws {
