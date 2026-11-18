@@ -777,7 +777,7 @@ final class RuntimeControllerTests: XCTestCase {
         _ = await controller.unload(sessionId: loaded.sessionId!)
     }
 
-    func testDisconnectRetainsLeaseUntilNativeCancellationDrainCompletes() async throws {
+    func testUnloadRetainsLeaseUntilNativeCancellationDrainCompletes() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 6_000))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -818,17 +818,17 @@ final class RuntimeControllerTests: XCTestCase {
         let generation = Task {
             try await controller.generate(
                 sessionId: sessionID,
-                prompt: "hold until disconnect drains",
+                prompt: "hold until unload drains",
                 requestId: requestId,
-                conversationRequestId: "disconnect-drain",
-                attemptId: "disconnect-drain-attempt",
+                conversationRequestId: "unload-drain",
+                attemptId: "unload-drain-attempt",
                 challengeNonce: challenge,
                 pageURL: trustedWorkspaceURL
             )
         }
         await engine.waitUntilGenerationStarted()
 
-        let disconnect = Task { await controller.disconnect() }
+        let unload = Task { await controller.unload(sessionId: sessionID) }
         await engine.waitUntilDrainStarted()
 
         let whileDraining = await runtime.snapshot()
@@ -837,10 +837,11 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertEqual(whileDraining.loadedModelIDs, [descriptor.id])
 
         await engine.finishDrain()
-        await disconnect.value
+        let unloaded = await unload.value
+        XCTAssertTrue(unloaded)
         do {
             _ = try await generation.value
-            XCTFail("Disconnect must not return a generation result.")
+            XCTFail("Unload must not return a generation result.")
         } catch {
             // Cancellation is expected after native drain completes.
         }
@@ -849,6 +850,75 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertEqual(afterDrain.activeLeaseCount, 0)
         XCTAssertEqual(afterDrain.activeUseCount, 0)
         XCTAssertTrue(afterDrain.loadedModelIDs.isEmpty)
+    }
+
+    func testUnloadDrainsGenerationSuspendedDuringChallengeConsumptionBeforeReleasingLease() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-unload-preparation-drain-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "unload-preparation-model",
+            name: "Unload preparation model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let engine = CountingLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = PausingChallengeStore()
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestID = UUID().uuidString
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "Unload must drain this suspended preparation.",
+                requestId: requestID,
+                conversationRequestId: "unload-preparation",
+                attemptId: "unload-preparation-attempt",
+                challengeNonce: String(repeating: "c", count: 32),
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        await challengeStore.waitUntilConsumeStarted()
+
+        let unload = Task { await controller.unload(sessionId: sessionID) }
+        let unloaded = await unload.value
+        XCTAssertTrue(unloaded, "Unload must await the registered preparation task.")
+        do {
+            _ = try await generation.value
+            XCTFail("A request cancelled by unload must not produce output.")
+        } catch is CancellationError {
+            // Expected: unload cancelled and drained challenge consumption.
+        } catch {
+            // The request may report a cancellation-related challenge failure
+            // after the challenge store settles; inference must still not start.
+        }
+
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeLeaseCount, 0, "The lease is released only after the preparation task settles.")
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        XCTAssertEqual(await engine.nonReadinessGenerationCount(), 0)
     }
 
     func testCancelAllInvalidatesGenerationSuspendedDuringChallengeConsumption() async throws {
