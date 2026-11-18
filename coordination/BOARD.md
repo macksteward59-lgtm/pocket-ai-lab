@@ -674,3 +674,10 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - UUID casing canonicalization from the earlier review is addressed in the inspected head, but this new capacity finding means PR #197 is not merge-ready even if CI passes.
 - PR #201 is closed unmerged at `874dca55d5c7cbe7e260404327555de6e849bf58`; do not treat its prior green CI as an open remediation. PR #200's parent-directory race remains unresolved, and issue #202 has no host-containment decision. PR #204 still lacks the legacy-record migration and adapter-level failure tests. PR #203 exact-head run `44373747684` remains green.
 - No application source changed, no PR merged/approved, and no governance, authority, or branch-protection settings changed. Hosted CI is not physical iPhone acceptance.
+
+
+## 2026-11-18 — PR #197 capacity remediation inspected
+
+- PR #197 advanced to `a66b0749434f2b74d4d990eac923efc6cd914a8e`. Static inspection of `recordRetiredGenerationRequest` confirms an existing authorized identity is removed from the authorized set (including empty-session cleanup) before insertion into the retired set; actor isolation makes the transfer atomic. New regression reserves and cancels 511 identities, then verifies the final 512th slot remains available. This addresses the specific double-counting finding in comment `6989513504` at the inspected head.
+- Exact-head iOS workflow run `44385127350` is registered but remains pending; no job results are available yet. Do not treat prior run `44383044295` as validation of this head. PR #197 remains draft pending exact-head CI and remaining lifecycle review.
+- Follow-up static review note posted to PR #197; no approval or merge. PR #204 migration/adapter tests and D-02 root-confinement decision remain outstanding. No application source or governance authority changed.
