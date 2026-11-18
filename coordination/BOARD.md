@@ -766,3 +766,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #201 is closed unmerged as a duplicate of PR #200. Its changed-file blob SHAs match PR #200's implementation; PR #200 remains the retained review path and still has the parent-directory race blocker.
 - Issue #202 remains open with no selected supported-platform matrix or approved native helper/immutable-snapshot implementation. Contract text remains proposal only.
 - No merge, no CI pass claim, no physical-device acceptance, and no D-02/D-04 acceptance.
+
+
+## 2026-11-18 — PR #212 native workflow startup failure
+
+- Refreshed PR #212 at exact head `244a728330f06c8294328d58115ac6b0f55602fc`; it remains open/draft/unmerged and the source diff is unchanged.
+- Native iOS workflow `44399814043` (run 570) has now completed with conclusion `startup_failure`. The jobs endpoint returns no jobs, confirming this attempt failed before a runner job was created; this is infrastructure/startup failure, not a source/test failure and not a pass.
+- The PR review comment records that GitHub's rerun-failed-jobs endpoint returned HTTP 403, `This workflow run cannot be retried`. No supported dispatch/retry action is exposed by the connected GitHub tools. A fresh pull_request-triggered native workflow attempt for the same exact head is still required; do not use the earlier test run on a different commit as evidence.
+- The deterministic cancel-all test and implementation remain unchanged; general CI was reported green in the PR comment, but this checkpoint's available workflow lookup exposes only the failed native run, so native validation remains unsatisfied.
+- PR #212 stays draft. No merge, physical-device acceptance, or release acceptance.
