@@ -3649,3 +3649,11 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - Confirmed current verifier result has path/line/occurrence metadata but no stable source-reference ID. D-04 acceptance requires emergent claims to cite verified source-reference IDs.
 - Decision: PR #198 remains a narrow adapter-level implementation for independent review; do not describe it as end-to-end Director capability. Before D-04, hold a separate schema/data-flow review for the capability entry point, stable ID semantics and content binding, stale-reference invalidation, and model-proposed reference validation. No shared interface or application code changed in this step.
 - Coordination board, donor register, and engineering handoff updated to make this integration limitation explicit. No APEX/East/Evidence/runtime authorization contracts changed.
+
+
+## 2026-11-18 — D-02 capability design proposal recorded
+
+- Inspected the existing SourceEvidenceAdapter and PAL source-evidence ingestion design. They already bind unverified static-analysis candidates to exact source bytes with SHA-256, normalized filename, line number, and stable provenance URI; this is a useful pattern to adapt carefully, not a new authority source.
+- Created coordination/STRIDE-D02-CAPABILITY-DESIGN.md as a design-only proposal. It describes the Director capability path, task-scoped immutable reference catalog, content-bound reference IDs, stale-reference revalidation, trust boundary, open design decisions, and required tests.
+- The proposal explicitly avoids exposing absolute workspace roots and treats model-supplied paths/quotes/IDs as untrusted. A reference ID is only a content-addressed lookup key, never a signature, attestation, approval, authorization, or trusted receipt.
+- Updated the engineering handoff and board to link the design proposal. No shared interface, app code, tests, sandbox, or authorization contract changed. PR #198 remains narrow and reviewable; D-04 remains blocked pending independent review and design acceptance.
