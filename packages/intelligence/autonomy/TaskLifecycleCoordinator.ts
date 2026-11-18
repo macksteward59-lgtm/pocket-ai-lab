@@ -669,7 +669,7 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
       next.status = "failed";
       cancelPendingSteps(next, now);
     }
-  } else if (next.cancellationRequestedAt != null) {
+  } else if (hasCancellationRequest(next)) {
     // Cancellation is terminal only after every active owner has settled.
     next.status = hasRunning ? "running" : "cancelled";
   } else if (next.steps.every(step => step.status === "succeeded")) next.status = "completed";
