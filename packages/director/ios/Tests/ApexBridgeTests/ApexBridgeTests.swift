@@ -349,6 +349,24 @@ private actor CancellationCompletionSignal {
     func hasFinished() -> Bool { finished }
 }
 
+private actor CancellationDrainWaitSignal {
+    private var reached = false
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func markReached() {
+        reached = true
+        continuation?.resume()
+        continuation = nil
+    }
+
+    func waitUntilReached() async {
+        if reached { return }
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+}
+
 private actor PausingFileHasher {
     private var continuation: CheckedContinuation<String, Error>?
     private var startedContinuation: CheckedContinuation<Void, Never>?
@@ -913,13 +931,17 @@ final class RuntimeControllerTests: XCTestCase {
         await engine.waitUntilDrainStarted()
 
         let cancellationFinished = CancellationCompletionSignal()
+        let cancellationReachedDrainWait = CancellationDrainWaitSignal()
+        await controller.setCancelAllDrainWaitObserverForTesting {
+            await cancellationReachedDrainWait.markReached()
+        }
         let cancellation = Task {
             _ = await controller.cancelAllGenerations()
             await cancellationFinished.markFinished()
         }
-        // Give cancelAllGenerations an opportunity to enter while unload is
-        // suspended in the same native drain. It must await the registered task.
-        try await Task.sleep(nanoseconds: 50_000_000)
+        // Synchronize after cancel-all has cancelled the captured task and is
+        // immediately about to await its settlement; no scheduler delay is used.
+        await cancellationReachedDrainWait.waitUntilReached()
         let finishedBeforeDrain = await cancellationFinished.hasFinished()
         XCTAssertFalse(
             finishedBeforeDrain,
