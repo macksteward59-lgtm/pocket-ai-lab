@@ -4126,3 +4126,10 @@ Accessible history this run: current conversation instructions and recent projec
 - Audited the post-merge PR #197 UUID-case finding against the merged source at `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`. RuntimeController canonicalizes request IDs before registry/dictionary operations; BridgeChallengeStore canonicalizes request and session IDs. Existing XCTest `testRequestIdentityReservationCanonicalizesUUIDCase` verifies uppercase/lowercase reservations collide, cancellation retires the shared identity, and replay reservation fails. `testChallengeBindingCanonicalizesRequestAndSessionUUIDCase` covers challenge binding. The review note is already addressed; no duplicate fix was created.
 - PR #200 / issue #202 remain a security hold. The current issue comments contain no accepted platform/threat-model decision; final-component O_NOFOLLOW and descriptor-bounded reads do not pin the root or prevent parent-directory replacement. Keep #198/#200 unmerged until a reviewed host-owned root-relative traversal or enforced immutable snapshot contract and adversarial race tests exist.
 - No PR merged, no authority semantics changed, no physical iPhone acceptance, no production e3 cancellation or production RLS/deployment acceptance claimed.
+
+
+## 2026-11-18 — PR #212 deterministic cancel-all regression
+
+- Replaced the scheduler-dependent `Task.sleep(50ms)` in PR #212 with an explicit checked-continuation handshake. The internal observer is unset by default, is signaled after cancel-all handles the captured attempt and immediately before awaiting its task, and is cleared by the test after drain completes.
+- New exact PR head `244a728330f06c8294328d58115ac6b0f55602fc`; PR remains draft/unmerged. Posted PR comment `6991900777` describing the change. The GitHub workflow lookup has not yet surfaced a run for this new head, so exact-head CI and native XCTest remain pending and no pass is claimed.
+- No merge, trust/authority change, physical-device acceptance, or production cancellation acceptance.
