@@ -533,7 +533,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     if (step.uncertainOnExpiredLease !== undefined && typeof step.uncertainOnExpiredLease !== "boolean") {
       throw new TaskLifecycleError("invalid_step", "uncertainOnExpiredLease must be a boolean");
     }
-    const uncertainOnExpiredLease = step.uncertainOnExpiredLease ?? (maxAttempts === 1);
+    const uncertainOnExpiredLease = step.uncertainOnExpiredLease ?? true;
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) {
       throw new TaskLifecycleError("invalid_attempt_limit", "Step maxAttempts must be from 1 to 5");
     }
@@ -742,7 +742,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     steps: task.steps.map(step => ({
       ...step,
       uncertain: step.uncertain ?? false,
-      uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? (step.maxAttempts === 1)
+      uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? true
     }))
   });
 }
