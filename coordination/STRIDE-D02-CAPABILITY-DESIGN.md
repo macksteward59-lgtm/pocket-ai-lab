@@ -293,3 +293,104 @@ Disposition:
 Do not add an unverified Node path trick or a repeated `realpath`/ `lstat` check and call it race-free. Ask the independent reviewer to choose A or B based on the actual deployment threat model. If A is chosen, define a narrow host port such as `openWorkspaceFile(workspaceHandle, normalizedRelativePath, maxBytes)` returning a bounded byte snapshot and explicit cleanup; the native implementation owns all directory/file handles and fails closed on unsupported platforms. If B is chosen, make the trusted snapshot/lease an explicit host capability and test that callers cannot pass arbitrary roots or opt out of the immutability precondition.
 
 No option is approved by this assessment. PR #200 remains a bounded-read improvement only; issue #202 is the decision gate. D-02 and D-04 remain blocked.
+## 13. Host filesystem containment contract and adversarial test matrix — review draft
+
+**Purpose:** specify the smallest host boundary needed if Issue #202 selects native directory-handle traversal. This is a contract for review, not approval to add a native dependency or claim a platform implementation exists.
+
+### 13.1 Scope established by repository inspection
+
+- The root package requires Node.js >=22.
+- The README describes Windows and macOS desktop launcher scripts but explicitly says those scripts are untested. It does not establish a supported production OS matrix or native-helper packaging guarantees.
+- The Director source verifier is a Node runtime adapter. The iOS Swift/LlamaEngine work is a separate runtime path and does not establish that a native filesystem helper is available to the desktop Node host.
+- No existing openWorkspaceFile native host port or cross-platform directory-handle helper was identified in the inspected Director adapter/docs. Do not assume one exists.
+- Accordingly, the first implementation decision is not which syscall should be called everywhere; it is to define which host platforms are actually supported for source verification. An unsupported host must return a stable unavailable result rather than silently falling back to the current weaker path walk.
+
+### 13.2 Proposed host-owned API
+
+Keep native details outside packages/intelligence. A narrow host adapter may expose an opaque workspace session:
+
+~~~ts
+export interface WorkspaceReadSession {
+  readonly workspaceHandle: string; // opaque host-issued selector; never a path
+  close(): Promise<void>;
+}
+
+export interface WorkspaceFileSnapshot {
+  readonly bytes: Uint8Array;       // immutable copy of the one bounded read
+  readonly byteLength: number;
+  readonly sha256: string;          // computed over exactly bytes
+  close(): Promise<void>;
+}
+
+export interface ConfinedWorkspaceReader {
+  openSession(input: { workspaceId: string }): Promise<WorkspaceReadSession>;
+  readFile(input: {
+    session: WorkspaceReadSession;
+    relativePath: string;           // normalized POSIX relative path only
+    maxBytes: number;
+    rejectSymlinks: true;
+    requireRegularFile: true;
+  }): Promise<WorkspaceFileSnapshot>;
+}
+~~~
+
+The public TypeScript shapes are illustrative. The host must not accept a caller-provided absolute root, file descriptor, native handle, or workspace path. The opaque session is created by the trusted host from its already-authorized workspace registration. The implementation must bind the session to that workspace identity and reject use after close, cross-workspace use, traversal, and unsupported object types.
+
+**Resource lifecycle:**
+1. Host opens/pins the workspace root and returns an opaque session.
+2. Each path component is opened relative to the preceding pinned directory handle; reject . and .. after normalization, symlinks, and platform-specific reparse points. Never resolve the full attacker-influenced path and then reopen it from the process root.
+3. Verify each opened intermediate object is a directory and the final object is a regular file.
+4. Enforce the byte limit during the read, with a maximum of maxBytes + 1; reject overflow.
+5. Hash and decode/match the same bytes. Do not perform a second path read for hashing or matching.
+6. Close every intermediate and final handle on success, error, timeout, and cancellation. Session close invalidates future reads.
+7. Return an immutable byte snapshot. The native layer must not leak live descriptors/handles to model-facing code.
+
+### 13.3 Platform adapter requirements
+
+- **POSIX hosts (macOS/Linux):** pin the root directory descriptor; walk each component with directory-relative opens and no-follow semantics; verify directory/file type using the opened descriptors. The implementation must account for filesystem-specific behavior and test the exact supported OS/filesystem combinations.
+- **Windows hosts:** use a separately reviewed handle-relative traversal strategy that pins directory handles and rejects reparse-point traversal at each component. A final-component-only flag is not sufficient. The implementation must validate actual handle identity/type and document any filesystem or API limitations.
+- **Other/unsupported hosts:** fail closed with a stable containment_unavailable reason. No fallback to realpath + open(path), lstat + open(path), or string-prefix checks.
+- **iOS:** do not infer desktop helper support from the native inference target. If source inspection is ever hosted inside the iOS app, it must use a separate document-provider/security-scoped-resource contract and the OS-granted file scope; it must not attempt unrestricted app-container or filesystem traversal.
+
+The native helper must define packaging/signing, ABI/version negotiation, supported OS versions, error-code mapping, cancellation behavior, descriptor/handle ownership, cleanup guarantees, and behavior when the helper cannot load. These are release gates, not optional diagnostics.
+
+### 13.4 Deterministic adversarial tests
+
+| Test | Adversarial action | Required outcome |
+|---|---|---|
+| Parent swap | Pause after opening/pinning a parent; replace a later path component with a symlink to an outside directory | Read remains bound to pinned workspace object or fails closed; outside bytes never returned |
+| Intermediate symlink | Place a symlink/reparse point in each possible path component | Reject; never follow |
+| Final symlink swap | Replace final entry immediately before open | Reject; never read target |
+| Directory replacement | Rename/replace a directory after its handle is opened | Continue within the opened directory identity or fail; never follow replacement outside root |
+| Hard link | Point an in-workspace regular file entry at an outside inode via hard link where supported | Apply documented policy: reject if identity-based workspace provenance is required; otherwise explicitly state that hard links cannot be distinguished by path confinement alone |
+| File growth | Grow file during read beyond limit | Read no more than maxBytes + 1; reject overflow |
+| File truncation/rewrite | Mutate content during read | Snapshot is one exact byte sequence; digest and quote match use same returned bytes; otherwise fail |
+| Non-regular object | FIFO, socket, device, directory, reparse point | Reject without blocking |
+| Cancellation | Cancel while opening/walking/reading | Close all acquired handles; no leaked descriptors |
+| Handle/session misuse | Reuse after close or with another workspace | Reject |
+| Resource exhaustion | Deep path, many concurrent reads, oversized limits | Bounded handles, memory, concurrency and time; fail predictably |
+| Native helper failure | Missing library, ABI mismatch, unsupported OS, permission error | Stable unavailable/error result; no unsafe fallback |
+
+Use barriers/hooks in the native test harness to make replacement timing deterministic; probabilistic stress loops alone do not prove race closure. Run tests on every supported OS in CI and retain the exact OS version, filesystem, Node version, native helper version, and test result.
+
+### 13.5 Acceptance gates
+
+- A reviewed supported-platform matrix exists; Windows/macOS scripts untested is not silently upgraded into production support.
+- Every supported host has an implementation that pins the root identity and rejects symlink/reparse traversal at every component.
+- Deterministic parent/intermediate/final replacement tests pass on each supported OS.
+- Resource and cancellation tests show no descriptor/handle leaks and respect the configured byte/time/concurrency ceilings.
+- The host adapter's failure paths are fail-closed; no path-based fallback.
+- Source bytes are read once into a bounded immutable snapshot; SHA-256, text decoding, matching, and returned line ranges all refer to that same snapshot.
+- Independent security review signs off on the implementation and its platform claims.
+- Existing workspace authorization, APEX/East/Evidence, BridgeGate, RuntimeController, LlamaEngine, and ToolSandbox contracts remain unchanged.
+
+### 13.6 Decision requested
+
+Before implementation, obtain explicit answers from the independent reviewer and host owner:
+1. Is concurrent modification by another process/user in scope for the workspace source verifier?
+2. Which desktop operating systems and versions are release-supported for source verification, distinct from merely having launcher scripts?
+3. Is a native helper acceptable for packaging and signing on each supported OS?
+4. If not, can the host enforce an immutable snapshot for the entire verifier session, including against same-user concurrent writers?
+5. Should iOS source inspection be out of scope for this increment?
+
+Until these are answered, keep PR #200 as bounded-read remediation only, leave #198/#200 unmerged, and do not wire source-reference IDs into D-04.
