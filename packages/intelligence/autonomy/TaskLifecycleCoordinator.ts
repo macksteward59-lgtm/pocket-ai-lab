@@ -363,7 +363,7 @@ export class TaskLifecycleCoordinator {
       if (typeof input.error !== "string" || !input.error.trim() ||
           (input.retryable !== undefined && typeof input.retryable !== "boolean") ||
           (input.outcome !== "definitive" && input.outcome !== "unknown")) {
-        throw new TaskLifecycleError("invalid_error", "A failure reason and boolean retryable flag are required");
+        throw new TaskLifecycleError("invalid_error", "A failure reason, valid outcome classification, and optional boolean retryable flag are required");
       }
       const outcomeUncertain = input.outcome === "unknown";
       const normalizedError = input.error.trim().slice(0, 2_000);
