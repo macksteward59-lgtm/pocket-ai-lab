@@ -1,4 +1,5 @@
 import Foundation
+import WebKit
 import XCTest
 @testable import PocketAILab
 import PocketLlamaEngine
@@ -31,6 +32,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     @MainActor
     private func makeLoadedDispatcher(
         root: URL,
+        engine: LlamaEngine = DispatcherStubEngine(),
         beforeSessionResolution: (@MainActor () async -> Void)? = nil,
         beforeNavigationCleanup: (@MainActor () async -> Void)? = nil
     ) async throws -> (WorkspaceBridgeDispatcher, String, NativeRuntimeComposition) {
@@ -56,7 +58,7 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
             quantization: entry.quantization
         )
         let composition = NativeRuntimeComposition(
-            engine: DispatcherStubEngine(),
+            engine: engine,
             availableMemoryMB: { 4_096 }
         )
         let runtime = try XCTUnwrap(composition.runtime)
@@ -730,6 +732,69 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testDispatcherInvalidationDrainsActiveGenerationBeforeReleasingOnlyWorkspaceLease() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let engine = DispatcherBlockingDrainLlamaEngine()
+        let (dispatcher, sessionID, composition) = try await makeLoadedDispatcher(root: root, engine: engine)
+        guard case .shared(let service) = composition.dependency,
+              let runtime = composition.runtime else {
+            throw XCTSkip("Shared runtime composition unavailable in test fixture.")
+        }
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let requestID = UUID().uuidString
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin, isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+        let authorization = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "authorizeGeneration", "sessionId": sessionID, "requestId": requestID],
+            frameOrigin: trustedOrigin, isMainFrame: true
+        )
+        XCTAssertEqual(authorization["ok"] as? Bool, true)
+        let authorizationData = try XCTUnwrap(authorization["data"] as? [String: Any])
+        let nonce = try XCTUnwrap(authorizationData["challengeNonce"] as? String)
+        let generation = Task {
+            await dispatcher.handle(
+                body: [
+                    "id": UUID().uuidString, "action": "generate", "sessionId": sessionID,
+                    "prompt": "Hold this generation until dispatcher teardown drains it.",
+                    "requestId": requestID, "conversationRequestId": "dispatcher-drain",
+                    "attemptId": "dispatcher-drain-attempt", "challengeNonce": nonce
+                ],
+                frameOrigin: trustedOrigin, isMainFrame: true
+            )
+        }
+        await engine.waitUntilGenerationStarted()
+        let beforeInvalidation = await runtime.snapshot()
+        XCTAssertEqual(beforeInvalidation.activeLeaseCount, 2)
+        XCTAssertEqual(beforeInvalidation.activeUseCount, 1)
+        XCTAssertEqual(beforeInvalidation.loadedModelIDs.count, 1)
+        dispatcher.invalidate()
+        await engine.waitUntilDrainStarted()
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeLeaseCount, 2)
+        XCTAssertEqual(whileDraining.activeUseCount, 1)
+        XCTAssertEqual(whileDraining.loadedModelIDs.count, 1)
+        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID])
+        await engine.finishDrain()
+        let response = await generation.value
+        let deadline = Date().addingTimeInterval(5)
+        var afterDrain = await runtime.snapshot()
+        while afterDrain.activeLeaseCount != 1, Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+            afterDrain = await runtime.snapshot()
+        }
+        XCTAssertEqual(response["ok"] as? Bool, false)
+        XCTAssertNil((response["data"] as? [String: Any])?["output"])
+        XCTAssertEqual(afterDrain.activeLeaseCount, 1)
+        XCTAssertEqual(afterDrain.activeUseCount, 0)
+        XCTAssertEqual(afterDrain.loadedModelIDs, [service.activeLeases()[0].model.id])
+        XCTAssertEqual(service.activeLeases().map(\.session.id), [sessionID])
+    }
+
+    @MainActor
     func testInvalidationDisablesAllFurtherMessages() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -743,6 +808,105 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
         )
         XCTAssertEqual(response["error"] as? String, "bridge_unavailable")
     }
+    @MainActor
+    func testDismantleRemovesPageWorldHandlerAndNavigationDelegate() async throws {
+        let trustedURL = URL(string: "https://workspace.example.test/app")!
+        let composition = NativeRuntimeComposition(
+            engine: DispatcherStubEngine(),
+            availableMemoryMB: { 4_096 }
+        )
+        let coordinator = PrivateWorkspaceWebView.Coordinator(
+            trustedURL: trustedURL,
+            runtimeDependency: composition.dependency
+        )
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addScriptMessageHandler(
+            coordinator,
+            contentWorld: .page,
+            name: WorkspaceBridgeDispatcher.messageHandlerName
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = coordinator
+
+        let loaded = expectation(description: "Workspace test document finishes loading")
+        let loadingObservation = webView.observe(\.isLoading, options: [.new]) { view, change in
+            guard change.newValue == false, view.url != nil else { return }
+            loaded.fulfill()
+        }
+        webView.loadHTMLString(
+            "<!doctype html><html><body>Workspace teardown test</body></html>",
+            baseURL: trustedURL
+        )
+        await fulfillment(of: [loaded], timeout: 10)
+
+        let handlerBeforeTeardown = try await webView.evaluateJavaScript(
+            "typeof window.webkit.messageHandlers.pocketAILab"
+        )
+        XCTAssertEqual(handlerBeforeTeardown as? String, "object")
+
+        PrivateWorkspaceWebView.dismantleUIView(webView, coordinator: coordinator)
+
+        XCTAssertNil(webView.navigationDelegate)
+        let handlerAfterTeardown = try await webView.evaluateJavaScript(
+            "typeof window.webkit.messageHandlers.pocketAILab"
+        )
+        XCTAssertEqual(handlerAfterTeardown as? String, "undefined")
+        withExtendedLifetime(loadingObservation) {}
+    }
+}
+
+private actor DispatcherBlockingDrainLlamaEngine: LlamaEngine {
+    private var generationStarted = false
+    private var generationStartedContinuation: CheckedContinuation<Void, Never>?
+    private var drainStartedContinuation: CheckedContinuation<Void, Never>?
+    private var drainContinuation: CheckedContinuation<Void, Never>?
+    func load(model: ModelDescriptor) async throws -> RuntimeSession {
+        RuntimeSession(id: UUID().uuidString, modelId: model.id)
+    }
+    func generate(session: RuntimeSession, request: GenerationRequest) async throws -> AsyncThrowingStream<Token, Error> {
+        if request.prompt.contains("readiness probe") {
+            return AsyncThrowingStream { continuation in
+                continuation.yield(Token(text: "ready", isComplete: true))
+                continuation.finish()
+            }
+        }
+        generationStarted = true
+        generationStartedContinuation?.resume()
+        generationStartedContinuation = nil
+        return AsyncThrowingStream { continuation in
+            let producer = Task {
+                do {
+                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                    continuation.yield(Token(text: "late", isComplete: true))
+                    continuation.finish()
+                } catch { continuation.finish(throwing: error) }
+            }
+            continuation.onTermination = { _ in producer.cancel() }
+        }
+    }
+    func cancel(sessionId: String, requestId: String) async {}
+    func cancelAndWait(sessionId: String, requestId: String) async {
+        await withCheckedContinuation { continuation in
+            drainContinuation = continuation
+            drainStartedContinuation?.resume()
+            drainStartedContinuation = nil
+        }
+    }
+    func unload(sessionId: String) async {}
+    func waitUntilGenerationStarted() async {
+        if generationStarted { return }
+        await withCheckedContinuation { generationStartedContinuation = $0 }
+    }
+    func waitUntilDrainStarted() async {
+        if drainContinuation != nil { return }
+        await withCheckedContinuation { drainStartedContinuation = $0 }
+    }
+    func finishDrain() {
+        drainContinuation?.resume()
+        drainContinuation = nil
+    }
+
+
 }
 
 private actor DispatcherStubEngine: LlamaEngine {
