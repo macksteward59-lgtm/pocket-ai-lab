@@ -215,6 +215,53 @@ describe("AgentLearningTool", () => {
     expect(tool.getCandidate(candidate.candidateId)?.status).toBe("candidate-only");
   });
 
+  it("uses the trusted evaluation runner instead of accepting model-supplied scores", async () => {
+    let evaluationCalls = 0;
+    const tool = new AgentLearningTool({
+      evidenceReader: makeEvidenceReader(),
+      trainingApprovalVerifier: { async verify() { return true; } },
+      trainingSandbox: { async run() {
+        return {
+          candidateModelRef: "candidate-model",
+          sandboxRunRef: "sandbox-run-1",
+          completedAt: "2026-11-18T12:05:00.000Z",
+          metrics: { trainLoss: 0.42 }
+        };
+      } },
+      evaluationRunner: {
+        async runPaired({ candidate, benchmarkVersion }) {
+          evaluationCalls += 1;
+          expect(candidate.candidateModelRef).toBe("candidate-model");
+          expect(benchmarkVersion).toBe("eval-v1");
+          return {
+            baselineRun: run("baseline-model", "baseline-run", 0.6),
+            candidateRun: run("candidate-model", "candidate-run", 0.8)
+          };
+        }
+      }
+    });
+    const proposal = await adapterProposal(tool);
+    const candidate = await tool.train(trainingRequest(proposal.proposalId));
+    const result = await tool.evaluate({ candidateId: candidate.candidateId, benchmarkVersion: "eval-v1" });
+    expect(evaluationCalls).toBe(1);
+    expect(result.status).toBe("eligible-for-human-review");
+  });
+
+  it("fails closed when no trusted evaluation runner is configured", async () => {
+    const tool = makeTool({ async run() {
+      return {
+        candidateModelRef: "candidate-model",
+        sandboxRunRef: "sandbox-run-1",
+        completedAt: "2026-11-18T12:05:00.000Z",
+        metrics: { trainLoss: 0.42 }
+      };
+    } });
+    const proposal = await adapterProposal(tool);
+    const candidate = await tool.train(trainingRequest(proposal.proposalId));
+    await expect(tool.evaluate({ candidateId: candidate.candidateId, benchmarkVersion: "eval-v1" }))
+      .rejects.toThrow(/evaluation runner is not configured/);
+  });
+
   it("keeps the baseline when paired benchmark quality does not improve", async () => {
     const tool = makeTool({ async run() {
       return {
