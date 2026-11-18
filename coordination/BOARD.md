@@ -756,3 +756,13 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Replaced the test's fixed 50 ms sleep with a checked-continuation handshake. An internal, nil-by-default test observer fires after cancel-all has processed the captured attempt and immediately before awaiting task settlement. The test waits for this exact point, asserts the barrier is still blocked while native drain is held, releases drain, then clears the observer.
 - PR #212 comment `6991900777` records the revision. Exact-head CI/native XCTest is not yet visible for `244a728...`; no test pass is claimed.
 - No merge or authority change. Physical-device acceptance remains separate.
+
+
+## 2026-11-18 — PR #212 CI queue refresh and duplicate-branch correction
+
+- Refreshed PR #212: exact head remains `244a728330f06c8294328d58115ac6b0f55602fc`; open, draft, unmerged. The deterministic observer/continuation regression is present in the live PR diff.
+- Exact-head iOS workflow run `44399814043` is currently queued with no jobs exposed by the jobs endpoint and no completed conclusion. Earlier job record was cancelled; do not count that attempt as validation. Native XCTest/general CI remain pending.
+- PR #212's review listing contains only COMMENTED reviews from the repository owner account; no independent review approval is established.
+- PR #201 is closed unmerged as a duplicate of PR #200. Its changed-file blob SHAs match PR #200's implementation; PR #200 remains the retained review path and still has the parent-directory race blocker.
+- Issue #202 remains open with no selected supported-platform matrix or approved native helper/immutable-snapshot implementation. Contract text remains proposal only.
+- No merge, no CI pass claim, no physical-device acceptance, and no D-02/D-04 acceptance.
