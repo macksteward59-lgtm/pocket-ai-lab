@@ -261,3 +261,11 @@ Disposition:
 - Exact-head GitHub Actions Intelligence run [#44369945652](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44369945652) completed successfully. Dependency installation/advisory reporting, syntax checks, TypeScript type-check/build, and tests all completed successfully. This supersedes earlier notes that exact-head CI was pending; historical snapshot CI is not used as proof for this head.
 - PR #200 has no submitted PR reviews and no inline review threads at this checkpoint. Exact-head CI is not independent security approval. Parent-directory replacement remains an explicitly disclosed residual limitation for independent review.
 - PR #198 remains open and unmerged at its original feature head. The source-reference verifier is still adapter-only, without the Director command/capability/catalog integration; D-02 acceptance and D-04 remain blocked. No APEX/East/Evidence/BridgeGate/runtime authority contract changed and no merge was performed.
+
+
+## 2026-11-18 — Parent-directory race decision tracked
+
+- Created [issue #202](https://github.com/macksteward59-lgtm/pocket-ai-lab/issues/202) to obtain an explicit supported-platform/threat-model decision for parent-directory replacement during source-verifier path resolution.
+- PR #200 now links issue #202 and remains draft/unmerged. Exact-head Intelligence CI run #44369945652 remains green for head `947c1ac289f70779e336fde6dd9e6c687f191a07`.
+- Security review status remains unchanged: no independent PR review has been submitted. The issue requires a decision on directory-relative no-follow primitives, workspace identity pinning, adversarial replacement tests, and documented residual limitations.
+- No source code or authorization boundary changed in this checkpoint. PR #198/#200 remain unmerged; D-02 acceptance and D-04 remain blocked.
