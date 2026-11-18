@@ -1351,6 +1351,41 @@ final class RuntimeControllerTests: XCTestCase {
         await controller.disconnect()
     }
 
+    func testEarlyCancellationTransfersReservationWithoutLeakingRegistryCapacity() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 5_100))
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        var reserved: [String] = []
+        for index in 0..<512 {
+            let requestId = UUID().uuidString
+            XCTAssertTrue(
+                await controller.reserveGenerationRequest(sessionId: sessionID, requestId: requestId),
+                "Reservation \(index) should fit within the registry."
+            )
+            reserved.append(requestId)
+        }
+
+        for (index, requestId) in reserved.enumerated() {
+            XCTAssertTrue(
+                await controller.cancelGeneration(sessionId: sessionID, requestId: requestId),
+                "Cancellation \(index) must atomically transfer its reservation to retirement."
+            )
+        }
+
+        let replacement = UUID().uuidString
+        XCTAssertTrue(
+            await controller.reserveGenerationRequest(sessionId: sessionID, requestId: replacement),
+            "Transferring all 512 reservations must leave the registry at 512, not 1024."
+        )
+        await controller.disconnect()
+    }
+
     func testDisconnectReleasesSessionsAndIdleModels() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 4_000))
         let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
