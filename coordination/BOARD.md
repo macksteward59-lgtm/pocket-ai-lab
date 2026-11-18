@@ -794,3 +794,13 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Exact-head native push run `44400975624` is now in progress. Job `135143572583` acquired the macOS Intel runner and completed setup, Xcode detection, build-tool installation, and pinned llama.cpp cache restore; pinned llama.cpp build is the active step.
 - A paired pull_request run `44400986303` is pending. The push run is already executing; neither run is yet a native XCTest pass.
 - PR remains draft/unmerged. Keep native acceptance and independent review gates open.
+
+
+## 2026-11-18 — PR #211 real PostgreSQL legacy migration regression passed
+
+- PR #211 head: `58a4b3ac4c8a931044c7a3144c2f124168f8d898`, still open/draft/unmerged and 9 commits ahead of #204 with no divergence.
+- Added a real PostgreSQL 16 JSONB migration regression: seed a legacy row with no `expiryPolicyVersion` and persisted multi-attempt `uncertainOnExpiredLease: false`; load through `PostgresTaskLifecycleStore` + `TaskLifecycleCoordinator`; assert in-memory fail-closed normalization without a write; trigger a normal lifecycle mutation; assert record version increments and stored JSONB now contains policy version 1 and `uncertainOnExpiredLease: true`.
+- Documented lazy persistence: `init()` normalizes in memory; the next successful lifecycle mutation writes the normalized snapshot through existing CAS. Initialization alone does not rewrite PostgreSQL.
+- Added the readiness document to the PostgreSQL integration workflow path filter.
+- Exact-head PostgreSQL 16 run `44402327930` passed; its job log contains both worker-ownership and legacy expiry-policy migration success messages. Exact-head general CI `44402327972` passed including type-check/build and full tests.
+- Independent review and the stacked #204 dependency remain outstanding. No merge.
