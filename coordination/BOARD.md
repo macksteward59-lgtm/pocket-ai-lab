@@ -633,3 +633,10 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - No workflow runs were returned for PR #205's exact head at review time. Treat this as test source added, not validated. The parent PR #197 exact-head workflow #44378631020 remains in progress at native app build; its pinned llama.cpp simulator/macOS build, typecheck, device-link compile, simulator boot, and bridge manifest steps are complete so far. No failure is reported yet.
 - PR #203 remains green at exact head via #44373747684; PR #204 remains blocked on the legacy persisted `uncertainOnExpiredLease: false` migration issue, with comment #6989381385 outstanding. PR #200 retains the parent-directory race/root-confinement review gate; no exact-head workflow runs were returned for its current head.
 - No application source/schema changed in this coordination update; no merge, branch-protection change, or authority change.
+
+
+## 2026-11-18 — PR #204 legacy expiry-policy migration blocker
+
+- A second compatibility review identified that changing the default to `uncertainOnExpiredLease: true` is insufficient for previously persisted tasks. The old normalizer materialized `false` for multi-attempt steps; the new validator preserves that explicit stored false, and recovery still treats it as a safe-retry opt-in. The old snapshot shape cannot distinguish intentional opt-in from the old implicit default.
+- Posted a blocking finding to PR #204 (comment ID `6989381385`): add a versioned migration/explicit-opt-in contract that treats legacy values as unsafe until re-authorized, plus a regression fixture using the previous serialized shape that proves an expired multi-attempt lease becomes uncertain rather than pending. A boolean opt-in remains a policy assertion, not proof of provider settlement.
+- Also requested adapter-level tests for the hard-coded `assign-core-agents` definitive / all-other-steps unknown classification (PR #204 comment ID `6989436510`). Exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` has no PR-triggered workflow run returned. PR #204 remains draft/unmerged and is not merge-ready.
