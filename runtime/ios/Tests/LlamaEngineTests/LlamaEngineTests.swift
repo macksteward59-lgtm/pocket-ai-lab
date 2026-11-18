@@ -162,6 +162,22 @@ final class LlamaEngineTests: XCTestCase {
         // releases the worker. The C entry point must preserve that cancellation.
         await gate.waitUntilPaused()
         await engine.cancel(sessionId: session.id, requestId: cancelledRequestID)
+        do {
+            _ = try await engine.generate(
+                session: session,
+                request: GenerationRequest(
+                    requestId: UUID().uuidString,
+                    prompt: "A replacement must wait for the prior native drain.",
+                    maxTokens: 8,
+                    temperature: 0
+                )
+            )
+            XCTFail("A replacement request must not start while the cancelled native task is still draining.")
+        } catch LlamaEngineError.invalidRequest {
+            // The session remains occupied until finishGeneration observes native task exit.
+        } catch {
+            XCTFail("Expected the active-generation guard, received: \\(error)")
+        }
         await gate.resume()
         await engine.cancelAndWait(sessionId: session.id, requestId: cancelledRequestID)
 
