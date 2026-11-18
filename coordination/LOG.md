@@ -3800,3 +3800,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 
 
 - Contract precision follow-up: the completed source snapshot now exposes an immutable decoded string, raw byte count, and SHA-256 of the exact raw bytes; it does not expose a mutable Uint8Array or live file handle. Directory handles remain owned by the host session and are closed by session lifecycle. Design update commit `708024ebfbc015da8b216cd58d259e1447b6f90f`.
+
+
+## 2026-11-18 — Director host integration seam verified
+
+- Inspected the live `main` composition path: `apps/web/directorRuntime.ts` constructs `LocalProjectInspector.open(options.workspaceRoot ?? process.cwd())` and injects it into `DirectorCapabilities`; `analyze-project` is dispatched by `DirectorCommandRouter` through the shared `ProjectInspector.inspect()` port.
+- This confirms an existing host-injection seam, but the bootstrap remains path-based and does not yet establish an opaque workspace registration, pinned root identity, or native confined reader. PR #198's new excerpt-verification method remains outside the shared interface/command contract; ordinary inspection wiring is not end-to-end D-02 verification or D-04 binding.
+- CI inventory: intelligence CI is `ubuntu-latest`/Node 22; desktop docs mark Windows/macOS launcher entrypoints untested; iOS LlamaEngine CI runs `macos-15-intel` for Swift/iOS simulator/macOS targets and does not test the Node filesystem adapter. No Windows containment CI or supported desktop OS matrix was found.
+- Added section 13.1.1 to `coordination/STRIDE-D02-CAPABILITY-DESIGN.md` with the composition point, trust-boundary implications, and CI limits. Commit: `11f9502397a00eb861e6411a167a3b7c29437ea0`.
+- No native implementation or platform support claim was added. PR #200 remains draft/unmerged; its exact-head check is green, but parent-directory race containment and independent review remain open. PR #198 remains unmerged; D-04 remains gated.
