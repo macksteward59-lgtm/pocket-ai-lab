@@ -3838,3 +3838,14 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Queried workflow jobs directly after the D-02 coordination update. PR #200 exact-head Intelligence run #44369945652 is confirmed completed/success for its recorded head.
 - Separate iOS cancellation work: PR #197's recorded exact-head run #44375389228 is completed/cancelled, not passed; PR #203 run #44373747684 remains in_progress. These runs do not validate or resolve filesystem containment. The earlier PR #195 run #44202379195 is completed/success, but its scope is a dispatcher-drain regression and is not evidence for the current PR #197/#203 heads.
 - No change to the D-02 decision gate; no application code, merge, or authority change.
+
+
+## 2026-11-18 — PR #204 lifecycle settlement patch
+
+- Created draft stacked PR [#204](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/204) from PR #187's head. Current exact head at the last poll: `70244d4b2f7bd106bbb3bd8f47d2d7658259b5a8`; base is `codex/east-durable-event-journal` at `d00260e4a1c3d0f3e8902b756e67e5cfcaf36bc4`.
+- Changed four files: lifecycle coordinator, East lifecycle adapter, autonomy regression tests, and production-readiness contract. Worker failure outcome is now explicit (`definitive` vs `unknown`); unknown is non-retryable/uncertain. Expired lease defaults to uncertain for all attempts; `uncertainOnExpiredLease: false` is explicit safe-retry opt-in.
+- Failure no longer clears an active sibling lease. New claims are blocked as soon as any step fails; pending descendants are preserved during sibling drain and cancelled only when no running sibling remains, at which point task failure is terminal. Stored-state validation permits the intermediate running state containing failed + active sibling + pending descendants.
+- Added tests for unknown outcome, multi-attempt lease expiry default, and sibling settlement; existing definitive retry tests updated with explicit classification. Checked seven autonomy test `failStep()` invocations for required outcome input (all classified). External call sites outside the inspected adapter/test files still need CI/typecheck verification.
+- CI has not been observed for the current head: workflow-run lookup returned an empty list and combined commit status returned no checks. No tests were executed locally. PR remains draft; do not infer success from branch creation or PR mergeability.
+- Follow-up review must test restart validation of failed+running state, multiple active siblings, lease expiry during drain, and exact adapter outcome semantics. This is not production e3 cancellation, provider settlement proof, distributed-store acceptance, or physical-device acceptance.
+- Coordination BOARD checkpoint updated in commit recorded in the companion BOARD entry. No app code merged, no main/default branch changed, no authority or branch protection modified.
