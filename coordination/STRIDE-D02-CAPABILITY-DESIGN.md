@@ -230,3 +230,16 @@ For `resolve`, re-open through the same host confinement adapter, hash the curre
 - No change to Evidence.swift signing/receipt contracts, APEX approval, East authorization, BridgeGate, RuntimeController, LlamaEngine, or ToolSandbox.
 - Existing Director, East, APEX, and evidence tests remain passing.
 - D-04 cannot consume raw path/line strings as references; it must resolve host-issued IDs through the task catalog.
+
+
+## PR #198 review-thread finding — 2026-11-18
+
+A new COMMENTED review entry and one unresolved inline thread are now present on PR #198. The review author is the PR author account itself (`macksteward59-lgtm`), so this is a recorded self-review finding, **not independent review approval**.
+
+The inline finding at `LocalProjectInspector.ts:182` identifies a concrete bounded-read race: `stat()` checks file size, then path-based `readFile()` buffers the entire file; a file that grows or is replaced between those operations can exceed the intended memory/read bound before the post-read byte-length check. It also asks for symlink-replacement protection at open time and a regression test for mutation between metadata validation and content read.
+
+Disposition:
+- Treat as a valid security hardening issue, not as an independent review.
+- Required remediation: open the checked object with a no-follow strategy where supported; verify the opened descriptor is a regular file; enforce the byte ceiling during descriptor reads by reading at most `maxBytes + 1`; hash and match the same bytes; fail closed when safe containment cannot be established.
+- Add deterministic regression coverage for growth/replacement between metadata check and read. Do not claim the existing oversized-file test covers this race.
+- Keep PR #198 unmerged and D-02/D-04 gates unchanged until remediation, exact-head CI, and independent review are complete.
