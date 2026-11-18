@@ -180,7 +180,7 @@ export class LocalProjectInspector implements ProjectInspector {
     // If the platform cannot provide O_NOFOLLOW, fail closed rather than
     // silently weakening the workspace boundary.
     if (typeof constants.O_NOFOLLOW !== "number") return undefined;
-    let handle;
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
       handle = await open(actual, constants.O_RDONLY | constants.O_NOFOLLOW);
       const metadata = await handle.stat();
