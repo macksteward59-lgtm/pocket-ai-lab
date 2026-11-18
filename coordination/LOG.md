@@ -3640,3 +3640,12 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - PR #198 remains open, ready for review, and unmerged. It has no submitted review or inline review threads. Its two changed files are the existing inspector and its tests. Exact-head CI #3025 passed. No reviewer was invented or assigned; no merge performed.
 - Refreshed the donor register, handoff, and coordination board to correct the PR #46 state and record D-07 partial implementation/remaining gaps. D-04 remains blocked pending independent D-02 review and interface acceptance.
 - No application code, tests, sandbox adapter, APEX/East/Evidence trust contract, or runtime authorization code changed in this coordination update.
+
+
+## 2026-11-18 — D-02 capability reachability and stable-reference gap found
+
+- Traced ProjectInspector, DirectorCapabilities, apps/web/directorRuntime.ts, packages/intelligence/index.ts, and repository code-search results.
+- Confirmed verifySourceReference is currently defined only on concrete LocalProjectInspector; the shared ProjectInspector interface exposes only inspect, DirectorCapabilities exposes analyzeProject only, and the current web runtime injects the adapter through that interface. No consumer of verifySourceReference was found in the default-branch repository search.
+- Confirmed current verifier result has path/line/occurrence metadata but no stable source-reference ID. D-04 acceptance requires emergent claims to cite verified source-reference IDs.
+- Decision: PR #198 remains a narrow adapter-level implementation for independent review; do not describe it as end-to-end Director capability. Before D-04, hold a separate schema/data-flow review for the capability entry point, stable ID semantics and content binding, stale-reference invalidation, and model-proposed reference validation. No shared interface or application code changed in this step.
+- Coordination board, donor register, and engineering handoff updated to make this integration limitation explicit. No APEX/East/Evidence/runtime authorization contracts changed.
