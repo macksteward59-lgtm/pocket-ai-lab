@@ -114,6 +114,13 @@ public actor BridgeChallengeStore: BridgeChallengeConsuming {
         return true
     }
 
+    /// Removes challenges bound to the exact spent request identity.
+    public func invalidate(requestId: String, sessionId: String) {
+        entries = entries.filter {
+            $0.value.requestId != requestId || $0.value.sessionId != sessionId
+        }
+    }
+
     public func invalidateAll() {
         entries.removeAll()
     }

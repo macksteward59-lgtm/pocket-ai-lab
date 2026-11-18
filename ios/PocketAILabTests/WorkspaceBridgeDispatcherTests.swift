@@ -291,6 +291,49 @@ final class WorkspaceBridgeDispatcherTests: XCTestCase {
     }
 
     @MainActor
+    func testCancellationBeforeAuthorizationPreventsChallengeIssuance() async throws {
+        let root = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let (dispatcher, sessionID, _) = try await makeLoadedDispatcher(root: root)
+        let trustedOrigin = URL(string: "https://workspace.example.test/")!
+        let requestID = UUID().uuidString
+
+        let readiness = await dispatcher.handle(
+            body: ["id": UUID().uuidString, "action": "checkReadiness", "sessionId": sessionID],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(readiness["ok"] as? Bool, true)
+
+        let cancellation = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "cancelGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(cancellation["ok"] as? Bool, true)
+        XCTAssertEqual((cancellation["data"] as? [String: Any])?["cancelled"] as? Bool, true)
+
+        let authorization = await dispatcher.handle(
+            body: [
+                "id": UUID().uuidString,
+                "action": "authorizeGeneration",
+                "sessionId": sessionID,
+                "requestId": requestID
+            ],
+            frameOrigin: trustedOrigin,
+            isMainFrame: true
+        )
+        XCTAssertEqual(authorization["ok"] as? Bool, false)
+        XCTAssertEqual(authorization["error"] as? String, "request_retired")
+        XCTAssertNil((authorization["data"] as? [String: Any])?["challengeNonce"])
+    }
+
+    @MainActor
     func testCancellationDeliveredBeforeGenerateBlocksExactDispatcherRequest() async throws {
         let root = try makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }

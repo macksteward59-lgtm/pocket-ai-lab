@@ -37,14 +37,15 @@ A cancellation request does not directly release a model lease.
 
 The WebKit dispatcher creates a task for each message. A cancel message can therefore reach the controller before the matching generate message.
 
-When the session is active and the request ID is a valid UUID, the controller can record an exact-session/request tombstone. Tombstones are:
+When the session is active and the request ID is a valid UUID, the controller permanently retires that exact identity for the lifetime of the session. Authorization and generation both reject it. The bounded session-lifetime registry holds at most 512 authorized or retired identities and never expires an entry while the session remains active. If an early cancellation cannot be recorded because the registry is full, cancellation is not confirmed; authorization reservations also fail closed at capacity.
 
-- Scoped to the exact session and request IDs.
-- Single-use: the matching generation consumes the tombstone.
-- Time-limited to 30 seconds.
-- Bounded to 256 entries.
+### Cancellation arrives before authorization or generation
 
-The matching generation fails with cancellation before preparation, challenge consumption, or inference. If the tombstone cannot be recorded, cancellation is not confirmed.
+The controller reserves each request ID before the dispatcher issues a challenge. Cancellation permanently retires that exact request identity for the lifetime of its runtime session, whether it arrives before authorization, after challenge issuance, or while generation is preparing. Authorization and generation both reject retired IDs. If cancellation wins while challenge issuance is suspended, the dispatcher removes only challenges bound to that request/session pair before returning.
+
+Authorized and retired request identities share a bounded 512-entry session-lifetime registry. If the registry is full, new authorization reservations and unrecordable early cancellations fail closed; the controller does not evict live-session identities or acknowledge an unrecorded cancellation. Session unload clears the registry only after registered generation work has drained and the exact session is removed.
+
+Retries after a failed or cancelled attempt require a fresh requestId and attemptId. These request-lifecycle entries are not evidence, receipts, authorization, or attestation.
 
 ### Cancellation after attempt settlement
 

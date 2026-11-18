@@ -267,6 +267,12 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                   isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending else {
                 return Self.error("runtime_not_ready", id: messageID)
             }
+            guard await runtimeController.reserveGenerationRequest(
+                sessionId: sessionId,
+                requestId: requestId
+            ) else {
+                return Self.error("request_retired", id: messageID)
+            }
             do {
                 let nonce = try await challengeStore.issue(
                     page: frameOrigin ?? trustedURL,
@@ -274,6 +280,13 @@ final class WorkspaceBridgeDispatcher: NSObject, WKScriptMessageHandlerWithReply
                     requestId: requestId,
                     sessionId: sessionId
                 )
+                if await runtimeController.isGenerationRequestRetired(
+                    sessionId: sessionId,
+                    requestId: requestId
+                ) {
+                    await challengeStore.invalidate(requestId: requestId, sessionId: sessionId)
+                    return Self.error("request_cancelled", id: messageID)
+                }
                 guard isActive, lifecycleGeneration == requestGeneration, !navigationCleanupPending else {
                     await challengeStore.invalidateAll()
                     return Self.error("bridge_unavailable", id: messageID)
