@@ -567,3 +567,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #204 remains draft/open/unmerged. Exact-head workflow lookup and combined commit status returned no CI runs/statuses at the latest poll; do not claim tests or CI passed. The branch was updated after PR creation, and hosted validation still needs to start/run. No local test execution was performed.
 - Remaining review gates: inspect all external `failStep()` call sites once CI/typecheck surfaces them; validate the new intermediate task state through restart/store validation; test multiple sibling leases including expiry and definitive/unknown settlement; and ensure adapter failure classifications match each concrete operation. This coordinator change does not prove provider drain, e3 production wiring, distributed persistence, or physical-device acceptance.
 - No merge, default-branch modification, branch-protection change, or APEX/Evidence/East authority change.
+
+
+## 2026-11-18 — PR #204 follow-up: restart validation for sibling drain
+
+- PR #204 latest exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49`; still open/draft/unmerged and stacked on PR #187. The sibling-drain regression now reconstructs the intermediate snapshot in a new coordinator: one failed step, one live sibling lease, and pending descendants. The restarted worker can read this state but cannot adopt/complete the old worker's live lease; the original lease owner can settle it, after which the task becomes terminally failed and pending descendants are cancelled.
+- Corrected the transition so pending descendants remain pending while an active sibling is draining. They are cancelled only once no running sibling remains. This is required for the intermediate persisted state to pass `validateStoredTask()`; the regression asserts the pending state before restart.
+- Re-verified source defaults: new task definitions and legacy stored records without an expiry policy both default to `uncertainOnExpiredLease: true`. Seven autonomy-test `failStep()` calls now all include an explicit outcome classification.
+- Latest exact-head workflow lookup still returned no workflow runs; combined status has no checks. No local test execution was performed. CI/typecheck remains unverified, including any external callers of the now-required typed `failStep()` outcome parameter.
+- PR #204 remains draft. No code merged; no default branch, branch protection, or APEX/Evidence/East authority changed.
