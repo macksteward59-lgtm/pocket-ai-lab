@@ -258,10 +258,16 @@ private actor PausingChallengeStore: BridgeChallengeConsuming {
         requestId: String,
         sessionId: String
     ) async -> Bool {
-        await withCheckedContinuation { continuation in
-            consumeContinuation = continuation
-            startedContinuation?.resume()
-            startedContinuation = nil
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                consumeContinuation = continuation
+                startedContinuation?.resume()
+                startedContinuation = nil
+            }
+        } onCancel: {
+            // Cancellation of the request task releases this deterministic test
+            // gate just as a real challenge store would eventually settle its IO.
+            Task { await self.resumeConsume(true) }
         }
     }
 
@@ -373,6 +379,8 @@ private actor ThirdCallPausingFileHasher {
     private var callCount = 0
     private var continuation: CheckedContinuation<String, Error>?
     private var startedContinuation: CheckedContinuation<Void, Never>?
+    private var cancellationObserved = false
+    private var cancellationWaiter: CheckedContinuation<Void, Never>?
 
     init(expectedHash: String) {
         self.expectedHash = expectedHash
@@ -381,10 +389,14 @@ private actor ThirdCallPausingFileHasher {
     func hash() async throws -> String {
         callCount += 1
         guard callCount == 3 else { return expectedHash }
-        return try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            startedContinuation?.resume()
-            startedContinuation = nil
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                startedContinuation?.resume()
+                startedContinuation = nil
+            }
+        } onCancel: {
+            Task { await self.cancelThirdCall() }
         }
     }
 
@@ -393,6 +405,19 @@ private actor ThirdCallPausingFileHasher {
         await withCheckedContinuation { continuation in
             startedContinuation = continuation
         }
+    }
+
+    func waitUntilThirdCallCancelled() async {
+        if cancellationObserved { return }
+        await withCheckedContinuation { cancellationWaiter = $0 }
+    }
+
+    private func cancelThirdCall() {
+        cancellationObserved = true
+        cancellationWaiter?.resume()
+        cancellationWaiter = nil
+        continuation?.resume(throwing: CancellationError())
+        continuation = nil
     }
 
     func resume() {
@@ -830,11 +855,12 @@ final class RuntimeControllerTests: XCTestCase {
         let sessionID = try XCTUnwrap(loaded.sessionId)
         _ = try await controller.readiness(sessionId: sessionID)
 
+        let requestID = UUID().uuidString
         let generation = Task {
             try await controller.generate(
                 sessionId: sessionID,
                 prompt: "This must not start after navigation cancellation.",
-                requestId: UUID().uuidString,
+                requestId: requestID,
                 conversationRequestId: "navigation-cancel-race",
                 attemptId: "navigation-cancel-race-attempt",
                 challengeNonce: String(repeating: "b", count: 32),
@@ -843,9 +869,9 @@ final class RuntimeControllerTests: XCTestCase {
         }
         await challengeStore.waitUntilConsumeStarted()
 
-        let cancelledCount = await controller.cancelAllGenerations()
-        XCTAssertEqual(cancelledCount, 0, "The request is intentionally suspended before it registers a native generation task.")
-        await challengeStore.resumeConsume(true)
+        let cancellation = Task { await controller.cancelAllGenerations() }
+        let cancelledCount = await cancellation.value
+        XCTAssertEqual(cancelledCount, 1, "Navigation cancellation must find and drain a request still consuming its challenge.")
 
         do {
             _ = try await generation.value
@@ -927,9 +953,12 @@ final class RuntimeControllerTests: XCTestCase {
         // the real one-use challenge has already been accepted.
         await hasher.waitUntilThirdCallStarted()
 
-        let cancelledCount = await controller.cancelAllGenerations()
-        XCTAssertEqual(cancelledCount, 0, "No native generation Task is registered while the post-challenge hash is suspended.")
-        await hasher.resume()
+        let cancellation = Task { await controller.cancelAllGenerations() }
+        // The request is now registered before preparation. cancelAll must wait
+        // for this suspended hash to settle rather than returning early.
+        await hasher.waitUntilThirdCallCancelled()
+        let cancelledCount = await cancellation.value
+        XCTAssertEqual(cancelledCount, 1, "Navigation cancellation must drain a request suspended in the post-challenge hash.")
 
         do {
             _ = try await generation.value
@@ -1014,8 +1043,10 @@ final class RuntimeControllerTests: XCTestCase {
         do {
             _ = try await generation.value
             XCTFail("Generation must not start after its session has been disconnected.")
+        } catch is CancellationError {
+            // Unload cancels and drains the registered request before releasing its lease.
         } catch {
-            XCTAssertEqual(error as? RuntimeControllerError, .unknownSession)
+            XCTFail("Expected cancellation after unload, received: \(error)")
         }
 
         let reports = await controller.reports()
@@ -1131,11 +1162,12 @@ final class RuntimeControllerTests: XCTestCase {
         let sessionID = try XCTUnwrap(loaded.sessionId)
         _ = try await controller.readiness(sessionId: sessionID)
 
+        let requestID = UUID().uuidString
         let generation = Task {
             try await controller.generate(
                 sessionId: sessionID,
                 prompt: "This must not reach inference after cancellation.",
-                requestId: UUID().uuidString,
+                requestId: requestID,
                 conversationRequestId: "cancel-race",
                 attemptId: "cancel-race-attempt",
                 challengeNonce: String(repeating: "b", count: 32),
@@ -1143,8 +1175,13 @@ final class RuntimeControllerTests: XCTestCase {
             )
         }
         await challengeStore.waitUntilConsumeStarted()
-        generation.cancel()
-        await challengeStore.resumeConsume(true)
+        let cancellation = Task {
+            await controller.cancelGeneration(sessionId: sessionID, requestId: requestID)
+        }
+        // The challenge-store fixture resumes its suspended consume only after
+        // the request task receives cancellation, making the drain assertion deterministic.
+        let cancellationConfirmed = await cancellation.value
+        XCTAssertTrue(cancellationConfirmed, "A preparation-stage request must be discoverable and drained by its exact request ID.")
 
         do {
             _ = try await generation.value
@@ -1158,6 +1195,102 @@ final class RuntimeControllerTests: XCTestCase {
         let report = await controller.reports().first
         XCTAssertEqual(report?.sessionId, sessionID)
         XCTAssertTrue(report?.canGenerate ?? false)
+        await controller.disconnect()
+    }
+
+    func testLateCancellationDoesNotClaimCompletedGenerationWasCancelled() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 4_400))
+        let (controller, _, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+        let requestID = UUID().uuidString
+        let nonce = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+
+        let record = try await controller.generate(
+            sessionId: sessionID,
+            prompt: "Complete before cancellation arrives.",
+            requestId: requestID,
+            conversationRequestId: "late-cancel",
+            attemptId: "late-cancel-attempt",
+            challengeNonce: nonce,
+            pageURL: trustedWorkspaceURL
+        )
+        XCTAssertEqual(record.output, "answer")
+
+        let cancelled = await controller.cancelGeneration(sessionId: sessionID, requestId: requestID)
+        XCTAssertFalse(cancelled, "A completed generation must not be reported as cancelled merely because its caller has not yet processed the result.")
+        await controller.disconnect()
+    }
+
+    func testCancellationDeliveredBeforeGenerationBlocksExactRequest() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 4_500))
+        let (controller, runtime, modelURL, descriptor, expectedHash, challengeStore) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestID = UUID().uuidString
+        let cancellationConfirmed = await controller.cancelGeneration(
+            sessionId: sessionID,
+            requestId: requestID
+        )
+        XCTAssertTrue(cancellationConfirmed, "A valid exact-request cancellation may arrive before its generation message.")
+
+        let nonce = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+        do {
+            _ = try await controller.generate(
+                sessionId: sessionID,
+                prompt: "This exact request was cancelled before dispatch.",
+                requestId: requestID,
+                conversationRequestId: "cancel-before-generate",
+                attemptId: "cancel-before-generate-attempt",
+                challengeNonce: nonce,
+                pageURL: trustedWorkspaceURL
+            )
+            XCTFail("A matching generation must not start after its cancellation tombstone was recorded.")
+        } catch is CancellationError {
+            // Expected: the one-use tombstone is consumed before preparation starts.
+        } catch {
+            XCTFail("Expected CancellationError, received: \(error)")
+        }
+
+        do {
+            _ = try await controller.generate(
+                sessionId: sessionID,
+                prompt: "A replay must not revive the cancelled request identity.",
+                requestId: requestID,
+                conversationRequestId: "cancel-before-generate-replay",
+                attemptId: "cancel-before-generate-replay-attempt",
+                challengeNonce: nonce,
+                pageURL: trustedWorkspaceURL
+            )
+            XCTFail("A request ID consumed by early cancellation must remain retired, even while its challenge is unused.")
+        } catch {
+            XCTAssertEqual(error as? RuntimeControllerError, .duplicateRequest)
+        }
+
+        let report = await controller.reports().first
+        XCTAssertEqual(report?.sessionId, sessionID)
+        XCTAssertTrue(report?.canGenerate ?? false, "A rejected cancelled request must not invalidate the model's readiness.")
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeUseCount, 0)
         await controller.disconnect()
     }
 

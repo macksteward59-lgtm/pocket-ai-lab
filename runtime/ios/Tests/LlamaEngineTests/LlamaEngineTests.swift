@@ -2,6 +2,32 @@ import XCTest
 import CryptoKit
 @testable import PocketLlamaEngine
 
+private actor NativeGenerationStartGate {
+    private var armed = true
+    private var paused = false
+    private var resumeContinuation: CheckedContinuation<Void, Never>?
+    private var startWaiter: CheckedContinuation<Void, Never>?
+
+    func pauseOnce() async {
+        guard armed else { return }
+        armed = false
+        paused = true
+        startWaiter?.resume()
+        startWaiter = nil
+        await withCheckedContinuation { resumeContinuation = $0 }
+    }
+
+    func waitUntilPaused() async {
+        if paused { return }
+        await withCheckedContinuation { startWaiter = $0 }
+    }
+
+    func resume() {
+        resumeContinuation?.resume()
+        resumeContinuation = nil
+    }
+}
+
 final class LlamaEngineTests: XCTestCase {
     func testPlaceholderLoadThrowsAndDoesNotReturnASession() async {
         let engine = PlaceholderLlamaEngine()
@@ -97,6 +123,89 @@ final class LlamaEngineTests: XCTestCase {
         } catch {
             XCTFail("unexpected error \(error)")
         }
+    }
+
+    func testPinnedGgufCancellationBeforeNativeDecodeEntryIsNotErased() async throws {
+        guard let path = SmokePath.path else {
+            throw XCTSkip("No smoke GGUF path is configured for this run.")
+        }
+        guard FileManager.default.isReadableFile(atPath: path) else {
+            if SmokePath.required {
+                XCTFail("Smoke GGUF is not readable at \(path)")
+            }
+            throw XCTSkip("Smoke GGUF is not readable in this process.")
+        }
+
+        let probe = LlamaCppMetalBackend.probe()
+        let gate = NativeGenerationStartGate()
+        let engine = LlamaCppMetalBackend(
+            requireMetal: probe.metalDeviceUsable,
+            treatMetalAsUnavailable: false,
+            beforeNativeGenerate: { await gate.pauseOnce() }
+        )
+        let session = try await engine.load(model: sampleModel(path: path))
+        defer { Task { await engine.unload(sessionId: session.id) } }
+
+        let cancelledRequestID = UUID().uuidString
+        let pendingStream = try await engine.generate(
+            session: session,
+            request: GenerationRequest(
+                requestId: cancelledRequestID,
+                prompt: "Generate a continuation for deterministic cancellation testing.",
+                maxTokens: 256,
+                temperature: 0
+            )
+        )
+
+        // Hold the native worker immediately before the C decode entry point.
+        // Cancellation is set while no C generation is running, then the gate
+        // releases the worker. The C entry point must preserve that cancellation.
+        await gate.waitUntilPaused()
+        await engine.cancel(sessionId: session.id, requestId: cancelledRequestID)
+        do {
+            _ = try await engine.generate(
+                session: session,
+                request: GenerationRequest(
+                    requestId: UUID().uuidString,
+                    prompt: "A replacement must wait for the prior native drain.",
+                    maxTokens: 8,
+                    temperature: 0
+                )
+            )
+            XCTFail("A replacement request must not start while the cancelled native task is still draining.")
+        } catch LlamaEngineError.invalidRequest {
+            // The session remains occupied until finishGeneration observes native task exit.
+        } catch {
+            XCTFail("Expected the active-generation guard, received: \(error)")
+        }
+        await gate.resume()
+        await engine.cancelAndWait(sessionId: session.id, requestId: cancelledRequestID)
+
+        do {
+            for try await _ in pendingStream {
+                XCTFail("A pre-decode cancellation must not publish output.")
+            }
+            XCTFail("The cancelled stream must finish with cancellation.")
+        } catch LlamaEngineError.cancelled {
+            // Expected: cancellation was set before pocket_llama_generate began.
+        } catch {
+            XCTFail("Expected native cancellation, received: \(error)")
+        }
+
+        let nextStream = try await engine.generate(
+            session: session,
+            request: GenerationRequest(
+                requestId: UUID().uuidString,
+                prompt: "The capital of France is",
+                maxTokens: 8,
+                temperature: 0
+            )
+        )
+        var nextOutput = ""
+        for try await token in nextStream {
+            nextOutput += token.text
+        }
+        XCTAssertFalse(nextOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
     func testPinnedGgufSmokeGeneration() async throws {

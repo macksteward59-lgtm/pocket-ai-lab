@@ -81,6 +81,8 @@ int pocket_llama_inspect_gguf(
     char * err,
     size_t err_len);
 
+/* Clears a prior request's cancellation flag before a new request task is published. */
+void pocket_llama_reset_cancel(pocket_llama * engine);
 void pocket_llama_request_cancel(pocket_llama * engine);
 
 /* layers and total are -1 when llama.cpp did not log an offload line. */

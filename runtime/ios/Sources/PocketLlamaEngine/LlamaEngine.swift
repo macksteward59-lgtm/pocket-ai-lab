@@ -132,6 +132,7 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
 public actor LlamaCppMetalBackend: LlamaEngine {
     private let requireMetal: Bool
     private let treatMetalAsUnavailable: Bool
+    private let beforeNativeGenerate: (@Sendable () async -> Void)?
     #if POCKET_LLAMA_LINKED
     private var sessions: [String: LoadedSession] = [:]
     #endif
@@ -142,12 +143,19 @@ public actor LlamaCppMetalBackend: LlamaEngine {
     public init(requireMetal: Bool = true) {
         self.requireMetal = requireMetal
         self.treatMetalAsUnavailable = false
+        self.beforeNativeGenerate = nil
     }
 
-    /// Test seam. It can only force the unavailable failure. It cannot invent text.
-    internal init(requireMetal: Bool, treatMetalAsUnavailable: Bool) {
+    /// Test seam. It can force the unavailable failure or pause immediately
+    /// before the detached native decode starts. It cannot invent text.
+    internal init(
+        requireMetal: Bool,
+        treatMetalAsUnavailable: Bool,
+        beforeNativeGenerate: (@Sendable () async -> Void)? = nil
+    ) {
         self.requireMetal = requireMetal
         self.treatMetalAsUnavailable = treatMetalAsUnavailable
+        self.beforeNativeGenerate = beforeNativeGenerate
     }
 
     public static func probe() -> LlamaCppProbe {
@@ -253,6 +261,9 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         guard let token = UUID(uuidString: request.requestId) else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        // Reset before publishing the generation task. A later cancel can now
+        // only set the flag; the C decode entry point must never clear it.
+        sessions[session.id]?.resetCancellation()
         generation[session.id] = token
         let slot = TaskSlot()
         let stream = AsyncThrowingStream<Token, Error> { continuation in
@@ -291,7 +302,9 @@ public actor LlamaCppMetalBackend: LlamaEngine {
             // A stale or unrelated request must never cancel a newer generation.
             return
         }
-        generation[sessionId] = nil
+        // Keep the session occupied until finishGeneration runs after native
+        // decode has exited. Clearing this early would let a new request reset
+        // the shared C cancellation flag while the old decode is still draining.
         #if POCKET_LLAMA_LINKED
         sessions[sessionId]?.requestCancel()
         #endif
@@ -335,6 +348,7 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         guard let loaded = sessions[sessionId] else {
             throw LlamaEngineError.sessionNotLoaded("Session \(sessionId) is not loaded.")
         }
+        await beforeNativeGenerate?()
         return try await Task.detached {
             try loaded.generate(request)
         }.value
@@ -414,6 +428,10 @@ private final class LoadedSession: @unchecked Sendable {
             throw LlamaEngineError.backendFailed("llama.cpp returned empty text. No token was invented.")
         }
         return text
+    }
+
+    func resetCancellation() {
+        pocket_llama_reset_cancel(handle)
     }
 
     func requestCancel() {
