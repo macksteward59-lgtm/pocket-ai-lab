@@ -954,6 +954,7 @@ final class RuntimeControllerTests: XCTestCase {
 
         await engine.finishDrain()
         await cancellation.value
+        await controller.setCancelAllDrainWaitObserverForTesting(nil)
         let unloaded = await unload.value
         XCTAssertTrue(unloaded)
         do {
