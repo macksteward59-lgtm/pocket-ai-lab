@@ -268,23 +268,24 @@ public actor RuntimeController {
     /// Identities remain reserved until their runtime session is unloaded.
     public func reserveGenerationRequest(sessionId: String, requestId: String) -> Bool {
         pruneFinishedGenerationAttempts(now: clock())
-        guard sessions[sessionId] != nil,
+        guard let canonicalRequestId = Self.canonicalUUID(requestId),
+              sessions[sessionId] != nil,
               !unloadingSessions.contains(sessionId),
-              Self.validUUID(requestId),
-              !isGenerationRequestRetired(sessionId: sessionId, requestId: requestId),
-              authorizedGenerationRequests[sessionId]?.contains(requestId) != true else {
+              !isGenerationRequestRetired(sessionId: sessionId, requestId: canonicalRequestId),
+              authorizedGenerationRequests[sessionId]?.contains(canonicalRequestId) != true else {
             return false
         }
         let count = authorizedGenerationRequests.values.reduce(0) { $0 + $1.count }
             + retiredGenerationRequests.values.reduce(0) { $0 + $1.count }
         guard count < maximumTrackedGenerationRequests else { return false }
-        authorizedGenerationRequests[sessionId, default: []].insert(requestId)
+        authorizedGenerationRequests[sessionId, default: []].insert(canonicalRequestId)
         return true
     }
 
     /// True once cancellation or a settled generation has spent this identity.
     public func isGenerationRequestRetired(sessionId: String, requestId: String) -> Bool {
-        retiredGenerationRequests[sessionId]?.contains(requestId) == true
+        guard let canonicalRequestId = Self.canonicalUUID(requestId) else { return false }
+        return retiredGenerationRequests[sessionId]?.contains(canonicalRequestId) == true
     }
 
     /// Registers a request-scoped task before preparation can suspend. The task
@@ -305,25 +306,27 @@ public actor RuntimeController {
         guard sessions[sessionId] != nil, !unloadingSessions.contains(sessionId) else {
             throw RuntimeControllerError.unknownSession
         }
-        guard Self.validUUID(requestId) else { throw RuntimeControllerError.invalidRequest }
-        if preGenerationCancellationRequests[sessionId]?.remove(requestId) != nil {
+        guard let canonicalRequestId = Self.canonicalUUID(requestId) else {
+            throw RuntimeControllerError.invalidRequest
+        }
+        if preGenerationCancellationRequests[sessionId]?.remove(canonicalRequestId) != nil {
             if preGenerationCancellationRequests[sessionId]?.isEmpty == true {
                 preGenerationCancellationRequests.removeValue(forKey: sessionId)
             }
             throw CancellationError()
         }
-        guard !isGenerationRequestRetired(sessionId: sessionId, requestId: requestId),
-              finishedGenerationAttempts[sessionId]?[requestId] == nil else {
+        guard !isGenerationRequestRetired(sessionId: sessionId, requestId: canonicalRequestId),
+              finishedGenerationAttempts[sessionId]?[canonicalRequestId] == nil else {
             throw RuntimeControllerError.duplicateRequest
         }
         // Direct controller callers receive the same one-attempt identity
         // protection as dispatcher-authorized callers.
-        if authorizedGenerationRequests[sessionId]?.contains(requestId) != true {
-            guard reserveGenerationRequest(sessionId: sessionId, requestId: requestId) else {
+        if authorizedGenerationRequests[sessionId]?.contains(canonicalRequestId) != true {
+            guard reserveGenerationRequest(sessionId: sessionId, requestId: canonicalRequestId) else {
                 throw RuntimeControllerError.duplicateRequest
             }
         }
-        guard generationAttempts[sessionId]?[requestId] == nil else {
+        guard generationAttempts[sessionId]?[canonicalRequestId] == nil else {
             throw RuntimeControllerError.duplicateRequest
         }
 
@@ -333,7 +336,7 @@ public actor RuntimeController {
             try await self.performGeneration(
                 sessionId: sessionId,
                 prompt: prompt,
-                requestId: requestId,
+                requestId: canonicalRequestId,
                 conversationRequestId: conversationRequestId,
                 attemptId: attemptId,
                 challengeNonce: challengeNonce,
@@ -344,7 +347,7 @@ public actor RuntimeController {
             )
         }
         var attempts = generationAttempts[sessionId] ?? [:]
-        attempts[requestId] = task
+        attempts[canonicalRequestId] = task
         generationAttempts[sessionId] = attempts
 
         do {
@@ -353,10 +356,10 @@ public actor RuntimeController {
             } onCancel: {
                 task.cancel()
             }
-            clearGenerationAttempt(sessionId: sessionId, requestId: requestId)
+            clearGenerationAttempt(sessionId: sessionId, requestId: canonicalRequestId)
             return record
         } catch {
-            clearGenerationAttempt(sessionId: sessionId, requestId: requestId)
+            clearGenerationAttempt(sessionId: sessionId, requestId: canonicalRequestId)
             throw error
         }
     }
@@ -526,23 +529,23 @@ public actor RuntimeController {
     @discardableResult
     public func cancelGeneration(sessionId: String, requestId: String) async -> Bool {
         pruneFinishedGenerationAttempts(now: clock())
-        if finishedGenerationAttempts[sessionId]?[requestId] != nil ||
-           retiredGenerationRequests[sessionId]?.contains(requestId) == true {
+        guard let canonicalRequestId = Self.canonicalUUID(requestId) else { return false }
+        if finishedGenerationAttempts[sessionId]?[canonicalRequestId] != nil ||
+           retiredGenerationRequests[sessionId]?.contains(canonicalRequestId) == true {
             return false
         }
         guard sessions[sessionId] != nil,
               !unloadingSessions.contains(sessionId),
-              Self.validUUID(requestId),
-              recordRetiredGenerationRequest(sessionId: sessionId, requestId: requestId) else {
+              recordRetiredGenerationRequest(sessionId: sessionId, requestId: canonicalRequestId) else {
             return false
         }
-        if let task = generationAttempts[sessionId]?[requestId] {
+        if let task = generationAttempts[sessionId]?[canonicalRequestId] {
             task.cancel()
             // Await the entire request task, including preparation and native drain.
             _ = try? await task.value
-            markGenerationAttemptFinished(sessionId: sessionId, requestId: requestId)
+            markGenerationAttemptFinished(sessionId: sessionId, requestId: canonicalRequestId)
         } else {
-            preGenerationCancellationRequests[sessionId, default: []].insert(requestId)
+            preGenerationCancellationRequests[sessionId, default: []].insert(canonicalRequestId)
         }
         return true
     }
@@ -770,8 +773,12 @@ public actor RuntimeController {
         }
     }
 
+    private static func canonicalUUID(_ value: String) -> String? {
+        UUID(uuidString: value)?.uuidString
+    }
+
     private static func validUUID(_ value: String) -> Bool {
-        UUID(uuidString: value) != nil
+        canonicalUUID(value) != nil
     }
 
     private static func validToken(_ value: String, minBytes: Int = 1, maxBytes: Int) -> Bool {

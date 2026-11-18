@@ -561,6 +561,33 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(snapshot.loadedModelIDs.isEmpty)
     }
 
+    func testRequestIdentityReservationCanonicalizesUUIDCase() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_700))
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
+        defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
+
+        let loaded = try await controller.load(
+            model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
+        )
+        let requestID = UUID().uuidString
+        XCTAssertTrue(await controller.reserveGenerationRequest(
+            sessionId: loaded.sessionId!, requestId: requestID.uppercased()
+        ))
+        XCTAssertFalse(await controller.reserveGenerationRequest(
+            sessionId: loaded.sessionId!, requestId: requestID.lowercased()
+        ))
+        XCTAssertTrue(await controller.cancelGeneration(
+            sessionId: loaded.sessionId!, requestId: requestID.lowercased()
+        ))
+        XCTAssertTrue(await controller.isGenerationRequestRetired(
+            sessionId: loaded.sessionId!, requestId: requestID.uppercased()
+        ))
+        XCTAssertFalse(await controller.reserveGenerationRequest(
+            sessionId: loaded.sessionId!, requestId: requestID
+        ))
+        _ = await controller.unload(sessionId: loaded.sessionId!)
+    }
+
     func testDuplicateRuntimeSessionCannotOverwriteExistingLease() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 1_750))
         let (controller, runtime, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
@@ -1494,6 +1521,43 @@ final class RuntimeControllerTests: XCTestCase {
 
 
 final class BridgeChallengeStoreTests: XCTestCase {
+    func testChallengeBindingCanonicalizesRequestAndSessionUUIDCase() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 9_500))
+        let store = try BridgeChallengeStore(clock: { clock.now() })
+        let page = URL(string: "https://workspace.example.test/app")!
+        let requestID = UUID().uuidString
+        let sessionID = UUID().uuidString
+
+        let nonce = try await store.issue(
+            page: page,
+            trusted: page,
+            requestId: requestID.uppercased(),
+            sessionId: sessionID.uppercased()
+        )
+        XCTAssertTrue(await store.consume(
+            nonce,
+            page: page,
+            trusted: page,
+            requestId: requestID.lowercased(),
+            sessionId: sessionID.lowercased()
+        ))
+
+        let secondNonce = try await store.issue(
+            page: page,
+            trusted: page,
+            requestId: requestID,
+            sessionId: sessionID
+        )
+        await store.invalidate(requestId: requestID.lowercased(), sessionId: sessionID.lowercased())
+        XCTAssertFalse(await store.consume(
+            secondNonce,
+            page: page,
+            trusted: page,
+            requestId: requestID.uppercased(),
+            sessionId: sessionID.uppercased()
+        ))
+    }
+
     func testChallengeIsBoundToOriginRequestAndSessionAndConsumedOnce() async throws {
         let clock = TestClock(Date(timeIntervalSince1970: 10_000))
         let store = try BridgeChallengeStore(lifetime: 60, clock: { clock.now() })
