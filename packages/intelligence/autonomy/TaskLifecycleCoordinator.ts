@@ -422,6 +422,44 @@ export class TaskLifecycleCoordinator {
   }
 
   /**
+   * Records owner-confirmed cancellation settlement for an active attempt.
+   * The host must call its provider cancellation/drain contract first; this
+   * method records the result but does not invoke or verify that external drain.
+   */
+  async settleCancelledStep(input: {
+    taskId: string;
+    stepId: string;
+    attemptId: string;
+  }): Promise<TaskRecord> {
+    return this.mutate(async () => {
+      this.requireInitialized();
+      const task = this.requireTask(input.taskId);
+      if (task.cancellationRequestedAt == null) {
+        throw new TaskLifecycleError(
+          "cancellation_not_requested",
+          "A durable task cancellation request is required before settling a step as cancelled"
+        );
+      }
+      const now = this.now();
+      const updated = cloneTask(task);
+      const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
+      step.status = "cancelled";
+      step.currentAttempt = null;
+      step.uncertain = false;
+      appendEvent(updated, "step.cancelled", now, {
+        stepId: step.id,
+        attemptId: input.attemptId,
+        ownerId: this.workerId,
+        resultingStepStatus: step.status
+      });
+      const final = refreshTaskStatus(updated, now);
+      appendTerminalEvent(updated.status, final, now);
+      await this.replaceTask(final);
+      return cloneTask(final);
+    });
+  }
+
+  /**
    * Requeues expired leases only while retry budget remains. Exhausted steps
    * become failed; task state then reflects the failure. Safe to call on startup.
    */

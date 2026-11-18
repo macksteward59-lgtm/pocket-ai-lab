@@ -84,7 +84,7 @@ if (claim) {
 - East/e3 remains the durable execution foundation; this kernel does not replace it or claim East/APEX integration.
 - Failed validation is not success. Evidence references are pointers, not verified evidence.
 - Retryable failures are bounded. Side-effecting host adapters must be idempotent or independently deduplicate attempts before retry.
-- Cancellation persists intent, stops new claims, and cancels pending steps, but it does not invalidate a live owner lease. The task remains running until every active owner reports settlement or the lease expires. Expiry during cancellation is uncertain and terminal; hosts must independently request provider cancellation and await its drain before releasing resources.
+- Cancellation persists intent, stops new claims, and cancels pending steps, but it does not invalidate a live owner lease. The task remains running until every active owner reports settlement or the lease expires. The host may call `settleCancelledStep` only after the provider adapter confirms cancellation and drain; that method records owner settlement but does not perform or independently verify provider cancellation. Expiry during cancellation is uncertain and terminal.
 - The system must stop when authorization, dependencies, resource budgets, or safety conditions are unresolved.
 
 ## Acceptance and remaining work

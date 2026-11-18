@@ -480,6 +480,9 @@ describe("TaskLifecycleCoordinator", () => {
     await h.coordinator.init();
     await h.create();
     const claim = await h.coordinator.claimNextStep("task-1");
+    await expect(h.coordinator.settleCancelledStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId
+    })).rejects.toMatchObject({ code: "cancellation_not_requested" });
     const requested = await h.coordinator.cancelTask("task-1");
 
     expect(requested.status).toBe("running");
@@ -494,12 +497,11 @@ describe("TaskLifecycleCoordinator", () => {
     const repeated = await h.coordinator.cancelTask("task-1");
     expect(repeated.events).toHaveLength(requested.events.length);
 
-    const settled = await h.coordinator.completeStep({
-      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
-      result: "Owner confirmed the active attempt settled"
+    const settled = await h.coordinator.settleCancelledStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId
     });
     expect(settled.status).toBe("cancelled");
-    expect(settled.steps[0]).toMatchObject({ status: "succeeded", currentAttempt: null });
+    expect(settled.steps[0]).toMatchObject({ status: "cancelled", currentAttempt: null });
     expect(settled.events.map(event => event.type)).toContain("task.cancelled");
     await expect(h.coordinator.completeStep({
       taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "duplicate"
@@ -531,9 +533,8 @@ describe("TaskLifecycleCoordinator", () => {
       taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "foreign completion"
     })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
 
-    const settled = await h.coordinator.completeStep({
-      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
-      result: "Original owner settled after restart"
+    const settled = await h.coordinator.settleCancelledStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId
     });
     expect(settled.status).toBe("cancelled");
   });
@@ -595,14 +596,14 @@ describe("TaskLifecycleCoordinator", () => {
     expect(requested.steps.find(step => step.id === "join")?.status).toBe("cancelled");
     expect(await h.coordinator.claimNextStep("parallel-cancel")).toBeNull();
 
-    const afterFirst = await h.coordinator.completeStep({
-      taskId: "parallel-cancel", stepId: first!.stepId, attemptId: first!.attemptId, result: "First settled"
+    const afterFirst = await h.coordinator.settleCancelledStep({
+      taskId: "parallel-cancel", stepId: first!.stepId, attemptId: first!.attemptId
     });
     expect(afterFirst.status).toBe("running");
     expect(afterFirst.steps.find(step => step.id === "second")?.currentAttempt?.id).toBe(second!.attemptId);
 
-    const afterSecond = await h.coordinator.completeStep({
-      taskId: "parallel-cancel", stepId: second!.stepId, attemptId: second!.attemptId, result: "Second settled"
+    const afterSecond = await h.coordinator.settleCancelledStep({
+      taskId: "parallel-cancel", stepId: second!.stepId, attemptId: second!.attemptId
     });
     expect(afterSecond.status).toBe("cancelled");
     expect(afterSecond.steps.some(step => step.currentAttempt !== null)).toBe(false);

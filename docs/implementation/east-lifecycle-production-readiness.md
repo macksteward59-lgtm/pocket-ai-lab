@@ -43,7 +43,7 @@ The lifecycle coordinator records cancellation as durable intent, not as proof t
 
 A successful owner settlement allows the requested cancellation to become terminal once no active leases remain. A definitive or unknown worker failure leaves the task failed; an expired lease during cancellation is always uncertain and must not be requeued, even if an older step policy opted into expiry retry. Repeated cancellation requests are idempotent.
 
-The host must separately invoke the provider/runtime cancellation contract and await its drain before releasing a model lease or allowing a replacement generation. A timeout should leave the resource marked busy or quarantined; the lifecycle intent alone never frees it.
+The host must separately invoke the provider/runtime cancellation contract and await its drain before releasing a model lease or allowing a replacement generation. Only after that confirmation may the owning worker call `settleCancelledStep`; the coordinator records that owner assertion but cannot verify the provider drain itself. A timeout should leave the resource marked busy or quarantined; the lifecycle intent alone never frees it.
 
 On process shutdown, stop new claims, persist cancellation intent, allow bounded provider drain, and leave unresolved leases recoverable only after their persisted expiry. Startup must reconcile incomplete attempts before accepting new work.
 
