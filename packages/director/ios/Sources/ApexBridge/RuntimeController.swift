@@ -558,6 +558,9 @@ public actor RuntimeController {
 
     /// Cancels every active generation and awaits each runtime cancellation
     /// drain. Used when the trusted workspace navigates or is torn down.
+    /// Returns the number of new request identities retired by this call.
+    /// Already-retired tasks and tasks owned by an unloading session are still
+    /// cancelled and awaited, but are not counted again.
     @discardableResult
     public func cancelAllGenerations() async -> Int {
         // Advance before the first await so suspended pre-inference attempts
