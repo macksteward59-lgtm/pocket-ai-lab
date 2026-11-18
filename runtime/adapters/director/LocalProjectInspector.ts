@@ -1,4 +1,6 @@
-import { realpath, readFile, stat } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, realpath } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 import type { ProjectAnalysis, ProjectInspector } from "../../../packages/intelligence/director/DirectorCapabilities";
 
@@ -14,6 +16,34 @@ export interface SourceReferenceVerification {
 
 const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".json", ".md", ".yml", ".yaml", ".toml", ".py", ".swift", ".sh"]);
 const DEFAULT_PATHS = ["README.md", "package.json"];
+/** @internal Open only a regular path entry; O_NOFOLLOW closes the final-component symlink swap window. */
+export async function openNoFollowFile(filePath: string): Promise<FileHandle | undefined> {
+  if (typeof constants.O_NOFOLLOW !== "number") return undefined;
+  try {
+    return await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ELOOP" || code === "ENOENT" || code === "ENOTDIR") return undefined;
+    throw error;
+  }
+}
+
+/** @internal Read at most maxBytes + 1 from an already-open descriptor; undefined means overflow. */
+export async function readBoundedFileHandle(
+  fileHandle: FileHandle,
+  maxBytes: number
+): Promise<{ content: string; byteLength: number } | undefined> {
+  const buffer = Buffer.alloc(maxBytes + 1);
+  let bytesRead = 0;
+  while (bytesRead < buffer.length) {
+    const result = await fileHandle.read(buffer, bytesRead, buffer.length - bytesRead, null);
+    if (result.bytesRead === 0) break;
+    bytesRead += result.bytesRead;
+  }
+  if (bytesRead > maxBytes) return undefined;
+  return { content: buffer.subarray(0, bytesRead).toString("utf8"), byteLength: bytesRead };
+}
+
 const MAX_FILES = 100;
 const MAX_FILE_BYTES = 64 * 1024;
 const MAX_TOTAL_BYTES = 2 * 1024 * 1024;
@@ -175,12 +205,17 @@ export class LocalProjectInspector implements ProjectInspector {
     if (actual !== this.root && !actual.startsWith(this.root + path.sep)) {
       throw new Error("Project inspection symlink escaped the workspace");
     }
-    const metadata = await stat(actual);
-    if (!metadata.isFile()) return undefined;
-    if (metadata.size > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
-    const content = await readFile(actual, "utf8");
-    const byteLength = Buffer.byteLength(content, "utf8");
-    if (byteLength > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
-    return { content, byteLength };
+    const fileHandle = await openNoFollowFile(actual);
+    if (!fileHandle) return undefined;
+    try {
+      const metadata = await fileHandle.stat();
+      if (!metadata.isFile()) return undefined;
+      if (metadata.size > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
+      const loaded = await readBoundedFileHandle(fileHandle, maxBytes);
+      if (!loaded) return { content: "", byteLength: 0, reason: "file_too_large" };
+      return loaded;
+    } finally {
+      await fileHandle.close();
+    }
   }
 }
