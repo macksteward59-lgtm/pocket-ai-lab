@@ -104,6 +104,12 @@ public actor RuntimeController {
     // Invalidates generation attempts suspended before their native task is registered.
     private var generationLifecycle: UInt64 = 0
     private var generationDrainCount = 0
+    // Internal synchronization seam for deterministic lifecycle tests; unset in production.
+    private var cancelAllDrainWaitObserverForTesting: (@Sendable () async -> Void)?
+
+    func setCancelAllDrainWaitObserverForTesting(_ observer: (@Sendable () async -> Void)?) {
+        cancelAllDrainWaitObserverForTesting = observer
+    }
 
     public init(
         runtime: NativeInferenceRuntime,
@@ -586,6 +592,10 @@ public actor RuntimeController {
                 // exact task snapshot, so it must cancel that task directly.
                 task.cancel()
             }
+            // Tests can synchronize exactly at the point where the global
+            // barrier is about to await the captured task. The observer is nil
+            // outside the deterministic lifecycle regression.
+            await cancelAllDrainWaitObserverForTesting?()
             // Always await the snapshot task. cancelGeneration awaits it when
             // it owns cancellation; this also covers concurrent unload and
             // already-retired requests without returning before task settlement.
