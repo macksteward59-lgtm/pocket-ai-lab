@@ -4149,3 +4149,10 @@ Accessible history this run: current conversation instructions and recent projec
 - Refreshed exact PR #212 head `244a728330f06c8294328d58115ac6b0f55602fc`. Native iOS workflow `44399814043` (run 570) completed as `startup_failure`; no jobs were created. Treat as infrastructure startup failure, not a code/test failure and not a pass.
 - The PR comment records the rerun endpoint's HTTP 403 response (`This workflow run cannot be retried`). Available connected GitHub actions expose job/run rerun but no workflow dispatch/new-run action. A fresh pull_request native attempt is still required for this exact head.
 - Source diff remains unchanged; deterministic test synchronization remains in place. PR #212 remains draft/unmerged; no physical-device or release acceptance.
+
+
+## 2026-11-18 — PR #212 exact-head general CI job verified
+
+- Verified exact-head general CI run `44399801682`: the `intelligence` job completed successfully through syntax check, type-check/build, and tests on `244a728330f06c8294328d58115ac6b0f55602fc`.
+- Exact-head native iOS run `44399814043` completed as `startup_failure` with zero jobs; no XCTest ran. General CI success is not a substitute for native XCTest.
+- PR #212 remains open/draft/unmerged, 7 commits ahead of its merged base with only the two intended Swift source/test files changed. No source change or merge.
