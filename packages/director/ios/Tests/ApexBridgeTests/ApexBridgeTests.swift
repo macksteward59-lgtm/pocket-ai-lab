@@ -1264,9 +1264,9 @@ final class RuntimeControllerTests: XCTestCase {
                 challengeNonce: nonce,
                 pageURL: trustedWorkspaceURL
             )
-            XCTFail("A matching generation must not start after its cancellation tombstone was recorded.")
+            XCTFail("A matching generation must not start after its request identity was retired.")
         } catch is CancellationError {
-            // Expected: the one-use tombstone is consumed before preparation starts.
+            // Expected: the first matching generate observes pre-generation cancellation.
         } catch {
             XCTFail("Expected CancellationError, received: \(error)")
         }
@@ -1281,7 +1281,7 @@ final class RuntimeControllerTests: XCTestCase {
                 challengeNonce: nonce,
                 pageURL: trustedWorkspaceURL
             )
-            XCTFail("A request ID consumed by early cancellation must remain retired, even while its challenge is unused.")
+            XCTFail("A request ID retired by early cancellation must remain retired, even while its challenge is unused.")
         } catch {
             XCTAssertEqual(error as? RuntimeControllerError, .duplicateRequest)
         }
