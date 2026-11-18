@@ -3909,3 +3909,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Exact-head PR #203 run #44373747684 is in progress at macOS XCTest; workflow completion remains pending.
 - PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` has no PR-triggered workflow run in the current lookup; validation remains unverified.
 - No application code changed, no PR merged or approved, and no APEX/East/Evidence/BridgeGate/runtime authority or branch protection changed. Hosted CI is not physical-device acceptance.
+
+
+## 2026-11-18 — PR #203 CI completed; PR #197 identity review
+
+- Exact-head PR #203 workflow #44373747684 for `6b71ff6da2b8fe6970042884a48dedf8a78694d3` completed successfully. All job steps passed, including native app build, app XCTest, iOS simulator XCTest, pinned GGUF smoke setup, macOS XCTest, and evidence recording. This validates only #203's exact head; hosted CI is not physical-device acceptance.
+- Exact-head PR #197 workflow #44378631020 for `87b88af77339491bcbd32d25e52edf911ac1b5f2` remains in progress at native app build. Earlier native dependency/typecheck/device-link/simulator/manifest steps passed; app XCTest and all later stages are pending.
+- Reviewed #197's controller, dispatcher, and challenge-store code. UUID syntax is validated but raw strings remain dictionary/set keys and challenge bindings. Since UUID text is case-insensitive while Swift String equality is case-sensitive, uppercase/lowercase spellings of the same UUID can bypass one-attempt identity collision checks. Posted concrete finding and required canonicalization/regression to PR #197 comment `5963652952`.
+- PR #197 remains draft/unmerged pending canonical identity normalization and exact-head CI completion. PR #204 current head still has no PR-triggered workflow run returned; validation is unverified.
+- No application source changed, no PR merged/approved, and no APEX/East/Evidence/BridgeGate/runtime authority or branch protection changed.
