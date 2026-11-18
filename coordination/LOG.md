@@ -3797,3 +3797,6 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Repository evidence: Node.js >=22; README mentions Windows/macOS launcher scripts but marks them untested; no production OS support matrix or existing native confined-reader helper was identified. Do not infer native iOS filesystem access from LlamaEngine work.
 - Updated Issue #202 and PR #200 with the draft contract. No native code was added and no platform option was approved.
 - PR #200 remains draft/unmerged at `947c1ac289f70779e336fde6dd9e6c687f191a07`; exact-head CI remains the previously recorded green run #44369945652. Independent review remains absent. PR #198 remains unmerged; D-02 and D-04 remain gated.
+
+
+- Contract precision follow-up: the completed source snapshot now exposes an immutable decoded string, raw byte count, and SHA-256 of the exact raw bytes; it does not expose a mutable Uint8Array or live file handle. Directory handles remain owned by the host session and are closed by session lifecycle. Design update commit `708024ebfbc015da8b216cd58d259e1447b6f90f`.
