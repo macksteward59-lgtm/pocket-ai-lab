@@ -68,6 +68,7 @@ export type TaskLifecycleEventType =
   | "step.lease_expired"
   | "task.completed"
   | "task.failed"
+  | "task.cancel_requested"
   | "task.cancelled";
 
 /** Durable audit metadata only; event contents never authorize execution. */
@@ -259,7 +260,8 @@ export class TaskLifecycleCoordinator {
     return this.mutate(async () => {
       this.requireInitialized();
       const task = this.requireTask(taskId);
-      if (isTerminal(task.status) || task.steps.some(step => step.status === "failed")) return null;
+      if (isTerminal(task.status) || hasCancellationRequest(task) ||
+          task.steps.some(step => step.status === "failed")) return null;
       const now = this.now();
       const active = task.steps.filter(step => step.status === "running").length;
       if (active >= task.maxConcurrentSteps) return null;
@@ -376,7 +378,9 @@ export class TaskLifecycleCoordinator {
         : normalizedError;
       step.currentAttempt = null;
       step.uncertain = outcomeUncertain;
-      step.status = !outcomeUncertain && input.retryable === true && step.attempts < step.maxAttempts
+      const cancellationRequested = hasCancellationRequest(updated);
+      step.status = !cancellationRequested && !outcomeUncertain &&
+        input.retryable === true && step.attempts < step.maxAttempts
         ? "pending"
         : "failed";
       appendEvent(updated, "step.failed", now, {
@@ -390,31 +394,65 @@ export class TaskLifecycleCoordinator {
     });
   }
 
+  /**
+   * Persists cancellation intent. Pending work is cancelled immediately, but a
+   * live attempt keeps its owner lease until that owner settles or recovery
+   * records expiry. This method does not cancel or drain an external provider.
+   */
   async cancelTask(taskId: string): Promise<TaskRecord> {
     return this.mutate(async () => {
       this.requireInitialized();
       const task = this.requireTask(taskId);
-      if (isTerminal(task.status)) return cloneTask(task);
+      if (isTerminal(task.status) || hasCancellationRequest(task)) return cloneTask(task);
       const now = this.now();
       const updated = cloneTask(task);
-      updated.status = "cancelled";
-      updated.completedAt = now.toISOString();
-      updated.updatedAt = now.toISOString();
-      for (const step of updated.steps) {
-        if (step.status === "pending" || step.status === "running") {
-          const attempt = step.currentAttempt;
-          step.status = "cancelled";
-          step.currentAttempt = null;
-          appendEvent(updated, "step.cancelled", now, {
-            stepId: step.id,
-            ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {}),
-            resultingStepStatus: step.status
-          });
-        }
+      const hasActiveAttempts = updated.steps.some(step => step.status === "running");
+      appendEvent(updated, "task.cancel_requested", now, {
+        resultingTaskStatus: hasActiveAttempts ? "running" : "cancelled"
+      });
+      cancelPendingSteps(updated, now);
+      const final = refreshTaskStatus(updated, now);
+      appendTerminalEvent(task.status, final, now);
+      await this.replaceTask(final);
+      return cloneTask(final);
+    });
+  }
+
+  /**
+   * Records owner-confirmed cancellation settlement for an active attempt.
+   * The host must call its provider cancellation/drain contract first; this
+   * method records the result but does not invoke or verify that external drain.
+   */
+  async settleCancelledStep(input: {
+    taskId: string;
+    stepId: string;
+    attemptId: string;
+  }): Promise<TaskRecord> {
+    return this.mutate(async () => {
+      this.requireInitialized();
+      const task = this.requireTask(input.taskId);
+      if (!hasCancellationRequest(task)) {
+        throw new TaskLifecycleError(
+          "cancellation_not_requested",
+          "A durable task cancellation request is required before settling a step as cancelled"
+        );
       }
-      appendEvent(updated, "task.cancelled", now, { resultingTaskStatus: updated.status });
-      await this.replaceTask(updated);
-      return cloneTask(updated);
+      const now = this.now();
+      const updated = cloneTask(task);
+      const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
+      step.status = "cancelled";
+      step.currentAttempt = null;
+      step.uncertain = false;
+      appendEvent(updated, "step.cancelled", now, {
+        stepId: step.id,
+        attemptId: input.attemptId,
+        ownerId: this.workerId,
+        resultingStepStatus: step.status
+      });
+      const final = refreshTaskStatus(updated, now);
+      appendTerminalEvent(updated.status, final, now);
+      await this.replaceTask(final);
+      return cloneTask(final);
     });
   }
 
@@ -437,7 +475,10 @@ export class TaskLifecycleCoordinator {
           if (step.status !== "running" || !step.currentAttempt) continue;
           if (Date.parse(step.currentAttempt.leaseExpiresAt) > now.getTime()) continue;
           const expiredAttempt = step.currentAttempt;
-          const outcomeUncertain = step.uncertainOnExpiredLease !== false;
+          // A requested cancellation must never turn lease expiry into a retry:
+          // the provider may still have completed an external side effect.
+          const outcomeUncertain = hasCancellationRequest(updated) ||
+            step.uncertainOnExpiredLease !== false;
           step.lastError = outcomeUncertain
             ? "Execution lease expired before completion; provider outcome is uncertain and requires operator reconciliation"
             : "Execution lease expired before completion";
@@ -598,34 +639,48 @@ function assertAcyclic(steps: readonly TaskStepRecord[]): void {
   for (const step of steps) visit(step.id);
 }
 
+function hasCancellationRequest(task: TaskRecord): boolean {
+  return task.events.some(event => event.type === "task.cancel_requested");
+}
+
+function cancelPendingSteps(task: TaskRecord, now: Date): void {
+  for (const step of task.steps) {
+    if (step.status !== "pending") continue;
+    step.status = "cancelled";
+    appendEvent(task, "step.cancelled", now, {
+      stepId: step.id,
+      resultingStepStatus: step.status
+    });
+  }
+}
+
 function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
   if (task.status === "cancelled") return task;
   const next = cloneTask(task);
-  if (next.steps.some(step => step.status === "failed")) {
+  if (hasCancellationRequest(next)) cancelPendingSteps(next, now);
+  const hasFailed = next.steps.some(step => step.status === "failed");
+  const hasRunning = next.steps.some(step => step.status === "running");
+  if (hasFailed) {
     // Stop issuing new work immediately, but retain active sibling leases until
     // their owners report settlement. A failed sibling cannot erase live work.
-    if (next.steps.some(step => step.status === "running")) {
+    if (hasRunning) {
       next.status = "running";
     } else {
       next.status = "failed";
+      cancelPendingSteps(next, now);
     }
-    for (const step of next.steps) {
-      if (next.status === "failed" && (step.status === "pending" || step.status === "running")) {
-        const attempt = step.currentAttempt;
-        step.status = "cancelled";
-        step.currentAttempt = null;
-        appendEvent(next, "step.cancelled", now, {
-          stepId: step.id,
-          ...(attempt ? { attemptId: attempt.id, ...(attempt.ownerId ? { ownerId: attempt.ownerId } : {}) } : {}),
-          resultingStepStatus: step.status
-        });
-      }
-    }
+  } else if (hasCancellationRequest(next)) {
+    // Cancellation is terminal only after every active owner has settled.
+    next.status = hasRunning ? "running" : "cancelled";
   } else if (next.steps.every(step => step.status === "succeeded")) next.status = "completed";
-  else if (next.steps.some(step => step.status === "running")) next.status = "running";
+  else if (hasRunning) next.status = "running";
   else next.status = "ready";
   next.updatedAt = now.toISOString();
-  if (next.status === "completed" || next.status === "failed") next.completedAt = now.toISOString();
+  if (next.status === "completed" || next.status === "failed" || next.status === "cancelled") {
+    next.completedAt = now.toISOString();
+  } else {
+    next.completedAt = null;
+  }
   return next;
 }
 
@@ -707,7 +762,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     const event = events[index];
     if (!event || event.sequence !== index + 1 || event.eventId !== `${task.id}:${index + 1}` ||
         !["task.created", "step.claimed", "step.completed", "step.failed", "step.cancelled",
-          "step.lease_expired", "task.completed", "task.failed", "task.cancelled"].includes(event.type) ||
+          "step.lease_expired", "task.completed", "task.failed", "task.cancel_requested", "task.cancelled"].includes(event.type) ||
         !validTimestamp(event.occurredAt) || Date.parse(event.occurredAt) < Date.parse(task.createdAt) ||
         Date.parse(event.occurredAt) > Date.parse(task.updatedAt) ||
         (event.stepId !== undefined && (typeof event.stepId !== "string" || !ids.has(event.stepId))) ||
@@ -720,6 +775,12 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     }
   }
 
+  const cancellationRequestEvents = events.filter(event => event.type === "task.cancel_requested");
+  if (cancellationRequestEvents.length > 1) {
+    throw new TaskLifecycleError("corrupt_store", "Stored task contains duplicate cancellation requests");
+  }
+  const cancellationRequestedAt = cancellationRequestEvents[0]?.occurredAt ?? null;
+
   for (const step of task.steps) {
     if (step.dependsOn.some(id => !ids.has(id))) {
       throw new TaskLifecycleError("corrupt_store", "Stored task contains an unknown dependency");
@@ -728,17 +789,26 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
   const runningCount = task.steps.filter(step => step.status === "running").length;
   const hasFailed = task.steps.some(step => step.status === "failed");
   const hasCancelled = task.steps.some(step => step.status === "cancelled");
+  const hasPending = task.steps.some(step => step.status === "pending");
   const allSucceeded = task.steps.every(step => step.status === "succeeded");
   if (runningCount > task.maxConcurrentSteps ||
       task.steps.some(step => step.status === "running" &&
         step.dependsOn.some(id => task.steps.find(dep => dep.id === id)?.status !== "succeeded")) ||
-      (task.status === "ready" && (runningCount > 0 || hasFailed || hasCancelled || allSucceeded || task.completedAt !== null)) ||
-      (task.status === "running" && (runningCount === 0 || hasCancelled || task.completedAt !== null)) ||
-      (task.status === "completed" && (!allSucceeded || !validTimestamp(task.completedAt))) ||
-      (task.status === "failed" && (!hasFailed || runningCount > 0 ||
-        task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
-      (task.status === "cancelled" && (hasFailed || !hasCancelled || runningCount > 0 ||
-        task.steps.some(step => step.status === "pending") || !validTimestamp(task.completedAt))) ||
+      (cancellationRequestedAt !== null &&
+        (Date.parse(cancellationRequestedAt) < Date.parse(task.createdAt) ||
+         Date.parse(cancellationRequestedAt) > Date.parse(task.updatedAt) ||
+         (task.completedAt !== null && Date.parse(cancellationRequestedAt) > Date.parse(task.completedAt)))) ||
+      (task.status === "ready" && (runningCount > 0 || hasFailed || hasCancelled || allSucceeded ||
+        cancellationRequestedAt !== null || task.completedAt !== null)) ||
+      (task.status === "running" && (runningCount === 0 ||
+        (hasCancelled && cancellationRequestedAt === null) ||
+        (cancellationRequestedAt !== null && hasPending) || task.completedAt !== null)) ||
+      (task.status === "completed" && (!allSucceeded || cancellationRequestedAt !== null ||
+        !validTimestamp(task.completedAt))) ||
+      (task.status === "failed" && (!hasFailed || runningCount > 0 || hasPending ||
+        !validTimestamp(task.completedAt))) ||
+      (task.status === "cancelled" && (hasFailed || !hasCancelled || runningCount > 0 || hasPending ||
+        !validTimestamp(task.completedAt))) ||
       (task.completedAt !== null && (Date.parse(task.completedAt) < Date.parse(task.createdAt) ||
         Date.parse(task.completedAt) > Date.parse(task.updatedAt)))) {
     throw new TaskLifecycleError("corrupt_store", "Stored task state is inconsistent");
@@ -783,6 +853,7 @@ function appendTerminalEvent(previousStatus: TaskStatus, task: TaskRecord, now: 
   if (previousStatus === task.status) return;
   if (task.status === "completed") appendEvent(task, "task.completed", now, { resultingTaskStatus: task.status });
   else if (task.status === "failed") appendEvent(task, "task.failed", now, { resultingTaskStatus: task.status });
+  else if (task.status === "cancelled") appendEvent(task, "task.cancelled", now, { resultingTaskStatus: task.status });
 }
 
 function isTerminal(status: TaskStatus): boolean {
