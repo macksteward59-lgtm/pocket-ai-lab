@@ -2,6 +2,32 @@ import XCTest
 import CryptoKit
 @testable import PocketLlamaEngine
 
+private actor NativeGenerationStartGate {
+    private var armed = true
+    private var paused = false
+    private var resumeContinuation: CheckedContinuation<Void, Never>?
+    private var startWaiter: CheckedContinuation<Void, Never>?
+
+    func pauseOnce() async {
+        guard armed else { return }
+        armed = false
+        paused = true
+        startWaiter?.resume()
+        startWaiter = nil
+        await withCheckedContinuation { resumeContinuation = $0 }
+    }
+
+    func waitUntilPaused() async {
+        if paused { return }
+        await withCheckedContinuation { startWaiter = $0 }
+    }
+
+    func resume() {
+        resumeContinuation?.resume()
+        resumeContinuation = nil
+    }
+}
+
 final class LlamaEngineTests: XCTestCase {
     func testPlaceholderLoadThrowsAndDoesNotReturnASession() async {
         let engine = PlaceholderLlamaEngine()
@@ -99,7 +125,7 @@ final class LlamaEngineTests: XCTestCase {
         }
     }
 
-    func testPinnedGgufCancellationBeforeStreamConsumptionIsNotErased() async throws {
+    func testPinnedGgufCancellationBeforeNativeDecodeEntryIsNotErased() async throws {
         guard let path = SmokePath.path else {
             throw XCTSkip("No smoke GGUF path is configured for this run.")
         }
@@ -111,7 +137,12 @@ final class LlamaEngineTests: XCTestCase {
         }
 
         let probe = LlamaCppMetalBackend.probe()
-        let engine = LlamaCppMetalBackend(requireMetal: probe.metalDeviceUsable)
+        let gate = NativeGenerationStartGate()
+        let engine = LlamaCppMetalBackend(
+            requireMetal: probe.metalDeviceUsable,
+            treatMetalAsUnavailable: false,
+            beforeNativeGenerate: { await gate.pauseOnce() }
+        )
         let session = try await engine.load(model: sampleModel(path: path))
         defer { Task { await engine.unload(sessionId: session.id) } }
 
@@ -120,23 +151,27 @@ final class LlamaEngineTests: XCTestCase {
             session: session,
             request: GenerationRequest(
                 requestId: cancelledRequestID,
-                prompt: "Generate a long continuation for cancellation testing.",
+                prompt: "Generate a continuation for deterministic cancellation testing.",
                 maxTokens: 256,
                 temperature: 0
             )
         )
 
-        // Cancel before attaching a stream consumer. The native task has been
-        // published, but it may not yet have entered pocket_llama_generate.
-        // Its cancellation flag must survive that later C entry point.
+        // Hold the native worker immediately before the C decode entry point.
+        // Cancellation is set while no C generation is running, then the gate
+        // releases the worker. The C entry point must preserve that cancellation.
+        await gate.waitUntilPaused()
+        await engine.cancel(sessionId: session.id, requestId: cancelledRequestID)
+        await gate.resume()
         await engine.cancelAndWait(sessionId: session.id, requestId: cancelledRequestID)
+
         do {
             for try await _ in pendingStream {
-                XCTFail("A pre-consumption cancellation must not publish output.")
+                XCTFail("A pre-decode cancellation must not publish output.")
             }
             XCTFail("The cancelled stream must finish with cancellation.")
         } catch LlamaEngineError.cancelled {
-            // Expected whether cancellation arrived before or during C decode.
+            // Expected: cancellation was set before pocket_llama_generate began.
         } catch {
             XCTFail("Expected native cancellation, received: \(error)")
         }
