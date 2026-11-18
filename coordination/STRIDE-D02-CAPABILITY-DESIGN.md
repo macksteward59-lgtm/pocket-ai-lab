@@ -412,3 +412,18 @@ Before implementation, obtain explicit answers from the independent reviewer and
 5. Should iOS source inspection be out of scope for this increment?
 
 Until these are answered, keep PR #200 as bounded-read remediation only, leave #198/#200 unmerged, and do not wire source-reference IDs into D-04.
+
+
+### 13.1.2 Current PR #200 diff: bounded-read hardening versus confinement
+
+A fresh review of the actual PR #200 patch (not only its CI result) confirms the following implemented properties:
+
+- `openNoFollowFile(filePath)` uses `O_RDONLY | O_NOFOLLOW` when the platform exposes the flag and fails closed when it does not.
+- The opened descriptor is checked with `fileHandle.stat()` and rejected unless it is a regular file.
+- `readBoundedFileHandle` allocates at most `maxBytes + 1`, reads from the already-open descriptor, and returns overflow when the extra byte is observed.
+- The descriptor is closed in a `finally` block.
+- Added tests exercise growth after opening and a final-component symlink.
+
+These are bounded-read and final-component protections only. The surrounding implementation still resolves the candidate to a full path and then opens that path. No pinned root directory handle or component-relative walk is present. Therefore intermediate parent components remain replaceable between resolution and open; final-component `O_NOFOLLOW` does not close that race. The added tests do not deterministically replace an intermediate parent after a parent handle is pinned, because no such handle-walk implementation exists yet.
+
+**Disposition:** PR #200 may be evaluated only as a bounded-read remediation. It does not satisfy root confinement, issue #202, D-02 acceptance, or D-04 prerequisites. A coordination finding was posted to the PR discussion (comment ID `6989272622`); it explicitly is not independent security approval. Keep #200 draft/unmerged until the host-owned root-pinned reader, platform-specific adversarial tests, supported-host matrix, and independent review are complete.
