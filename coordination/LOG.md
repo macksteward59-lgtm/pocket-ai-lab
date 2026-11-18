@@ -4007,3 +4007,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #205 is now closed unmerged at head `3f288198fefd7502201134901d4dc11348d0535f`; it is not an active integration PR and its former validation statements do not validate PR #197's latest head. PR #203 remains open/draft with exact-head successful run `44373747684`.
 - PR #204 still has no exact-head workflow run and its legacy-record migration plus adapter-level failure tests remain outstanding. D-02 issue #202 has no recorded host-containment decision; PR #200 remains blocked on parent-component/root-pinning race resistance.
 - No PR merged/approved; no production code or authority boundaries changed in this coordination checkpoint.
+
+
+## 2026-11-18 — PR #197 refreshed general CI evidence
+
+- Confirmed the latest exact-head general CI run is `44385850893` (run 3098), not merely the earlier push run `44385608967`. Run `44385850893` completed successfully against `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`; dependency/advisory reporting, syntax, type-check/build, and tests all passed.
+- Exact-head native iOS run `44385621155` remains `in_progress`, with native app build step 13 still running and XCTest/simulator/macOS smoke steps 14–19 pending. No native CI success claim. The run metadata has not advanced since 20:20Z; recheck before interpreting as a hung runner.
+- PR #197 remains open/draft/unmerged at the same head. PR #204 and #200 remain at previously reviewed heads with unresolved migration/adapter and root-pinning blockers. PR #205 remains closed unmerged. PR #203 remains open/draft with its independent successful exact-head run.
+- No production code or trust/governance authority changed in this update.
