@@ -103,3 +103,12 @@ The first isolated D-02 implementation slice has been opened as draft PR [#198](
 - Trust boundary unchanged: source presence is not exploitability, reachability, runtime behavior, authenticity, mitigation analysis, signed Evidence, attestation, APEX approval, East authorization, or trusted receipt.
 
 Latest PR #198 review confirms exactly two changed files, 12 commits ahead of main, zero commits behind, and GitHub reports mergeable=true. Exact-head-associated Pocket AI Lab CI run #3025 passed the TypeScript build and full `npm test`; LocalProjectInspector tests passed 9/9. The PR description records the merge-ref tested and the high-severity non-blocking npm audit finding. The draft has been advanced to ready-for-review; it remains open and unmerged. Next: independent code/security review. Do not start D-04 until D-02 review accepts the source-reference result shape and trust boundary.
+
+
+## 2026-11-18 — D-07 ownership and implementation reconciliation
+
+A live GitHub refresh confirms PR [#46](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/46) is **merged** (2026-11-13), not draft or unmerged as the older board row stated. Its merged implementation already owns the Director tool lifecycle and repository-inspection foundations: ToolDirector requires a host-injected ToolSandbox, quarantines candidates on missing/failed/incomplete test execution, binds activation/retirement approval to the exact artifact digest, and registers metadata only (actual execution remains behind SecurityDivision/DelegationGate/APEX/East). The merged LocalProjectInspector supplies the root-confined, bounded, read-only file access reused by D-02.
+
+**D-07 disposition:** partially implemented by #46; no new D-07 implementation branch should be created. The concrete production sandbox remains a host responsibility. The donor VCS metadata exclusion and regex complexity/deadline controls are not proven by the inspected #46 code, so add those to the concrete sandbox adapter security acceptance matrix when that adapter is selected. Do not mistake the interface contract for proof of an operational isolated sandbox.
+
+**D-02 review note:** PR #198 still changes only the two inspector files and has no submitted reviews or inline review threads. Its feature branch was created from main SHA e8f4dadc22c9814d68f881fb5151c9aca5ab29b8; re-check its current base/head comparison before merging because main may have advanced since branch creation. Exact-head CI #3025 passed as recorded above. No merge or reviewer assignment performed.
