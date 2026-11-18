@@ -156,9 +156,7 @@ export class LocalProjectInspector implements ProjectInspector {
     }
     return {
       status: "unverified", path: normalizedPath, occurrenceCount,
-      reason: matchingCount > 1 || (matchingCount === 0 && occurrenceCount > 1 &&
-        input.startLine === undefined && input.endLine === undefined)
-        ? "ambiguous_match" : "line_range_mismatch"
+      reason: matchingCount > 1 ? "ambiguous_match" : "line_range_mismatch"
     };
   }
 
