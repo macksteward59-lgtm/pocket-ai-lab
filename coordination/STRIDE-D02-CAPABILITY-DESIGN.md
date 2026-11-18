@@ -89,3 +89,52 @@ The smallest safe first integration is a task-context-aware Director capability 
 For the initial integration, treat the catalog as ephemeral and process-local unless a separately reviewed, existing durable artifact contract is identified and explicitly adopted. Do not write source-reference records through `MemoryManager` or overload `EastTaskRecord.evidenceRefs`: those fields have existing deliberation/evidence semantics. If later persistence is required, define a narrow artifact interface and restart/revalidation behavior in a separate design review before implementation.
 
 This trace does not approve shared-interface changes. It narrows the open design decision: task identity is already available at the Director router, but the current project-analysis path drops it; current East task storage is in-memory and has no source-reference artifact store. D-04 remains blocked until the capability contract, task/workspace scoping, catalog lifecycle, and independent D-02 review are accepted.
+
+
+## 10. Proposed minimum typed port (review draft)
+
+The code trace suggests separating the Director-facing capability from the host-owned catalog. The following is a contract sketch for review, not approved code:
+
+```ts
+export interface SourceReferenceProposal {
+  path: string;
+  quote: string;
+  startLine?: number;
+  endLine?: number;
+}
+
+export interface VerifiedSourceReference {
+  status: "verified" | "unverified";
+  referenceId?: string;       // host-issued; verified only
+  path: string;               // normalized relative path
+  sourceSha256?: string;      // exact bytes of the checked snapshot
+  startLine?: number;
+  endLine?: number;
+  occurrenceCount: number;
+  reason?: string;            // stable, bounded reason code
+}
+
+export interface SourceReferenceVerifier {
+  verify(input: {
+    taskId: string;           // from DirectorCommandContext, never model data
+    proposal: SourceReferenceProposal;
+  }): Promise<VerifiedSourceReference>;
+  resolve(input: {
+    taskId: string;           // from current trusted task context
+    referenceId: string;      // untrusted selector; catalog lookup only
+  }): Promise<VerifiedSourceReference | undefined>;
+}
+```
+
+Contract implications:
+
+- Inject `SourceReferenceVerifier` as a distinct host port in `DirectorCapabilityOptions`; do not widen `ProjectInspector` into a generic filesystem API. The implementation may delegate to the same `LocalProjectInspector` instance so confinement and bounded reads are shared.
+- Pass `context.taskId` explicitly from the router into `DirectorCapabilities.verifySourceReference`. The command payload contains only the source proposal. The router's strict field allowlist must reject `taskId`, `workspaceId`, `referenceId`, `sourceSha256`, and authority-like fields in model proposals.
+- The host port, not the shared capability layer, owns opaque workspace identity and the task-scoped catalog. A catalog entry is immutable and contains the exact source digest, normalized relative path, exact line range, quote digest, and opaque workspace scope.
+- `resolve` is a lookup plus freshness check, not proof by possession. It must re-read the current file through the same confined adapter and reject if the content digest or exact quote/line binding changed. It must reject cross-task and cross-workspace references even if an ID is copied.
+- IDs should be derived from a versioned, unambiguous canonical encoding (for example, length-prefixed UTF-8 fields) and SHA-256. Do not use delimiter-joined strings unless escaping/canonicalization is formally specified. Reuse the repository's Node `createHash("sha256")` convention where the host runtime supports it; add fixed test vectors before implementation.
+- A reference ID is a scoped lookup key only. It is not a signature, evidence receipt, authorization grant, or durable identifier across process restarts. With the proposed ephemeral catalog, restart naturally invalidates prior IDs and requires re-verification.
+
+### Remaining decision narrowed
+
+Prefer an explicit `verify-source-reference` Director command for the first increment because the router already provides a strict structured-command boundary and the Researcher/Validator workflow needs an auditable operation. Keep the command read-only and bounded; do not expose arbitrary file reads. An internal stage remains a valid alternative if the existing Researcher pipeline can invoke the same capability with identical task context and catalog guarantees. The implementation owner should select one path after independent review rather than shipping both.
