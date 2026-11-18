@@ -605,7 +605,7 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
       next.status = "failed";
     }
     for (const step of next.steps) {
-      if (step.status === "pending" || (step.status === "running" && next.status === "failed")) {
+      if (next.status === "failed" && (step.status === "pending" || step.status === "running")) {
         const attempt = step.currentAttempt;
         step.status = "cancelled";
         step.currentAttempt = null;
