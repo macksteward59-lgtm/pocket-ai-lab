@@ -132,6 +132,7 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
 public actor LlamaCppMetalBackend: LlamaEngine {
     private let requireMetal: Bool
     private let treatMetalAsUnavailable: Bool
+    private let beforeNativeGenerate: (@Sendable () async -> Void)?
     #if POCKET_LLAMA_LINKED
     private var sessions: [String: LoadedSession] = [:]
     #endif
@@ -142,12 +143,19 @@ public actor LlamaCppMetalBackend: LlamaEngine {
     public init(requireMetal: Bool = true) {
         self.requireMetal = requireMetal
         self.treatMetalAsUnavailable = false
+        self.beforeNativeGenerate = nil
     }
 
-    /// Test seam. It can only force the unavailable failure. It cannot invent text.
-    internal init(requireMetal: Bool, treatMetalAsUnavailable: Bool) {
+    /// Test seam. It can force the unavailable failure or pause immediately
+    /// before the detached native decode starts. It cannot invent text.
+    internal init(
+        requireMetal: Bool,
+        treatMetalAsUnavailable: Bool,
+        beforeNativeGenerate: (@Sendable () async -> Void)? = nil
+    ) {
         self.requireMetal = requireMetal
         self.treatMetalAsUnavailable = treatMetalAsUnavailable
+        self.beforeNativeGenerate = beforeNativeGenerate
     }
 
     public static func probe() -> LlamaCppProbe {
@@ -340,6 +348,7 @@ public actor LlamaCppMetalBackend: LlamaEngine {
         guard let loaded = sessions[sessionId] else {
             throw LlamaEngineError.sessionNotLoaded("Session \(sessionId) is not loaded.")
         }
+        await beforeNativeGenerate?()
         return try await Task.detached {
             try loaded.generate(request)
         }.value
