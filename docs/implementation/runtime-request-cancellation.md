@@ -29,7 +29,7 @@ The registry intentionally includes preparation-stage requests that have not yet
 
 ### Cancellation while the request is registered
 
-cancelGeneration cancels the exact task and awaits its value. The request task must settle before the controller acknowledges cancellation. During native inference, the shared NativeInferenceRuntime retains its use pin and awaits the engine's cancelAndWait path before releasing that pin. The controller's generation task then settles before the caller can release the corresponding session lease.
+cancelGeneration cancels the exact task and awaits its value. The request task must settle before the controller acknowledges cancellation. During native inference, the shared NativeInferenceRuntime retains its use pin and awaits the engine's cancelAndWait path before releasing that pin. The llama.cpp bridge clears the prior request's atomic cancellation flag before publishing a new generation task; the C decode entry point does not clear it. This ordering prevents a cancellation delivered just before C decode begins from being erased by decode startup. The controller's generation task then settles before the caller can release the corresponding session lease.
 
 A cancellation request does not directly release a model lease.
 
@@ -88,6 +88,7 @@ The native follow-up must pass exact-head Swift compilation and XCTest, includin
 - Cancellation during challenge consumption.
 - Cancellation during post-challenge file verification.
 - Cancellation during active native inference, with drain-before-release assertions.
+- llama.cpp cancellation delivered before stream consumption, proving a new C decode cannot erase the request's cancellation flag.
 - Navigation cancellation across preparation-stage requests.
 - Session unload while preparation or inference is active.
 - Cancellation delivered before the matching generation.
