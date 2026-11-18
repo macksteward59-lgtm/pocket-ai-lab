@@ -3890,3 +3890,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Confirmed its reader still uses `realpath` → `stat` → `readFile`, retaining the parent-directory TOCTOU gap and whole-file buffering before the byte-length check. PR #200's bounded descriptor reader is not part of #198's diff, and #200 itself still lacks pinned-root/component-relative confinement.
 - Posted the review finding to issue #202 (comment ID 6989309833). PR #198 remains unmerged; D-04 integration remains blocked pending the host containment decision, implementation, and independent review.
 - Updated `coordination/STRIDE-D02-CAPABILITY-DESIGN.md` section 13.1.3. No application code changed, no PR merged, and no APEX/East/Evidence/BridgeGate/runtime authority changed.
+
+
+## 2026-11-18 — PR #204 source review and CI re-poll
+
+- Reviewed PR #204 head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49`, stacked on #187. Diff changes TaskLifecycleCoordinator, EastTaskLifecycleAdapter, autonomy tests, and production-readiness docs. It requires definitive/unknown failure outcome; makes expired leases uncertain by default unless explicitly opted out; blocks new claims after a failed step; and retains live sibling attempts until owner settlement. Added tests cover unknown outcomes, default expiry, sibling lease preservation across coordinator reconstruction, owner fencing, and final failure after sibling settlement.
+- This is a useful coordinator-level safety improvement, not a complete host supervisor. Explicit expiry opt-out remains a caller policy assertion; it is not backed by a verifiable idempotency token in the coordinator. cancelTask() remains immediate and can still clear active attempts. Durable external-execution records, provider/e3 correlation, restart reconciliation, schema migration, and deployed e3 cancellation remain open.
+- Exact-head workflow/status lookup for #204 returned no workflow runs and no status checks. It remains draft/open/unmerged; no validation claim is made.
+- PR #203 workflow #44373747684 progressed through iOS simulator XCTest and is currently at XCTest on macOS; no final result yet.
+- Updated coordination BOARD in commit `02a89798156e8f86856ec2860e1a2683e6cbe824`. No application source/schema changed in this continuation; no PR merged/closed and no authority/branch-protection changes.
