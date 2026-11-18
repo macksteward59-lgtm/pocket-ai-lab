@@ -61,7 +61,7 @@ export { GOVERNANCE_ADVISORY_INVARIANT, specialistPrompt, withGovernanceInvarian
 export { ModelRouterResiliency } from "./model-router/ModelRouterResiliency";
 export { classifyExport, watchOnce } from "./governance/watchInbox";
 export { assessImprovement, type EvaluationRun, type EvaluationCaseResult, type ImprovementAssessment, type AssessmentOptions } from "./evaluation/ImprovementEngine";
-export { AgentLearningTool, type LearningChangeKind, type LearningEvidence, type LearningEvidenceReader, type LearningProposal, type TrainingBudget, type CandidateTrainingRequest, type IsolatedTrainingJob, type CandidateTrainingResult, type TrainingSandbox, type TrainingApprovalRequest, type TrainingApprovalVerifier, type LearningCandidate, type CandidateAssessment } from "./learning/AgentLearningTool";
+export { AgentLearningTool, type LearningChangeKind, type LearningEvidence, type LearningEvidenceReader, type LearningProposal, type TrainingBudget, type CandidateTrainingRequest, type IsolatedTrainingJob, type CandidateTrainingResult, type TrainingSandbox, type TrainingApprovalRequest, type TrainingApprovalVerifier, type LearningCandidate, type CandidateAssessment, type CandidateEvaluationRunner, type PairedEvaluationRuns } from "./learning/AgentLearningTool";
 
 export { createDirectorTaskRuntime, type DirectorTaskRuntime, type DirectorTaskRuntimeOptions } from "./director/createDirectorTaskRuntime";
 export { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskHistoryEntry, type DirectorTaskRunnerOptions } from "./director/DirectorTaskRunner";
