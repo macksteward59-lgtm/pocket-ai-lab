@@ -75,6 +75,12 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 3. **Governed autonomy** — Permanent core team + dynamic specialists; consequential actions must pass the independent APEX authorization path.
 4. **Honest product states** — A role is not represented as an active inference agent until a real provider call occurs. Model text is not verification or authorization.
 
+## Agent Learning & Improvement
+
+The intelligence package exposes a governed learning tool through `Orchestrator.learning` and the Director's finite structured-command interface. Agents can propose changes from host-approved evidence, request adapter-only training through a digest-approved isolated sandbox, and compare candidate artifacts with the existing paired benchmark evaluator. Passing results are recommendations for independent human review only.
+
+No evidence reader, training approval verifier, or training sandbox is enabled by default. The tool cannot modify live model weights, promote candidates, or change permissions. See `docs/architecture/Agent-Learning-Improvement-Tool.md`.
+
 ## Implementation status
 
 | Area | Status |
