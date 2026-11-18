@@ -1,4 +1,5 @@
-import { realpath, readFile, stat } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, realpath } from "node:fs/promises";
 import path from "node:path";
 import type { ProjectAnalysis, ProjectInspector } from "../../../packages/intelligence/director/DirectorCapabilities";
 
@@ -175,12 +176,35 @@ export class LocalProjectInspector implements ProjectInspector {
     if (actual !== this.root && !actual.startsWith(this.root + path.sep)) {
       throw new Error("Project inspection symlink escaped the workspace");
     }
-    const metadata = await stat(actual);
-    if (!metadata.isFile()) return undefined;
-    if (metadata.size > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
-    const content = await readFile(actual, "utf8");
-    const byteLength = Buffer.byteLength(content, "utf8");
-    if (byteLength > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
-    return { content, byteLength };
+    // Open the resolved target without following a final-component symlink.
+    // If the platform cannot provide O_NOFOLLOW, fail closed rather than
+    // silently weakening the workspace boundary.
+    if (typeof constants.O_NOFOLLOW !== "number") return undefined;
+    let handle;
+    try {
+      handle = await open(actual, constants.O_RDONLY | constants.O_NOFOLLOW);
+      const metadata = await handle.stat();
+      if (!metadata.isFile()) return undefined;
+      if (metadata.size > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
+
+      // Read from this one opened object and stop at maxBytes + 1. A file that
+      // grows after fstat cannot make us buffer an unbounded replacement.
+      const bytes = Buffer.allocUnsafe(maxBytes + 1);
+      let bytesRead = 0;
+      while (bytesRead < bytes.length) {
+        const result = await handle.read(bytes, bytesRead, bytes.length - bytesRead, bytesRead);
+        if (result.bytesRead === 0) break;
+        bytesRead += result.bytesRead;
+      }
+      if (bytesRead > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
+      const snapshot = bytes.subarray(0, bytesRead);
+      return { content: snapshot.toString("utf8"), byteLength: bytesRead };
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ELOOP" || code === "ENOENT") return undefined;
+      throw error;
+    } finally {
+      await handle?.close();
+    }
   }
 }
