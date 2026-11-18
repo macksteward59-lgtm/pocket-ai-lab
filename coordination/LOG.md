@@ -4142,3 +4142,10 @@ Accessible history this run: current conversation instructions and recent projec
 - PR #201 is closed unmerged because its changed-file blob SHAs are identical to PR #200's implementation. PR #200 remains the sole retained review path for this bounded-read work and still has unresolved parent-directory replacement exposure.
 - Issue #202 remains open; supported OS matrix and root-pinned host helper vs enforced immutable snapshot decision are not selected. Design document remains proposal only.
 - No merge, authority change, physical-device acceptance, or D-02/D-04 acceptance.
+
+
+## 2026-11-18 — PR #212 native workflow startup failure
+
+- Refreshed exact PR #212 head `244a728330f06c8294328d58115ac6b0f55602fc`. Native iOS workflow `44399814043` (run 570) completed as `startup_failure`; no jobs were created. Treat as infrastructure startup failure, not a code/test failure and not a pass.
+- The PR comment records the rerun endpoint's HTTP 403 response (`This workflow run cannot be retried`). Available connected GitHub actions expose job/run rerun but no workflow dispatch/new-run action. A fresh pull_request native attempt is still required for this exact head.
+- Source diff remains unchanged; deterministic test synchronization remains in place. PR #212 remains draft/unmerged; no physical-device or release acceptance.
