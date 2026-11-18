@@ -1,3 +1,7 @@
+import { realpath, readFile, stat } from "node:fs/promises";
+import path from "node:path";
+import type { ProjectAnalysis, ProjectInspector } from "../../../packages/intelligence/director/DirectorCapabilities";
+
 export interface SourceReferenceVerification {
   status: "verified" | "unverified";
   path: string;
@@ -8,9 +12,6 @@ export interface SourceReferenceVerification {
     "file_too_large" | "quote_not_found" | "ambiguous_match" | "line_range_mismatch";
 }
 
-import { realpath, readFile, stat } from "node:fs/promises";
-import path from "node:path";
-import type { ProjectAnalysis, ProjectInspector } from "../../../packages/intelligence/director/DirectorCapabilities";
 
 const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".json", ".md", ".yml", ".yaml", ".toml", ".py", ".swift", ".sh"]);
 const DEFAULT_PATHS = ["README.md", "package.json"];
@@ -46,7 +47,7 @@ export class LocalProjectInspector implements ProjectInspector {
     const findings: ProjectAnalysis["findings"] = [];
     let totalBytes = 0;
     for (const relative of [...new Set(requested)]) {
-      const loaded = await this.readEligibleTextFile(relative);
+      const loaded = await this.readEligibleTextFile(relative, Math.min(MAX_FILE_BYTES, MAX_TOTAL_BYTES - totalBytes));
       if (!loaded || loaded.reason === "file_too_large" || totalBytes + loaded.byteLength > MAX_TOTAL_BYTES) continue;
       const content = loaded.content;
       totalBytes += loaded.byteLength;
@@ -90,6 +91,7 @@ export class LocalProjectInspector implements ProjectInspector {
       status: "unverified", path: typeof relative === "string" ? relative : "",
       occurrenceCount: 0, reason: "invalid_reference"
     });
+    if (!input || typeof input !== "object") return invalid();
     if (typeof relative !== "string" || !relative.trim() || relative.length > 1024 ||
         path.isAbsolute(relative) || relative.split(/[\\/]/).includes("..") ||
         typeof quote !== "string" || !quote.length || quote.length > 8192 ||
@@ -123,7 +125,6 @@ export class LocalProjectInspector implements ProjectInspector {
       const endLine = startLine + (through.match(/\n/g)?.length ?? 0);
       occurrences.push({ startLine, endLine });
       offset = found + 1;
-      if (occurrences.length > 100) break;
     }
     if (!occurrences.length) {
       return { status: "unverified", path: relative, occurrenceCount: 0, reason: "quote_not_found" };
@@ -145,7 +146,7 @@ export class LocalProjectInspector implements ProjectInspector {
     };
   }
 
-  private async readEligibleTextFile(relative: string): Promise<
+  private async readEligibleTextFile(relative: string, maxBytes = MAX_FILE_BYTES): Promise<
     { content: string; byteLength: number; reason?: never } |
     { content: ""; byteLength: 0; reason: "file_too_large" } |
     undefined
@@ -162,10 +163,10 @@ export class LocalProjectInspector implements ProjectInspector {
     }
     const metadata = await stat(actual);
     if (!metadata.isFile()) return undefined;
-    if (metadata.size > MAX_FILE_BYTES) return { content: "", byteLength: 0, reason: "file_too_large" };
+    if (metadata.size > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
     const content = await readFile(actual, "utf8");
     const byteLength = Buffer.byteLength(content, "utf8");
-    if (byteLength > MAX_FILE_BYTES) return { content: "", byteLength: 0, reason: "file_too_large" };
+    if (byteLength > maxBytes) return { content: "", byteLength: 0, reason: "file_too_large" };
     return { content, byteLength };
   }
 
