@@ -269,3 +269,27 @@ Disposition:
 - PR #200 now links issue #202 and remains draft/unmerged. Exact-head Intelligence CI run #44369945652 remains green for head `947c1ac289f70779e336fde6dd9e6c687f191a07`.
 - Security review status remains unchanged: no independent PR review has been submitted. The issue requires a decision on directory-relative no-follow primitives, workspace identity pinning, adversarial replacement tests, and documented residual limitations.
 - No source code or authorization boundary changed in this checkpoint. PR #198/#200 remain unmerged; D-02 acceptance and D-04 remain blocked.
+
+
+## 12. Parent-directory containment platform assessment — 2026-11-18
+
+### Repository/runtime facts
+
+- The repository root `package.json` declares Node.js `>=22`; the consumer prototype documents Node.js 22+ and a portable desktop launcher for Windows and macOS. The source verifier is a Node filesystem adapter, not the Swift iOS inference runtime.
+- The current PR #200 implementation calls `realpath(candidate)`, then `open(actual, O_RDONLY | O_NOFOLLOW)`. This pins the opened final file object and bounds reads, but does not pin each parent directory component from the workspace root.
+- The documented Node `fsPromises.open(path, flags)` API accepts a pathname and returns a `FileHandle`; `fsPromises.opendir(path)` likewise opens a directory by pathname. The documented Node fs API does not expose a portable `openat(dirfd, relativePath, flags)` / directory-handle-relative child-open parameter. See [Node.js v22 fs documentation](https://nodejs.org/download/release/v22.23.3/docs/api/fs.html).
+- Therefore, the existing Node-only adapter cannot claim portable descriptor-relative traversal merely by switching from `readFile` to `FileHandle`. `O_NOFOLLOW` remains final-component protection, not a root-confined walk across every parent component.
+
+### Options for independent decision
+
+| Option | Security property | Platform / operational cost | Disposition |
+|---|---|---|---|
+| A. Native host helper with directory-relative traversal | Can pin the root directory handle and open each path component relative to the prior handle, rejecting symlinks at every step; final file descriptor is read with the existing byte cap | Requires a small native helper per supported OS (e.g. POSIX `openat` + `O_DIRECTORY` + `O_NOFOLLOW`; Windows needs a separately reviewed handle-relative implementation). Must test macOS, Linux, Windows and packaging | Preferred if the threat model includes concurrent workspace mutation |
+| B. Host-enforced immutable workspace snapshot | Verifier reads only a host-created snapshot whose directory tree is not writable by untrusted actors for the entire verification lifetime | Snapshot creation itself must be trusted and race-safe; same-user concurrent writers and ACL/ownership assumptions must be explicit. A mere advisory lock or repeated `realpath` is not enforcement | Acceptable only if the host can actually enforce and document the non-mutation assumption |
+| C. Current pathname + final-component `O_NOFOLLOW` | Bounds reads and rejects final-component symlink substitution; does not prevent a parent-directory replacement race | Portable-ish Node implementation, but weaker containment | Not sufficient when concurrent workspace mutation is in scope |
+
+### Review recommendation
+
+Do not add an unverified Node path trick or a repeated `realpath`/ `lstat` check and call it race-free. Ask the independent reviewer to choose A or B based on the actual deployment threat model. If A is chosen, define a narrow host port such as `openWorkspaceFile(workspaceHandle, normalizedRelativePath, maxBytes)` returning a bounded byte snapshot and explicit cleanup; the native implementation owns all directory/file handles and fails closed on unsupported platforms. If B is chosen, make the trusted snapshot/lease an explicit host capability and test that callers cannot pass arbitrary roots or opt out of the immutability precondition.
+
+No option is approved by this assessment. PR #200 remains a bounded-read improvement only; issue #202 is the decision gate. D-02 and D-04 remain blocked.
