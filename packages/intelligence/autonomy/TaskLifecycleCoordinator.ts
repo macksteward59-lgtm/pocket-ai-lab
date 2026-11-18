@@ -85,8 +85,12 @@ export interface TaskLifecycleEvent {
 }
 
 export const MAX_TASK_LIFECYCLE_EVENTS = 2_048;
+/** Version 1 makes conservative expired-lease behavior explicit in persisted records. */
+export const CURRENT_EXPIRY_POLICY_VERSION = 1;
 
 export interface TaskRecord {
+  /** Missing only in pre-versioned snapshots; those records migrate fail-closed. */
+  expiryPolicyVersion: number;
   id: string;
   objective: string;
   status: TaskStatus;
@@ -573,6 +577,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
   const timestamp = now.toISOString();
   return {
     id: definition.id.trim(), objective: definition.objective.trim(), status: "ready",
+    expiryPolicyVersion: CURRENT_EXPIRY_POLICY_VERSION,
     steps, maxConcurrentSteps, leaseMs, metadata: { ...metadata },
     createdAt: timestamp, updatedAt: timestamp, completedAt: null, events: []
   };
@@ -625,6 +630,10 @@ function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
 }
 
 function validateStoredTask(task: TaskRecord): TaskRecord {
+  const isLegacyExpiryPolicy = task?.expiryPolicyVersion === undefined;
+  if (!isLegacyExpiryPolicy && task.expiryPolicyVersion !== CURRENT_EXPIRY_POLICY_VERSION) {
+    throw new TaskLifecycleError("corrupt_store", "Stored task uses an unsupported expiry policy version");
+  }
   const validTimestamp = (value: unknown): value is string =>
     typeof value === "string" && Number.isFinite(Date.parse(value)) &&
     new Date(value).toISOString() === value;
@@ -738,11 +747,15 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
   assertAcyclic(task.steps);
   return cloneTask({
     ...task,
+    expiryPolicyVersion: CURRENT_EXPIRY_POLICY_VERSION,
     events: [...(task.events ?? [])].map(event => ({ ...event })),
     steps: task.steps.map(step => ({
       ...step,
       uncertain: step.uncertain ?? false,
-      uncertainOnExpiredLease: step.uncertainOnExpiredLease ?? true
+      // The previous normalizer persisted false for multi-attempt steps by default.
+      // Without a version marker that false cannot be distinguished from an explicit
+      // safety argument, so all pre-versioned records migrate to conservative true.
+      uncertainOnExpiredLease: isLegacyExpiryPolicy ? true : (step.uncertainOnExpiredLease ?? true)
     }))
   });
 }

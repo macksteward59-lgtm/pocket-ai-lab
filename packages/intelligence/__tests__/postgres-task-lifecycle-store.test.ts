@@ -99,6 +99,7 @@ function task(id: string): TaskRecord {
     id,
     objective: "Persist one bounded lifecycle",
     status: "ready",
+    expiryPolicyVersion: 1,
     steps: [{
       id: "inspect",
       description: "Inspect the implementation",

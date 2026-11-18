@@ -237,6 +237,44 @@ describe("TaskLifecycleCoordinator", () => {
   });
 
 
+  it("migrates pre-versioned multi-attempt records with persisted false to fail-closed expiry", async () => {
+    let milliseconds = Date.parse("2026-11-17T12:00:00.000Z");
+    const now = () => new Date(milliseconds);
+    const originalStore = new InMemoryTaskLifecycleStore();
+    const original = new TaskLifecycleCoordinator({
+      store: originalStore, now, workerId: "worker-legacy-writer"
+    });
+    await original.init();
+    await original.createTask({
+      id: "legacy-expiry", objective: "Migrate the previous implicit multi-attempt retry default",
+      leaseMs: 1_000,
+      steps: [{ id: "publish", description: "Potentially non-idempotent external operation", maxAttempts: 3,
+        uncertainOnExpiredLease: false }]
+    });
+    await original.claimNextStep("legacy-expiry");
+    const current = originalStore.load()[0];
+    const { expiryPolicyVersion: _version, ...legacyShape } = current;
+    legacyShape.steps[0].uncertainOnExpiredLease = false;
+    const persisted: TaskRecord[] = [legacyShape as TaskRecord];
+    const legacyStore: TaskLifecycleStore = {
+      load: () => persisted,
+      save: records => { persisted.splice(0, persisted.length, ...records.map(record => structuredClone(record))); }
+    };
+
+    milliseconds += 1_001;
+    const restarted = new TaskLifecycleCoordinator({
+      store: legacyStore, now, workerId: "worker-after-legacy-migration"
+    });
+    await restarted.init();
+    expect(await restarted.recoverExpiredLeases("legacy-expiry")).toBe(1);
+    const migrated = restarted.getTask("legacy-expiry");
+    expect(migrated.expiryPolicyVersion).toBe(1);
+    expect(migrated.steps[0]).toMatchObject({
+      status: "failed", uncertain: true, uncertainOnExpiredLease: true
+    });
+    expect(await restarted.claimNextStep("legacy-expiry")).toBeNull();
+  });
+
   it("treats an expired multi-attempt lease as uncertain unless safe retry is explicit", async () => {
     let milliseconds = Date.parse("2026-11-17T12:00:00.000Z");
     const store = new InMemoryTaskLifecycleStore();
