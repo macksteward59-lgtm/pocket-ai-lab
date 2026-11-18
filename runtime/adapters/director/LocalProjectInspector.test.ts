@@ -94,4 +94,28 @@ describe("LocalProjectInspector", () => {
     })).rejects.toThrow(/symlink escaped/);
   });
 
+
+  it("counts dense duplicate matches without requiring a retained match list", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-dense-"));
+    directories.push(root);
+    await writeFile(path.join(root, "README.md"), "x".repeat(60000));
+    const inspector = await LocalProjectInspector.open(root);
+
+    await expect(inspector.verifySourceReference({
+      path: "README.md", quote: "x"
+    })).resolves.toMatchObject({
+      status: "unverified", occurrenceCount: 60000, reason: "ambiguous_match"
+    });
+  });
+
+  it("rejects malformed runtime input without throwing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-invalid-"));
+    directories.push(root);
+    const inspector = await LocalProjectInspector.open(root);
+
+    await expect(inspector.verifySourceReference(null as never)).resolves.toMatchObject({
+      status: "unverified", occurrenceCount: 0, reason: "invalid_reference"
+    });
+  });
+
 });
