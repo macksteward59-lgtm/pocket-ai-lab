@@ -316,10 +316,9 @@ export interface WorkspaceReadSession {
 }
 
 export interface WorkspaceFileSnapshot {
-  readonly bytes: Uint8Array;       // immutable copy of the one bounded read
-  readonly byteLength: number;
-  readonly sha256: string;          // computed over exactly bytes
-  close(): Promise<void>;
+  readonly text: string;            // immutable decoded text from the one bounded read
+  readonly byteLength: number;      // raw byte count, before decoding
+  readonly sha256: string;          // SHA-256 of the exact raw bytes, before decoding
 }
 
 export interface ConfinedWorkspaceReader {
@@ -343,7 +342,7 @@ The public TypeScript shapes are illustrative. The host must not accept a caller
 4. Enforce the byte limit during the read, with a maximum of maxBytes + 1; reject overflow.
 5. Hash and decode/match the same bytes. Do not perform a second path read for hashing or matching.
 6. Close every intermediate and final handle on success, error, timeout, and cancellation. Session close invalidates future reads.
-7. Return an immutable byte snapshot. The native layer must not leak live descriptors/handles to model-facing code.
+7. Return a completed snapshot containing an immutable string plus the raw byte count and digest. Compute SHA-256 over raw bytes before decoding; decode and match that same read. Do not expose a mutable Uint8Array or live descriptors/handles to model-facing code. The directory session, not the completed snapshot, owns the pinned directory handles and must close them deterministically.
 
 ### 13.3 Platform adapter requirements
 
