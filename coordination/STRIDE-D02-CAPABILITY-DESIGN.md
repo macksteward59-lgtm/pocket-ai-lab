@@ -243,3 +243,13 @@ Disposition:
 - Required remediation: open the checked object with a no-follow strategy where supported; verify the opened descriptor is a regular file; enforce the byte ceiling during descriptor reads by reading at most `maxBytes + 1`; hash and match the same bytes; fail closed when safe containment cannot be established.
 - Add deterministic regression coverage for growth/replacement between metadata check and read. Do not claim the existing oversized-file test covers this race.
 - Keep PR #198 unmerged and D-02/D-04 gates unchanged until remediation, exact-head CI, and independent review are complete.
+
+
+## Bounded-read remediation coordination — 2026-11-18
+
+- PR #198 remains open at its original feature head `17ac696687bfaaba3123eccb18c9f3d03bb1c13f`; no feature code was folded into it.
+- A prior stacked remediation PR #199 was closed without merge during branch reconciliation. Its exact remediation snapshot (`fd1047b6931b8072f35239177416df0114f88171`) had a recorded green hosted Intelligence CI result in the #198 review-thread comments: 28 files / 336 tests passed, 2 skipped; LocalProjectInspector source and compiled suites each passed 11 tests. That result is not transferable to a different commit SHA as exact-head CI.
+- Re-created the isolated remediation as draft PR #200: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/200
+- PR #200 targets the unchanged #198 branch and adds descriptor-bound reads capped at `maxBytes + 1`, descriptor regular-file checks, final-component `O_NOFOLLOW`, guaranteed close, and deterministic growth/symlink regression tests.
+- PR #200 explicitly records the residual limitation: this is not a portable `openat`/directory-descriptor guarantee against every parent-directory replacement race. Independent security review must decide whether the host platform needs stronger directory-handle confinement.
+- PR #200 exact-head hosted CI and independent review are pending. Do not merge #198 or #200 yet; D-02 and D-04 remain gated.
