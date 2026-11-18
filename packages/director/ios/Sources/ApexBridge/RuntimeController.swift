@@ -104,7 +104,7 @@ public actor RuntimeController {
     // Invalidates generation attempts suspended before their native task is registered.
     private var generationLifecycle: UInt64 = 0
     private var generationDrainCount = 0
-    // Internal synchronization seam for deterministic lifecycle tests; unset in production.
+    // Internal synchronization seam fired after all captured tasks are cancelled and before drain waits; unset in production.
     private var cancelAllDrainWaitObserverForTesting: (@Sendable () async -> Void)?
 
     func setCancelAllDrainWaitObserverForTesting(_ observer: (@Sendable () async -> Void)?) {
@@ -577,28 +577,42 @@ public actor RuntimeController {
         // The request registry includes preparation-stage attempts that have no
         // entry in ActiveSession.generations yet. Snapshot it only after raising the
         // lifecycle barrier; new requests now fail before registration.
+        pruneFinishedGenerationAttempts(now: clock())
         let pending = generationAttempts.flatMap { sessionId, attempts in
             attempts.map { (sessionId, $0.key, $0.value) }
         }
         var cancelled = 0
+
+        // Phase 1: retire and cancel every exact task in the snapshot. Do not
+        // await one native/provider drain before the remaining attempts have
+        // received their cancellation request.
         for (sessionId, requestId, task) in pending {
-            let didCancel = await cancelGeneration(sessionId: sessionId, requestId: requestId)
-            if didCancel {
-                cancelled += 1
-            } else {
-                // The public per-request API can reject an already-retired
-                // request or a session whose unload has closed external
-                // cancellation. This global lifecycle barrier still owns the
-                // exact task snapshot, so it must cancel that task directly.
+            guard let canonicalRequestId = Self.canonicalUUID(requestId) else {
                 task.cancel()
+                continue
             }
-            // Tests can synchronize exactly at the point where the global
-            // barrier is about to await the captured task. The observer is nil
-            // outside the deterministic lifecycle regression.
-            await cancelAllDrainWaitObserverForTesting?()
-            // Always await the snapshot task. cancelGeneration awaits it when
-            // it owns cancellation; this also covers concurrent unload and
-            // already-retired requests without returning before task settlement.
+            let alreadyFinished = finishedGenerationAttempts[sessionId]?[canonicalRequestId] != nil
+            let alreadyRetired = retiredGenerationRequests[sessionId]?.contains(canonicalRequestId) == true
+            let sessionAcceptsCancellation = sessions[sessionId] != nil &&
+                !unloadingSessions.contains(sessionId)
+            if !alreadyFinished && !alreadyRetired && sessionAcceptsCancellation &&
+               recordRetiredGenerationRequest(sessionId: sessionId, requestId: canonicalRequestId) {
+                cancelled += 1
+            }
+
+            // The global lifecycle snapshot owns this exact task even when the
+            // public per-request guard rejects an unloading or retired session.
+            task.cancel()
+        }
+
+        // This test seam is reached after every captured task has received
+        // cancellation and immediately before the drain-wait phase.
+        await cancelAllDrainWaitObserverForTesting?()
+
+        // Phase 2: wait for every captured task. Each task retains its own
+        // NativeInferenceRuntime use-pin and ModelPool lease until its native
+        // cancellation/drain path has settled.
+        for (_, _, task) in pending {
             _ = try? await task.value
         }
         return cancelled
