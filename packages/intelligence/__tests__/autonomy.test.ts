@@ -756,6 +756,7 @@ describe("TaskLifecycleCoordinator", () => {
     expect(afterFailure.steps.find(step => step.id === "second")).toMatchObject({
       status: "running", currentAttempt: { id: second!.attemptId }
     });
+    expect(afterFailure.steps.find(step => step.id === "join")?.status).toBe("pending");
     expect(await h.coordinator.claimNextStep("parallel-failure")).toBeNull();
 
     const settled = await h.coordinator.completeStep({
