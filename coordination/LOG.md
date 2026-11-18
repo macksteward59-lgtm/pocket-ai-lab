@@ -3990,3 +3990,10 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Deterministic tests now cover unload during blocked native `cancelAndWait` (lease and inference use-pin remain held) and generation suspended during challenge consumption. Targeted follow-up review posted to PR #197. Exact-head workflow run `44385621155` is queued; earlier runs `44385127350` and `44385602976` were cancelled/superseded and are not validation for this head. Keep PR draft pending all stages and independent review.
 - PR #204 remains blocked on legacy serialized-task migration and adapter-level outcome tests; PR #200 remains blocked on parent-component/root-pinning race; issue #202 has no host-containment decision. PR #203 exact-head run `44373747684` remains successful.
 - No application source, governance authority, signing, or branch protection changed in this coordination update.
+
+## 2026-11-18 — East legacy expiry-policy migration claim
+
+- Claimed isolated follow-up branch `codex/east-legacy-expiry-policy-migration`, based on PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` (base PR #187 head `d00260e4a1c3d0f3e8902b756e67e5cfcaf36bc4`).
+- Scope: add an explicit expiry-policy version marker; migrate prior serialized task records that lack the marker to `uncertainOnExpiredLease: true` even when the legacy record contains `false`; reject unknown policy versions; add restart/expiry regression coverage; and test East adapter failure classification for local assignment versus each provider/evidence-bearing operation.
+- Exclusions: no e3 task declaration/API changes, no inference/provider execution changes, no supervisor or production persistence claims, and no APEX, Evidence, BridgeGate, RLS, signer, attestation, or authorization changes.
+- This commit records ownership only. No application code has been changed and no validation is claimed.
