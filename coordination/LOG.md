@@ -3934,3 +3934,10 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - No exact-head workflow runs exist yet for #205; do not treat its test as executed. Parent #197 run #44378631020 remains in progress at native app build, with pinned llama.cpp build, typecheck, device-link compile, simulator boot, and bridge manifest validation complete and no reported failure.
 - #203 exact-head CI remains green (#44373747684). #204 still needs a fail-closed migration for legacy stored multi-attempt tasks with explicit `uncertainOnExpiredLease: false`; discussion comment #6989381385 records the finding. #200 still has a parent-component race/root confinement gate; no exact-head CI run returned.
 - Board update: `ebd2fd4f03ce766b3196100d5a7acc99046a5518`. No application source/schema changed; no merges or governance changes.
+
+
+## 2026-11-18 — PR #204 legacy expiry-policy migration blocker
+
+- A second compatibility review identified that changing the default to `uncertainOnExpiredLease: true` is insufficient for previously persisted tasks. The old normalizer materialized `false` for multi-attempt steps; the new validator preserves that explicit stored false, and recovery still treats it as a safe-retry opt-in. The old snapshot shape cannot distinguish intentional opt-in from the old implicit default.
+- Posted a blocking finding to PR #204 (comment ID `6989381385`): add a versioned migration/explicit-opt-in contract that treats legacy values as unsafe until re-authorized, plus a regression fixture using the previous serialized shape that proves an expired multi-attempt lease becomes uncertain rather than pending. A boolean opt-in remains a policy assertion, not proof of provider settlement.
+- Also requested adapter-level tests for the hard-coded `assign-core-agents` definitive / all-other-steps unknown classification (PR #204 comment ID `6989436510`). Exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` has no PR-triggered workflow run returned. PR #204 remains draft/unmerged and is not merge-ready.
