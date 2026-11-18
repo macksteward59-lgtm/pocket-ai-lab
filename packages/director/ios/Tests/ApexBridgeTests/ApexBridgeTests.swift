@@ -1012,8 +1012,9 @@ final class RuntimeControllerTests: XCTestCase {
             await cancellationReachedDrainWait.markReached()
         }
         let cancellation = Task {
-            _ = await controller.cancelAllGenerations()
+            let count = await controller.cancelAllGenerations()
             await cancellationFinished.markFinished()
+            return count
         }
         // Synchronize after cancel-all has cancelled the captured task and is
         // immediately about to await its settlement; no scheduler delay is used.
@@ -1029,7 +1030,12 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertEqual(whileDraining.activeUseCount, 1)
 
         await engine.finishDrain()
-        await cancellation.value
+        let cancelledCount = await cancellation.value
+        XCTAssertEqual(
+            cancelledCount,
+            0,
+            "A task already owned by unload is drained but is not a new request identity retired by cancel-all."
+        )
         await controller.setCancelAllDrainWaitObserverForTesting(nil)
         let unloaded = await unload.value
         XCTAssertTrue(unloaded)
