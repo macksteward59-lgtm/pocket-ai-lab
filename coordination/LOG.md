@@ -4068,3 +4068,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #197 received a progress comment (ID `6990897404`) recording these exact-head results. No approval/merge.
 - Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 root-pinned component-relative traversal outstanding; issue #202 no accepted containment decision; PR #205 closed unmerged; PR #203 remains separate.
 - No production code, trust/governance authority, or D-04 integration changed in this checkpoint.
+
+## 2026-11-18 — East cancellation request/drain semantics claim
+
+- Claimed `codex/east-cancel-request-drain` as a sequential follow-on to PR #211 exact head `84f16592dfd092793f77773d0854bc2f71780f69` (PR #211 is draft/in-review and remains unmerged).
+- Scope: change the lifecycle kernel's `cancelTask` from immediate lease invalidation to a durable cancellation request; stop new claims and cancel pending steps immediately, but preserve active attempt IDs/owner leases until each active owner reports completion/failure or the lease expires; only then terminalize as cancelled or failed. Add restart, no-new-claim, owner-settlement, unknown-outcome, and event-journal tests; document host drain responsibilities.
+- Explicit boundary: this is not provider cancellation, does not prove a native request stopped, and does not infer settlement from process exit. The host must still invoke the provider's cancellation contract and await drain before releasing model/session resources. Unknown outcomes remain uncertain and terminal.
+- Exclusions: no e3 platform schema/API, provider implementation, APEX authority, Evidence signing, BridgeGate, RLS, attestation, or authorization changes. No production persistence or physical-device claim.
+- This commit records ownership only; no cancellation implementation has been changed.
