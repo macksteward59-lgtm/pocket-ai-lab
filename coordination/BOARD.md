@@ -726,3 +726,13 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - General CI `44385850893` passed on the same SHA. Do not call the complete native workflow successful until macOS XCTest and runner-evidence recording complete.
 - Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 root-pinned component-relative traversal outstanding; issue #202 no accepted containment decision; PR #205 closed unmerged; PR #203 separate with its own exact-head success.
 - No production code, approval, merge, D-04 integration, or authority change in this checkpoint.
+
+
+## 2026-11-18 — PR #197 complete exact-head native CI pass
+
+- PR #197 head `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d` remains open/draft/unmerged. General CI run `44385850893` and native workflow run `44385621155` (run 561) both completed successfully on this exact head.
+- Native workflow passed native app build/XCTest, iOS simulator XCTest, pinned llama.cpp build/link, pinned smoke GGUF verification, macOS XCTest, and runner-evidence recording. iOS Simulator log: 82 tests, 4 skipped, 0 failures; `POCKET_LLAMA_PROBE` reports linked and Metal usable. macOS log: 82 tests, 1 skipped, 0 failures; `POCKET_LLAMA_EVALUATION_SMOKE` and `POCKET_LLAMA_SMOKE` report output, model SHA-256, lease release/unload, and Metal/offload details.
+- Runner evidence identifies the simulator as iPhone Air and explicitly states no physical iPhone was used. Hosted CI is complete; physical-device acceptance and independent review remain separate release gates.
+- PR #197 received a progress comment (ID `6990897404`) recording these exact-head results. No approval/merge.
+- Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 root-pinned component-relative traversal outstanding; issue #202 no accepted containment decision; PR #205 closed unmerged; PR #203 remains separate.
+- No production code, trust/governance authority, or D-04 integration changed in this checkpoint.
