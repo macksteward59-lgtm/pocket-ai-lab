@@ -579,3 +579,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 
 
 - Monitoring update (2026-11-18): PR #203 exact-head workflow #44373747684 has now passed Director bridge manifest validation and native Pocket AI Lab app build; native app XCTest is in progress. Simulator XCTest and later smoke/evidence steps remain pending. PR #204 exact head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49` still has no workflow run or commit status; do not claim validation. Coordination docs refreshed after the poll.
+
+
+## 2026-11-18 — East lifecycle coordinated remediation plan
+
+- Added [EAST-LIFECYCLE-REMEDIATION-PLAN.md](EAST-LIFECYCLE-REMEDIATION-PLAN.md), commit `2fb535472a78415d4809202b9ccd34c44ac478e1`. This is a design/handoff document only, not an approved implementation. It sequences typed definitive-vs-unknown outcomes, durable exact-attempt execution records, schema-v1 migration strategy, host-supervised cancellation/failure drain, settlement-aware recovery, and documented e3 integration.
+- The plan consolidates source-confirmed #187 hazards: explicit fail classification is incorrectly derived from lease-expiry policy; expired leases may requeue without supervisor settlement; one failed step can erase a running sibling; cancellation terminalizes workflow state before external drain. It also records the Postgres store's strict schema-v1 behavior and absence of an upgrade path.
+- PR #203 exact-head workflow #44373747684 has progressed through native app build and is currently executing iOS simulator XCTest. No final result yet. PR #197 exact-head run #44375389228 ended cancelled during native app build; earlier green run is for its prior head only.
+- No application source, database schema, PR state, branch protection, or APEX/Evidence/East authority changed. Hosted simulator checks do not constitute physical iPhone acceptance.
