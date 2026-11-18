@@ -35,7 +35,7 @@ The learning tool is intentionally model-independent: it accepts host adapters a
 - LearningEvidenceReader: returns only approved, provenance-bearing evidence.
 - TrainingApprovalVerifier: validates independent human approval bound to the exact job digest.
 - TrainingSandbox: runs candidate-only adapter training under enforced resource and network isolation.
-- Existing paired evaluation infrastructure: produces baseline/candidate runs on identical versioned cases.
+- CandidateEvaluationRunner: produces baseline/candidate runs on identical versioned cases; the Director command accepts only a candidate ID and benchmark version, not model-supplied scores.
 
 ## Acceptance criteria
 
