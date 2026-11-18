@@ -129,34 +129,36 @@ export class LocalProjectInspector implements ProjectInspector {
       }
       return low;
     };
-    const occurrences: Array<{ startLine: number; endLine: number }> = [];
+    let occurrenceCount = 0;
+    let matchingCount = 0;
+    let selectedMatch: { startLine: number; endLine: number } | undefined;
     let offset = 0;
     while (offset <= content.length - exactQuote.length) {
       const found = content.indexOf(exactQuote, offset);
       if (found < 0) break;
-      occurrences.push({
+      occurrenceCount += 1;
+      const candidate = {
         startLine: lineForOffset(found),
         endLine: lineForOffset(found + exactQuote.length - 1)
-      });
+      };
+      if ((input.startLine === undefined || candidate.startLine === input.startLine) &&
+          (input.endLine === undefined || candidate.endLine === input.endLine)) {
+        matchingCount += 1;
+        if (matchingCount === 1) selectedMatch = candidate;
+      }
       offset = found + 1;
     }
-    if (!occurrences.length) {
+    if (occurrenceCount === 0) {
       return { status: "unverified", path: normalizedPath, occurrenceCount: 0, reason: "quote_not_found" };
     }
-    const matching = occurrences.filter(item =>
-      (input.startLine === undefined || item.startLine === input.startLine) &&
-      (input.endLine === undefined || item.endLine === input.endLine));
-    if (matching.length === 1 && occurrences.length === 1) {
-      return { status: "verified", path: normalizedPath, occurrenceCount: 1, ...matching[0] };
-    }
-    if (matching.length === 1) {
-      return { status: "verified", path: normalizedPath, occurrenceCount: occurrences.length, ...matching[0] };
+    if (matchingCount === 1 && selectedMatch) {
+      return { status: "verified", path: normalizedPath, occurrenceCount, ...selectedMatch };
     }
     return {
-      status: "unverified", path: normalizedPath, occurrenceCount: occurrences.length,
-      reason: matching.length > 1 ? "ambiguous_match" :
-        (occurrences.length > 1 && input.startLine === undefined && input.endLine === undefined
-          ? "ambiguous_match" : "line_range_mismatch")
+      status: "unverified", path: normalizedPath, occurrenceCount,
+      reason: matchingCount > 1 || (matchingCount === 0 && occurrenceCount > 1 &&
+        input.startLine === undefined && input.endLine === undefined)
+        ? "ambiguous_match" : "line_range_mismatch"
     };
   }
 
