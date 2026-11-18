@@ -737,3 +737,14 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - PR #197 received a progress comment (ID `6990897404`) recording these exact-head results. No approval/merge.
 - Other gates unchanged: PR #204 legacy-record migration and East adapter failure tests outstanding; PR #200 root-pinned component-relative traversal outstanding; issue #202 no accepted containment decision; PR #205 closed unmerged; PR #203 remains separate.
 - No production code, trust/governance authority, or D-04 integration changed in this checkpoint.
+
+
+## 2026-11-18 — refreshed East cancellation stack and native review audit
+
+- PR #213 is now refreshed onto PR #211's exact head `8965d1ebef42f19021876a63e44c36c09a42b3f7`. Current PR #213 head: `b3aa9661bf08c8cd99d88125610c62f38bbe6656`; the PR description records 7 commits ahead / 0 behind and five intended files changed.
+- Independently rechecked both exact-head workflow jobs for #213: general CI run `44398491855` completed successfully (syntax, type-check/build, tests); PostgreSQL 16 integration run `44398491896` completed successfully (migration, real worker-ownership fencing, cancellation-drain/event-journal scenario). PR #213 remains draft/unmerged and has no submitted review or inline review thread. Its host/e3 provider-cancellation supervisor and production RLS/deployment gates remain open.
+- PR #211 and #204 still have no independent submitted reviews in the current review listing. #213's successful stack validation does not itself approve or merge the upstream PRs.
+- PR #212 has a deterministic-test-quality blocker: `Task.sleep(50ms)` does not prove `cancelAllGenerations()` reached the await on the captured task. Replace it with an explicit synchronization point before relying on the regression. PR #212 remains draft/unmerged.
+- PR #197's post-merge UUID-casing review note is already covered in the merged source: RuntimeController canonicalizes request UUIDs before registry use, BridgeChallengeStore canonicalizes request/session UUIDs, and `testRequestIdentityReservationCanonicalizesUUIDCase` plus `testChallengeBindingCanonicalizesRequestAndSessionUUIDCase` prove the collision/replay behavior. No duplicate patch is warranted.
+- PR #200 and issue #202 remain blocked: the root/parent-component replacement race is unresolved, and issue #202 has no accepted host-containment/platform decision or independent review response. Keep #198/#200 unmerged; no D-02/D-04 acceptance.
+- No merge, authority change, physical-device acceptance, production e3 cancellation, or production RLS/deployment claim in this checkpoint.
