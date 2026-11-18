@@ -29,7 +29,6 @@ on:
     branches:
       - main
       - ios/private-iphone-test-hybrid
-      - codex/runtime-request-attempt-registry
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
@@ -43,8 +42,9 @@ permissions:
   contents: read
 
 concurrency:
-  # Push and pull_request events for the same PR head share one native build slot.
-  group: ios-llamaengine-${{ github.head_ref || github.ref_name }}
+  # Keep push and pull_request event refs independent; otherwise the paired
+  # events for one PR update can cancel each other's native validation run.
+  group: ios-llamaengine-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
