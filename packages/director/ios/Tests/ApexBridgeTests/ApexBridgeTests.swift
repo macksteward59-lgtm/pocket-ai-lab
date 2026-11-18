@@ -1295,7 +1295,8 @@ final class RuntimeControllerTests: XCTestCase {
     }
 
     func testCancellationRegistryFailsClosedAtCapacity() async throws {
-        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture()
+        let clock = TestClock(Date(timeIntervalSince1970: 5_000))
+        let (controller, _, modelURL, descriptor, expectedHash, _) = try makeFixture(clock: clock)
         defer { try? FileManager.default.removeItem(at: modelURL.deletingLastPathComponent()) }
         let loaded = try await controller.load(
             model: descriptor, expectedFileHash: expectedHash, estimatedMemoryMB: 256
