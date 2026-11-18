@@ -3789,3 +3789,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - The earlier #187/#188 review comments already identify coordinator outcome-classification and expired-lease retry hazards: `uncertainOnExpiredLease` is overloaded for explicit failures, and lease expiry/retry must not imply provider stop or safe redispatch. Preserve typed definitive-failure vs outcome-unknown classification and exact-attempt settlement before retries.
 - Disposition: PR #188's provider/direct-runtime cancellation tests must not be described as end-to-end e3 cancellation, restart-safe cancellation, or production supervisor integration. Next implementation should extend the existing East lifecycle boundary and host-owned supervisor, not add an undocumented argument to the e3 platform schema or infer settlement from process exit. No source changes, merges, or authority changes made.
 - PR #203 exact-head native workflow #44373747684 remains queued at the latest poll; do not reuse #197's earlier green run as #203 validation. PR #200/#198 remain blocked by the independent filesystem-containment decision in issue #202.
+
+
+## 2026-11-18 — Confined workspace reader contract drafted
+
+- Added section 13 to [STRIDE-D02-CAPABILITY-DESIGN.md](STRIDE-D02-CAPABILITY-DESIGN.md), defining a review-only host-owned reader contract and adversarial test matrix. It covers opaque workspace sessions, component-relative directory-handle traversal, bounded immutable snapshots, same-byte hashing/matching, cleanup/cancellation, fail-closed unsupported hosts, Windows reparse points, POSIX symlinks, hard-link policy, and iOS document-provider separation.
+- Repository evidence: Node.js >=22; README mentions Windows/macOS launcher scripts but marks them untested; no production OS support matrix or existing native confined-reader helper was identified. Do not infer native iOS filesystem access from LlamaEngine work.
+- Updated Issue #202 and PR #200 with the draft contract. No native code was added and no platform option was approved.
+- PR #200 remains draft/unmerged at `947c1ac289f70779e336fde6dd9e6c687f191a07`; exact-head CI remains the previously recorded green run #44369945652. Independent review remains absent. PR #198 remains unmerged; D-02 and D-04 remain gated.
