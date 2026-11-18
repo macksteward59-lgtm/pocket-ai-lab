@@ -3873,3 +3873,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Posted a scoped coordination finding on PR #200 (comment ID `6989272622`) stating that this is not independent review or approval and that #200 must remain draft/unmerged for confinement purposes.
 - Added section 13.1.2 to `coordination/STRIDE-D02-CAPABILITY-DESIGN.md` to distinguish the implemented bounded-read properties from the missing root-pinned reader and deterministic parent-swap tests. Commit: `f4895a9b386414526193ec6a1227f715a175c4fc`.
 - No application code or tests changed. No PR merged, D-02 accepted, D-04 enabled, or APEX/East/Evidence/BridgeGate/runtime authority altered.
+
+
+## 2026-11-18 — East lifecycle remediation plan recorded
+
+- Created `coordination/EAST-LIFECYCLE-REMEDIATION-PLAN.md` at commit `2fb535472a78415d4809202b9ccd34c44ac478e1`. Design-only handoff: it explicitly avoids a partial failStep patch and sequences typed failure outcomes, durable exact-attempt execution identity, Postgres schema-v1 migration, supervisor-owned cancellation/failure drain, settlement-aware lease recovery, e3 host integration, and regression acceptance.
+- Source basis: PR #187 current TaskLifecycleCoordinator and PostgresTaskLifecycleStore. Current code confirms failStep uncertainty is coupled to uncertainOnExpiredLease; recoverExpiredLeases can requeue without supervisor settlement; refreshTaskStatus invalidates live sibling attempts; cancelTask clears running attempts before external settlement. Postgres store strictly accepts schema v1 and has no migration path. These findings were already documented in PR #187 conversation; no duplicate comments were posted.
+- Exact-head PR #203 workflow #44373747684 advanced through native app build and is currently running iOS simulator XCTest. PR #197 new-head workflow #44375389228 was cancelled during native app build; prior green result is stale for that head.
+- Updated coordination BOARD in commit `5aa0137c12429a059d5dedfe8c0a8a2953245df8`. No application source/schema changed, no PR merged/closed, and no authority or branch protection changed. Simulator CI is not physical-device acceptance.
