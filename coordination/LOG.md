@@ -3831,3 +3831,10 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Reconfirmed the implementation boundary from live `main`: `apps/web/directorRuntime.ts` still constructs `LocalProjectInspector` from a caller-supplied path/default `process.cwd()` and injects it into `DirectorCapabilities`. There is no opaque registered workspace identity, pinned root session, or native confined reader. Node 22 intelligence CI is Linux-only; Windows/macOS desktop launchers are untested; the Swift/iOS workflow does not validate this Node filesystem boundary.
 - Updated the D-02 row in `coordination/BOARD.md` to record the #201/#200 reconciliation, exact-head CI reference, absent independent review, and still-open parent-race gate. Board update commit: `6f8ca21b3c13ff24bba923f0f75c1826134c3ecb`.
 - Next action remains a reviewed decision by the independent security reviewer and host owner on concurrent workspace mutation, supported desktop OS/version matrix, native-helper acceptability, or enforceable immutable-snapshot guarantees. Until then, do not add a path-based fallback, native code, D-04 reference binding, or merge #198/#200. No APEX/East/Evidence/BridgeGate/runtime authority contract changed.
+
+
+## 2026-11-18 19:20 UTC — Follow-up CI status poll
+
+- Queried workflow jobs directly after the D-02 coordination update. PR #200 exact-head Intelligence run #44369945652 is confirmed completed/success for its recorded head.
+- Separate iOS cancellation work: PR #197's recorded exact-head run #44375389228 is completed/cancelled, not passed; PR #203 run #44373747684 remains in_progress. These runs do not validate or resolve filesystem containment. The earlier PR #195 run #44202379195 is completed/success, but its scope is a dispatcher-drain regression and is not evidence for the current PR #197/#203 heads.
+- No change to the D-02 decision gate; no application code, merge, or authority change.
