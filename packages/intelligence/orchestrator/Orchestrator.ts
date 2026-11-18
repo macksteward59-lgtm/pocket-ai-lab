@@ -163,7 +163,7 @@ export class Orchestrator {
       approvalVerifier: opts.toolApprovalVerifier,
       store: opts.toolArtifactStore
     });
-    this.directorCommands = new DirectorCommandRouter(this.capabilities, this.tooling);
+    this.directorCommands = new DirectorCommandRouter(this.capabilities, this.tooling, this.learning);
     this.security = new SecurityDivision({
       agents: this.agents,
       gate: opts.delegationGate ?? new DelegationGate(),
