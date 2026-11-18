@@ -785,3 +785,12 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 - Independently fetched general CI run `44399801682` jobs: the `intelligence` job completed successfully, including JavaScript syntax, type-check/build, and tests. This verifies the general CI green report for the exact PR head.
 - Native iOS run `44399814043` remains completed with `startup_failure` and zero jobs. No native XCTest ran. The general CI pass does not replace the required native workflow.
 - PR #212 remains open/draft/unmerged; no source changes or merge in this checkpoint.
+
+
+## 2026-11-18 — PR #212 native workflow restarted on exact current head
+
+- PR #212 advanced to `75fd1626ba5535351039113ccb4ed0f1e1f7e0c9` with a CI-only workflow change adding its feature branch to the native workflow's push trigger. The prior source/test commit remains unchanged.
+- Exact-head general CI push run `44400975539` completed successfully.
+- Exact-head native push run `44400975624` is now in progress. Job `135143572583` acquired the macOS Intel runner and completed setup, Xcode detection, build-tool installation, and pinned llama.cpp cache restore; pinned llama.cpp build is the active step.
+- A paired pull_request run `44400986303` is pending. The push run is already executing; neither run is yet a native XCTest pass.
+- PR remains draft/unmerged. Keep native acceptance and independent review gates open.
