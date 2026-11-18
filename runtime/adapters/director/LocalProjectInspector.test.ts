@@ -43,7 +43,7 @@ describe("LocalProjectInspector", () => {
   it("verifies an exact source excerpt and its 1-based line range", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "pocket-reference-"));
     directories.push(root);
-    await writeFile(path.join(root, "README.md"), "# Example\nconst answer = 42;\nexport {}\n");
+    await writeFile(path.join(root, "README.md"), "# Example\r\nconst answer = 42;\r\nexport {}\r\n");
     const inspector = await LocalProjectInspector.open(root);
 
     await expect(inspector.verifySourceReference({
@@ -51,6 +51,9 @@ describe("LocalProjectInspector", () => {
     })).resolves.toEqual({
       status: "verified", path: "README.md", occurrenceCount: 1, startLine: 2, endLine: 2
     });
+    await expect(inspector.verifySourceReference({
+      path: "./README.md", quote: "const answer = 42;", startLine: 2, endLine: 2
+    })).resolves.toMatchObject({ status: "verified", path: "README.md", startLine: 2 });
   });
 
   it("rejects paraphrases and reports duplicate excerpts as ambiguous without a line hint", async () => {
