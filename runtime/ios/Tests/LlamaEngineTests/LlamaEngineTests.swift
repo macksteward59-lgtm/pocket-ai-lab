@@ -105,7 +105,7 @@ final class LlamaEngineTests: XCTestCase {
         }
         guard FileManager.default.isReadableFile(atPath: path) else {
             if SmokePath.required {
-                XCTFail("Smoke GGUF is not readable at \\(path)")
+                XCTFail("Smoke GGUF is not readable at \(path)")
             }
             throw XCTSkip("Smoke GGUF is not readable in this process.")
         }
@@ -138,7 +138,7 @@ final class LlamaEngineTests: XCTestCase {
         } catch LlamaEngineError.cancelled {
             // Expected whether cancellation arrived before or during C decode.
         } catch {
-            XCTFail("Expected native cancellation, received: \\(error)")
+            XCTFail("Expected native cancellation, received: \(error)")
         }
 
         let nextStream = try await engine.generate(
