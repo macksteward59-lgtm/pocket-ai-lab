@@ -14,7 +14,7 @@ This is an autonomy foundation, not a claim that the complete product can yet op
 Task states:
 
 - `ready`: at least one step can be claimed or is waiting for dependencies.
-- `running`: one or more step leases are active. A task with `cancellationRequestedAt` remains running while its active owners drain.
+- `running`: one or more step leases are active. A task with a persisted `task.cancel_requested` event remains running while its active owners drain.
 - `completed`: every step succeeded.
 - `failed`: a step exhausted its retry budget or failed non-retryably, including an uncertain outcome discovered during cancellation drain.
 - `cancelled`: cancellation was requested and every active lease settled without a failed/uncertain outcome.

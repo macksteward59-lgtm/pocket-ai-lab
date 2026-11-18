@@ -102,8 +102,6 @@ export interface TaskRecord {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
-  /** Persisted request time; active owner leases remain live until they settle or expire. */
-  cancellationRequestedAt?: string | null;
   /** Ordered, append-only lifecycle transitions retained in the durable snapshot. */
   events: TaskLifecycleEvent[];
 }
@@ -262,7 +260,7 @@ export class TaskLifecycleCoordinator {
     return this.mutate(async () => {
       this.requireInitialized();
       const task = this.requireTask(taskId);
-      if (isTerminal(task.status) || task.cancellationRequestedAt != null ||
+      if (isTerminal(task.status) || hasCancellationRequest(task) ||
           task.steps.some(step => step.status === "failed")) return null;
       const now = this.now();
       const active = task.steps.filter(step => step.status === "running").length;
@@ -380,7 +378,7 @@ export class TaskLifecycleCoordinator {
         : normalizedError;
       step.currentAttempt = null;
       step.uncertain = outcomeUncertain;
-      const cancellationRequested = updated.cancellationRequestedAt != null;
+      const cancellationRequested = hasCancellationRequest(updated);
       step.status = !cancellationRequested && !outcomeUncertain &&
         input.retryable === true && step.attempts < step.maxAttempts
         ? "pending"
@@ -405,10 +403,9 @@ export class TaskLifecycleCoordinator {
     return this.mutate(async () => {
       this.requireInitialized();
       const task = this.requireTask(taskId);
-      if (isTerminal(task.status) || task.cancellationRequestedAt != null) return cloneTask(task);
+      if (isTerminal(task.status) || hasCancellationRequest(task)) return cloneTask(task);
       const now = this.now();
       const updated = cloneTask(task);
-      updated.cancellationRequestedAt = now.toISOString();
       const hasActiveAttempts = updated.steps.some(step => step.status === "running");
       appendEvent(updated, "task.cancel_requested", now, {
         resultingTaskStatus: hasActiveAttempts ? "running" : "cancelled"
@@ -434,7 +431,7 @@ export class TaskLifecycleCoordinator {
     return this.mutate(async () => {
       this.requireInitialized();
       const task = this.requireTask(input.taskId);
-      if (task.cancellationRequestedAt == null) {
+      if (!hasCancellationRequest(task)) {
         throw new TaskLifecycleError(
           "cancellation_not_requested",
           "A durable task cancellation request is required before settling a step as cancelled"
@@ -480,7 +477,7 @@ export class TaskLifecycleCoordinator {
           const expiredAttempt = step.currentAttempt;
           // A requested cancellation must never turn lease expiry into a retry:
           // the provider may still have completed an external side effect.
-          const outcomeUncertain = updated.cancellationRequestedAt != null ||
+          const outcomeUncertain = hasCancellationRequest(updated) ||
             step.uncertainOnExpiredLease !== false;
           step.lastError = outcomeUncertain
             ? "Execution lease expired before completion; provider outcome is uncertain and requires operator reconciliation"
@@ -623,8 +620,7 @@ function normalizeDefinition(definition: TaskDefinition, now: Date): TaskRecord 
     id: definition.id.trim(), objective: definition.objective.trim(), status: "ready",
     expiryPolicyVersion: CURRENT_EXPIRY_POLICY_VERSION,
     steps, maxConcurrentSteps, leaseMs, metadata: { ...metadata },
-    createdAt: timestamp, updatedAt: timestamp, completedAt: null,
-    cancellationRequestedAt: null, events: []
+    createdAt: timestamp, updatedAt: timestamp, completedAt: null, events: []
   };
 }
 
@@ -643,6 +639,10 @@ function assertAcyclic(steps: readonly TaskStepRecord[]): void {
   for (const step of steps) visit(step.id);
 }
 
+function hasCancellationRequest(task: TaskRecord): boolean {
+  return task.events.some(event => event.type === "task.cancel_requested");
+}
+
 function cancelPendingSteps(task: TaskRecord, now: Date): void {
   for (const step of task.steps) {
     if (step.status !== "pending") continue;
@@ -657,7 +657,7 @@ function cancelPendingSteps(task: TaskRecord, now: Date): void {
 function refreshTaskStatus(task: TaskRecord, now: Date): TaskRecord {
   if (task.status === "cancelled") return task;
   const next = cloneTask(task);
-  if (next.cancellationRequestedAt != null) cancelPendingSteps(next, now);
+  if (hasCancellationRequest(next)) cancelPendingSteps(next, now);
   const hasFailed = next.steps.some(step => step.status === "failed");
   const hasRunning = next.steps.some(step => step.status === "running");
   if (hasFailed) {
@@ -704,8 +704,6 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
       !validTimestamp(task.createdAt) || !validTimestamp(task.updatedAt) ||
       Date.parse(task.updatedAt) < Date.parse(task.createdAt) ||
       (task.completedAt !== null && !validTimestamp(task.completedAt)) ||
-      (task.cancellationRequestedAt !== undefined && task.cancellationRequestedAt !== null &&
-        !validTimestamp(task.cancellationRequestedAt)) ||
       (task.events !== undefined && (!Array.isArray(task.events) || task.events.length > MAX_TASK_LIFECYCLE_EVENTS))) {
     throw new TaskLifecycleError("corrupt_store", "Stored task record is invalid");
   }
@@ -777,13 +775,11 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
     }
   }
 
-  const cancellationRequestedAt = task.cancellationRequestedAt ?? null;
   const cancellationRequestEvents = events.filter(event => event.type === "task.cancel_requested");
-  if ((cancellationRequestedAt === null && cancellationRequestEvents.length > 0) ||
-      (cancellationRequestedAt !== null &&
-        (cancellationRequestEvents.length !== 1 || cancellationRequestEvents[0].occurredAt !== cancellationRequestedAt))) {
-    throw new TaskLifecycleError("corrupt_store", "Stored cancellation intent and event history disagree");
+  if (cancellationRequestEvents.length > 1) {
+    throw new TaskLifecycleError("corrupt_store", "Stored task contains duplicate cancellation requests");
   }
+  const cancellationRequestedAt = cancellationRequestEvents[0]?.occurredAt ?? null;
 
   for (const step of task.steps) {
     if (step.dependsOn.some(id => !ids.has(id))) {
@@ -822,7 +818,6 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
   return cloneTask({
     ...task,
     expiryPolicyVersion: CURRENT_EXPIRY_POLICY_VERSION,
-    cancellationRequestedAt,
     events: [...(task.events ?? [])].map(event => ({ ...event })),
     steps: task.steps.map(step => ({
       ...step,

@@ -41,6 +41,9 @@ async function main() {
   const taskId = "task-" + randomUUID();
   const ownerId = "worker-owner-" + randomUUID();
   const contenderId = "worker-contender-" + randomUUID();
+  const cancellationNamespace = namespace + "-cancel";
+  const cancellationTaskId = "cancel-task-" + randomUUID();
+  const cancellationOwnerId = "cancel-owner-" + randomUUID();
   const owner = new TaskLifecycleCoordinator({
     store: new PostgresTaskLifecycleStore(database, namespace),
     workerId: ownerId
@@ -147,11 +150,103 @@ async function main() {
     assert.equal(finalObserver.getTask(taskId).events[2].resultingStepStatus, "succeeded");
     assert.equal(finalObserver.getTask(taskId).events[3].resultingTaskStatus, "completed");
 
-    console.log("East PostgreSQL worker-ownership and event-journal checks passed");
+    // A second namespace exercises the durable cancellation-request/drain path
+    // against real PostgreSQL rather than the in-memory or fake SQL adapters.
+    const cancellationOwner = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, cancellationNamespace),
+      workerId: cancellationOwnerId
+    });
+    await cancellationOwner.init();
+    await cancellationOwner.createTask({
+      id: cancellationTaskId,
+      objective: "Persist cancellation intent and drain every active owner",
+      leaseMs: 60_000,
+      maxConcurrentSteps: 2,
+      steps: [
+        { id: "first", description: "First active execution" },
+        { id: "second", description: "Second active execution" },
+        { id: "join", description: "Pending dependent execution", dependsOn: ["first", "second"] }
+      ]
+    });
+    const [first, second] = await Promise.all([
+      cancellationOwner.claimNextStep(cancellationTaskId),
+      cancellationOwner.claimNextStep(cancellationTaskId)
+    ]);
+    assert.ok(first);
+    assert.ok(second);
+
+    const requested = await cancellationOwner.cancelTask(cancellationTaskId);
+    assert.equal(requested.status, "running");
+    assert.equal(requested.steps.filter(step => step.status === "running").length, 2);
+    assert.equal(requested.steps.find(step => step.id === "join")?.status, "cancelled");
+    const requestEvent = requested.events.find(event => event.type === "task.cancel_requested");
+    assert.ok(requestEvent);
+
+    const cancellationObserver = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, cancellationNamespace),
+      workerId: "cancel-observer-" + randomUUID()
+    });
+    await cancellationObserver.init();
+    const persistedRequest = cancellationObserver.getTask(cancellationTaskId);
+    assert.equal(persistedRequest.status, "running");
+    assert.equal(
+      persistedRequest.events.find(event => event.type === "task.cancel_requested")?.occurredAt,
+      requestEvent.occurredAt
+    );
+    assert.equal(
+      persistedRequest.steps.find(step => step.id === "first")?.currentAttempt?.ownerId,
+      cancellationOwnerId
+    );
+    assert.equal(await cancellationObserver.claimNextStep(cancellationTaskId), null);
+    await assert.rejects(
+      cancellationObserver.settleCancelledStep({
+        taskId: cancellationTaskId, stepId: first.stepId, attemptId: first.attemptId
+      }),
+      error => error instanceof TaskLifecycleError && error.code === "lease_owner_mismatch"
+    );
+
+    const afterFirstDrain = await cancellationOwner.settleCancelledStep({
+      taskId: cancellationTaskId, stepId: first.stepId, attemptId: first.attemptId
+    });
+    assert.equal(afterFirstDrain.status, "running");
+    await cancellationObserver.reload();
+    assert.equal(
+      cancellationObserver.getTask(cancellationTaskId).steps.find(step => step.id === "second")?.currentAttempt?.id,
+      second.attemptId
+    );
+
+    const afterSecondDrain = await cancellationOwner.settleCancelledStep({
+      taskId: cancellationTaskId, stepId: second.stepId, attemptId: second.attemptId
+    });
+    assert.equal(afterSecondDrain.status, "cancelled");
+    const cancellationFinalObserver = new TaskLifecycleCoordinator({
+      store: new PostgresTaskLifecycleStore(database, cancellationNamespace),
+      workerId: "cancel-final-observer-" + randomUUID()
+    });
+    await cancellationFinalObserver.init();
+    const persistedFinal = cancellationFinalObserver.getTask(cancellationTaskId);
+    assert.equal(persistedFinal.status, "cancelled");
+    assert.equal(persistedFinal.events.filter(event => event.type === "task.cancel_requested").length, 1);
+    assert.equal(persistedFinal.events.filter(event => event.type === "task.cancelled").length, 1);
+    for (const claim of [first, second]) {
+      assert.ok(persistedFinal.events.some(event =>
+        event.type === "step.cancelled" && event.attemptId === claim.attemptId &&
+        event.ownerId === cancellationOwnerId
+      ));
+    }
+    await assert.rejects(
+      cancellationOwner.completeStep({
+        taskId: cancellationTaskId, stepId: first.stepId, attemptId: first.attemptId,
+        result: "stale completion after cancellation settlement"
+      }),
+      error => error instanceof TaskLifecycleError && error.code === "stale_attempt"
+    );
+
+    console.log("East PostgreSQL worker-ownership, cancellation-drain, and event-journal checks passed");
   } finally {
     await pool.query(
-      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = $1",
-      [namespace]
+      "DELETE FROM pocket_task_lifecycle_snapshots WHERE namespace = ANY($1)",
+      [[namespace, cancellationNamespace]]
     );
     await pool.end();
   }

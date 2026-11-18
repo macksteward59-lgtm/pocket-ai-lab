@@ -486,7 +486,7 @@ describe("TaskLifecycleCoordinator", () => {
     const requested = await h.coordinator.cancelTask("task-1");
 
     expect(requested.status).toBe("running");
-    expect(requested.cancellationRequestedAt).toBeTruthy();
+    expect(requested.events.some(event => event.type === "task.cancel_requested")).toBe(true);
     expect(requested.steps[0]).toMatchObject({
       status: "running", currentAttempt: { id: claim!.attemptId, ownerId: "worker-main" }
     });
@@ -520,10 +520,9 @@ describe("TaskLifecycleCoordinator", () => {
     });
     await restarted.init();
     const resumed = restarted.getTask("task-1");
-    expect(resumed).toMatchObject({
-      status: "running",
-      cancellationRequestedAt: requested.cancellationRequestedAt
-    });
+    expect(resumed).toMatchObject({ status: "running" });
+    expect(resumed.events.find(event => event.type === "task.cancel_requested")?.occurredAt)
+      .toBe(requested.events.find(event => event.type === "task.cancel_requested")?.occurredAt);
     expect(resumed.steps.find(step => step.id === "inspect")).toMatchObject({
       status: "running",
       currentAttempt: { id: claim!.attemptId, ownerId: "worker-main" }

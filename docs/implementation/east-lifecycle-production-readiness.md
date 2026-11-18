@@ -39,7 +39,7 @@ This is concurrency fencing, not authentication or authorization. A worker ID is
 
 ## Cancellation and shutdown
 
-The lifecycle coordinator records cancellation as durable intent, not as proof that an external operation stopped. A cancellation request immediately blocks new claims and cancels pending steps, but it preserves every active attempt ID and owner lease. The task remains `running` with `cancellationRequestedAt` until each active owner reports settlement or its lease expires.
+The lifecycle coordinator records cancellation as durable intent, not as proof that an external operation stopped. A cancellation request immediately blocks new claims and cancels pending steps, but it preserves every active attempt ID and owner lease. The task remains `running` while the durable `task.cancel_requested` event is present and active owners have not settled.
 
 A successful owner settlement allows the requested cancellation to become terminal once no active leases remain. A definitive or unknown worker failure leaves the task failed; an expired lease during cancellation is always uncertain and must not be requeued, even if an older step policy opted into expiry retry. Repeated cancellation requests are idempotent.
 
