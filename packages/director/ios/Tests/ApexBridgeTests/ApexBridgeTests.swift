@@ -852,6 +852,100 @@ final class RuntimeControllerTests: XCTestCase {
         XCTAssertTrue(afterDrain.loadedModelIDs.isEmpty)
     }
 
+    func testCancelAllWaitsForGenerationAlreadyDrainingThroughUnload() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 6_100))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let modelURL = directory.appendingPathComponent("model.gguf")
+        try Data("GGUF-concurrent-cancel-all-unload-fixture".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let descriptor = ModelDescriptor(
+            id: "concurrent-cancel-all-unload-model",
+            name: "Concurrent cancel-all unload model",
+            path: modelURL.path,
+            contextLength: 1024
+        )
+        let engine = BlockingDrainLlamaEngine()
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(maxResidentMemoryMB: 4096, maxLoadedModels: 1),
+            availableMemoryMB: { 4096 }
+        )
+        let challengeStore = try BridgeChallengeStore(clock: { clock.now() })
+        let controller = try RuntimeController(
+            runtime: runtime,
+            deviceId: "test-device",
+            runtimeIdentity: "test-runtime",
+            challengeStore: challengeStore,
+            trustedWorkspaceURL: trustedWorkspaceURL,
+            clock: { clock.now() }
+        )
+        let loaded = try await controller.load(
+            model: descriptor,
+            expectedFileHash: Self.sha256(modelURL),
+            estimatedMemoryMB: 256
+        )
+        let sessionID = try XCTUnwrap(loaded.sessionId)
+        _ = try await controller.readiness(sessionId: sessionID)
+
+        let requestId = UUID().uuidString
+        let challenge = try await challengeStore.issue(
+            page: trustedWorkspaceURL,
+            trusted: trustedWorkspaceURL,
+            requestId: requestId,
+            sessionId: sessionID
+        )
+        let generation = Task {
+            try await controller.generate(
+                sessionId: sessionID,
+                prompt: "Hold this generation while unload and cancel-all overlap.",
+                requestId: requestId,
+                conversationRequestId: "concurrent-unload-cancel-all",
+                attemptId: "concurrent-unload-cancel-all-attempt",
+                challengeNonce: challenge,
+                pageURL: trustedWorkspaceURL
+            )
+        }
+        await engine.waitUntilGenerationStarted()
+
+        let unload = Task { await controller.unload(sessionId: sessionID) }
+        await engine.waitUntilDrainStarted()
+
+        let cancellationFinished = CancellationCompletionSignal()
+        let cancellation = Task {
+            _ = await controller.cancelAllGenerations()
+            await cancellationFinished.markFinished()
+        }
+        // Give cancelAllGenerations an opportunity to enter while unload is
+        // suspended in the same native drain. It must await the registered task.
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertFalse(
+            await cancellationFinished.hasFinished(),
+            "cancelAllGenerations must not return while unload still owns an active native drain."
+        )
+
+        let whileDraining = await runtime.snapshot()
+        XCTAssertEqual(whileDraining.activeLeaseCount, 1)
+        XCTAssertEqual(whileDraining.activeUseCount, 1)
+
+        await engine.finishDrain()
+        await cancellation.value
+        let unloaded = await unload.value
+        XCTAssertTrue(unloaded)
+        do {
+            _ = try await generation.value
+            XCTFail("The overlapping unload/cancel-all operation must not return generation output.")
+        } catch {
+            // Cancellation is expected after the native drain gate is released.
+        }
+
+        let afterDrain = await runtime.snapshot()
+        XCTAssertEqual(afterDrain.activeLeaseCount, 0)
+        XCTAssertEqual(afterDrain.activeUseCount, 0)
+        XCTAssertTrue(afterDrain.loadedModelIDs.isEmpty)
+    }
+
     func testUnloadDrainsGenerationSuspendedDuringChallengeConsumptionBeforeReleasingLease() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
