@@ -4163,3 +4163,11 @@ Accessible history this run: current conversation instructions and recent projec
 - Reconciled `agent-coordination` at `088945fbcd30d3d34ab01e9f92ec959a209e6def` and rechecked PR #212 branch `codex/fix-cancelall-unload-drain-20261118` at `75fd1626ba5535351039113ccb4ed0f1e1f7e0c9`. The branch's intervening commit only adds the branch to the iOS workflow's push trigger; exact-head native run `44400986303` is pending.
 - Source review found a separate fan-out ordering gap: `cancelAllGenerations()` awaits `cancelGeneration()` within its loop, while `cancelGeneration()` awaits the native drain. A slow first generation can therefore delay cancellation of other captured requests. Implement the operation in two phases: atomically retire/cancel all eligible exact task handles first, then await every captured task. Do not release any model lease or inference use-pin early.
 - Claimed only `RuntimeController.swift` and `ApexBridgeTests.swift` on the existing PR #212 feature branch. Add deterministic coverage with two concurrent generations and independently held native drain gates. No APEX/Evidence/BridgeGate/attestation/authorization change; no merge or approval.
+
+
+## 2026-11-18 — PR #212 native workflow restarted on exact current head
+
+- Workflow trigger follow-up commit `75fd1626ba5535351039113ccb4ed0f1e1f7e0c9` adds the PR branch to the native workflow's push trigger; no Swift source/test changes in this commit.
+- Exact-head general CI `44400975539` passed.
+- Exact-head native push workflow `44400975624` is in progress on macOS Intel. Job `135143572583` acquired runner and passed setup/Xcode/build-tool/cache-restore steps; pinned llama.cpp build is active. Paired PR event run `44400986303` is pending.
+- No native XCTest result yet; PR #212 remains draft/unmerged.
