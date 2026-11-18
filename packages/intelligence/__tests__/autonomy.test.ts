@@ -475,17 +475,135 @@ describe("TaskLifecycleCoordinator", () => {
       .rejects.toMatchObject({ code: "unknown_task" });
   });
 
-  it("cancels live leases and ignores late worker results", async () => {
+  it("persists cancellation intent and retains a live lease until its owner settles", async () => {
     const h = harness();
     await h.coordinator.init();
     await h.create();
     const claim = await h.coordinator.claimNextStep("task-1");
-    const cancelled = await h.coordinator.cancelTask("task-1");
-    expect(cancelled.status).toBe("cancelled");
-    expect(cancelled.steps[0].currentAttempt).toBeNull();
+    const requested = await h.coordinator.cancelTask("task-1");
+
+    expect(requested.status).toBe("running");
+    expect(requested.cancellationRequestedAt).toBeTruthy();
+    expect(requested.steps[0]).toMatchObject({
+      status: "running", currentAttempt: { id: claim!.attemptId, ownerId: "worker-main" }
+    });
+    expect(requested.steps.find(step => step.id === "implement")?.status).toBe("cancelled");
+    expect(await h.coordinator.claimNextStep("task-1")).toBeNull();
+    expect(requested.events.map(event => event.type)).toContain("task.cancel_requested");
+
+    const repeated = await h.coordinator.cancelTask("task-1");
+    expect(repeated.events).toHaveLength(requested.events.length);
+
+    const settled = await h.coordinator.completeStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
+      result: "Owner confirmed the active attempt settled"
+    });
+    expect(settled.status).toBe("cancelled");
+    expect(settled.steps[0]).toMatchObject({ status: "succeeded", currentAttempt: null });
+    expect(settled.events.map(event => event.type)).toContain("task.cancelled");
     await expect(h.coordinator.completeStep({
-      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "too late"
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "duplicate"
     })).rejects.toMatchObject({ code: "stale_attempt" });
+  });
+
+  it("restores cancellation intent without transferring a live lease to a restarted worker", async () => {
+    const h = harness();
+    await h.coordinator.init();
+    await h.create();
+    const claim = await h.coordinator.claimNextStep("task-1");
+    const requested = await h.coordinator.cancelTask("task-1");
+
+    const restarted = new TaskLifecycleCoordinator({
+      store: h.store, now: h.now, workerId: "worker-after-restart"
+    });
+    await restarted.init();
+    expect(restarted.getTask("task-1")).toMatchObject({
+      status: "running",
+      cancellationRequestedAt: requested.cancellationRequestedAt,
+      steps: [expect.objectContaining({
+        status: "running", currentAttempt: expect.objectContaining({ id: claim!.attemptId, ownerId: "worker-main" })
+      })]
+    });
+    expect(await restarted.claimNextStep("task-1")).toBeNull();
+    await expect(restarted.completeStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "foreign completion"
+    })).rejects.toMatchObject({ code: "lease_owner_mismatch" });
+
+    const settled = await h.coordinator.completeStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
+      result: "Original owner settled after restart"
+    });
+    expect(settled.status).toBe("cancelled");
+  });
+
+  it("never retries an expired lease after cancellation, even with an explicit safe-retry policy", async () => {
+    const h = harness({ leaseMs: 1_000 });
+    await h.coordinator.init();
+    await h.create();
+    await h.coordinator.claimNextStep("task-1");
+    await h.coordinator.cancelTask("task-1");
+    h.advance(1_001);
+
+    expect(await h.coordinator.recoverExpiredLeases("task-1")).toBe(1);
+    const recovered = h.coordinator.getTask("task-1");
+    expect(recovered.status).toBe("failed");
+    expect(recovered.steps[0]).toMatchObject({
+      status: "failed", uncertain: true, currentAttempt: null
+    });
+    expect(recovered.steps[0].lastError).toContain("outcome is uncertain");
+    expect(await h.coordinator.claimNextStep("task-1")).toBeNull();
+  });
+
+  it("does not retry a definitive failure after cancellation has been requested", async () => {
+    const h = harness();
+    await h.coordinator.init();
+    await h.create();
+    const claim = await h.coordinator.claimNextStep("task-1");
+    await h.coordinator.cancelTask("task-1");
+    const failed = await h.coordinator.failStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
+      error: "Provider confirmed failure", outcome: "definitive", retryable: true
+    });
+    expect(failed.status).toBe("failed");
+    expect(failed.steps[0]).toMatchObject({
+      status: "failed", uncertain: false, currentAttempt: null, attempts: 1
+    });
+    expect(await h.coordinator.claimNextStep("task-1")).toBeNull();
+  });
+
+  it("waits for every active sibling lease before terminal cancellation", async () => {
+    const h = harness({ maxConcurrentSteps: 2 });
+    await h.coordinator.init();
+    await h.coordinator.createTask({
+      id: "parallel-cancel", objective: "Drain every active owner before cancellation",
+      maxConcurrentSteps: 2,
+      steps: [
+        { id: "first", description: "First active step" },
+        { id: "second", description: "Second active step" },
+        { id: "join", description: "Pending dependent step", dependsOn: ["first", "second"] }
+      ]
+    });
+    const [first, second] = await Promise.all([
+      h.coordinator.claimNextStep("parallel-cancel"),
+      h.coordinator.claimNextStep("parallel-cancel")
+    ]);
+    const requested = await h.coordinator.cancelTask("parallel-cancel");
+    expect(requested.status).toBe("running");
+    expect(requested.steps.filter(step => step.status === "running")).toHaveLength(2);
+    expect(requested.steps.find(step => step.id === "join")?.status).toBe("cancelled");
+    expect(await h.coordinator.claimNextStep("parallel-cancel")).toBeNull();
+
+    const afterFirst = await h.coordinator.completeStep({
+      taskId: "parallel-cancel", stepId: first!.stepId, attemptId: first!.attemptId, result: "First settled"
+    });
+    expect(afterFirst.status).toBe("running");
+    expect(afterFirst.steps.find(step => step.id === "second")?.currentAttempt?.id).toBe(second!.attemptId);
+
+    const afterSecond = await h.coordinator.completeStep({
+      taskId: "parallel-cancel", stepId: second!.stepId, attemptId: second!.attemptId, result: "Second settled"
+    });
+    expect(afterSecond.status).toBe("cancelled");
+    expect(afterSecond.steps.some(step => step.currentAttempt !== null)).toBe(false);
   });
 
   it("does not publish in-memory state when durable save fails", async () => {
