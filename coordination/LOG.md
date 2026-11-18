@@ -3630,3 +3630,13 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - D-04 remains blocked pending independent D-02 review and acceptance of the source-reference interface/trust boundary.
 
 - Follow-up: marked PR #198 ready for review after CI passed. No reviewers are currently requested and no repository CODEOWNERS file was found in the standard locations checked. PR remains open/unmerged; do not merge until an independent reviewer signs off.
+
+
+## 2026-11-18 — STRIDE-GPT D-07 overlap resolved against merged Director workshop
+
+- Inspected PR #46 metadata, its complete changed-file list, and the merged patches for LocalProjectInspector. PR #46 is merged (merge commit 555750e8ef40b71554d605bc52dc9eb9baa5660f), contrary to the stale board row that still described it as draft/unmerged.
+- Confirmed #46 already provides ToolDirector, a required host-injected ToolSandbox port, fail-closed behavior when the sandbox is absent, quarantine on sandbox exceptions or incomplete/failed tests, digest-bound independent approval for activation/retirement, and metadata-only registration. It also provides bounded, read-only workspace inspection with traversal and symlink escape checks.
+- Decision: do not create a second D-07 sandbox or overlap the merged implementation. D-07 is partially covered, not complete: the production sandbox adapter remains host-injected, and the inspected code does not establish donor-specific VCS-metadata exclusion or regex complexity/deadline safeguards. Track these as acceptance tests for the concrete adapter.
+- PR #198 remains open, ready for review, and unmerged. It has no submitted review or inline review threads. Its two changed files are the existing inspector and its tests. Exact-head CI #3025 passed. No reviewer was invented or assigned; no merge performed.
+- Refreshed the donor register, handoff, and coordination board to correct the PR #46 state and record D-07 partial implementation/remaining gaps. D-04 remains blocked pending independent D-02 review and interface acceptance.
+- No application code, tests, sandbox adapter, APEX/East/Evidence trust contract, or runtime authorization code changed in this coordination update.
