@@ -3628,3 +3628,5 @@ Exact-head iOS workflow #44166303330 is currently in progress on this commit. Th
 - The workflow's npm audit reporting step surfaced a high-severity advisory chain involving `picomatch`, `fdir`, `tinyglobby`, `vite`, and `vitest`. The workflow uses `npm audit --json ... || true`, so the advisory is non-blocking and does not indicate a failure in this PR. Track dependency remediation separately; do not expand D-02's two-file scope.
 - Updated PR #198's validation section and handoff/architecture/board records. PR is now ready for independent review, still open and unmerged. No merge performed.
 - D-04 remains blocked pending independent D-02 review and acceptance of the source-reference interface/trust boundary.
+
+- Follow-up: marked PR #198 ready for review after CI passed. No reviewers are currently requested and no repository CODEOWNERS file was found in the standard locations checked. PR remains open/unmerged; do not merge until an independent reviewer signs off.
