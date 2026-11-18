@@ -22,7 +22,8 @@ export type DirectorCommand =
   | { kind: "retire-tool"; toolId: string; approvalRef: string }
   | { kind: "use-device"; approvalRef: string; action: Parameters<DirectorCapabilities["useDevice"]>[0]["action"] }
   | { kind: "propose-agent-learning"; agentId: string; objective: string; changeKind: LearningChangeKind; evidenceRefs: string[] }
-  | { kind: "train-agent-candidate"; proposalId: string; baselineModelId: string; datasetRef: string; datasetVersion: string; budget: TrainingBudget; hyperparameters: Record<string, string | number | boolean>; approvalRef: string };
+  | { kind: "train-agent-candidate"; proposalId: string; baselineModelId: string; datasetRef: string; datasetVersion: string; budget: TrainingBudget; hyperparameters: Record<string, string | number | boolean>; approvalRef: string }
+  | { kind: "evaluate-agent-candidate"; candidateId: string; benchmarkVersion: string };
 
 export interface DirectorCommandContext {
   taskId: string;
@@ -43,7 +44,8 @@ export interface DirectorCommandProvider {
 export const DIRECTOR_COMMAND_KINDS = [
   "research", "analyze-project", "propose-memory-improvements",
   "apply-memory-improvement", "develop-tool", "activate-tool",
-  "retire-tool", "use-device", "propose-agent-learning", "train-agent-candidate"
+  "retire-tool", "use-device", "propose-agent-learning", "train-agent-candidate",
+  "evaluate-agent-candidate"
 ] as const;
 
 /**
@@ -61,7 +63,8 @@ export const DIRECTOR_COMMAND_FIELDS = {
   "retire-tool": ["kind", "toolId", "approvalRef"],
   "use-device": ["kind", "approvalRef", "action"],
   "propose-agent-learning": ["kind", "agentId", "objective", "changeKind", "evidenceRefs"],
-  "train-agent-candidate": ["kind", "proposalId", "baselineModelId", "datasetRef", "datasetVersion", "budget", "hyperparameters", "approvalRef"]
+  "train-agent-candidate": ["kind", "proposalId", "baselineModelId", "datasetRef", "datasetVersion", "budget", "hyperparameters", "approvalRef"],
+  "evaluate-agent-candidate": ["kind", "candidateId", "benchmarkVersion"]
 } as const satisfies Record<(typeof DIRECTOR_COMMAND_KINDS)[number], readonly string[]>;
 
 export class DirectorCommandRouter {
@@ -126,6 +129,9 @@ export class DirectorCommandRouter {
       case "train-agent-candidate":
         if (!this.learning) throw new Error("Agent learning tool is not configured");
         return this.learning.train({ ...command, taskId: context.taskId });
+      case "evaluate-agent-candidate":
+        if (!this.learning) throw new Error("Agent learning tool is not configured");
+        return this.learning.evaluate(command);
     }
   }
 }
@@ -205,6 +211,10 @@ export function parseDirectorCommand(input: unknown): DirectorCommand {
       }
       requireRecord(input.budget, "budget");
       requireRecord(input.hyperparameters, "hyperparameters");
+      return input as unknown as DirectorCommand;
+    case "evaluate-agent-candidate":
+      requireString(input.candidateId, "candidateId");
+      requireString(input.benchmarkVersion, "benchmarkVersion");
       return input as unknown as DirectorCommand;
     default:
       throw new Error("Unsupported Director command: " + input.kind);
