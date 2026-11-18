@@ -48,7 +48,7 @@ The matching generation fails with cancellation before preparation, challenge co
 
 ### Cancellation after completion
 
-A completed request is not retroactively cancellable. The controller retains a bounded completion marker for up to 30 seconds (maximum 512 entries). A late cancellation returns false while that marker remains. This prevents a completed generation from being reported as cancelled merely because its caller has not yet processed the result.
+A successfully completed generation is not retroactively cancellable. The controller retains a bounded completion marker for up to 30 seconds (maximum 512 entries). A late cancellation returns false while that marker remains. This prevents a completed generation from being reported as cancelled merely because its caller has not yet processed the result. A request that fails during preparation or challenge validation is not marked successfully completed; it may be retried with the same request identity and a newly issued one-use challenge. Once cancellation is explicitly accepted and its task drains, that request identity is retired.
 
 Completion markers are lifecycle bookkeeping only. They are not generation receipts, evidence, authorization, or attestation.
 
