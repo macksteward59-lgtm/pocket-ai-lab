@@ -4050,3 +4050,11 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 
 - Correction to the preceding East migration checkpoint entry: on PR #197 exact-head run `44385621155`, iOS simulator XCTest (step 15) has completed successfully. The only active test stage is XCTest on macOS (step 18); runner evidence (step 19) remains pending. Native workflow is still `in_progress`, not a completed overall pass.
 - PR #211 exact-head general CI `44392126156` completed successfully on `444aed28ff5fc527746f6047051a92e74a03fde2`; syntax, type-check/build, and tests passed. Follow-on remains draft/unmerged.
+
+
+## 2026-11-18 — PR #211 branch refresh and exact-head CI pass
+
+- The follow-on branch advanced after the earlier `444aed28…` checkpoint. Re-fetched PR #211 and reviewed the new commit `84f16592dfd092793f77773d0854bc2f71780f69`; the updated diff separates East adapter failure cases and expiry-policy version tests into focused test files, and updates the PostgreSQL lifecycle fixture.
+- Exact-head general CI [#44392443536](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44392443536) completed successfully on `84f16592dfd092793f77773d0854bc2f71780f69`: syntax, type-check/build, and tests passed. This supersedes the earlier PR #211 head `444aed28…` and its run `44392126156` for current validation.
+- PR #211 remains draft/unmerged and stacked on PR #204 head `6fc21e0cbbfad828853f88fc9a1fa287d4448a49`. A refreshed exact-head update was posted on #211. No integration or authorization approval is implied.
+- PR #197 native workflow `44385621155` remains in progress on `27157aa375a6b2b3f1091a42dfbd9de6e380ba1d`: native app build, app XCTest, iOS simulator XCTest, pinned GGUF download, and smoke-path setup have passed; macOS XCTest is running and runner evidence is pending.
