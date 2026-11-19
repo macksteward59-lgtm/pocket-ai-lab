@@ -59,7 +59,7 @@ export async function serializeGIECodebookArtifact(
   const modelId = assertIdentityString(codebook.modelId, "modelId");
   const revision = assertIdentityString(codebook.modelRevision, "modelRevision");
   const valueCount = codebook.residualStages * codebook.subspaces * tableLength;
-  const byteLength = HEADER_BYTES + modelId.length + revision.length + valueCount * 4;
+  const byteLength = HEADER_BYTES + modelId.byteLength + revision.byteLength + valueCount * 4;
   if (byteLength > MAX_ARTIFACT_BYTES) throw new Error("GCB1 artifact exceeds 25 MiB");
 
   const bytes = new Uint8Array(byteLength);
