@@ -123,6 +123,21 @@ final class NativeLatentChannelTests: XCTestCase {
         } catch NativeLatentChannelError.replayRejected {}
     }
 
+    func testSequenceMustFitSharedJSONSafeIntegerRange() async throws {
+        let (sender, _, _) = makeChannels()
+        do {
+            _ = try await sender.send(
+                output: output([0.1, 0.2]),
+                taskId: "task-1",
+                conversationId: "conversation-1",
+                recipientAgentId: "critic",
+                sequence: UInt64.max,
+                expiresAt: fixedNow.addingTimeInterval(300)
+            )
+            XCTFail("A sequence outside JavaScript's safe integer range must be rejected.")
+        } catch NativeLatentChannelError.invalidSequence {}
+    }
+
     func testAuthorizationDenialPreventsBlobCreation() async throws {
         let now = fixedNow
         let store = InMemoryNativeLatentBlobStore(now: { now })
