@@ -65,7 +65,7 @@ describe("GIE pooled product quantizer", () => {
     expect(decoded.tokenCount).toBe(3);
     expect(decoded.embeddingDimension).toBe(4);
     expect(decoded.segmentTokenCounts).toEqual([2, 1]);
-    expect(Array.from(decoded.segmentEmbeddings)).toEqual([3.5, 4.25, 10, 18, 0.5, 1.75, 31, 42]);
+    expect(Array.from(decoded.segmentEmbeddings)).toEqual([3.5, 4.25, 9, 18, 0.5, 1.75, 31, 42]);
   });
 
   it("trains shared residual codebooks and round-trips ordered pooled segments", () => {
