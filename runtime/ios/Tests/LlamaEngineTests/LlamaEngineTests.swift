@@ -139,6 +139,16 @@ final class LlamaEngineTests: XCTestCase {
         XCTAssertEqual(count, 1)
         XCTAssertFalse(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         XCTAssertNotEqual(text, "[placeholder inference]")
+        let latent = try await engine.generateWithLatent(
+            session: session,
+            request: GenerationRequest(prompt: "The capital of France is", maxTokens: 8, temperature: 0)
+        )
+        XCTAssertEqual(latent.modelId, session.modelId)
+        XCTAssertFalse(latent.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        XCTAssertGreaterThan(latent.embedding.count, 0)
+        XCTAssertEqual(latent.shape, [latent.embedding.count])
+        XCTAssertTrue(latent.embedding.allSatisfy(\.isFinite))
+        print("POCKET_LLAMA_LATENT dimension=\(latent.embedding.count) textChars=\(latent.text.count)")
         print("POCKET_LLAMA_SMOKE chars=\(text.count) metalUsable=\(probe.metalDeviceUsable) offloaded=\(report?.offloadedLayers ?? -1)")
         await engine.unload(sessionId: session.id)
         let gone = RuntimeSession(id: session.id, modelId: session.modelId)
@@ -196,6 +206,66 @@ final class LlamaEngineTests: XCTestCase {
             XCTAssertEqual(result.status, .completed)
             XCTAssertNil(result.errorMessage)
             XCTAssertFalse(result.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            let latent = try await runtime.generateWithLatent(
+                lease: lease,
+                request: GenerationRequest(
+                    prompt: "The capital of France is",
+                    maxTokens: 8,
+                    temperature: 0
+                )
+            )
+            XCTAssertEqual(latent.modelId, model.id)
+            XCTAssertFalse(latent.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertGreaterThan(latent.embedding.count, 0)
+            XCTAssertEqual(latent.shape, [latent.embedding.count])
+            XCTAssertTrue(latent.embedding.allSatisfy(\.isFinite))
+
+            // Exercise the complete native path: llama.cpp final-token embedding
+            // -> same-model int8 codec -> binary blob reference -> digest/replay
+            // checks -> reconstructed vector. Authorization remains injected.
+            let channelNow = Date()
+            let latentStore = InMemoryNativeLatentBlobStore(now: { channelNow })
+            let replayGuard = InMemoryNativeLatentReplayGuard(now: { channelNow })
+            let latentIdentity = NativeLatentModelIdentity(modelId: model.id, modelRevision: digest)
+            let senderChannel = NativeLatentChannel(
+                localAgentId: "researcher",
+                modelIdentity: latentIdentity,
+                blobStore: latentStore,
+                authorization: StaticNativeLatentAuthorization(allowed: true),
+                replayGuard: replayGuard,
+                now: { channelNow }
+            )
+            let recipientChannel = NativeLatentChannel(
+                localAgentId: "critic",
+                modelIdentity: latentIdentity,
+                blobStore: latentStore,
+                authorization: StaticNativeLatentAuthorization(allowed: true),
+                replayGuard: replayGuard,
+                now: { channelNow }
+            )
+            let latentEnvelope = try await senderChannel.send(
+                output: latent,
+                taskId: "native-smoke-task",
+                conversationId: "native-smoke-conversation",
+                recipientAgentId: "critic",
+                sequence: 0,
+                expiresAt: channelNow.addingTimeInterval(300)
+            )
+            let reconstructed = try await recipientChannel.receive(
+                latentEnvelope,
+                expectedTaskId: "native-smoke-task",
+                expectedConversationId: "native-smoke-conversation",
+                expectedSenderAgentId: "researcher"
+            )
+            let latentSquaredError = zip(latent.embedding, reconstructed.embedding).reduce(0.0) { partial, pair in
+                let delta = Double(pair.0 - pair.1)
+                return partial + delta * delta
+            }
+            let latentRMSE = sqrt(latentSquaredError / Double(latent.embedding.count))
+            XCTAssertEqual(reconstructed.embedding.count, latent.embedding.count)
+            XCTAssertLessThan(latentRMSE, 0.1)
+            XCTAssertLessThan(latentEnvelope.payload.byteLength, latent.embedding.count * MemoryLayout<Float>.size)
+            print("POCKET_LLAMA_LATENT_CHANNEL dimension=\\(latent.embedding.count) payloadBytes=\\(latentEnvelope.payload.byteLength) rawFloat32Bytes=\\(latent.embedding.count * MemoryLayout<Float>.size) rmse=\\(latentRMSE)")
             XCTAssertEqual(try Self.sha256(fileAt: modelURL), digest, "The pinned model bytes changed during evaluation.")
 
             let afterGeneration = await runtime.snapshot()
