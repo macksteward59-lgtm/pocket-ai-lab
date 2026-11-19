@@ -74,6 +74,18 @@ describe("latent communication contract", () => {
     })).success).toBe(false);
   });
 
+  it("rejects unsafe sequence numbers and future-dated transfers", () => {
+    expect(LatentTransferEnvelopeSchema.safeParse(transfer({
+      sequence: Number.MAX_SAFE_INTEGER + 1
+    })).success).toBe(false);
+    expect(() => validateLatentTransfer(transfer(), {
+      taskId: "task-1",
+      conversationId: "conversation-1",
+      senderAgentId: "researcher",
+      recipientAgentId: "critic"
+    }, new Date("2026-11-18T11:59:59.999Z"))).toThrow(/future/);
+  });
+
   it("binds transfer identity to the authorized task route and checks expiry", () => {
     const value = transfer();
     expect(validateLatentTransfer(value, {
