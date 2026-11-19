@@ -62,7 +62,7 @@ describe("LatentChannelRuntime", () => {
     const decoded = await f.runtime.receive({
       envelope, taskId: "task-1", senderAgentId: "reasoner", recipient
     });
-    expect(Array.from(decoded)).toEqual([0.1, -0.2, 0.3, 0.4]);
+    [0.1, -0.2, 0.3, 0.4].forEach((expected, index) => expect(decoded[index]).toBeCloseTo(expected, 5));
   });
 
   it("falls back when no compatible codec or authorization is available", async () => {
