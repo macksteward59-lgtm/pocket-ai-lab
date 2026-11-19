@@ -1,0 +1,44 @@
+name: GIE canonical codebook CI
+
+on:
+  pull_request:
+    branches:
+      - codex/neuralese-sequence-codec-poc
+    paths:
+      - "packages/intelligence/**"
+      - "runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/gie-codebook-artifact-ci.yml"
+  push:
+    branches:
+      - codex/gie-canonical-codebook-artifact
+    paths:
+      - "packages/intelligence/**"
+      - "runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/gie-codebook-artifact-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gie-codebook-artifact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build TypeScript
+        run: npm run build
+      - name: Run intelligence engine tests
+        run: npm run test:engine
