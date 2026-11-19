@@ -162,7 +162,10 @@ export class LatentChannelRuntime {
     });
   }
 
-  async receive(envelopeInput: unknown): Promise<{
+  async receive(
+    envelopeInput: unknown,
+    expected: { taskId: string; senderAgentId: string }
+  ): Promise<{
     hiddenState: Float32Array;
     shape: number[];
     transferId: string;
@@ -170,8 +173,8 @@ export class LatentChannelRuntime {
   }> {
     const local = LatentCapabilitySchema.parse(this.options.localCapability);
     const envelope = validateLatentTransfer(envelopeInput, {
-      taskId: (envelopeInput as LatentTransferEnvelope)?.taskId,
-      senderAgentId: (envelopeInput as LatentTransferEnvelope)?.senderAgentId,
+      taskId: expected.taskId,
+      senderAgentId: expected.senderAgentId,
       recipientAgentId: local.agentId
     }, this.options.now?.() ?? new Date());
 
@@ -195,11 +198,6 @@ export class LatentChannelRuntime {
     });
     if (!authorized) throw new Error("Latent receive denied by host authorization policy");
 
-    const replayKey = [envelope.conversationId, envelope.senderAgentId, envelope.sequence].join(":");
-    if (!await this.options.replayGuard.claim(replayKey, envelope.expiresAt)) {
-      throw new Error("Latent transfer replay or duplicate sequence rejected");
-    }
-
     const bytes = await this.options.blobStore.get(envelope.payload.blobRef);
     if (!bytes) throw new Error("Latent binary payload is missing or expired");
     if (bytes.byteLength !== envelope.payload.byteLength) {
@@ -208,6 +206,11 @@ export class LatentChannelRuntime {
     const actualDigest = (await this.options.digest.sha256(bytes)).toLowerCase();
     if (actualDigest !== envelope.payload.sha256.toLowerCase()) {
       throw new Error("Latent binary payload digest mismatch");
+    }
+
+    const replayKey = [envelope.conversationId, envelope.senderAgentId, envelope.sequence].join(":");
+    if (!await this.options.replayGuard.claim(replayKey, envelope.expiresAt)) {
+      throw new Error("Latent transfer replay or duplicate sequence rejected");
     }
 
     const hiddenState = await this.options.codec.decode({
