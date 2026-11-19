@@ -132,6 +132,47 @@ final class NativeLatentChannelTests: XCTestCase {
         } catch NativeLatentChannelError.replayRejected {}
     }
 
+    func testFractionalClockDoesNotSerializeCreationTimeIntoTheFuture() async throws {
+        let fractionalNow = Date(timeIntervalSince1970: 1_800_000_000.0009)
+        let store = InMemoryNativeLatentBlobStore(now: { fractionalNow })
+        let replay = InMemoryNativeLatentReplayGuard(now: { fractionalNow })
+        let sender = NativeLatentChannel(
+            localAgentId: "researcher",
+            modelIdentity: modelIdentity,
+            blobStore: store,
+            authorization: StaticNativeLatentAuthorization(allowed: true),
+            replayGuard: replay,
+            now: { fractionalNow }
+        )
+        let recipient = NativeLatentChannel(
+            localAgentId: "critic",
+            modelIdentity: modelIdentity,
+            blobStore: store,
+            authorization: StaticNativeLatentAuthorization(allowed: true),
+            replayGuard: replay,
+            now: { fractionalNow }
+        )
+        let envelope = try await sender.send(
+            output: output([0.1, 0.2, 0.3]),
+            taskId: "fractional-clock-task",
+            conversationId: "fractional-clock-conversation",
+            recipientAgentId: "critic",
+            sequence: 0,
+            expiresAt: fractionalNow.addingTimeInterval(300)
+        )
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let serializedCreatedAt = try XCTUnwrap(formatter.date(from: envelope.createdAt))
+        XCTAssertLessThanOrEqual(serializedCreatedAt, fractionalNow)
+        let received = try await recipient.receive(
+            envelope,
+            expectedTaskId: "fractional-clock-task",
+            expectedConversationId: "fractional-clock-conversation",
+            expectedSenderAgentId: "researcher"
+        )
+        XCTAssertEqual(received.embedding.count, 3)
+    }
+
     func testSequenceMustFitSharedJSONSafeIntegerRange() async throws {
         let (sender, _, _) = makeChannels()
         do {
