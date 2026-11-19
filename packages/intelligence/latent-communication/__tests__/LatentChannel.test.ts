@@ -37,7 +37,8 @@ function transfer(overrides: Record<string, unknown> = {}) {
       codecVersion: "1",
       encoderModel: sender.model,
       decoderModel: recipient.model,
-      dtype: "int8"
+      dtype: "int8",
+      maxPayloadBytes: 2048
     },
     shape: [16, 32],
     payload: { blobRef: "blob-1", byteLength: 512, sha256: "a".repeat(64) },
