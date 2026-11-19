@@ -263,7 +263,10 @@ export async function runEastTaskWithLifecycle(
         stepId: claim.stepId,
         attemptId: claim.attemptId,
         error: error instanceof Error ? error.message : "East lifecycle step failed",
-        retryable: false
+        retryable: false,
+        // Provider/tool failures may occur after an external side effect. Without
+        // a provider-specific definitive-failure receipt, preserve uncertainty.
+        outcome: "unknown"
       });
       throw error;
     }
