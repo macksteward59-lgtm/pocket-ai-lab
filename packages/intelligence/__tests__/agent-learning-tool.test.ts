@@ -164,7 +164,10 @@ describe("AgentLearningTool", () => {
       taskId: "task-2", agentId: "researcher", objective: "Improve retrieval",
       changeKind: "retrieval", evidenceRefs: ["source"]
     });
-    await expect(withSandbox.train(trainingRequest(nonTraining.proposalId))).rejects.toThrow(/Only adapter-training/);
+    await expect(withSandbox.train({
+      ...trainingRequest(nonTraining.proposalId),
+      taskId: "task-2"
+    })).rejects.toThrow(/Only adapter-training/);
   });
 
   it("requires independent approval bound to the exact training job", async () => {
