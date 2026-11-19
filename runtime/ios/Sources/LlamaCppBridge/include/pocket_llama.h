@@ -119,6 +119,22 @@ int pocket_llama_set_embeddings(
     char * err,
     size_t err_len);
 
+/* Bounded generated-token sequence capture. out_capacity is measured in floats. */
+int pocket_llama_set_sequence_capture(
+    pocket_llama * engine,
+    size_t max_tokens,
+    size_t max_bytes,
+    char * err,
+    size_t err_len);
+int pocket_llama_copy_embedding_sequence(
+    pocket_llama * engine,
+    float * out,
+    size_t out_capacity,
+    size_t * token_count,
+    size_t * embedding_dimension,
+    char * err,
+    size_t err_len);
+
 void pocket_llama_free(pocket_llama * engine);
 
 #ifdef __cplusplus
