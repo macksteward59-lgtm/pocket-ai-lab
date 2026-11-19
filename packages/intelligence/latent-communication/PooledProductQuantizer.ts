@@ -262,8 +262,14 @@ export class PooledProductQuantizer {
       throw new Error("GIE payload does not match the negotiated codebook");
     }
 
+    const decodedElements = segmentCount * dimension;
+    if (!Number.isSafeInteger(decodedElements) || decodedElements > MAX_ELEMENTS) {
+      throw new Error("GIE decoded tensor exceeds the supported element bound");
+    }
     const expectedLength = HEADER_BYTES + segmentCount * 2 + segmentCount * stages * subspaces;
-    if (bytes.byteLength !== expectedLength) throw new Error("GIE payload length is invalid");
+    if (!Number.isSafeInteger(expectedLength) || bytes.byteLength !== expectedLength) {
+      throw new Error("GIE payload length is invalid");
+    }
 
     const segmentTokenCounts: number[] = [];
     let cursor = HEADER_BYTES;
