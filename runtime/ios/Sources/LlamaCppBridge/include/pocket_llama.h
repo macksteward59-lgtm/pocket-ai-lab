@@ -82,6 +82,8 @@ int pocket_llama_inspect_gguf(
     size_t err_len);
 
 void pocket_llama_request_cancel(pocket_llama * engine);
+/* Reset cancellation before scheduling a new generation, never inside generate. */
+void pocket_llama_reset_cancel(pocket_llama * engine);
 
 /* layers and total are -1 when llama.cpp did not log an offload line. */
 void pocket_llama_offload(const pocket_llama * engine, int * requested, int * layers, int * total);
