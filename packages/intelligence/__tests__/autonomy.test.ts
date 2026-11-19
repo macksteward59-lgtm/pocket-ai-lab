@@ -560,14 +560,32 @@ describe("TaskLifecycleCoordinator", () => {
       .rejects.toMatchObject({ code: "unknown_task" });
   });
 
-  it("cancels live leases and ignores late worker results", async () => {
+  it("drains live leases before terminal cancellation and rejects late worker results", async () => {
     const h = harness();
     await h.coordinator.init();
     await h.create();
     const claim = await h.coordinator.claimNextStep("task-1");
-    const cancelled = await h.coordinator.cancelTask("task-1");
+    const requested = await h.coordinator.cancelTask("task-1");
+    expect(requested.status).toBe("running");
+    expect(requested.events.some(event => event.type === "task.cancel_requested")).toBe(true);
+    expect(requested.steps[0]).toMatchObject({
+      status: "running",
+      currentAttempt: { id: claim!.attemptId, ownerId: "worker-main" }
+    });
+    await expect(h.coordinator.completeStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "late completion"
+    })).rejects.toMatchObject({ code: "cancellation_requested" });
+    await expect(h.coordinator.failStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId,
+      error: "late failure", outcome: "definitive"
+    })).rejects.toMatchObject({ code: "cancellation_requested" });
+
+    const cancelled = await h.coordinator.settleCancelledStep({
+      taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId
+    });
     expect(cancelled.status).toBe("cancelled");
     expect(cancelled.steps[0].currentAttempt).toBeNull();
+    expect(cancelled.events.map(event => event.type)).toContain("step.cancelled");
     await expect(h.coordinator.completeStep({
       taskId: "task-1", stepId: claim!.stepId, attemptId: claim!.attemptId, result: "too late"
     })).rejects.toMatchObject({ code: "stale_attempt" });
