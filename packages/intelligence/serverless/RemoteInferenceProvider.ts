@@ -32,7 +32,12 @@ export interface RemoteInferenceOptions {
   fetchImpl?: typeof fetch;
 }
 
-export class RemoteInferenceError extends Error {}
+export class RemoteInferenceError extends Error {
+  constructor(message: string, readonly code?: "cancelled" | "timeout") {
+    super(message);
+    this.name = "RemoteInferenceError";
+  }
+}
 
 export class RemoteInferenceProvider implements InferenceProvider {
   private readonly baseUrl: string;
@@ -53,9 +58,18 @@ export class RemoteInferenceProvider implements InferenceProvider {
     this.fetchImpl = impl;
   }
 
-  async generate(request: InferenceRequest): Promise<InferenceResult> {
+  async generate(request: InferenceRequest, options: { signal?: AbortSignal } = {}): Promise<InferenceResult> {
+    const callerSignal = options.signal;
+    if (callerSignal?.aborted) {
+      throw new RemoteInferenceError("Inference request was cancelled before dispatch", "cancelled");
+    }
+
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const abortFromCaller = () => controller.abort(callerSignal?.reason);
+    callerSignal?.addEventListener("abort", abortFromCaller, { once: true });
+    if (callerSignal?.aborted) abortFromCaller();
+
+    const timer = setTimeout(() => controller.abort(new Error("Inference request timed out")), this.timeoutMs);
     try {
       const response = await this.fetchImpl(this.baseUrl + "/v1/generate", {
         method: "POST",
@@ -75,16 +89,21 @@ export class RemoteInferenceProvider implements InferenceProvider {
       }
       return { payload: data.payload, evidenceRefs: Array.isArray(data.evidenceRefs) ? data.evidenceRefs : undefined };
     } catch (err) {
-      if ((err as Error).name === "AbortError") {
-        throw new RemoteInferenceError(`Inference host did not respond within ${this.timeoutMs}ms`);
+      if (callerSignal?.aborted) {
+        // Aborting this HTTP exchange does not prove that a remote GPU worker
+        // stopped its generation; only the local request/response has settled.
+        throw new RemoteInferenceError("Inference request was cancelled", "cancelled");
+      }
+      if (controller.signal.aborted || (err as Error).name === "AbortError") {
+        throw new RemoteInferenceError(`Inference host did not respond within ${this.timeoutMs}ms`, "timeout");
       }
       if (err instanceof RemoteInferenceError) throw err;
       throw new RemoteInferenceError(`Inference request failed: ${(err as Error).message}`);
     } finally {
       clearTimeout(timer);
+      callerSignal?.removeEventListener("abort", abortFromCaller);
     }
-  }
-}
+  }}
 
 async function safeText(response: Response): Promise<string> {
   try {
