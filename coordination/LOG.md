@@ -4256,3 +4256,8 @@ Accessible history this run: current conversation instructions and recent projec
 - Inspected PR #169's current RuntimeController.swift: the host-owned BridgeChallengeStore is injected and consume() is called against the request/session binding before native inference. This supersedes the earlier PR #164-only observation that the nonce was merely format-checked.
 - Inspected PR #174's current WorkspaceBridgeDispatcher.swift and WorkspaceView.swift: WKScriptMessageHandlerWithReply is installed; origin and main-frame status are derived from WKScriptMessage.frameInfo; the dispatcher issues/invalidates one-use challenges and disconnects/cancels during teardown. The exact-head #169 and #174 iOS/general CI results are recorded on the board.
 - PR #168 remains fail-closed for importModel/loadModel/unloadModel without native approval. No production APEX authorization, signed Evidence, runtime attestation, or physical-device acceptance is inferred from these source/CI results.
+
+## 2026-11-19 — PR #212 native app build passed
+
+- On exact head `00f68a7ccd24f9d3ecae749be6d2b08a7abac2a1`, both native workflows have now passed pinned llama.cpp simulator/macOS build, fail-closed typecheck, generic iOS framework link, simulator boot, Director bridge package-manifest validation, and native Pocket AI Lab app build.
+- PR workflow [#44608716088](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44608716088) is running native app XCTest. Push workflow [#44608707057](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44608707057) is in simulator boot/app XCTest. Neither has a completed XCTest result yet; simulator XCTest, pinned-GGUF smoke, and macOS XCTest remain pending. No physical iPhone test.
