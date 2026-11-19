@@ -98,3 +98,6 @@ export {
   type LatentPayloadReference, type LatentTransferEnvelope,
   type LatentTransferAuthorization, type LatentBlobStore, type LatentCodec
 } from "./latent-communication/LatentChannel";
+
+export { LatentChannelRuntime, InMemoryLatentBlobStore, InMemoryLatentReplayGuard, type LatentDigest, type LatentReplayGuard } from "./latent-communication/LatentChannelRuntime";
+export { AffineInt8LatentCodec } from "./latent-communication/AffineInt8LatentCodec";
