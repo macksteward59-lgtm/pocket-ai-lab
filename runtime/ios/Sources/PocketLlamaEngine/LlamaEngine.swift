@@ -302,7 +302,7 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         throw LlamaEngineError.backendUnavailable("llama.cpp Metal is not linked in this build. No tokens were produced.")
         #else
         try LlamaEngineSupport.validateRequest(request)
-        guard sessions[session.id] != nil else {
+        guard let loaded = sessions[session.id] else {
             throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
         guard generation[session.id] == nil else {
@@ -311,6 +311,7 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         guard let token = UUID(uuidString: request.requestId) else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        loaded.resetCancel()
         generation[session.id] = token
         let slot = TaskSlot()
         let stream = AsyncThrowingStream<Token, Error> { continuation in
@@ -358,6 +359,7 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         guard let token = UUID(uuidString: request.requestId) else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        loaded.resetCancel()
         generation[session.id] = token
         let task = Task.detached {
             try loaded.generateWithLatent(request, modelId: session.modelId)
@@ -405,6 +407,7 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         guard let token = UUID(uuidString: request.requestId) else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        loaded.resetCancel()
         generation[session.id] = token
         let task = Task.detached {
             try loaded.generateWithLatentSequence(
@@ -741,6 +744,10 @@ private final class LoadedSession: @unchecked Sendable {
             throw LlamaEngineError.backendFailed("llama.cpp returned empty text. No token was invented.")
         }
         return text
+    }
+
+    func resetCancel() {
+        pocket_llama_reset_cancel(handle)
     }
 
     func requestCancel() {
