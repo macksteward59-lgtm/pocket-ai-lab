@@ -94,6 +94,27 @@ int pocket_llama_generate(
     if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
     return POCKET_LLAMA_ERR_NOT_LINKED;
 }
+int pocket_llama_copy_last_embedding(
+    pocket_llama * engine,
+    float * out,
+    size_t out_capacity,
+    size_t * out_count,
+    char * err,
+    size_t err_len) {
+    (void) engine;
+    (void) out;
+    (void) out_capacity;
+    if (out_count) *out_count = 0;
+    if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
+    return POCKET_LLAMA_ERR_NOT_LINKED;
+}
+int pocket_llama_set_embeddings(pocket_llama * engine, int enabled, char * err, size_t err_len) {
+    (void) engine;
+    (void) enabled;
+    if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
+    return POCKET_LLAMA_ERR_NOT_LINKED;
+}
+
 void pocket_llama_free(pocket_llama * engine) { (void) engine; }
 
 #else
@@ -105,6 +126,7 @@ struct pocket_llama {
     int32_t requested_gpu_layers;
     int offloaded_layers;
     int offload_total;
+    int capture_embeddings;
     atomic_int cancel;
     pthread_mutex_t mu;
     int mu_ready;
@@ -312,6 +334,10 @@ int pocket_llama_load(
     uint32_t batch = n_ctx < 512 ? (uint32_t) n_ctx : 512;
     ctx_params.n_batch = batch;
     ctx_params.n_ubatch = batch;
+    // Prompt prefill is batched with embeddings disabled. Embedding capture is
+    // enabled only for one-token decode steps, so one output row is sufficient.
+    ctx_params.n_outputs_max = 1;
+    ctx_params.n_outputs_max_per_seq = 1;
     ctx_params.abort_callback = should_abort;
     ctx_params.abort_callback_data = engine;
 
@@ -374,7 +400,7 @@ int pocket_llama_inspect_gguf(
     size_t err_len) {
     if (!out_metadata) return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Metadata output is required.");
     memset(out_metadata, 0, sizeof(*out_metadata));
-    if (!path || path[0] == '\\0') return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "A model path is required.");
+    if (!path || path[0] == '\0') return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "A model path is required.");
 
     struct stat info;
     if (stat(path, &info) != 0 || !S_ISREG(info.st_mode) || info.st_size <= 0) {
@@ -458,7 +484,7 @@ int pocket_llama_inspect_gguf(
 
 cleanup:
     gguf_free(ctx);
-    if (result == POCKET_LLAMA_OK && err && err_len) err[0] = '\\0';
+    if (result == POCKET_LLAMA_OK && err && err_len) err[0] = '\0';
     return result;
 }
 
@@ -551,6 +577,10 @@ int pocket_llama_generate(
 
     pthread_mutex_lock(&engine->mu);
     atomic_store(&engine->cancel, 0);
+    // A batched prompt prefill can contain hundreds of tokens. Capturing every
+    // embedding would exceed the deliberately bounded one-row output buffer.
+    // Capture is enabled only after prefill, for the one-token generation steps.
+    llama_set_embeddings(engine->ctx, false);
 
     const struct llama_vocab * vocab = llama_model_get_vocab(engine->model);
     if (!vocab) {
@@ -597,6 +627,10 @@ int pocket_llama_generate(
             return rc;
         }
         offset += chunk;
+    }
+
+    if (engine->capture_embeddings) {
+        llama_set_embeddings(engine->ctx, true);
     }
 
     struct llama_sampler * sampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
@@ -670,6 +704,62 @@ int pocket_llama_generate(
         out[0] = '\0';
         return fail(err, err_len, POCKET_LLAMA_ERR_EMPTY, "llama.cpp returned empty text. No token was invented.");
     }
+    if (err && err_len) err[0] = '\0';
+    return POCKET_LLAMA_OK;
+}
+
+int pocket_llama_copy_last_embedding(
+    pocket_llama * engine,
+    float * out,
+    size_t out_capacity,
+    size_t * out_count,
+    char * err,
+    size_t err_len) {
+    if (out_count) *out_count = 0;
+    if (!engine || !engine->ctx || !engine->model || !out_count) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "The embedding export arguments were rejected.");
+    }
+
+    pthread_mutex_lock(&engine->mu);
+    const size_t required = (size_t) llama_model_n_embd_out(engine->model);
+    *out_count = required;
+    if (required == 0) {
+        *out_count = 0;
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "The model did not report an output embedding dimension.");
+    }
+    if (!out && out_capacity == 0) {
+        pthread_mutex_unlock(&engine->mu);
+        if (err && err_len) err[0] = '\0';
+        return POCKET_LLAMA_OK;
+    }
+    if (!out || out_capacity < required) {
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_BUFFER, "The embedding output buffer is too small.");
+    }
+
+    float * embedding = llama_get_embeddings_ith(engine->ctx, -1);
+    if (!embedding) {
+        *out_count = 0;
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "llama.cpp did not retain a final-token output embedding.");
+    }
+    memcpy(out, embedding, required * sizeof(float));
+    pthread_mutex_unlock(&engine->mu);
+    if (err && err_len) err[0] = '\0';
+    return POCKET_LLAMA_OK;
+}
+
+int pocket_llama_set_embeddings(pocket_llama * engine, int enabled, char * err, size_t err_len) {
+    if (!engine || !engine->ctx || (enabled != 0 && enabled != 1)) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "The embedding capture toggle was rejected.");
+    }
+    pthread_mutex_lock(&engine->mu);
+    // Defer the llama.cpp toggle until pocket_llama_generate has completed
+    // batched prompt prefill. Enabling it before prefill can request one output
+    // embedding per prompt token while n_outputs_max is intentionally one.
+    engine->capture_embeddings = (enabled == 1);
+    pthread_mutex_unlock(&engine->mu);
     if (err && err_len) err[0] = '\0';
     return POCKET_LLAMA_OK;
 }
