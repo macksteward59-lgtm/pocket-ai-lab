@@ -14,9 +14,8 @@ negotiation.
 
 ## Memory and execution behavior
 
-- The C bridge enables embedding extraction in the llama.cpp context.
-- The bridge reserves one output row because the current decoder marks only
-  the final token of each decode batch for logits output.
+- The C bridge keeps llama.cpp embedding extraction disabled during batched prompt prefill, then enables it only for one-token generated-token decode steps.
+- The bridge reserves one output row; this avoids allocating one embedding row per prompt token and keeps capture bounded to generated tokens.
 - Swift obtains the required output dimension, allocates a bounded buffer,
   copies the embedding while holding the native session lock, and rejects
   missing, empty, oversized, or non-finite vectors.
@@ -38,9 +37,11 @@ are demonstration/test utilities, not production security controls.
 
 ## Validation and limitations
 
-The pinned-GGUF XCTest smoke path now exercises both direct engine export and
-the NativeInferenceRuntime API, checking non-empty text, a non-empty vector,
-shape consistency, and finite values.
+The pinned-GGUF XCTest smoke path exercises both direct engine export and the
+NativeInferenceRuntime API, checking non-empty text, a non-empty vector, shape
+consistency, and finite values. Embedding capture is deliberately disabled for
+prompt prefill and enabled only for single-token decode steps; this is required
+because the llama.cpp context output-row ceiling is one.
 
 ## Native same-model channel proof of concept
 
