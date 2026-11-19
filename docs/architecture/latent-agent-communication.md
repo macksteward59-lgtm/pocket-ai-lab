@@ -2,10 +2,7 @@
 
 ## Status
 
-This is a contract-only prototype. It does not implement hidden-state extraction,
-compression, binary transport, decoding, or a production authorization adapter.
-It must not be described as a working latent communication runtime or as a
-measured efficiency improvement.
+This PR establishes the versioned TypeScript contract and control/data-plane boundary. The executable TypeScript same-model runtime proof of concept is developed downstream in PR #218; native llama.cpp final-token export and the Swift same-model channel are developed in PR #219. Neither downstream prototype is a production authorization or transport adapter, and no end-to-end efficiency claim is made.
 
 ## Architecture boundary
 
@@ -59,3 +56,20 @@ compute, or latency. Benchmark separately:
 
 No performance claim is made by this prototype. Cross-model codecs require
 training/alignment and evaluation on the actual model pair and target device.
+
+
+## Implementation sequencing
+
+- PR #216: protocol contract, capability negotiation, bounded metadata, and
+  explicit host interfaces.
+- PR #218: in-process TypeScript demonstration using an affine int8 codec,
+  binary blob references, digest verification, route checks, and replay guard.
+- PR #219: native llama.cpp final-token output embedding plus a Swift channel
+  using the same v1 envelope field names and same-model codec.
+
+The prototypes are intentionally same-model. Heterogeneous model pairs require
+a trained alignment codec and task-level quality evaluation. The in-memory
+storage/replay adapters and static authorization implementation are test/demo
+only. Production use still requires durable access-controlled storage,
+persistent replay protection, signed or authenticated transfer metadata, and
+an APEX/Director authorization adapter.
