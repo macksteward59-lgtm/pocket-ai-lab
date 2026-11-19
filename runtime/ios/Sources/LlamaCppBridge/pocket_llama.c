@@ -128,103 +128,6 @@ int pocket_llama_copy_embedding_sequence(pocket_llama * engine, float * out, siz
     return POCKET_LLAMA_ERR_NOT_LINKED;
 }
 
-int pocket_llama_set_sequence_capture(
-    pocket_llama * engine,
-    size_t max_tokens,
-    size_t max_bytes,
-    char * err,
-    size_t err_len) {
-    if (!engine || !engine->ctx || !engine->model) {
-        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "A loaded engine is required for sequence capture.");
-    }
-    pthread_mutex_lock(&engine->mu);
-    if (max_tokens == 0 && max_bytes == 0) {
-        engine->sequence_capture_enabled = 0;
-        engine->sequence_token_count = 0;
-        engine->sequence_embedding_dimension = 0;
-        engine->sequence_max_tokens = 0;
-        engine->sequence_max_bytes = 0;
-        free(engine->sequence_embeddings);
-        engine->sequence_embeddings = NULL;
-        pthread_mutex_unlock(&engine->mu);
-        if (err && err_len) err[0] = '\\0';
-        return POCKET_LLAMA_OK;
-    }
-    if (max_tokens == 0 || max_tokens > 256 || max_bytes == 0 || max_bytes > 16U * 1024U * 1024U) {
-        pthread_mutex_unlock(&engine->mu);
-        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Latent sequence bounds are outside the supported limits.");
-    }
-    const size_t dimension = (size_t) llama_model_n_embd_out(engine->model);
-    if (dimension == 0 || dimension > 65536 || max_tokens > SIZE_MAX / dimension ||
-        max_tokens * dimension > SIZE_MAX / sizeof(float)) {
-        pthread_mutex_unlock(&engine->mu);
-        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Latent sequence dimensions overflow the supported allocation range.");
-    }
-    const size_t floats = max_tokens * dimension;
-    const size_t bytes = floats * sizeof(float);
-    if (bytes > max_bytes) {
-        pthread_mutex_unlock(&engine->mu);
-        return fail(err, err_len, POCKET_LLAMA_ERR_BUFFER, "Latent sequence allocation exceeds the negotiated byte ceiling.");
-    }
-    float * buffer = calloc(floats, sizeof(float));
-    if (!buffer) {
-        pthread_mutex_unlock(&engine->mu);
-        return fail(err, err_len, POCKET_LLAMA_ERR_CONTEXT, "Latent sequence buffer allocation failed.");
-    }
-    free(engine->sequence_embeddings);
-    engine->sequence_embeddings = buffer;
-    engine->sequence_max_tokens = max_tokens;
-    engine->sequence_max_bytes = max_bytes;
-    engine->sequence_embedding_dimension = dimension;
-    engine->sequence_token_count = 0;
-    engine->sequence_capture_enabled = 1;
-    engine->capture_embeddings = 1;
-    pthread_mutex_unlock(&engine->mu);
-    if (err && err_len) err[0] = '\\0';
-    return POCKET_LLAMA_OK;
-}
-
-int pocket_llama_copy_embedding_sequence(
-    pocket_llama * engine,
-    float * out,
-    size_t out_capacity,
-    size_t * token_count,
-    size_t * embedding_dimension,
-    char * err,
-    size_t err_len) {
-    if (token_count) *token_count = 0;
-    if (embedding_dimension) *embedding_dimension = 0;
-    if (!engine || !engine->ctx || !token_count || !embedding_dimension) {
-        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Latent sequence output arguments were rejected.");
-    }
-    pthread_mutex_lock(&engine->mu);
-    const size_t count = engine->sequence_token_count;
-    const size_t dimension = engine->sequence_embedding_dimension;
-    if (!engine->sequence_capture_enabled || !engine->sequence_embeddings || count == 0 || dimension == 0 ||
-        count > SIZE_MAX / dimension || count * dimension > SIZE_MAX / sizeof(float)) {
-        pthread_mutex_unlock(&engine->mu);
-        return fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "No complete latent sequence is available.");
-    }
-    const size_t required = count * dimension;
-    *token_count = count;
-    *embedding_dimension = dimension;
-    if (!out && out_capacity == 0) {
-        pthread_mutex_unlock(&engine->mu);
-        if (err && err_len) err[0] = '\\0';
-        return POCKET_LLAMA_OK;
-    }
-    if (!out || out_capacity < required) {
-        *token_count = 0;
-        *embedding_dimension = 0;
-        pthread_mutex_unlock(&engine->mu);
-        return fail(err, err_len, POCKET_LLAMA_ERR_BUFFER, "The latent sequence output buffer is too small.");
-    }
-    memcpy(out, engine->sequence_embeddings, required * sizeof(float));
-    pthread_mutex_unlock(&engine->mu);
-    if (err && err_len) err[0] = '\\0';
-    return POCKET_LLAMA_OK;
-}
-
 void pocket_llama_free(pocket_llama * engine) { (void) engine; }
 
 #else
@@ -896,6 +799,103 @@ int pocket_llama_set_embeddings(pocket_llama * engine, int enabled, char * err, 
     // batched prompt prefill. Enabling it before prefill can request one output
     // embedding per prompt token while n_outputs_max is intentionally one.
     engine->capture_embeddings = (enabled == 1);
+    pthread_mutex_unlock(&engine->mu);
+    if (err && err_len) err[0] = '\0';
+    return POCKET_LLAMA_OK;
+}
+
+int pocket_llama_set_sequence_capture(
+    pocket_llama * engine,
+    size_t max_tokens,
+    size_t max_bytes,
+    char * err,
+    size_t err_len) {
+    if (!engine || !engine->ctx || !engine->model) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "A loaded engine is required for sequence capture.");
+    }
+    pthread_mutex_lock(&engine->mu);
+    if (max_tokens == 0 && max_bytes == 0) {
+        engine->sequence_capture_enabled = 0;
+        engine->sequence_token_count = 0;
+        engine->sequence_embedding_dimension = 0;
+        engine->sequence_max_tokens = 0;
+        engine->sequence_max_bytes = 0;
+        free(engine->sequence_embeddings);
+        engine->sequence_embeddings = NULL;
+        pthread_mutex_unlock(&engine->mu);
+        if (err && err_len) err[0] = '\0';
+        return POCKET_LLAMA_OK;
+    }
+    if (max_tokens == 0 || max_tokens > 256 || max_bytes == 0 || max_bytes > 16U * 1024U * 1024U) {
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Latent sequence bounds are outside the supported limits.");
+    }
+    const size_t dimension = (size_t) llama_model_n_embd_out(engine->model);
+    if (dimension == 0 || dimension > 65536 || max_tokens > SIZE_MAX / dimension ||
+        max_tokens * dimension > SIZE_MAX / sizeof(float)) {
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Latent sequence dimensions overflow the supported allocation range.");
+    }
+    const size_t floats = max_tokens * dimension;
+    const size_t bytes = floats * sizeof(float);
+    if (bytes > max_bytes) {
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_BUFFER, "Latent sequence allocation exceeds the negotiated byte ceiling.");
+    }
+    float * buffer = calloc(floats, sizeof(float));
+    if (!buffer) {
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_CONTEXT, "Latent sequence buffer allocation failed.");
+    }
+    free(engine->sequence_embeddings);
+    engine->sequence_embeddings = buffer;
+    engine->sequence_max_tokens = max_tokens;
+    engine->sequence_max_bytes = max_bytes;
+    engine->sequence_embedding_dimension = dimension;
+    engine->sequence_token_count = 0;
+    engine->sequence_capture_enabled = 1;
+    engine->capture_embeddings = 1;
+    pthread_mutex_unlock(&engine->mu);
+    if (err && err_len) err[0] = '\0';
+    return POCKET_LLAMA_OK;
+}
+
+int pocket_llama_copy_embedding_sequence(
+    pocket_llama * engine,
+    float * out,
+    size_t out_capacity,
+    size_t * token_count,
+    size_t * embedding_dimension,
+    char * err,
+    size_t err_len) {
+    if (token_count) *token_count = 0;
+    if (embedding_dimension) *embedding_dimension = 0;
+    if (!engine || !engine->ctx || !token_count || !embedding_dimension) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Latent sequence output arguments were rejected.");
+    }
+    pthread_mutex_lock(&engine->mu);
+    const size_t count = engine->sequence_token_count;
+    const size_t dimension = engine->sequence_embedding_dimension;
+    if (!engine->sequence_capture_enabled || !engine->sequence_embeddings || count == 0 || dimension == 0 ||
+        count > SIZE_MAX / dimension || count * dimension > SIZE_MAX / sizeof(float)) {
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "No complete latent sequence is available.");
+    }
+    const size_t required = count * dimension;
+    *token_count = count;
+    *embedding_dimension = dimension;
+    if (!out && out_capacity == 0) {
+        pthread_mutex_unlock(&engine->mu);
+        if (err && err_len) err[0] = '\0';
+        return POCKET_LLAMA_OK;
+    }
+    if (!out || out_capacity < required) {
+        *token_count = 0;
+        *embedding_dimension = 0;
+        pthread_mutex_unlock(&engine->mu);
+        return fail(err, err_len, POCKET_LLAMA_ERR_BUFFER, "The latent sequence output buffer is too small.");
+    }
+    memcpy(out, engine->sequence_embeddings, required * sizeof(float));
     pthread_mutex_unlock(&engine->mu);
     if (err && err_len) err[0] = '\0';
     return POCKET_LLAMA_OK;
