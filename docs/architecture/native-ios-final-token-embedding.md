@@ -45,10 +45,12 @@ shape consistency, and finite values.
 ## Native same-model channel proof of concept
 
 `NativeLatentChannel.swift` now connects the final-token embedding to a native
-same-model affine int8 codec and out-of-band blob reference. It uses CryptoKit
-SHA-256, checks task/conversation/sender/recipient/model-revision binding,
-expiry, payload size, digest, and replay sequence before returning a decoded
-vector. The Codable envelope contains metadata and a blob reference, not the
+same-model affine int8 codec and out-of-band blob reference. Its Codable
+`LatentTransferEnvelope` v1, codec selection, payload reference, field names,
+model identities, and ISO-8601 timestamps mirror the TypeScript contract. It
+uses CryptoKit SHA-256, checks task/conversation/sender/recipient/model-revision
+binding, expiry, payload size, digest, and replay sequence before returning a
+decoded vector. The envelope contains metadata and a blob reference, not the
 embedding bytes.
 
 The native XCTest suite covers quantization error, payload size, model identity,
