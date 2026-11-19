@@ -113,7 +113,7 @@ describe("GIE pooled product quantizer", () => {
     for (let i = 0; i < segmentCount; i += 1) {
       view.setUint16(50 + i * 2, 1, true);
     }
-    expect(() => oversizedCodebook.decode(payload, identity)).toThrow(/allocation bound/);
+    expect(() => oversizedCodebook.decode(payload, identity)).toThrow(/element bound/);
   });
 
   it("rejects non-finite activations and incompatible training dimensions", () => {
