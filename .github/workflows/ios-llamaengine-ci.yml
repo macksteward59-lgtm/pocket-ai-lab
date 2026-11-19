@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/latent-channel-runtime-poc
+      - codex/ios-final-embedding-export
     paths:
       - "runtime/ios/**"
       - "ios/**"
@@ -15,6 +16,7 @@ on:
     branches:
       - main
       - ios/private-iphone-test-hybrid
+      - codex/ios-bounded-latent-sequence-capture
     paths:
       - "runtime/ios/**"
       - "ios/**"

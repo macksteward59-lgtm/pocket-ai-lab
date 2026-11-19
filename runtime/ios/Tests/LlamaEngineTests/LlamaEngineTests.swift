@@ -220,6 +220,34 @@ final class LlamaEngineTests: XCTestCase {
             XCTAssertEqual(latent.shape, [latent.embedding.count])
             XCTAssertTrue(latent.embedding.allSatisfy(\.isFinite))
 
+            let latentSequence = try await runtime.generateWithLatentSequence(
+                lease: lease,
+                request: GenerationRequest(
+                    prompt: "The capital of France is",
+                    maxTokens: 8,
+                    temperature: 0
+                ),
+                maxLatentTokens: 8,
+                maxLatentBytes: 16 * 1024 * 1024
+            )
+            XCTAssertEqual(latentSequence.modelId, model.id)
+            XCTAssertFalse(latentSequence.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertGreaterThanOrEqual(latentSequence.tokenCount, 2)
+            XCTAssertLessThanOrEqual(latentSequence.tokenCount, 8)
+            XCTAssertEqual(latentSequence.text, latent.text, "Greedy text generation must be identical for the same prompt and model.")
+            XCTAssertEqual(latentSequence.embeddingDimension, latent.embedding.count)
+            let sequenceFinalEmbedding = Array(latentSequence.embeddings.suffix(latentSequence.embeddingDimension))
+            XCTAssertEqual(sequenceFinalEmbedding.count, latent.embedding.count)
+            for (sequenceValue, finalValue) in zip(sequenceFinalEmbedding, latent.embedding) {
+                XCTAssertEqual(sequenceValue, finalValue, accuracy: 1e-4,
+                               "The final sequence row must match the standalone final-token embedding.")
+            }
+            XCTAssertGreaterThan(latentSequence.embeddingDimension, 0)
+            XCTAssertEqual(latentSequence.shape, [latentSequence.tokenCount, latentSequence.embeddingDimension])
+            XCTAssertEqual(latentSequence.embeddings.count, latentSequence.tokenCount * latentSequence.embeddingDimension)
+            XCTAssertTrue(latentSequence.embeddings.allSatisfy(\.isFinite))
+            print("POCKET_LLAMA_LATENT_SEQUENCE tokens=\(latentSequence.tokenCount) dimension=\(latentSequence.embeddingDimension) bytes=\(latentSequence.embeddings.count * MemoryLayout<Float>.size)")
+
             // Exercise the complete native path: llama.cpp final-token embedding
             // -> same-model int8 codec -> binary blob reference -> digest/replay
             // checks -> reconstructed vector. Authorization remains injected.
