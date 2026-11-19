@@ -151,11 +151,12 @@ export class PooledProductQuantizer {
 
   encode(input: LatentSequence, identity: { modelId: string; modelRevision: string }): EncodedLatentSequence {
     this.assertIdentity(identity);
-    const pooled = poolSequence(input, this.codebook.maxTokensPerSegment);
     const { embeddingDimension: dimension, subspaces, codebookSize, residualStages } = this.codebook;
     if (input.embeddingDimension !== dimension) {
       throw new Error("Latent sequence embedding dimension does not match the codebook");
     }
+    // Reject incompatible inputs before validating or allocating pooled sequence buffers.
+    const pooled = poolSequence(input, this.codebook.maxTokensPerSegment);
     const segmentCount = pooled.vectors.length;
     if (segmentCount > MAX_SEGMENTS) throw new Error("Sequence has too many pooled segments");
 
@@ -315,9 +316,14 @@ export function chooseRateDistortionCandidate(
   candidates: readonly EncodedLatentSequence[],
   limits: { maxSequenceRmse: number; maxPayloadBytes: number }
 ): EncodedLatentSequence | null {
+  if (!Number.isFinite(limits.maxSequenceRmse) || limits.maxSequenceRmse < 0 ||
+      !Number.isSafeInteger(limits.maxPayloadBytes) || limits.maxPayloadBytes < 0) {
+    throw new Error("Rate-distortion limits must be finite, non-negative, and safely bounded");
+  }
   return candidates
     .filter(candidate =>
       Number.isFinite(candidate.sequenceRmse) &&
+      candidate.sequenceRmse >= 0 &&
       candidate.sequenceRmse <= limits.maxSequenceRmse &&
       candidate.bytes.byteLength <= limits.maxPayloadBytes
     )
