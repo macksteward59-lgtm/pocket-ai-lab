@@ -4,7 +4,7 @@ import {
   LatentTransferEnvelopeSchema,
   negotiateLatentCodec,
   validateLatentTransfer
-} from "../LatentChannel";
+} from "../latent-communication/LatentChannel";
 
 const sender = {
   protocolVersion: 1 as const,
