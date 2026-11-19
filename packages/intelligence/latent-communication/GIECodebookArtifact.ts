@@ -90,7 +90,8 @@ export async function serializeGIECodebookArtifact(
     }
   }
 
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  const digestInput = bytes.slice().buffer as ArrayBuffer;
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", digestInput);
   const sha256 = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
   return { bytes, sha256 };
 }
