@@ -159,6 +159,28 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         try await runtime.unload(modelId: lease.model.id)
     }
 
+    func testLatentSequenceRejectsGenerationBeyondNegotiatedBoundBeforeInference() async throws {
+        let engine = ControlledRuntimeTestEngine()
+        let runtime = try makeRuntime(engine: engine)
+        let lease = try await runtime.acquire(model: model("latent-sequence-bound"), estimatedMemoryMB: 128)
+        do {
+            _ = try await runtime.generateWithLatentSequence(
+                lease: lease,
+                request: GenerationRequest(prompt: "bounded", maxTokens: 9, temperature: 0),
+                maxLatentTokens: 8,
+                maxLatentBytes: 1_024
+            )
+            XCTFail("A request larger than its negotiated latent row bound must be rejected")
+        } catch NativeInferenceRuntimeError.invalidOutputLimit {
+        }
+        let active = await engine.activeRequestIDs()
+        XCTAssertTrue(active.isEmpty, "Rejected latent sequence bounds must fail before inference starts")
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        _ = await runtime.release(lease)
+        try await runtime.unload(modelId: lease.model.id)
+    }
+
     func testReleasedLeaseCannotStartGeneration() async throws {
         let engine = ControlledRuntimeTestEngine()
         let runtime = try makeRuntime(engine: engine)
