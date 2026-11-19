@@ -407,9 +407,15 @@ public actor NativeLatentChannel {
     }
 
     private func iso8601(_ date: Date) -> String {
+        // ISO8601DateFormatter serializes fractional seconds at millisecond
+        // precision. Round down before formatting so parsing createdAt can
+        // never move it a fraction of a millisecond into the future relative
+        // to the injected clock used by send()/receive().
+        let milliseconds = floor(date.timeIntervalSince1970 * 1_000) / 1_000
+        let canonicalDate = Date(timeIntervalSince1970: milliseconds)
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.string(from: date)
+        return formatter.string(from: canonicalDate)
     }
 
     private func parseISO8601(_ value: String) -> Date? {
