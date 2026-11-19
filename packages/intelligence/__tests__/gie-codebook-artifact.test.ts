@@ -70,4 +70,33 @@ describe("GCB1 canonical codebook artifact", () => {
       { modelId: "other-model", modelRevision: fixture.modelRevision }
     )).rejects.toThrow("model identity");
   });
+
+  it("rejects unsupported versions and reserved flags after digest verification", async () => {
+    const encoded = await serializeGIECodebookArtifact(fixtureCodebook());
+    for (const [offset, value] of [[4, 2], [5, 1], [13, 1]] as const) {
+      const changed = encoded.bytes.slice();
+      changed[offset] = value;
+      const digest = await globalThis.crypto.subtle.digest("SHA-256", changed.slice().buffer as ArrayBuffer);
+      const expected = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+      await expect(loadGIECodebookArtifact(changed, expected, { modelId: fixture.modelId, modelRevision: fixture.modelRevision })).rejects.toThrow("version or flags");
+    }
+  });
+
+  it("rejects malformed UTF-8, noncanonical negative zero, and non-finite Float32 values", async () => {
+    const encoded = await serializeGIECodebookArtifact(fixtureCodebook());
+    const stringsEnd = 20 + new TextEncoder().encode(fixture.modelId).byteLength + new TextEncoder().encode(fixture.modelRevision).byteLength;
+    const mutations = [
+      { offset: 20, value: 0xff },
+      { offset: stringsEnd, value: 0x00, tail: [0x00, 0x00, 0x80] },
+      { offset: stringsEnd, value: 0x00, tail: [0x00, 0xc0, 0x7f] }
+    ];
+    for (const mutation of mutations) {
+      const changed = encoded.bytes.slice();
+      changed[mutation.offset] = mutation.value;
+      if (mutation.tail) changed.set(mutation.tail, mutation.offset + 1);
+      const digest = await globalThis.crypto.subtle.digest("SHA-256", changed.slice().buffer as ArrayBuffer);
+      const expected = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+      await expect(loadGIECodebookArtifact(changed, expected, { modelId: fixture.modelId, modelRevision: fixture.modelRevision })).rejects.toThrow();
+    }
+  });
 });
