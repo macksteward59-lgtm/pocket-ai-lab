@@ -20,16 +20,18 @@ The current `InMemoryTaskLifecycleStore` is for tests and ephemeral execution on
 
 - Recover only expired leases. Never steal a live lease.
 - Scope recovery to the selected task when resuming one East task; global startup recovery is a separate host operation.
-- Preserve the original attempt identifier and failure reason in the audit trail.
+- Preserve the original attempt identifier, worker owner, outcome classification, and failure reason in the append-only event journal.
+- Expired leases default to uncertain and failed. Automatic retry is allowed only when a step explicitly opts into `uncertainOnExpiredLease: false` and the host has established that replay is safe.
 - Inference-bearing steps remain single-attempt unless the provider exposes a durable idempotency key and a verifiable result-retrieval contract.
 - If a provider may have completed but the result was not durably committed, mark the step uncertain and require reconciliation. Do not blindly generate again.
+- `failStep()` must classify the result as `definitive` or `unknown`; unknown outcomes never enter automatic retry.
 - Persist bounded deliberation output before advancing to the evidence-gate step. Treat it as untrusted proposal text.
 - A completed lifecycle must be returned idempotently without re-running assignment, inference, deliberation, or evidence submission.
 - A failed or cancelled lifecycle is terminal until an explicit, separately audited operator action creates a new attempt/workflow.
 
 ## Cancellation and shutdown
 
-Production cancellation must flow from the task coordinator through East, the inference provider, and the concrete runtime request. Cancellation is not complete merely because the lifecycle record says `cancelled`.
+Production cancellation is a durable request-and-drain protocol. `cancelTask()` records `task.cancel_requested`, stops new claims, cancels pending steps, and preserves active owner leases. Normal completion/failure is rejected while cancellation is pending. Each owner must cancel and drain its provider request, then call `settleCancelledStep()` using the exact task, step, and attempt. The task becomes terminally cancelled only after all active owners settle. Cancellation is not complete merely because the lifecycle record contains a cancellation request.
 
 Before releasing a model lease or allowing a replacement generation, the host must await the provider's cancellation/drain contract. A timeout should leave the resource marked busy or quarantined; it must not free a lease while native work may still use the session.
 
@@ -52,11 +54,11 @@ On process shutdown, stop new claims, persist cancellation intent, allow bounded
 - Crash injection before and after every persistence boundary preserves the documented state machine.
 - A provider success followed by a persistence failure enters an uncertain state without duplicate inference.
 - Expired lease recovery is scoped and bounded; live leases remain owned.
-- Cancellation waits for native generation drain before lease release.
+- Cancellation waits for native generation drain before lease release; foreign workers cannot settle another worker's attempt.
 - Schema migration, corruption, disk-full, permission, and key-unavailable cases fail closed.
 - Audit events are durable and redact sensitive payloads.
 - Physical-device tests cover memory pressure, thermal pressure, process termination, and restart.
 
 ## Current status
 
-The coordinator and East adapter provide an injectable store boundary, bounded leases, task-scoped expiry recovery, and idempotent completed-step resumption. The repository's current in-memory store does not satisfy the production requirements above. Active provider cancellation propagation and a production transactional store remain open work.
+The coordinator and East adapter provide an injectable store boundary, bounded owner-fenced leases, task-scoped expiry recovery, an append-only lifecycle event journal, uncertain-outcome handling, and cancellation request/drain state. The repository's current in-memory store does not satisfy the production requirements above. A production transactional store, real East/InferenceProvider cancellation propagation, and a production APEX authorization adapter remain open work.
