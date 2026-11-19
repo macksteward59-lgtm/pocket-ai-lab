@@ -113,11 +113,11 @@ export class PooledProductQuantizer {
       for (let subspace = 0; subspace < options.subspaces; subspace += 1) {
         const offset = subspace * subspaceDimension;
         const samples = residuals.map(vector => vector.slice(offset, offset + subspaceDimension));
-        stageCodebooks.push(trainKMeans(
+        stageCodebooks.push(canonicalFloat32Table(trainKMeans(
           samples,
           options.codebookSize,
           options.iterations ?? 20
-        ));
+        )));
       }
       stages.push(stageCodebooks);
 
@@ -533,4 +533,16 @@ function hexToBytes(hex: string): Uint8Array {
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+
+/** Round each trained centroid to the wire format before training residual stages. */
+function canonicalFloat32Table(table: Float64Array): Float64Array {
+  const canonical = new Float64Array(table.length);
+  for (let index = 0; index < table.length; index += 1) {
+    const rounded = Math.fround(table[index]);
+    if (!Number.isFinite(rounded)) throw new Error("Codebook centroid is not finite Float32");
+    canonical[index] = Object.is(rounded, -0) ? 0 : rounded;
+  }
+  return canonical;
 }
