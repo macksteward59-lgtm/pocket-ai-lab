@@ -88,3 +88,13 @@ export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFl
 
 export { AuthorizationRelationshipModel, checkAuthorizationRelationships } from "./research-science";
 export type { PermissionEffect, OwnershipRequirement, AuthorizationInvariantKind, RolePermissionGrant, ResourceOwnershipRule, AuthorizationRouteBinding, AuthorizationInvariant, AuthorizationRelationshipModelInput, AuthorizationCounterexample, AuthorizationRelationshipCheck } from "./research-science";
+
+export {
+  LATENT_CHANNEL_PROTOCOL_VERSION, MAX_LATENT_PAYLOAD_BYTES, MAX_LATENT_RANK, MAX_LATENT_ELEMENTS,
+  LatentDTypeSchema, LatentCapabilitySchema, LatentCodecSelectionSchema,
+  LatentPayloadReferenceSchema, LatentTransferEnvelopeSchema,
+  negotiateLatentCodec, validateLatentTransfer,
+  type LatentDType, type LatentCapability, type LatentCodecSelection,
+  type LatentPayloadReference, type LatentTransferEnvelope,
+  type LatentTransferAuthorization, type LatentBlobStore, type LatentCodec
+} from "./latent-communication/LatentChannel";
