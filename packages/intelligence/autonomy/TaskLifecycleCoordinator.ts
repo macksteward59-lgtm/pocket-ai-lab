@@ -330,6 +330,9 @@ export class TaskLifecycleCoordinator {
       const now = this.now();
       const updated = cloneTask(task);
       const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
+      if (hasCancellationRequest(updated)) {
+        throw new TaskLifecycleError("cancellation_requested", "A cancelled task attempt must settle through settleCancelledStep after the host drains the provider");
+      }
       if (typeof input.result !== "string" || !input.result.trim() || input.result.length > 16_000) {
         throw new TaskLifecycleError("invalid_result", "A non-empty step result up to 16000 characters is required");
       }
@@ -366,6 +369,9 @@ export class TaskLifecycleCoordinator {
       const now = this.now();
       const updated = cloneTask(task);
       const step = this.requireActiveAttempt(updated, input.stepId, input.attemptId, now);
+      if (hasCancellationRequest(updated)) {
+        throw new TaskLifecycleError("cancellation_requested", "A cancelled task attempt must settle through settleCancelledStep after the host drains the provider");
+      }
       if (typeof input.error !== "string" || !input.error.trim() ||
           (input.retryable !== undefined && typeof input.retryable !== "boolean") ||
           (input.outcome !== "definitive" && input.outcome !== "unknown")) {
