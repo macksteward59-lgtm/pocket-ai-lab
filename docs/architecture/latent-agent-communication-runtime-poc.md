@@ -20,8 +20,9 @@ back to text until a trained alignment codec is implemented and evaluated.
    codec, and byte count.
 4. Binary bytes are stored outside MessageBus. Only a bounded envelope and blob
    reference are returned to the control plane.
-5. Recipient validates task/route/expiry, rechecks host authorization, claims a
-   replay key, retrieves the blob, verifies length and SHA-256, and only then
+5. Recipient validates task/conversation/route/expiry, rechecks host authorization,
+   claims a replay key scoped to task, conversation, sender, recipient, and sequence,
+   retrieves the blob, verifies length and SHA-256, and only then
    invokes the decoder.
 6. Decoded vector length and finite numeric values are checked before return.
 
@@ -48,4 +49,7 @@ compute. Those require runtime-level measurements on actual iOS model pairs.
 - Benchmarks comparing task success, semantic distortion, transfer bytes,
   encode/decode latency, peak memory, compute, and actual KV-cache behavior.
 
-The in-memory store and replay guard are test/demo utilities only.
+The in-memory store and replay guard are test/demo utilities only. The reference
+codec rejects malformed tensor shapes and guards finite Float32 extrema against
+intermediate arithmetic overflow. The runtime binds receive validation to the
+expected conversation as well as task and sender.
