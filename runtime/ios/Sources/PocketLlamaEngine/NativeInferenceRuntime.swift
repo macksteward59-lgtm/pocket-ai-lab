@@ -3,6 +3,8 @@ import Foundation
 public enum NativeInferenceRuntimeError: Error, Equatable, Sendable {
     case invalidOutputLimit
     case responseTooLarge
+    case latentExportUnavailable
+    case invalidLatentOutput
 }
 
 
@@ -150,6 +152,54 @@ public struct NativeInferenceRuntime: Sendable {
         }
     }
 
+
+    /// Generates text and a bounded final-token embedding under the same model lease and scheduler permit.
+    /// The embedding is data, not an authorization receipt or a cross-model compatibility guarantee.
+    public func generateWithLatent(
+        lease: ModelPoolLease,
+        request: GenerationRequest,
+        maxOutputBytes: Int = 64_000
+    ) async throws -> LlamaLatentOutput {
+        guard maxOutputBytes > 0 else {
+            throw NativeInferenceRuntimeError.invalidOutputLimit
+        }
+        guard let latentEngine = engine as? any LatentExportingLlamaEngine else {
+            throw NativeInferenceRuntimeError.latentExportUnavailable
+        }
+        let use = try await pool.beginUse(lease)
+        do {
+            let result = try await scheduler.withPermit {
+                do {
+                    let output = try await latentEngine.generateWithLatent(
+                        session: lease.session,
+                        request: request
+                    )
+                    try Task.checkCancellation()
+                    guard output.text.utf8.count <= maxOutputBytes else {
+                        throw NativeInferenceRuntimeError.responseTooLarge
+                    }
+                    guard output.modelId == lease.session.modelId,
+                          !output.embedding.isEmpty,
+                          output.shape == [output.embedding.count],
+                          output.embedding.allSatisfy(\.isFinite) else {
+                        throw NativeInferenceRuntimeError.invalidLatentOutput
+                    }
+                    return output
+                } catch {
+                    await latentEngine.cancelAndWait(
+                        sessionId: lease.session.id,
+                        requestId: request.requestId
+                    )
+                    throw error
+                }
+            }
+            await pool.endUse(use)
+            return result
+        } catch {
+            await pool.endUse(use)
+            throw error
+        }
+    }
 
     /// Evaluation variant of generate that retains partial output and structured failure details.
     /// It uses the same exact lease, use pin, scheduler permit, output bound, and cancellation drain
