@@ -734,16 +734,18 @@ int pocket_llama_generate(
 
     llama_sampler_free(sampler);
     free(tokens);
+    const int blank_output = text_is_blank(out);
+    if (rc != POCKET_LLAMA_OK || blank_output) {
+        engine->sequence_token_count = 0;
+    }
     pthread_mutex_unlock(&engine->mu);
 
     if (rc != POCKET_LLAMA_OK) {
         out[0] = '\0';
-        engine->sequence_token_count = 0;
         return rc;
     }
-    if (text_is_blank(out)) {
+    if (blank_output) {
         out[0] = '\0';
-        engine->sequence_token_count = 0;
         return fail(err, err_len, POCKET_LLAMA_ERR_EMPTY, "llama.cpp returned empty text. No token was invented.");
     }
     if (err && err_len) err[0] = '\0';
