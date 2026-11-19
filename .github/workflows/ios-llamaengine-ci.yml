@@ -5,8 +5,12 @@ on:
     branches:
       - main
       - codex/latent-channel-runtime-poc
+      - codex/neuralese-sequence-codec-poc
+      - codex/gie-canonical-codebook-artifact
     paths:
       - "runtime/ios/**"
+      - "packages/intelligence/**"
+      - "docs/architecture/GIE-CANONICAL-CODEBOOK-ARTIFACT-v1.md"
       - "ios/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
