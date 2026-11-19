@@ -48,6 +48,15 @@ function setup(authorization = { async authorize() { return true; } }) {
 }
 
 describe("latent channel runtime proof of concept", () => {
+  it("matches the v1 cross-runtime affine-int8 byte fixture", async () => {
+    const bytes = await codec.encode({
+      hiddenState: Float32Array.from([-1, 0, 1]),
+      shape: [3],
+      dtype: "int8"
+    });
+    expect(Array.from(bytes)).toEqual([0, 0, 128, 191, 0, 0, 128, 63, 129, 0, 127]);
+  });
+
   it("transfers a quantized tensor out of band and reconstructs within bounded error", async () => {
     const { sender, recipient } = setup();
     const vector = Float32Array.from({ length: 1024 }, (_, i) => Math.sin(i / 19) * 2.5);
