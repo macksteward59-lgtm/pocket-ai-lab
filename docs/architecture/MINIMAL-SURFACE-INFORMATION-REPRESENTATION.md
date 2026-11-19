@@ -145,37 +145,33 @@ task quality. Publish raw metrics before any weighted aggregate. The weighted
 objective remains a research hypothesis until its terms and weights are
 specified and validated.
 
-The optimization is constrained by:
+The optimizer must enforce hard acceptance gates before comparing resource
+costs. At minimum, define workload-specific floors for downstream task quality,
+relationship/order preservation, and robustness, plus ceilings for payload
+bytes, peak memory, compute, and latency. Exact model/codec/codebook
+compatibility and host authorization are non-negotiable constraints, not
+weighted objectives.
 
-- A >= A_min: downstream task quality must remain above its accepted floor;
-- T >= T_min: stability under the defined perturbation set must meet its floor;
-- R_preserved >= R_min: required relationships must remain recoverable;
-- resource ceilings for payload bytes, peak memory, compute, and latency;
-- exact model/codec/codebook compatibility and protocol authorization.
+For every candidate, report explicit measured quantities:
 
-A weighted objective alone is not sufficient: it could trade away critical
-semantic quality for a smaller payload. Hard quality and safety constraints
-must be applied before selecting the lowest-cost candidate.
-
-For a given candidate representation Z, measure at least:
-
-- S(Z): serialized bytes plus separately reported peak/temporary memory;
-- C(Z): operation counts and/or measured algorithmic cost;
-- E(Z): measured energy where available, otherwise report compute time as a
-  separate proxy rather than calling it energy;
-- L(Z): encode, transfer, decode, and end-to-end latency;
-- D_dist(X, D_dec): numerical and task-relevant distortion;
-- A(Z): downstream task accuracy/success;
-- T(Z, P): sensitivity under a documented perturbation suite.
+- serialized payload bytes, including envelope and metadata;
+- peak and temporary memory;
+- operation counts and/or measured compute time;
+- measured energy, if the hardware exposes a reliable measurement;
+- encode, transfer, decode, and end-to-end latency;
+- numerical reconstruction error;
+- relationship/order/boundary preservation;
+- downstream task accuracy, success, or quality;
+- sensitivity under a documented perturbation suite.
 
 Do not combine quantities with incompatible units until a normalization and
-weight-selection policy is documented. Always publish the raw measurements
+weight-selection policy is documented. Always publish raw measurements
 alongside any aggregate score.
 
 ## 5. Relationships and topology
 
-The relationship term R is central to the original idea. A representation can
-have low vector RMSE while losing ordering, dependencies, references, or
+Relationship preservation is a distinct evaluation target. A representation
+can have low vector RMSE while losing ordering, dependencies, references, or
 important local changes.
 
 The first MSIR prototype should represent relationships explicitly as a
@@ -197,32 +193,27 @@ Possible metrics include edge precision/recall, order preservation, boundary
 retention, and task-specific dependency preservation. The metric must match the
 relation type; one generic graph score is not sufficient for every task.
 
-A graph or simplicial-complex representation may be a practical first
-implementation. A continuous surface/manifold representation is a later
-experiment, not a prerequisite. If a surface is introduced, document its
-construction, metric, boundary conditions B, and numerical method.
+A graph representation may be a practical first implementation for explicit
+typed relations. A continuous surface/manifold representation is a later
+experiment, not a prerequisite. If a geometric object is introduced, document
+its construction, metric, boundary treatment, and numerical method.
 
-## 6. Curvature, minimality, and stability
+## 6. Geometric hypotheses and perturbation stability
 
-H denotes mean curvature in the recovered theory. It should not be added as a
-decorative penalty. Before using H, the implementation must define:
+Curvature or minimal-surface-inspired regularization is an optional research
+hypothesis, not an assumed property of the current codec. Before implementing
+a geometric penalty, define the geometric object, coordinate system, metric,
+neighborhood construction, boundary treatment, numerical estimator, and the
+reason the proposed penalty should improve task-relevant preservation.
 
-1. what points or features form the surface;
-2. how neighborhoods and adjacency are selected;
-3. the metric and coordinate system;
-4. boundary conditions B;
-5. how curvature is estimated and normalized;
-6. why lower curvature should preserve or improve task-relevant information.
+Compare any geometric candidate against a non-geometric baseline. Retain it
+only if held-out experiments show a reproducible improvement.
 
-A minimal-surface-inspired regularizer can then be compared against non-geometric
-baselines. It must not be presumed to improve semantic quality.
-
-Perturbation P should be a reproducible suite, including controlled numerical
-noise, missing elements, reordered elements where order is not protected,
-distribution-shift samples, and corrupted metadata. Stability T should measure
-how much the representation, decoded structure, and downstream result change
-under each permitted perturbation. Protected invariants must fail closed when
-violated.
+Use a reproducible perturbation suite: controlled numerical noise, missing
+elements, reordering only where order is not protected, distribution shift,
+and corrupted metadata. Measure changes in the encoded representation,
+reconstruction, preserved relations, and downstream task result. Protected
+invariants must fail closed when violated.
 
 ## 7. Relationship to GIE1, GCB1, and latent channel
 
@@ -301,7 +292,7 @@ memory. Those require independent experiments.
 
 ### MSIR-0: specification and fixtures
 
-- Freeze the repository-compatible X/Y/Z notation and the explicit metric glossary. Do not freeze speculative meanings for M/I/R/S/C/E/H/P/T/L/A/D.
+- Freeze the repository-compatible X/Y/Z notation and explicit measured metric names. Do not assign speculative meanings to M/I/R/S/C/E/H/P/T/L/A/D.
 - Define a versioned structured-representation schema for ordered segments and
   typed relations.
 - Create deterministic fixtures where vector values are similar but ordering
@@ -350,7 +341,7 @@ memory. Those require independent experiments.
 
 MSIR is not ready for runtime adoption until all of the following are true:
 
-- deterministic X -> Y -> Z -> D_dec fixtures pass;
+- deterministic X -> Y -> Z -> decoded-pooled-representation fixtures pass;
 - source order and protected relationships survive encode/decode;
 - payload and memory bounds are checked before allocation;
 - model, schema, codec, and codebook identities are validated;
