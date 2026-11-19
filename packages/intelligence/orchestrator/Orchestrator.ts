@@ -54,7 +54,8 @@ export interface InferenceResult {
 }
 
 export interface InferenceProvider {
-  generate(request: InferenceRequest): Promise<InferenceResult>;
+  /** Providers must settle their local work before resolving/rejecting after cancellation. */
+  generate(request: InferenceRequest, options?: { signal?: AbortSignal }): Promise<InferenceResult>;
 }
 
 const STAGE_PLAN: Record<DeliberationStage, AgentId[]> = {
@@ -162,8 +163,11 @@ export class Orchestrator {
   }
 
   async executeTask(
-    request: TaskRequest
+    request: TaskRequest,
+    options: { signal?: AbortSignal } = {}
   ): Promise<{ synthesis: string; evidenceRefs: string[]; consensus: boolean; notes: string[] }> {
+    const signal = options.signal;
+    throwIfAborted(signal);
     if (!request.id.trim() || !request.objective.trim()) {
       throw new Error("Task id and objective are required");
     }
@@ -175,12 +179,15 @@ export class Orchestrator {
         const generated: AgentMessage[] = [];
         let nextSequence = this.bus.getThread(request.id).length;
         for (const agentId of STAGE_PLAN[stage]) {
+          throwIfAborted(signal);
           const agent = this.agents.getAgent(agentId);
           if (!agent) throw new Error("Unknown agent: " + agentId);
           const model = this.models.getPreferredModel(agentId);
           const selected = await this.router.route(agentId, model, requiredCapabilities);
-          const sessionId = this.agents.startSession(agentId, request.id, selected.id);
+          let sessionId: string | undefined;
           try {
+            throwIfAborted(signal);
+            sessionId = this.agents.startSession(agentId, request.id, selected.id);
             this.agents.updateStatus(sessionId, "running");
             const result = await this.inference.generate({
               agentId,
@@ -193,7 +200,10 @@ export class Orchestrator {
                 "Return only a structured payload valid for message type " + STAGE_MESSAGE_TYPE[stage] + "."
               ].join("\n"),
               contextMessages: [...priorMessages]
-            });
+            }, { signal });
+            // Never publish a result that settled after cancellation. The
+            // provider promise is awaited before its model/session lease is released.
+            throwIfAborted(signal);
             const message: AgentMessage = {
               protocolVersion: 1,
               messageId: crypto.randomUUID(),
@@ -210,7 +220,7 @@ export class Orchestrator {
             generated.push(this.bus.publish(message));
             this.agents.updateStatus(sessionId, "complete");
           } finally {
-            this.agents.releaseSession(sessionId);
+            if (sessionId) this.agents.releaseSession(sessionId);
             this.router.release(selected.id);
           }
         }
@@ -222,6 +232,7 @@ export class Orchestrator {
       throw new Error("The synthesis agent did not produce a valid completion payload");
     }
 
+    throwIfAborted(signal);
     await this.memory.write({
       layer: "episodic",
       content: deliberation.finalSynthesis,
@@ -257,4 +268,12 @@ export class Orchestrator {
   handleScanTelemetryUpload(input: GovernanceUploadInput): Promise<GovernanceUploadResult> {
     return reviewScanTelemetry(this, input);
   }
+}
+
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  const error = new Error("Inference cancelled");
+  error.name = "AbortError";
+  throw error;
 }
