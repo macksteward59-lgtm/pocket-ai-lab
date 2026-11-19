@@ -85,6 +85,37 @@ describe("GIE pooled product quantizer", () => {
     expect(() => codec.encode(incompatible, identity)).toThrow(/dimension does not match the codebook/);
   });
 
+  it("rejects decoded tensor dimensions above the allocation ceiling", () => {
+    const dimension = 8_192;
+    const segmentCount = 2_049;
+    const oversizedCodebook = new PooledProductQuantizer({
+      codebookId,
+      modelId: identity.modelId,
+      modelRevision: identity.modelRevision,
+      embeddingDimension: dimension,
+      subspaces: dimension,
+      codebookSize: 2,
+      residualStages: 1,
+      maxTokensPerSegment: 1,
+      stages: [Array.from({ length: dimension }, () => new Float64Array(2))]
+    });
+    const payload = new Uint8Array(50 + segmentCount * 2 + segmentCount * dimension);
+    payload.set([0x47, 0x49, 0x45, 0x31], 0);
+    const view = new DataView(payload.buffer);
+    payload[4] = 1;
+    view.setUint16(5, dimension, true);
+    view.setUint16(7, dimension, true);
+    payload[9] = 1;
+    view.setUint16(10, 2, true);
+    view.setUint32(12, segmentCount, true);
+    view.setUint16(16, segmentCount, true);
+    payload.fill(0xaa, 18, 50);
+    for (let i = 0; i < segmentCount; i += 1) {
+      view.setUint16(50 + i * 2, 1, true);
+    }
+    expect(() => oversizedCodebook.decode(payload, identity)).toThrow(/allocation bound/);
+  });
+
   it("rejects non-finite activations and incompatible training dimensions", () => {
     const codec = train();
     const invalid = sequence(10);
