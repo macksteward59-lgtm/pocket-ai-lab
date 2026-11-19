@@ -54,6 +54,24 @@ describe("MessageBus", () => {
     }).toThrow();
   });
 
+  it("restores a validated task thread without replaying listener side effects", () => {
+    const source = new MessageBus();
+    const first = source.publish(message("analysis", "reasoner", { analysis: "First" }, 0));
+    const second = source.publish(message("validation", "validator", {
+      claim: "First analysis", verified: false
+    }, 1));
+
+    const restored = new MessageBus();
+    let notifications = 0;
+    restored.subscribe("validator", () => notifications++);
+    restored.restoreThread("task-1", [second, first]);
+
+    expect(restored.getThread("task-1").map(item => item.sequence)).toEqual([0, 1]);
+    expect(notifications).toBe(0);
+    expect(() => restored.restoreThread("task-1", [first])).toThrow(/existing task messages/);
+    expect(() => new MessageBus().restoreThread("task-1", [first, first])).toThrow(/duplicate message/);
+  });
+
   it("delivers broadcast messages and supports unsubscribe", () => {
     const bus = new MessageBus();
     let received = 0;
@@ -187,7 +205,7 @@ describe("Orchestrator", () => {
     });
 
     orchestrator.models.register(model);
-    for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+    for (const agentId of ["director", "reasoner", "researcher", "engineer", "security", "critic", "validator", "archivist"]) {
       orchestrator.models.associateAgent(agentId, model.id);
     }
 
@@ -200,7 +218,7 @@ describe("Orchestrator", () => {
     expect(result.synthesis).toBe("Integrated result");
     expect(result.consensus).toBe(true);
     const thread = orchestrator.bus.getThread("orchestration-test");
-    expect(thread).toHaveLength(10);
-    expect(thread.map(item => item.sequence)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(thread).toHaveLength(12);
+    expect(thread.map(item => item.sequence)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 });
