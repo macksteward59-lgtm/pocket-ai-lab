@@ -77,13 +77,13 @@ describe("latent communication contract", () => {
   it("binds transfer identity to the authorized task route and checks expiry", () => {
     const value = transfer();
     expect(validateLatentTransfer(value, {
-      taskId: "task-1", senderAgentId: "researcher", recipientAgentId: "critic"
+      taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher", recipientAgentId: "critic"
     }, new Date("2026-11-18T12:01:00.000Z")).transferId).toBe(value.transferId);
     expect(() => validateLatentTransfer(value, {
-      taskId: "task-2", senderAgentId: "researcher", recipientAgentId: "critic"
+      taskId: "task-2", conversationId: "conversation-1", senderAgentId: "researcher", recipientAgentId: "critic"
     })).toThrow(/identity/);
     expect(() => validateLatentTransfer(value, {
-      taskId: "task-1", senderAgentId: "researcher", recipientAgentId: "critic"
+      taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher", recipientAgentId: "critic"
     }, new Date("2026-11-18T12:06:00.000Z"))).toThrow(/expired/);
   });
 });
