@@ -21,7 +21,7 @@ interface SharedFixture {
 }
 
 const fixture = JSON.parse(readFileSync(
-  new URL("../../../runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json", import.meta.url),
+  "runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json",
   "utf8"
 )) as SharedFixture;
 
@@ -53,7 +53,7 @@ describe("GCB1 canonical codebook artifact", () => {
       { modelId: fixture.modelId, modelRevision: fixture.modelRevision }
     );
     expect(decoded.codebookId).toBe(fixture.sha256);
-    expect(decoded.stages[0][0]).toEqual([1.25, -2.5, 3.75, 4.5]);
+    expect(Array.from(decoded.stages[0][0])).toEqual([1.25, -2.5, 3.75, 4.5]);
     expect(decoded.embeddingDimension).toBe(2);
   });
 
