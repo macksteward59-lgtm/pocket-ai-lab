@@ -55,7 +55,8 @@ let package = Package(
         .testTarget(
             name: "LlamaEngineTests",
             dependencies: ["PocketLlamaEngine"],
-            path: "Tests/LlamaEngineTests"
+            path: "Tests/LlamaEngineTests",
+            resources: [.copy("Fixtures/gie-codebook-artifact-v1.json")]
         )
     ]
 )
