@@ -5,6 +5,7 @@ on:
     branches:
       - codex/latent-channel-runtime-poc
       - codex/ios-final-embedding-export
+      - codex/neuralese-sequence-codec-poc
     paths:
       - "packages/intelligence/latent-communication/**"
       - "packages/intelligence/__tests__/latent-channel*.test.ts"
@@ -14,6 +15,7 @@ on:
     branches:
       - codex/latent-agent-communication-on-integration
       - codex/latent-channel-runtime-poc
+      - codex/ios-final-embedding-export
     paths:
       - "packages/intelligence/latent-communication/**"
       - "packages/intelligence/__tests__/latent-channel*.test.ts"
