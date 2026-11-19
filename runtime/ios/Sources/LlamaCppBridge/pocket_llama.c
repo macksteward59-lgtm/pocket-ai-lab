@@ -738,10 +738,12 @@ int pocket_llama_generate(
 
     if (rc != POCKET_LLAMA_OK) {
         out[0] = '\0';
+        engine->sequence_token_count = 0;
         return rc;
     }
     if (text_is_blank(out)) {
         out[0] = '\0';
+        engine->sequence_token_count = 0;
         return fail(err, err_len, POCKET_LLAMA_ERR_EMPTY, "llama.cpp returned empty text. No token was invented.");
     }
     if (err && err_len) err[0] = '\0';
@@ -816,6 +818,7 @@ int pocket_llama_set_sequence_capture(
     pthread_mutex_lock(&engine->mu);
     if (max_tokens == 0 && max_bytes == 0) {
         engine->sequence_capture_enabled = 0;
+        engine->capture_embeddings = 0;
         engine->sequence_token_count = 0;
         engine->sequence_embedding_dimension = 0;
         engine->sequence_max_tokens = 0;
