@@ -38,11 +38,11 @@ function setup(authorization = { async authorize() { return true; } }) {
   const replay = new InMemoryLatentReplayGuard(() => now().getTime());
   const sender = new LatentChannelRuntime({
     localCapability: capability("researcher", "sender"),
-    codec, blobStore: store, authorization, digest, replay, now
+    codec, blobStore: store, authorization, digest, replayGuard: replay, now
   });
   const recipient = new LatentChannelRuntime({
     localCapability: capability("critic", "recipient"),
-    codec, blobStore: store, authorization, digest, replay, now
+    codec, blobStore: store, authorization, digest, replayGuard: replay, now
   });
   return { sender, recipient, store, now };
 }
