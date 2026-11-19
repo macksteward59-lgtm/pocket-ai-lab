@@ -35,60 +35,94 @@ A geometric surface, manifold, graph embedding, or curvature penalty must not
 be assumed to be equivalent to semantic preservation. Each proposed geometric
 quantity requires an explicit construction and an empirical test.
 
-## 2. Recovered variable glossary
+## 2. Notation and compatibility with the existing implementation
 
-The following glossary restores the variables from the earlier theory and
-separates names that were overloaded in the source notes.
+The current repository already defines the GIE sequence notation in
+`PooledProductQuantizer.ts`. MSIR must use that notation rather than introduce
+a conflicting meaning:
 
-| Symbol | Meaning | Implementation interpretation |
-| --- | --- | --- |
-| M | Memory structure | Organization of stored representations, indexes, and relationships |
-| I | Information | Source content or latent information to preserve |
-| R | Relationships | Edges, ordering, dependencies, and contextual relations among elements |
-| S | Storage | Bytes and memory occupied by the representation |
-| C | Complexity | Structural/algorithmic complexity of representation and operations |
-| E | Energy or cost | Measured compute/energy cost of encode, transmit, decode, and use |
-| H | Mean curvature | Optional geometric diagnostic/regularizer, only after a surface is defined |
-| P | Perturbation | Controlled input noise, distribution shift, deletion, or corruption |
-| T | Stability | Bounded change in representation/output under specified perturbations |
-| L | Latency | Encode, transfer, decode, and end-to-end task latency |
-| A | Accuracy | Downstream task correctness or quality |
-| D_dist | Information distortion | Loss between source and reconstructed/task-relevant information |
+- **X — Source:** token-level source vectors.
+- **Y — Structure:** ordered temporal segments and their pooled
+  representatives.
+- **Z — Compact code:** product-quantized codebook indices plus optional
+  residual stages.
 
-A second notation describes the representation path:
+These meanings are grounded in the existing implementation. GIE's current
+sequence codec preserves segment spans and order, but its decoded output is
+pooled segment vectors—not the original token-by-token activation sequence.
 
-- X: original/source information;
-- Y: intermediate structure derived from X;
-- Z: encoded compact representation;
-- D_dec: decoded/reconstructed information;
-- B: boundary conditions and invariants imposed on the representation.
+The earlier Minimal Surface Theory notes also listed the symbols
+`M, I, R, S, C, E, H, P, T, L, A, D` and the weighted objective:
 
-The historical notes used D for both decoded information and distortion.
-This specification disambiguates them as D_dec and D_dist. Y was previously
-left undefined; here Y is defined as the structured intermediate representation
-that captures segments, topology, ordering, boundaries, and task-relevant
-relationships before compact coding.
+`J = alpha*S + beta*C + gamma*E + delta*L + epsilon*D`
+
+The available historical record does not establish a reliable, complete
+definition for every symbol or establish that all of them were intended as
+independent terms in this exact implementation. Therefore this document does
+**not** assign speculative meanings to those symbols. Before implementing a
+mathematical optimizer, the original glossary must be verified. For this
+engineering proposal, use explicit names instead:
+
+- `sourceVectors`: input activation sequence;
+- `segments`: ordered temporal windows and their spans;
+- `pooledRepresentatives`: vectors produced by the configured pooling rule;
+- `codes`: codebook indices and residual-stage indices;
+- `reconstruction`: decoded pooled representatives;
+- `distortion`: separately measured numerical and task-level loss;
+- `relations`: explicit ordering, adjacency, and protected boundaries.
+
+This prevents a guessed historical definition from silently becoming a
+repository-wide contract. Any future mathematical objective must document each
+term, its units, normalization, measurement procedure, and source.
+
+## 2.1 Existing Pocket AI Lab contracts that MSIR must preserve
+
+MSIR is subordinate to the existing architecture:
+
+- `LatentChannel.ts` owns protocol-v1 capability negotiation, model identity,
+  codec selection, bounded transfer-envelope validation, and route identity.
+- `LatentChannelRuntime.ts` coordinates codec execution, host authorization,
+  payload storage, digest verification, replay protection, expiry, and receive
+  validation. Its in-memory store and replay guard remain test/demo adapters.
+- `PooledProductQuantizer.ts` owns GIE sequence pooling and product/residual
+  quantization. It is same-model and bound to its codebook identity.
+- `GIECodebookArtifact.ts` and GCB1 define the canonical codebook artifact and
+  digest contract.
+- The agent message bus carries control-plane messages and references; latent
+  bytes remain out-of-band.
+- Director/APEX remains the authorization authority and East/e3 remains the
+  durable execution authority. An MSIR representation is data, never a grant
+  of permission or evidence of approval.
+
+MSIR may add a versioned representation structure before GIE encoding, but it
+must not redefine the existing GIE1 wire format, GCB1 artifact, protocol-v1
+envelope, model identity, or authorization contract. Any wire-visible
+extension requires a separately versioned schema and explicit capability
+negotiation. Older peers must continue to use the existing codec or text
+fallback; they must never guess how to parse MSIR metadata.
 
 ## 3. Representation pipeline
 
-1. **Capture X:** obtain a bounded latent sequence or other model output, with
-   model ID, immutable revision, layer, token positions, dtype, shape, and task
-   scope. Hidden-state access remains runtime-specific.
-2. **Construct Y:** create an explicit structure over the source elements.
-   The first implementation should preserve token/segment order and may attach
-   typed relationships such as adjacency, dependency, reference, or temporal
-   continuity. Do not infer relationships that the source runtime did not
-   provide or a validated algorithm did not derive.
-3. **Optimize Y:** select a representation under storage, complexity, compute,
-   latency, stability, and task-quality constraints.
-4. **Encode Z:** pass the optimized representation to a versioned codec such as
-   GIE1. The codec remains responsible for its own wire format, codebook
-   identity, integrity checks, and bounded decoding.
-5. **Decode D_dec:** reconstruct the structured representation from Z using
-   the exact compatible artifact and codec version.
-6. **Validate:** compare reconstructed content and relationships with the
-   source and measure downstream task behavior. Reject, increase fidelity, or
-   fall back to an established channel when acceptance constraints are not met.
+1. **Capture X:** obtain a bounded sequence of token-level vectors from a
+   runtime that explicitly supports sequence export. Bind the capture to the
+   exact model ID and immutable revision, layer/position metadata, dtype, shape,
+   task scope, and configured resource ceilings.
+2. **Construct Y:** use the existing GIE segmentation semantics first: ordered
+   temporal windows, token spans, and pooled representatives. MSIR experiments
+   may add a separately versioned relationship sidecar for explicit adjacency,
+   protected boundaries, or task-provided dependencies. Do not infer hidden
+   semantic relations from vector proximity and treat them as facts.
+3. **Optimize Y:** evaluate bounded candidate segmentations/representations
+   against measured distortion and downstream task quality. Do not modify the
+   GIE1 encoder's current segment/index layout in this stage.
+4. **Encode Z:** pass the compatible pooled representation to the existing
+   GIE1 encoder and exact GCB1 artifact. The existing codec owns its binary
+   format, codebook digest, identity binding, and decoder compatibility.
+5. **Decode:** reconstruct the pooled segment representatives using the exact
+   matching GIE1/GCB1 artifacts. Restore the declared spans and ordering.
+6. **Validate:** compare reconstruction and any MSIR sidecar relations against
+   the source fixture and measure downstream task behavior. Reject or fall
+   back to the existing latent codec/text path when constraints are not met.
 
 Current GIE1 decoding reconstructs ordered pooled segment vectors; it does not
 reconstruct every original token vector. MSIR must preserve that distinction
@@ -96,13 +130,20 @@ and must not label pooled-segment reconstruction as lossless token recovery.
 
 ## 4. Objective and constraints
 
-The recovered conceptual objective is:
+The earlier notes record a weighted objective in the form:
 
-J = alpha*S + beta*C + gamma*E + delta*L + epsilon*D_dist
+J = alpha*S + beta*C + gamma*E + delta*L + epsilon*D
 
-where the coefficients are non-negative policy weights selected for a workload.
-All terms must be measured or explicitly normalized before they are combined.
-The objective is a design target, not an established physical law.
+The meanings, units, and normalization of every historical term must be
+verified before this equation is used as executable optimization logic. In
+particular, do not assume that a variable name such as `E` means measured
+energy, or that `D` has one unambiguous meaning. For implementation and
+benchmarking, use explicit metric names: payload bytes, peak memory, operation
+count/compute time, measured energy (if available), encode/decode/transfer
+latency, numerical reconstruction error, relation preservation, and downstream
+task quality. Publish raw metrics before any weighted aggregate. The weighted
+objective remains a research hypothesis until its terms and weights are
+specified and validated.
 
 The optimization is constrained by:
 
@@ -185,10 +226,17 @@ violated.
 
 ## 7. Relationship to GIE1, GCB1, and latent channel
 
-MSIR belongs before GIE1:
+MSIR experiments sit between model-specific sequence extraction and the
+existing GIE sequence encoder. The initial compatible path is:
 
-Model-specific latent extraction -> X -> MSIR structure Y and optimization ->
-GIE1 encoder -> Z -> authorized latent transport -> GIE1 decoder -> D_dec.
+model-specific sequence extraction -> X -> existing GIE segmentation/pooling
+Y -> optional versioned MSIR relationship sidecar -> existing GIE1 encoder ->
+Z -> existing authorized latent transport -> GIE1 decoder -> pooled
+reconstruction.
+
+The relationship sidecar is experimental and is not part of the current GIE1
+wire payload. It must not be sent until a separately versioned protocol
+extension and peer capability negotiation exist.
 
 GCB1 remains the immutable, digest-verified codebook artifact used by the
 quantizer. GIE1 remains responsible for compact sequence encoding/decoding.
@@ -253,7 +301,7 @@ memory. Those require independent experiments.
 
 ### MSIR-0: specification and fixtures
 
-- Freeze the glossary and X/Y/Z/D_dec/B notation.
+- Freeze the repository-compatible X/Y/Z notation and the explicit metric glossary. Do not freeze speculative meanings for M/I/R/S/C/E/H/P/T/L/A/D.
 - Define a versioned structured-representation schema for ordered segments and
   typed relations.
 - Create deterministic fixtures where vector values are similar but ordering
