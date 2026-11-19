@@ -101,3 +101,5 @@ export {
 
 export { LatentChannelRuntime, InMemoryLatentBlobStore, InMemoryLatentReplayGuard, type LatentDigest, type LatentReplayGuard } from "./latent-communication/LatentChannelRuntime";
 export { AffineInt8LatentCodec } from "./latent-communication/AffineInt8LatentCodec";
+
+export { PooledProductQuantizer, chooseRateDistortionCandidate, type LatentSequence, type ProductQuantizerOptions, type ProductQuantizerCodebook, type EncodedLatentSequence, type DecodedLatentSequence } from "./latent-communication/PooledProductQuantizer";
