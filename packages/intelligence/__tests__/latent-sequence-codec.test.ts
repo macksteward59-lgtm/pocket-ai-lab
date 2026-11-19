@@ -75,6 +75,13 @@ describe("GIE pooled product quantizer", () => {
     expect(() => codec.decode(malformedSpan, identity)).toThrow(/segment span/);
   });
 
+  it("rejects an input embedding dimension that differs from the codebook", () => {
+    const codec = train();
+    const incompatible = sequence(11);
+    incompatible.embeddingDimension = 8;
+    expect(() => codec.encode(incompatible, identity)).toThrow(/dimension does not match the codebook/);
+  });
+
   it("rejects non-finite activations and incompatible training dimensions", () => {
     const codec = train();
     const invalid = sequence(10);
