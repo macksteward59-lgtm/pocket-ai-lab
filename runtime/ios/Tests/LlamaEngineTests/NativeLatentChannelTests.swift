@@ -40,6 +40,65 @@ final class NativeLatentChannelTests: XCTestCase {
         )
     }
 
+    func testGIE1DecoderMatchesSharedTypeScriptWireFixture() throws {
+        let identity = NativeLatentModelIdentity(
+            modelId: "shared-model",
+            modelRevision: "sha256:model-rev-1"
+        )
+        let codebook = NativeGIECodebook(
+            codebookId: String(repeating: "a", count: 64),
+            modelIdentity: identity,
+            embeddingDimension: 4,
+            subspaces: 2,
+            codebookSize: 2,
+            residualStages: 2,
+            maxTokensPerSegment: 2,
+            stages: [
+                [[1, 2, 3, 4], [10, 20, 30, 40]],
+                [[0.5, 0.25, -0.5, -0.25], [1, 2, -1, -2]]
+            ]
+        )
+        let codec = try NativeGIESequenceCodec(codebook: codebook)
+        let hex = "474945310104000200020200000003000200" +
+            String(repeating: "aa", count: 32) +
+            "02000100" +
+            "01000001" +
+            "00010100"
+        var fixture = Data()
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            fixture.append(UInt8(hex[index..<next], radix: 16)!)
+            index = next
+        }
+        let decoded = try codec.decode(fixture, modelIdentity: identity)
+        XCTAssertEqual(decoded.tokenCount, 3)
+        XCTAssertEqual(decoded.embeddingDimension, 4)
+        XCTAssertEqual(decoded.segmentTokenCounts, [2, 1])
+        XCTAssertEqual(decoded.segmentEmbeddings, [3.5, 4.25, 9, 18, 0.5, 1.75, 31, 42])
+    }
+
+    func testGIE1DecoderRejectsWrongModelAndCorruptPayloads() throws {
+        let identity = NativeLatentModelIdentity(modelId: "shared-model", modelRevision: "sha256:model-rev-1")
+        let codebook = NativeGIECodebook(
+            codebookId: String(repeating: "a", count: 64),
+            modelIdentity: identity,
+            embeddingDimension: 4,
+            subspaces: 2,
+            codebookSize: 2,
+            residualStages: 2,
+            maxTokensPerSegment: 2,
+            stages: [
+                [[1, 2, 3, 4], [10, 20, 30, 40]],
+                [[0.5, 0.25, -0.5, -0.25], [1, 2, -1, -2]]
+            ]
+        )
+        let codec = try NativeGIESequenceCodec(codebook: codebook)
+        XCTAssertThrowsError(try codec.decode(Data(), modelIdentity: identity))
+        XCTAssertThrowsError(try codec.decode(Data(repeating: 0, count: 60), modelIdentity:
+            NativeLatentModelIdentity(modelId: "other", modelRevision: identity.modelRevision)))
+    }
+
     func testAffineInt8CodecMatchesCrossRuntimeWireFixture() throws {
         let codec = AffineInt8NativeLatentCodec(modelIdentity: modelIdentity)
         let bytes = try codec.encode(output([-1, 0, 1]))
