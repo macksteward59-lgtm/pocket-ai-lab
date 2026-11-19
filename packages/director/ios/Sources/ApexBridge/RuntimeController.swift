@@ -104,6 +104,12 @@ public actor RuntimeController {
     // Invalidates generation attempts suspended before their native task is registered.
     private var generationLifecycle: UInt64 = 0
     private var generationDrainCount = 0
+    // Internal synchronization seam fired after all captured tasks are cancelled and before drain waits; unset in production.
+    private var cancelAllDrainWaitObserverForTesting: (@Sendable () async -> Void)?
+
+    @_spi(Testing) public func setCancelAllDrainWaitObserverForTesting(_ observer: (@Sendable () async -> Void)?) {
+        cancelAllDrainWaitObserverForTesting = observer
+    }
 
     public init(
         runtime: NativeInferenceRuntime,
@@ -552,6 +558,9 @@ public actor RuntimeController {
 
     /// Cancels every active generation and awaits each runtime cancellation
     /// drain. Used when the trusted workspace navigates or is torn down.
+    /// Returns the number of new request identities retired by this call.
+    /// Already-retired tasks and tasks owned by an unloading session are still
+    /// cancelled and awaited, but are not counted again.
     @discardableResult
     public func cancelAllGenerations() async -> Int {
         // Advance before the first await so suspended pre-inference attempts
@@ -571,14 +580,43 @@ public actor RuntimeController {
         // The request registry includes preparation-stage attempts that have no
         // entry in ActiveSession.generations yet. Snapshot it only after raising the
         // lifecycle barrier; new requests now fail before registration.
+        pruneFinishedGenerationAttempts(now: clock())
         let pending = generationAttempts.flatMap { sessionId, attempts in
-            attempts.keys.map { (sessionId, $0) }
+            attempts.map { (sessionId, $0.key, $0.value) }
         }
         var cancelled = 0
-        for (sessionId, requestId) in pending {
-            if await cancelGeneration(sessionId: sessionId, requestId: requestId) {
+
+        // Phase 1: retire and cancel every exact task in the snapshot. Do not
+        // await one native/provider drain before the remaining attempts have
+        // received their cancellation request.
+        for (sessionId, requestId, task) in pending {
+            guard let canonicalRequestId = Self.canonicalUUID(requestId) else {
+                task.cancel()
+                continue
+            }
+            let alreadyFinished = finishedGenerationAttempts[sessionId]?[canonicalRequestId] != nil
+            let alreadyRetired = retiredGenerationRequests[sessionId]?.contains(canonicalRequestId) == true
+            let sessionAcceptsCancellation = sessions[sessionId] != nil &&
+                !unloadingSessions.contains(sessionId)
+            if !alreadyFinished && !alreadyRetired && sessionAcceptsCancellation &&
+               recordRetiredGenerationRequest(sessionId: sessionId, requestId: canonicalRequestId) {
                 cancelled += 1
             }
+
+            // The global lifecycle snapshot owns this exact task even when the
+            // public per-request guard rejects an unloading or retired session.
+            task.cancel()
+        }
+
+        // This test seam is reached after every captured task has received
+        // cancellation and immediately before the drain-wait phase.
+        await cancelAllDrainWaitObserverForTesting?()
+
+        // Phase 2: wait for every captured task. Each task retains its own
+        // NativeInferenceRuntime use-pin and ModelPool lease until its native
+        // cancellation/drain path has settled.
+        for (_, _, task) in pending {
+            _ = try? await task.value
         }
         return cancelled
     }

@@ -29,6 +29,8 @@ on:
     branches:
       - main
       - ios/private-iphone-test-hybrid
+      # Allow the cancel-all/unload drain follow-up to receive a fresh native CI run on push.
+      - codex/fix-cancelall-unload-drain-20261118
     paths:
       - "runtime/ios/**"
       - "packages/director/ios/**"
