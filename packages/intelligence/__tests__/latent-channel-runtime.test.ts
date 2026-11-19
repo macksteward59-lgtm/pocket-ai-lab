@@ -85,8 +85,8 @@ describe("latent channel runtime proof of concept", () => {
     const extremeBytes = await edgeCodec.encode({ hiddenState: extreme, shape: [5], dtype: "int8" });
     const extremeDecoded = await edgeCodec.decode({ bytes: extremeBytes, shape: [5], dtype: "int8" });
     expect(Array.from(extremeDecoded).every(Number.isFinite)).toBe(true);
-    expect(extremeDecoded[0]).toBeCloseTo(extreme[0], -30);
-    expect(extremeDecoded[4]).toBeCloseTo(extreme[4], -30);
+    expect(extremeDecoded[0]).toBe(extreme[0]);
+    expect(extremeDecoded[4]).toBe(extreme[4]);
   });
 
   it("rejects malformed shapes and invalid sequence values before storing payloads", async () => {
