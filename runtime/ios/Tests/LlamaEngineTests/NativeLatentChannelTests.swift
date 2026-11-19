@@ -99,6 +99,69 @@ final class NativeLatentChannelTests: XCTestCase {
             NativeLatentModelIdentity(modelId: "other", modelRevision: identity.modelRevision)))
     }
 
+    func testGIE1DecoderRejectsMalformedSpansIndicesDigestAndPayloadLength() throws {
+        let identity = NativeLatentModelIdentity(modelId: "shared-model", modelRevision: "sha256:model-rev-1")
+        let codebook = NativeGIECodebook(
+            codebookId: String(repeating: "a", count: 64),
+            modelIdentity: identity,
+            embeddingDimension: 4,
+            subspaces: 2,
+            codebookSize: 2,
+            residualStages: 2,
+            maxTokensPerSegment: 2,
+            stages: [
+                [[1, 2, 3, 4], [10, 20, 30, 40]],
+                [[0.5, 0.25, -0.5, -0.25], [1, 2, -1, -2]]
+            ]
+        )
+        let codec = try NativeGIESequenceCodec(codebook: codebook)
+        let hex = "474945310104000200020200030000000200" +
+            String(repeating: "aa", count: 32) +
+            "02000100" +
+            "01000001" +
+            "00010100"
+        var fixture = Data()
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            fixture.append(UInt8(hex[index..<next], radix: 16)!)
+            index = next
+        }
+
+        var badSpan = fixture
+        badSpan[50] = 0
+        badSpan[51] = 0
+        XCTAssertThrowsError(try codec.decode(badSpan, modelIdentity: identity)) {
+            XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidSegmentSpans)
+        }
+
+        var badIndex = fixture
+        badIndex[badIndex.count - 1] = 0xff
+        XCTAssertThrowsError(try codec.decode(badIndex, modelIdentity: identity)) {
+            XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidCodewordIndex)
+        }
+
+        var badDigest = fixture
+        badDigest[18] ^= 0x01
+        XCTAssertThrowsError(try codec.decode(badDigest, modelIdentity: identity)) {
+            XCTAssertEqual($0 as? NativeGIESequenceCodecError, .codebookMismatch)
+        }
+
+        XCTAssertThrowsError(try codec.decode(fixture.dropLast(), modelIdentity: identity)) {
+            XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidPayloadLength)
+        }
+        var trailingByte = fixture
+        trailingByte.append(0)
+        XCTAssertThrowsError(try codec.decode(trailingByte, modelIdentity: identity)) {
+            XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidPayloadLength)
+        }
+
+        let wrongIdentity = NativeLatentModelIdentity(modelId: "other-model", modelRevision: identity.modelRevision)
+        XCTAssertThrowsError(try codec.decode(fixture, modelIdentity: wrongIdentity)) {
+            XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidModelIdentity)
+        }
+    }
+
     func testAffineInt8CodecMatchesCrossRuntimeWireFixture() throws {
         let codec = AffineInt8NativeLatentCodec(modelIdentity: modelIdentity)
         let bytes = try codec.encode(output([-1, 0, 1]))
