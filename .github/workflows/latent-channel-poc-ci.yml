@@ -9,6 +9,7 @@ on:
     paths:
       - "packages/intelligence/latent-communication/**"
       - "packages/intelligence/__tests__/latent-channel*.test.ts"
+      - "packages/intelligence/__tests__/latent-sequence-codec.test.ts"
       - "packages/intelligence/index.ts"
       - ".github/workflows/latent-channel-poc-ci.yml"
   pull_request:
