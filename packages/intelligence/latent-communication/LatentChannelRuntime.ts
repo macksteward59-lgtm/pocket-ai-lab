@@ -244,10 +244,11 @@ export class LatentChannelRuntime {
         selection.codecVersion !== this.options.codec.codecVersion) {
       throw new Error("Local codec does not match negotiated codec identity");
     }
-    const supported = operation === "encode"
-      ? this.options.codec.canEncode(encoderModel)
-      : this.options.codec.canDecode(decoderModel);
-    if (!supported) throw new Error("Codec does not support the negotiated model identity");
+    const encoderSupported = this.options.codec.canEncode(encoderModel);
+    const decoderSupported = this.options.codec.canDecode(decoderModel);
+    if (!encoderSupported || !decoderSupported) {
+      throw new Error("Codec does not support the negotiated encoder and decoder model identities");
+    }
   }
 }
 
