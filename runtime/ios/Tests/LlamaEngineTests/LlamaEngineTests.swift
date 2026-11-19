@@ -223,17 +223,25 @@ final class LlamaEngineTests: XCTestCase {
             let latentSequence = try await runtime.generateWithLatentSequence(
                 lease: lease,
                 request: GenerationRequest(
-                    prompt: "Write a short factual sentence about the planet Mars:",
-                    maxTokens: 12,
+                    prompt: "The capital of France is",
+                    maxTokens: 8,
                     temperature: 0
                 ),
-                maxLatentTokens: 12,
+                maxLatentTokens: 8,
                 maxLatentBytes: 16 * 1024 * 1024
             )
             XCTAssertEqual(latentSequence.modelId, model.id)
             XCTAssertFalse(latentSequence.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             XCTAssertGreaterThanOrEqual(latentSequence.tokenCount, 2)
-            XCTAssertLessThanOrEqual(latentSequence.tokenCount, 12)
+            XCTAssertLessThanOrEqual(latentSequence.tokenCount, 8)
+            XCTAssertEqual(latentSequence.text, latent.text, "Greedy text generation must be identical for the same prompt and model.")
+            XCTAssertEqual(latentSequence.embeddingDimension, latent.embedding.count)
+            let sequenceFinalEmbedding = Array(latentSequence.embeddings.suffix(latentSequence.embeddingDimension))
+            XCTAssertEqual(sequenceFinalEmbedding.count, latent.embedding.count)
+            for (sequenceValue, finalValue) in zip(sequenceFinalEmbedding, latent.embedding) {
+                XCTAssertEqual(sequenceValue, finalValue, accuracy: 1e-4,
+                               "The final sequence row must match the standalone final-token embedding.")
+            }
             XCTAssertGreaterThan(latentSequence.embeddingDimension, 0)
             XCTAssertEqual(latentSequence.shape, [latentSequence.tokenCount, latentSequence.embeddingDimension])
             XCTAssertEqual(latentSequence.embeddings.count, latentSequence.tokenCount * latentSequence.embeddingDimension)
