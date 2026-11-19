@@ -42,6 +42,8 @@ The learning tool is intentionally model-independent: it accepts host adapters a
 - Unapproved or missing evidence cannot produce a proposal.
 - Missing approval or sandbox cannot start training.
 - The exact training request is digest-bound to approval.
+- Training rejects proposals whose originating task differs from the requested task.
+- Evaluation rejects paired runs unless both use the exact requested benchmark version.
 - Training cannot write to the baseline or production configuration.
 - Evaluation rejects mismatched model identities or dataset versions.
 - Safety regressions and quality/pass-rate regressions retain the baseline.
