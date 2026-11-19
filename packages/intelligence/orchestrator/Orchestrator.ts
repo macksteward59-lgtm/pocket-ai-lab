@@ -16,6 +16,7 @@ import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVeri
 import { DirectorCommandRouter, type DirectorCommandProvider } from "../director/DirectorCommandRouter";
 import { DirectorCapabilities, type ResearchProvider, type ProjectInspector, type MemoryImprovementAdvisor, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge } from "../director/DirectorCapabilities";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
+import { AgentLearningTool, type LearningEvidenceReader, type TrainingSandbox, type TrainingApprovalVerifier, type CandidateEvaluationRunner } from "../learning/AgentLearningTool";
 
 export interface TaskRequest {
   id: string;
@@ -90,7 +91,7 @@ export class Orchestrator {
   /** Director-managed tool lifecycle; generated code remains gated and non-executable here. */
   readonly tooling: ToolDirector;
   /** Research, project analysis, memory evolution, and permissioned device capabilities. */
-  readonly capabilities: DirectorCapabilities;
+  readonly capabilities: DirectorCapabilities;\n  /** Governed proposal, isolated candidate-training, and paired evaluation tool. */\n  readonly learning: AgentLearningTool;
   /** Strict allowlisted structured-command bridge for model/provider adapters. */
   readonly directorCommands: DirectorCommandRouter;
   private readonly inference: InferenceProvider;
@@ -117,7 +118,7 @@ export class Orchestrator {
     researchProvider?: ResearchProvider;
     projectInspector?: ProjectInspector;
     memoryImprovementAdvisor?: MemoryImprovementAdvisor;
-    memoryChangeApproval?: MemoryChangeApproval;
+    memoryChangeApproval?: MemoryChangeApproval;\n    learningEvidenceReader?: LearningEvidenceReader;\n    trainingSandbox?: TrainingSandbox;\n    trainingApprovalVerifier?: TrainingApprovalVerifier;\n    candidateEvaluationRunner?: CandidateEvaluationRunner;
     devicePermissionBroker?: DevicePermissionBroker;
     deviceBridge?: DeviceBridge;
     /** Optional model-native structured tool-call adapter for Director commands. */
@@ -133,7 +134,7 @@ export class Orchestrator {
     this.directorCommandProvider = opts.directorCommandProvider;
     this.router = new ModelRouter(opts.getResources);
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
-    this.memory = opts.memory ?? new MemoryManager();
+    this.memory = opts.memory ?? new MemoryManager();\n    this.learning = new AgentLearningTool({\n      evidenceReader: opts.learningEvidenceReader,\n      trainingSandbox: opts.trainingSandbox,\n      trainingApprovalVerifier: opts.trainingApprovalVerifier,\n      evaluationRunner: opts.candidateEvaluationRunner\n    });
     this.capabilities = new DirectorCapabilities({
       memory: this.memory,
       research: opts.researchProvider,
@@ -152,7 +153,7 @@ export class Orchestrator {
       approvalVerifier: opts.toolApprovalVerifier,
       store: opts.toolArtifactStore
     });
-    this.directorCommands = new DirectorCommandRouter(this.capabilities, this.tooling);
+    this.directorCommands = new DirectorCommandRouter(this.capabilities, this.tooling, this.learning);
     this.security = new SecurityDivision({
       agents: this.agents,
       gate: opts.delegationGate ?? new DelegationGate(),
