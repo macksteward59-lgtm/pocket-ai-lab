@@ -149,11 +149,12 @@ export function negotiateLatentCodec(
 /** Validate bounded metadata before any blob lookup or decoder invocation. */
 export function validateLatentTransfer(
   input: unknown,
-  expected: { taskId: string; senderAgentId: string; recipientAgentId: string },
+  expected: { taskId: string; conversationId: string; senderAgentId: string; recipientAgentId: string },
   now: Date = new Date()
 ): LatentTransferEnvelope {
   const transfer = LatentTransferEnvelopeSchema.parse(input);
   if (transfer.taskId !== expected.taskId ||
+      transfer.conversationId !== expected.conversationId ||
       transfer.senderAgentId !== expected.senderAgentId ||
       transfer.recipientAgentId !== expected.recipientAgentId) {
     throw new Error("Latent transfer identity does not match the authorized route");
