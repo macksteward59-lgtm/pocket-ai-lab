@@ -23,7 +23,7 @@ measured efficiency improvement.
 ## Contract
 
 The TypeScript prototype defines:
-- Capability declarations, including explicit hidden-state-export support.
+- Capability declarations, with separate hidden-state-export and latent-decode support.
 - Exact codec ID/version and dtype negotiation between encoder and decoder.
 - Model identity/revision binding on both ends.
 - Bounded tensor rank, element count, payload bytes, transfer identity, and TTL.
