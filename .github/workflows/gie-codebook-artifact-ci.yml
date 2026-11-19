@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install --no-package-lock
       - name: Build TypeScript
         run: npm run build
       - name: Run intelligence engine tests
