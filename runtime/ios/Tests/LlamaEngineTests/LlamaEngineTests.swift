@@ -220,6 +220,26 @@ final class LlamaEngineTests: XCTestCase {
             XCTAssertEqual(latent.shape, [latent.embedding.count])
             XCTAssertTrue(latent.embedding.allSatisfy(\.isFinite))
 
+            let latentSequence = try await runtime.generateWithLatentSequence(
+                lease: lease,
+                request: GenerationRequest(
+                    prompt: "Write a short factual sentence about the planet Mars:",
+                    maxTokens: 12,
+                    temperature: 0
+                ),
+                maxLatentTokens: 12,
+                maxLatentBytes: 16 * 1024 * 1024
+            )
+            XCTAssertEqual(latentSequence.modelId, model.id)
+            XCTAssertFalse(latentSequence.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertGreaterThanOrEqual(latentSequence.tokenCount, 2)
+            XCTAssertLessThanOrEqual(latentSequence.tokenCount, 12)
+            XCTAssertGreaterThan(latentSequence.embeddingDimension, 0)
+            XCTAssertEqual(latentSequence.shape, [latentSequence.tokenCount, latentSequence.embeddingDimension])
+            XCTAssertEqual(latentSequence.embeddings.count, latentSequence.tokenCount * latentSequence.embeddingDimension)
+            XCTAssertTrue(latentSequence.embeddings.allSatisfy(\.isFinite))
+            print("POCKET_LLAMA_LATENT_SEQUENCE tokens=\(latentSequence.tokenCount) dimension=\(latentSequence.embeddingDimension) bytes=\(latentSequence.embeddings.count * MemoryLayout<Float>.size)")
+
             // Exercise the complete native path: llama.cpp final-token embedding
             // -> same-model int8 codec -> binary blob reference -> digest/replay
             // checks -> reconstructed vector. Authorization remains injected.
