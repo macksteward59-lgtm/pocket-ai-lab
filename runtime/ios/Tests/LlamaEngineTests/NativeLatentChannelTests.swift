@@ -208,6 +208,27 @@ final class NativeLatentChannelTests: XCTestCase {
         } catch NativeLatentChannelError.invalidBlobReceipt {}
     }
 
+    func testUppercaseBlobDigestReceiptIsCanonicalizedAcrossRuntimes() async throws {
+        let store = UppercaseDigestNativeLatentBlobStore()
+        let (sender, recipient, _) = makeChannels(store: store)
+        let envelope = try await sender.send(
+            output: output([0.1, 0.2, 0.3]),
+            taskId: "task-1",
+            conversationId: "conversation-1",
+            recipientAgentId: "critic",
+            sequence: 8,
+            expiresAt: fixedNow.addingTimeInterval(300)
+        )
+        XCTAssertEqual(envelope.payload.sha256, envelope.payload.sha256.lowercased())
+        let received = try await recipient.receive(
+            envelope,
+            expectedTaskId: "task-1",
+            expectedConversationId: "conversation-1",
+            expectedSenderAgentId: "researcher"
+        )
+        XCTAssertEqual(received.embedding.count, 3)
+    }
+
     func testTamperedBlobIsRejectedBeforeDecode() async throws {
         let store = TamperingNativeLatentBlobStore()
         let (sender, recipient, _) = makeChannels(store: store)
@@ -296,3 +317,21 @@ private actor TamperingNativeLatentBlobStore: NativeLatentBlobStore {
         return data
     }
 }
+private actor UppercaseDigestNativeLatentBlobStore: NativeLatentBlobStore {
+    private var entries: [String: Data] = [:]
+
+    func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentPayloadReference {
+        let reference = "uppercase:" + UUID().uuidString
+        entries[reference] = Data(data)
+        return NativeLatentPayloadReference(
+            blobRef: reference,
+            byteLength: data.count,
+            sha256: NativeLatentSHA256.digest(data).uppercased()
+        )
+    }
+
+    func get(_ reference: String) async throws -> Data? {
+        entries[reference].map(Data.init)
+    }
+}
+
