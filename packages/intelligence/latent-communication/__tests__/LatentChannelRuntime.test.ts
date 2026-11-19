@@ -86,6 +86,29 @@ describe("latent channel runtime proof of concept", () => {
     })).rejects.toThrow(/compatible latent codec|model identity/);
   });
 
+  it("rejects envelopes claiming a different encoder model revision", async () => {
+    const { sender, recipient } = setup();
+    const envelope = await sender.send({
+      taskId: "task-1",
+      conversationId: "conversation-1",
+      recipient: capability("critic", "recipient"),
+      sequence: 1,
+      hiddenState: new Float32Array([0.1, 0.2]),
+      shape: [2],
+      expiresAt: "2026-11-19T04:05:00.000Z"
+    });
+    const tampered = {
+      ...envelope,
+      codec: {
+        ...envelope.codec,
+        encoderModel: { ...model, modelRevision: "unrecognized-revision" }
+      }
+    };
+    await expect(recipient.receive(tampered, {
+      taskId: "task-1", senderAgentId: "researcher"
+    })).rejects.toThrow(/sender model identity/);
+  });
+
   it("fails closed when host authorization denies transfer", async () => {
     const { sender } = setup({ async authorize() { return false; } });
     await expect(sender.send({
