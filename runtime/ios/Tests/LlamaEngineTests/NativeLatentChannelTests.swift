@@ -96,15 +96,11 @@ final class NativeLatentChannelTests: XCTestCase {
             senderAgentId: envelope.senderAgentId,
             recipientAgentId: envelope.recipientAgentId,
             sequence: envelope.sequence,
-            createdAt: fixedNow.addingTimeInterval(30),
+            createdAt: ISO8601DateFormatter().string(from: fixedNow.addingTimeInterval(30)),
             expiresAt: envelope.expiresAt,
-            modelIdentity: envelope.modelIdentity,
-            codecId: envelope.codecId,
-            codecVersion: envelope.codecVersion,
+            codec: envelope.codec,
             shape: envelope.shape,
-            blobReference: envelope.blobReference,
-            payloadByteLength: envelope.payloadByteLength,
-            payloadSHA256: envelope.payloadSHA256
+            payload: envelope.payload
         )
         do {
             _ = try await recipient.receive(
@@ -224,8 +220,8 @@ private actor TamperingNativeLatentBlobStore: NativeLatentBlobStore {
         let id = "tamper:" + UUID().uuidString
         stored = Data(data)
         reference = id
-        return NativeLatentBlobReceipt(
-            reference: id,
+        return NativeLatentPayloadReference(
+            blobRef: id,
             byteLength: data.count,
             sha256: NativeLatentSHA256.digest(data)
         )
