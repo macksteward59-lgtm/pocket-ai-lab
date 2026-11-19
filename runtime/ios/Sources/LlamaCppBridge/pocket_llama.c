@@ -512,6 +512,11 @@ void pocket_llama_request_cancel(pocket_llama * engine) {
     atomic_store(&engine->cancel, 1);
 }
 
+void pocket_llama_reset_cancel(pocket_llama * engine) {
+    if (!engine) return;
+    atomic_store(&engine->cancel, 0);
+}
+
 void pocket_llama_offload(const pocket_llama * engine, int * requested, int * layers, int * total) {
     if (!engine) {
         if (requested) *requested = 0;
@@ -595,7 +600,6 @@ int pocket_llama_generate(
     }
 
     pthread_mutex_lock(&engine->mu);
-    atomic_store(&engine->cancel, 0);
     engine->sequence_token_count = 0;
     if (engine->sequence_capture_enabled && (size_t) max_tokens > engine->sequence_max_tokens) {
         pthread_mutex_unlock(&engine->mu);
