@@ -10,6 +10,7 @@ import type {
   DirectorCapabilities, ResearchSource, ProjectAnalysis, MemoryImprovementProposal
 } from "./DirectorCapabilities";
 import type { ToolDirector, ToolBuildSpec } from "../tooling/ToolDirector";
+import type { AgentLearningTool, LearningChangeKind, TrainingBudget } from "../learning/AgentLearningTool";
 
 export type DirectorCommand =
   | { kind: "research"; query: string; allowedDomains?: string[]; maxSources?: number }
@@ -19,7 +20,10 @@ export type DirectorCommand =
   | { kind: "develop-tool"; spec: ToolBuildSpec }
   | { kind: "activate-tool"; toolId: string; version: number; approvalRef: string }
   | { kind: "retire-tool"; toolId: string; approvalRef: string }
-  | { kind: "use-device"; approvalRef: string; action: Parameters<DirectorCapabilities["useDevice"]>[0]["action"] };
+  | { kind: "use-device"; approvalRef: string; action: Parameters<DirectorCapabilities["useDevice"]>[0]["action"] }
+  | { kind: "propose-agent-learning"; agentId: string; objective: string; changeKind: LearningChangeKind; evidenceRefs: string[] }
+  | { kind: "train-agent-candidate"; proposalId: string; baselineModelId: string; datasetRef: string; datasetVersion: string; budget: TrainingBudget; hyperparameters: Record<string, string | number | boolean>; approvalRef: string }
+  | { kind: "evaluate-agent-candidate"; candidateId: string; benchmarkVersion: string };
 
 export interface DirectorCommandContext {
   taskId: string;
