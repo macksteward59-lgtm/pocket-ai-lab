@@ -237,6 +237,9 @@ export class AgentLearningTool {
     }
     const proposal = this.proposals.get(input.proposalId);
     if (!proposal) throw new Error("Unknown learning proposal");
+    if (proposal.taskId !== input.taskId) {
+      throw new Error("Learning proposal belongs to a different task");
+    }
     if (proposal.changeKind !== "adapter-training") {
       throw new Error("Only adapter-training proposals can start a training job");
     }
@@ -312,6 +315,10 @@ export class AgentLearningTool {
       benchmarkVersion: input.benchmarkVersion
     });
     if (!runs?.baselineRun || !runs.candidateRun) throw new Error("Evaluation runner returned incomplete paired runs");
+    if (runs.baselineRun.datasetVersion !== input.benchmarkVersion ||
+        runs.candidateRun.datasetVersion !== input.benchmarkVersion) {
+      throw new Error("Evaluation runs do not match the requested benchmark version");
+    }
     return this.assess({
       candidateId: candidate.candidateId,
       baselineRun: runs.baselineRun,
