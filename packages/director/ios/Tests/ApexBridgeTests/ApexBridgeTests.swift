@@ -2,7 +2,7 @@ import Foundation
 import CryptoKit
 import XCTest
 import PocketLlamaEngine
-import ApexBridge
+@_spi(Testing) import ApexBridge
 
 final class BridgeGateTests: XCTestCase {
     func testHTTPSOriginIncludesEffectivePort() {
