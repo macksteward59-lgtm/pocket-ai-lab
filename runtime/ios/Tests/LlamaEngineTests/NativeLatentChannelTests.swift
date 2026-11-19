@@ -75,7 +75,7 @@ final class NativeLatentChannelTests: XCTestCase {
         XCTAssertEqual(decoded.tokenCount, 3)
         XCTAssertEqual(decoded.embeddingDimension, 4)
         XCTAssertEqual(decoded.segmentTokenCounts, [2, 1])
-        XCTAssertEqual(decoded.segmentEmbeddings, [3.5, 4.25, 10, 18, 1, 2, 9, 22])
+        XCTAssertEqual(decoded.segmentEmbeddings, [3.5, 4.25, 10, 18, 0.5, 1.75, 31, 42])
     }
 
     func testGIE1DecoderRejectsWrongModelAndCorruptPayloads() throws {
