@@ -57,7 +57,7 @@ describe("latent communication contract", () => {
   it("negotiates only exact shared codec versions and dtypes", () => {
     expect(negotiateLatentCodec(sender, recipient)).toMatchObject({
       codecId: "codec-a", codecVersion: "1", dtype: "int8",
-      encoderModel: sender.model, decoderModel: recipient.model
+      encoderModel: sender.model, decoderModel: recipient.model, maxPayloadBytes: 2048
     });
     expect(negotiateLatentCodec({ ...sender, supportsHiddenStateExport: false }, recipient)).toBeNull();
     expect(negotiateLatentCodec(sender, { ...recipient, supportsLatentDecode: false })).toBeNull();
@@ -68,6 +68,9 @@ describe("latent communication contract", () => {
     expect(LatentTransferEnvelopeSchema.safeParse(transfer({ shape: [Number.MAX_SAFE_INTEGER, 4] })).success).toBe(false);
     expect(LatentTransferEnvelopeSchema.safeParse(transfer({
       payload: { blobRef: "blob", byteLength: 16 * 1024 * 1024 + 1, sha256: "a".repeat(64) }
+    })).success).toBe(false);
+    expect(LatentTransferEnvelopeSchema.safeParse(transfer({
+      payload: { blobRef: "blob", byteLength: 2049, sha256: "a".repeat(64) }
     })).success).toBe(false);
   });
 
