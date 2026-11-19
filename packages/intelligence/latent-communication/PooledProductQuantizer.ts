@@ -366,6 +366,9 @@ function poolSequence(
       !Array.from(tokenEmbeddings).every(Number.isFinite)) {
     throw new Error("Latent sequence shape or values are invalid");
   }
+  if (Math.ceil(tokenCount / maxTokensPerSegment) > MAX_SEGMENTS) {
+    throw new Error("Latent sequence has too many temporal segments");
+  }
   const vectors: Float64Array[] = [];
   const spans: number[] = [];
   let squaredError = 0;
