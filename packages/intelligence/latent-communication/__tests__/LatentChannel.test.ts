@@ -61,7 +61,7 @@ describe("latent communication contract", () => {
   });
 
   it("rejects unbounded tensors and oversized payload references", () => {
-    expect(LatentTransferEnvelopeSchema.safeParse(transfer({ shape: [MAX_SAFE_INTEGER, 4] })).success).toBe(false);
+    expect(LatentTransferEnvelopeSchema.safeParse(transfer({ shape: [Number.MAX_SAFE_INTEGER, 4] })).success).toBe(false);
     expect(LatentTransferEnvelopeSchema.safeParse(transfer({
       payload: { blobRef: "blob", byteLength: 16 * 1024 * 1024 + 1, sha256: "a".repeat(64) }
     })).success).toBe(false);
