@@ -60,7 +60,8 @@ describe("latent channel runtime proof of concept", () => {
       shape: [1024],
       expiresAt: "2026-11-19T04:05:00.000Z"
     });
-    const result = await recipient.receive(envelope);
+    const result = await recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" });
+    await expect(recipient.receive(envelope, { taskId: "other-task", senderAgentId: "researcher" })).rejects.toThrow(/identity/);
     let squaredError = 0;
     for (let i = 0; i < vector.length; i += 1) {
       squaredError += (vector[i] - result.hiddenState[i]) ** 2;
@@ -109,8 +110,8 @@ describe("latent channel runtime proof of concept", () => {
       shape: [3],
       expiresAt: "2026-11-19T04:05:00.000Z"
     });
-    await recipient.receive(envelope);
-    await expect(recipient.receive(envelope)).rejects.toThrow(/replay|duplicate/);
+    await recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" });
+    await expect(recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" })).rejects.toThrow(/replay|duplicate/);
   });
 
   it("rejects tampered binary payloads before decode", async () => {
@@ -130,6 +131,6 @@ describe("latent channel runtime proof of concept", () => {
       if (bytes) bytes[8] = bytes[8] ^ 1;
       return bytes;
     };
-    await expect(recipient.receive(envelope)).rejects.toThrow(/digest mismatch/);
+    await expect(recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" })).rejects.toThrow(/digest mismatch/);
   });
 });
