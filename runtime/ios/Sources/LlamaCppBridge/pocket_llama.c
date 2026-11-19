@@ -818,15 +818,15 @@ int pocket_llama_set_sequence_capture(
         return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "A loaded engine is required for sequence capture.");
     }
     pthread_mutex_lock(&engine->mu);
+    engine->sequence_capture_enabled = 0;
+    engine->capture_embeddings = 0;
+    engine->sequence_token_count = 0;
+    engine->sequence_embedding_dimension = 0;
+    engine->sequence_max_tokens = 0;
+    engine->sequence_max_bytes = 0;
+    free(engine->sequence_embeddings);
+    engine->sequence_embeddings = NULL;
     if (max_tokens == 0 && max_bytes == 0) {
-        engine->sequence_capture_enabled = 0;
-        engine->capture_embeddings = 0;
-        engine->sequence_token_count = 0;
-        engine->sequence_embedding_dimension = 0;
-        engine->sequence_max_tokens = 0;
-        engine->sequence_max_bytes = 0;
-        free(engine->sequence_embeddings);
-        engine->sequence_embeddings = NULL;
         pthread_mutex_unlock(&engine->mu);
         if (err && err_len) err[0] = '\0';
         return POCKET_LLAMA_OK;
@@ -852,7 +852,6 @@ int pocket_llama_set_sequence_capture(
         pthread_mutex_unlock(&engine->mu);
         return fail(err, err_len, POCKET_LLAMA_ERR_CONTEXT, "Latent sequence buffer allocation failed.");
     }
-    free(engine->sequence_embeddings);
     engine->sequence_embeddings = buffer;
     engine->sequence_max_tokens = max_tokens;
     engine->sequence_max_bytes = max_bytes;
