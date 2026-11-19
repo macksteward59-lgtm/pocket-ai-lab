@@ -181,6 +181,44 @@ final class NativeInferenceRuntimeTests: XCTestCase {
         try await runtime.unload(modelId: lease.model.id)
     }
 
+    func testLatentSequenceRejectsInvalidCaptureBoundsBeforeInference() async throws {
+        let engine = ControlledRuntimeTestEngine()
+        let runtime = try makeRuntime(engine: engine)
+        let lease = try await runtime.acquire(model: model("latent-sequence-invalid-bounds"), estimatedMemoryMB: 128)
+        let invalidBounds: [(maxTokens: Int, maxBytes: Int, maxOutputBytes: Int)] = [
+            (0, 1_024, 64_000),
+            (257, 1_024, 64_000),
+            (8, 0, 64_000),
+            (8, 16 * 1024 * 1024 + 1, 64_000),
+            (8, 1_024, 0)
+        ]
+
+        for (index, bounds) in invalidBounds.enumerated() {
+            do {
+                _ = try await runtime.generateWithLatentSequence(
+                    lease: lease,
+                    request: GenerationRequest(
+                        prompt: "invalid capture bounds \(index)",
+                        maxTokens: 1,
+                        temperature: 0
+                    ),
+                    maxLatentTokens: bounds.maxTokens,
+                    maxLatentBytes: bounds.maxBytes,
+                    maxOutputBytes: bounds.maxOutputBytes
+                )
+                XCTFail("Invalid latent sequence bounds must be rejected before inference")
+            } catch NativeInferenceRuntimeError.invalidOutputLimit {
+            }
+        }
+
+        let active = await engine.activeRequestIDs()
+        XCTAssertTrue(active.isEmpty, "Invalid capture bounds must not create an inference request")
+        let snapshot = await runtime.snapshot()
+        XCTAssertEqual(snapshot.activeUseCount, 0)
+        _ = await runtime.release(lease)
+        try await runtime.unload(modelId: lease.model.id)
+    }
+
     func testReleasedLeaseCannotStartGeneration() async throws {
         let engine = ControlledRuntimeTestEngine()
         let runtime = try makeRuntime(engine: engine)
