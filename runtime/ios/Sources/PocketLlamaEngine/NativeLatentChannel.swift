@@ -81,6 +81,7 @@ public protocol NativeLatentReplayGuard: Sendable {
 public enum NativeLatentChannelError: Error, Equatable, Sendable {
     case invalidIdentity
     case invalidRoute
+    case invalidSequence
     case invalidShape
     case invalidExpiry
     case unsupportedCodec
@@ -203,6 +204,7 @@ public struct AffineInt8NativeLatentCodec: Sendable {
 /// access-controlled blob storage, persistent replay protection, and an
 /// APEX/Director-backed authorization adapter.
 public actor NativeLatentChannel {
+    private static let maximumSafeSequence = UInt64(9_007_199_254_740_991)
     private let localAgentId: String
     private let modelIdentity: NativeLatentModelIdentity
     private let codec: AffineInt8NativeLatentCodec
@@ -246,6 +248,7 @@ public actor NativeLatentChannel {
               localAgentId != recipientAgentId else {
             throw NativeLatentChannelError.invalidRoute
         }
+        guard sequence <= Self.maximumSafeSequence else { throw NativeLatentChannelError.invalidSequence }
         guard expiresAt > createdAt else { throw NativeLatentChannelError.invalidExpiry }
         guard output.modelId == modelIdentity.modelId else { throw NativeLatentChannelError.invalidIdentity }
 
@@ -316,6 +319,7 @@ public actor NativeLatentChannel {
               envelope.conversationId == expectedConversationId,
               envelope.senderAgentId == expectedSenderAgentId,
               envelope.recipientAgentId == localAgentId,
+              envelope.sequence <= Self.maximumSafeSequence,
               envelope.codec.encoderModel == modelIdentity,
               envelope.codec.decoderModel == modelIdentity else {
             throw NativeLatentChannelError.invalidRoute
