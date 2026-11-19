@@ -123,6 +123,32 @@ describe("AgentLearningTool", () => {
     expect(candidate.candidateModelRef).toBe("candidate-model");
   });
 
+  it("rejects training when the proposal belongs to a different task before approval or sandbox execution", async () => {
+    let sandboxCalls = 0;
+    let approvalCalls = 0;
+    const tool = new AgentLearningTool({
+      evidenceReader: makeEvidenceReader(),
+      trainingApprovalVerifier: { async verify() { approvalCalls += 1; return true; } },
+      trainingSandbox: { async run() {
+        sandboxCalls += 1;
+        throw new Error("sandbox must not run");
+      } }
+    });
+    const proposal = await tool.propose({
+      taskId: "task-original",
+      agentId: "engineer",
+      objective: "Train an adapter",
+      changeKind: "adapter-training",
+      evidenceRefs: ["reviewed:dataset-notes"]
+    });
+    await expect(tool.train({
+      ...trainingRequest(proposal.proposalId),
+      taskId: "different-task"
+    })).rejects.toThrow(/different task/);
+    expect(approvalCalls).toBe(0);
+    expect(sandboxCalls).toBe(0);
+  });
+
   it("does not train non-training proposals or run without a sandbox", async () => {
     const tool = makeTool();
     const proposal = await tool.propose({
@@ -245,6 +271,35 @@ describe("AgentLearningTool", () => {
     const result = await tool.evaluate({ candidateId: candidate.candidateId, benchmarkVersion: "eval-v1" });
     expect(evaluationCalls).toBe(1);
     expect(result.status).toBe("eligible-for-human-review");
+  });
+
+  it("rejects paired runs when both use a version other than the requested benchmark", async () => {
+    const tool = new AgentLearningTool({
+      evidenceReader: makeEvidenceReader(),
+      trainingApprovalVerifier: { async verify() { return true; } },
+      trainingSandbox: { async run() {
+        return {
+          candidateModelRef: "candidate-model",
+          sandboxRunRef: "sandbox-run-1",
+          completedAt: "2026-11-18T12:05:00.000Z",
+          metrics: { trainLoss: 0.42 }
+        };
+      } },
+      evaluationRunner: {
+        async runPaired() {
+          return {
+            baselineRun: { ...run("baseline-model", "baseline-run", 0.6), datasetVersion: "wrong-version" },
+            candidateRun: { ...run("candidate-model", "candidate-run", 0.8), datasetVersion: "wrong-version" }
+          };
+        }
+      }
+    });
+    const proposal = await adapterProposal(tool);
+    const candidate = await tool.train(trainingRequest(proposal.proposalId));
+    await expect(tool.evaluate({
+      candidateId: candidate.candidateId,
+      benchmarkVersion: "requested-version"
+    })).rejects.toThrow(/requested benchmark version/);
   });
 
   it("fails closed when no trusted evaluation runner is configured", async () => {
