@@ -91,7 +91,9 @@ export class Orchestrator {
   /** Director-managed tool lifecycle; generated code remains gated and non-executable here. */
   readonly tooling: ToolDirector;
   /** Research, project analysis, memory evolution, and permissioned device capabilities. */
-  readonly capabilities: DirectorCapabilities;\n  /** Governed proposal, isolated candidate-training, and paired evaluation tool. */\n  readonly learning: AgentLearningTool;
+  readonly capabilities: DirectorCapabilities;
+  /** Governed proposal, isolated candidate-training, and paired evaluation tool. */
+  readonly learning: AgentLearningTool;
   /** Strict allowlisted structured-command bridge for model/provider adapters. */
   readonly directorCommands: DirectorCommandRouter;
   private readonly inference: InferenceProvider;
@@ -118,7 +120,11 @@ export class Orchestrator {
     researchProvider?: ResearchProvider;
     projectInspector?: ProjectInspector;
     memoryImprovementAdvisor?: MemoryImprovementAdvisor;
-    memoryChangeApproval?: MemoryChangeApproval;\n    learningEvidenceReader?: LearningEvidenceReader;\n    trainingSandbox?: TrainingSandbox;\n    trainingApprovalVerifier?: TrainingApprovalVerifier;\n    candidateEvaluationRunner?: CandidateEvaluationRunner;
+    memoryChangeApproval?: MemoryChangeApproval;
+    learningEvidenceReader?: LearningEvidenceReader;
+    trainingSandbox?: TrainingSandbox;
+    trainingApprovalVerifier?: TrainingApprovalVerifier;
+    candidateEvaluationRunner?: CandidateEvaluationRunner;
     devicePermissionBroker?: DevicePermissionBroker;
     deviceBridge?: DeviceBridge;
     /** Optional model-native structured tool-call adapter for Director commands. */
@@ -134,7 +140,13 @@ export class Orchestrator {
     this.directorCommandProvider = opts.directorCommandProvider;
     this.router = new ModelRouter(opts.getResources);
     this.deliberation = new DeliberationEngine(opts.maxDeliberationRounds ?? 1);
-    this.memory = opts.memory ?? new MemoryManager();\n    this.learning = new AgentLearningTool({\n      evidenceReader: opts.learningEvidenceReader,\n      trainingSandbox: opts.trainingSandbox,\n      trainingApprovalVerifier: opts.trainingApprovalVerifier,\n      evaluationRunner: opts.candidateEvaluationRunner\n    });
+    this.memory = opts.memory ?? new MemoryManager();
+    this.learning = new AgentLearningTool({
+      evidenceReader: opts.learningEvidenceReader,
+      trainingSandbox: opts.trainingSandbox,
+      trainingApprovalVerifier: opts.trainingApprovalVerifier,
+      evaluationRunner: opts.candidateEvaluationRunner
+    });
     this.capabilities = new DirectorCapabilities({
       memory: this.memory,
       research: opts.researchProvider,
