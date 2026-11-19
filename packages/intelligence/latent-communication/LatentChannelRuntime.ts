@@ -246,7 +246,7 @@ export class LatentChannelRuntime {
     const encoderSupported = this.options.codec.canEncode(encoderModel);
     const decoderSupported = this.options.codec.canDecode(decoderModel);
     if (!encoderSupported || !decoderSupported) {
-      throw new Error("Codec does not support the negotiated encoder and decoder model identities");
+      throw new Error("Codec does not support the negotiated model identity pair");
     }
   }
 }
