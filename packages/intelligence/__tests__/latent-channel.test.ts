@@ -83,7 +83,7 @@ describe("latent communication contract", () => {
       taskId: "task-2", conversationId: "conversation-1", senderAgentId: "researcher", recipientAgentId: "critic"
     })).toThrow(/identity/);
     expect(() => validateLatentTransfer(value, {
-      taskId: "task-1", senderAgentId: "researcher", recipientAgentId: "critic"
+      taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher", recipientAgentId: "critic"
     }, new Date("2026-11-18T12:06:00.000Z"))).toThrow(/expired/);
   });
 });
