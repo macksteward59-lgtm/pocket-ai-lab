@@ -105,7 +105,8 @@ export async function loadGIECodebookArtifact(
       bytes.byteLength > MAX_ARTIFACT_BYTES || !/^[a-f0-9]{64}$/.test(expectedSHA256)) {
     throw new Error("GCB1 artifact bounds or expected digest are invalid");
   }
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  const digestInput = bytes.slice().buffer as ArrayBuffer;
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", digestInput);
   const actual = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
   if (actual !== expectedSHA256) throw new Error("GCB1 artifact SHA-256 mismatch");
 
