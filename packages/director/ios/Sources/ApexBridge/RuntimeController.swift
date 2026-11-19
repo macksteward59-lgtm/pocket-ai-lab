@@ -107,7 +107,7 @@ public actor RuntimeController {
     // Internal synchronization seam fired after all captured tasks are cancelled and before drain waits; unset in production.
     private var cancelAllDrainWaitObserverForTesting: (@Sendable () async -> Void)?
 
-    func setCancelAllDrainWaitObserverForTesting(_ observer: (@Sendable () async -> Void)?) {
+    package func setCancelAllDrainWaitObserverForTesting(_ observer: (@Sendable () async -> Void)?) {
         cancelAllDrainWaitObserverForTesting = observer
     }
 
