@@ -11,13 +11,15 @@ const sender = {
   agentId: "researcher",
   model: { modelId: "model-a", modelRevision: "rev-1" },
   supportsHiddenStateExport: true,
+  supportsLatentDecode: false,
   codecs: [{ codecId: "codec-a", codecVersion: "1", dtypes: ["float16" as const, "int8" as const], maxPayloadBytes: 4096 }]
 };
 const recipient = {
   protocolVersion: 1 as const,
   agentId: "critic",
   model: { modelId: "model-b", modelRevision: "rev-2" },
-  supportsHiddenStateExport: true,
+  supportsHiddenStateExport: false,
+  supportsLatentDecode: true,
   codecs: [{ codecId: "codec-a", codecVersion: "1", dtypes: ["int8" as const], maxPayloadBytes: 2048 }]
 };
 
@@ -57,7 +59,7 @@ describe("latent communication contract", () => {
       codecId: "codec-a", codecVersion: "1", dtype: "int8",
       encoderModel: sender.model, decoderModel: recipient.model
     });
-    expect(negotiateLatentCodec(sender, { ...recipient, supportsHiddenStateExport: false })).toBeNull();
+    expect(negotiateLatentCodec(sender, { ...recipient, supportsLatentDecode: false })).toBeNull();
     expect(negotiateLatentCodec(sender, { ...recipient, codecs: [{ ...recipient.codecs[0], codecVersion: "2" }] })).toBeNull();
   });
 
