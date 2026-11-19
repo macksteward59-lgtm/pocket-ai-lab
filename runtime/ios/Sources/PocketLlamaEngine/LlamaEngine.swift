@@ -170,56 +170,6 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
         throw LlamaEngineError.backendUnavailable("The placeholder engine cannot export latent representations.")
     }
 
-    public func generateWithLatentSequence(
-        session: RuntimeSession,
-        request: GenerationRequest,
-        maxLatentTokens: Int = 256,
-        maxLatentBytes: Int = 16 * 1024 * 1024
-    ) async throws -> LlamaLatentSequenceOutput {
-        #if !POCKET_LLAMA_LINKED
-        throw LlamaEngineError.backendUnavailable("llama.cpp Metal is not linked in this build. No latent sequence was produced.")
-        #else
-        try LlamaEngineSupport.validateRequest(request)
-        guard maxLatentTokens > 0, maxLatentTokens <= 256,
-              maxLatentBytes > 0, maxLatentBytes <= 16 * 1024 * 1024,
-              request.maxTokens <= maxLatentTokens else {
-            throw LlamaEngineError.invalidRequest("Latent sequence limits are invalid or smaller than the requested generation.")
-        }
-        guard let loaded = sessions[session.id] else {
-            throw LlamaEngineError.sessionNotLoaded("Session \\(session.id) is not loaded.")
-        }
-        guard generation[session.id] == nil else {
-            throw LlamaEngineError.invalidRequest("This runtime session already has an active generation.")
-        }
-        guard let token = UUID(uuidString: request.requestId) else {
-            throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
-        }
-        generation[session.id] = token
-        let task = Task.detached {
-            try loaded.generateWithLatentSequence(
-                request,
-                modelId: session.modelId,
-                maxTokens: maxLatentTokens,
-                maxBytes: maxLatentBytes
-            )
-        }
-        latentSequenceTasks[session.id] = (requestId: token.uuidString, task: task)
-        do {
-            let result = try await withTaskCancellationHandler {
-                try await task.value
-            } onCancel: {
-                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
-            }
-            guard generation[session.id] == token else { throw LlamaEngineError.cancelled }
-            finishGeneration(sessionId: session.id, token: token)
-            return result
-        } catch {
-            finishGeneration(sessionId: session.id, token: token)
-            throw error
-        }
-        #endif
-    }
-
     public func cancel(sessionId: String, requestId: String) async {}
 
     public func cancelAndWait(sessionId: String, requestId: String) async {}
@@ -422,6 +372,56 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
             guard generation[session.id] == token else {
                 throw LlamaEngineError.cancelled
             }
+            finishGeneration(sessionId: session.id, token: token)
+            return result
+        } catch {
+            finishGeneration(sessionId: session.id, token: token)
+            throw error
+        }
+        #endif
+    }
+
+    public func generateWithLatentSequence(
+        session: RuntimeSession,
+        request: GenerationRequest,
+        maxLatentTokens: Int = 256,
+        maxLatentBytes: Int = 16 * 1024 * 1024
+    ) async throws -> LlamaLatentSequenceOutput {
+        #if !POCKET_LLAMA_LINKED
+        throw LlamaEngineError.backendUnavailable("llama.cpp Metal is not linked in this build. No latent sequence was produced.")
+        #else
+        try LlamaEngineSupport.validateRequest(request)
+        guard maxLatentTokens > 0, maxLatentTokens <= 256,
+              maxLatentBytes > 0, maxLatentBytes <= 16 * 1024 * 1024,
+              request.maxTokens <= maxLatentTokens else {
+            throw LlamaEngineError.invalidRequest("Latent sequence limits are invalid or smaller than the requested generation.")
+        }
+        guard let loaded = sessions[session.id] else {
+            throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
+        }
+        guard generation[session.id] == nil else {
+            throw LlamaEngineError.invalidRequest("This runtime session already has an active generation.")
+        }
+        guard let token = UUID(uuidString: request.requestId) else {
+            throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
+        }
+        generation[session.id] = token
+        let task = Task.detached {
+            try loaded.generateWithLatentSequence(
+                request,
+                modelId: session.modelId,
+                maxTokens: maxLatentTokens,
+                maxBytes: maxLatentBytes
+            )
+        }
+        latentSequenceTasks[session.id] = (requestId: token.uuidString, task: task)
+        do {
+            let result = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
+            }
+            guard generation[session.id] == token else { throw LlamaEngineError.cancelled }
             finishGeneration(sessionId: session.id, token: token)
             return result
         } catch {
