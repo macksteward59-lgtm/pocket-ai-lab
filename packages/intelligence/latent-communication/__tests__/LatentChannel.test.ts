@@ -59,7 +59,8 @@ describe("latent communication contract", () => {
       codecId: "codec-a", codecVersion: "1", dtype: "int8",
       encoderModel: sender.model, decoderModel: recipient.model
     });
-    expect(negotiateLatentCodec({ ...sender, supportsHiddenStateExport: false }, recipient)).toBeNull();\n    expect(negotiateLatentCodec(sender, { ...recipient, supportsLatentDecode: false })).toBeNull();
+    expect(negotiateLatentCodec({ ...sender, supportsHiddenStateExport: false }, recipient)).toBeNull();
+    expect(negotiateLatentCodec(sender, { ...recipient, supportsLatentDecode: false })).toBeNull();
     expect(negotiateLatentCodec(sender, { ...recipient, codecs: [{ ...recipient.codecs[0], codecVersion: "2" }] })).toBeNull();
   });
 
