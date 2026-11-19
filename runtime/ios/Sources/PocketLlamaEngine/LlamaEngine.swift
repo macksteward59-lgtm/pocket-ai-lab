@@ -350,7 +350,7 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         #else
         try LlamaEngineSupport.validateRequest(request)
         guard let loaded = sessions[session.id] else {
-            throw LlamaEngineError.sessionNotLoaded("Session \\(session.id) is not loaded.")
+            throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
         guard generation[session.id] == nil else {
             throw LlamaEngineError.invalidRequest("This runtime session already has an active generation. Cancel or finish it before starting another.")
@@ -674,7 +674,7 @@ private final class LoadedSession: @unchecked Sendable {
         }
         guard copyRC == POCKET_LLAMA_OK,
               copiedTokens == tokenCount, copiedDimension == dimension,
-              embeddings.allSatisfy(\\.isFinite) else {
+              embeddings.allSatisfy(\.isFinite) else {
             throw Self.map(copyRC, err)
         }
         return LlamaLatentSequenceOutput(
