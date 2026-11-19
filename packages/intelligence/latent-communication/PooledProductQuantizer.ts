@@ -153,6 +153,9 @@ export class PooledProductQuantizer {
     this.assertIdentity(identity);
     const pooled = poolSequence(input, this.codebook.maxTokensPerSegment);
     const { embeddingDimension: dimension, subspaces, codebookSize, residualStages } = this.codebook;
+    if (input.embeddingDimension !== dimension) {
+      throw new Error("Latent sequence embedding dimension does not match the codebook");
+    }
     const segmentCount = pooled.vectors.length;
     if (segmentCount > MAX_SEGMENTS) throw new Error("Sequence has too many pooled segments");
 
