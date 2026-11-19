@@ -7,8 +7,8 @@ final class NativeGIESequenceEncoderTests: XCTestCase {
         modelRevision: "sha256:model-rev-1"
     )
 
-    private func codebook() throws -> NativeGIECodebook {
-        try NativeGIECodebook(
+    private func codebook() -> NativeGIECodebook {
+        NativeGIECodebook(
             codebookId: String(repeating: "a", count: 64),
             modelIdentity: identity,
             embeddingDimension: 4,
@@ -101,7 +101,7 @@ final class NativeGIESequenceEncoderTests: XCTestCase {
     }
 
     func testEncoderUsesFirstCodewordForExactDistanceTies() throws {
-        let tied = try NativeGIECodebook(
+        let tied = NativeGIECodebook(
             codebookId: String(repeating: "b", count: 64),
             modelIdentity: identity,
             embeddingDimension: 2,
