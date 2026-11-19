@@ -48,3 +48,6 @@ jobs:
 
       - name: Test latent communication contract and runtime
         run: npx vitest run packages/intelligence/__tests__/latent-channel.test.ts packages/intelligence/__tests__/latent-channel-runtime.test.ts
+
+      - name: Test full intelligence engine suite
+        run: npm run test:engine
