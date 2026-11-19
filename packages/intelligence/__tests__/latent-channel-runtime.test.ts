@@ -60,8 +60,9 @@ describe("latent channel runtime proof of concept", () => {
       shape: [1024],
       expiresAt: "2026-11-19T04:05:00.000Z"
     });
-    const result = await recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" });
-    await expect(recipient.receive(envelope, { taskId: "other-task", senderAgentId: "researcher" })).rejects.toThrow(/identity/);
+    const result = await recipient.receive(envelope, { taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher" });
+    await expect(recipient.receive(envelope, { taskId: "other-task", conversationId: "conversation-1", senderAgentId: "researcher" })).rejects.toThrow(/identity/);
+    await expect(recipient.receive(envelope, { taskId: "task-1", conversationId: "different-conversation", senderAgentId: "researcher" })).rejects.toThrow(/identity/);
     let squaredError = 0;
     for (let i = 0; i < vector.length; i += 1) {
       squaredError += (vector[i] - result.hiddenState[i]) ** 2;
@@ -71,6 +72,35 @@ describe("latent channel runtime proof of concept", () => {
     expect(rmse).toBeLessThan(0.02);
     expect(envelope.payload.byteLength).toBe(8 + vector.length);
     expect(envelope.payload.byteLength).toBeLessThan(vector.byteLength * 0.3);
+  });
+
+  it("handles constant vectors and extreme finite Float32 ranges without overflow", async () => {
+    const edgeCodec = new AffineInt8LatentCodec(model);
+    const constant = Float32Array.from([7.25, 7.25, 7.25]);
+    const constantBytes = await edgeCodec.encode({ hiddenState: constant, shape: [3], dtype: "int8" });
+    const constantDecoded = await edgeCodec.decode({ bytes: constantBytes, shape: [3], dtype: "int8" });
+    expect(Array.from(constantDecoded)).toEqual([7.25, 7.25, 7.25]);
+
+    const extreme = Float32Array.from([-3e38, -1e38, 0, 1e38, 3e38]);
+    const extremeBytes = await edgeCodec.encode({ hiddenState: extreme, shape: [5], dtype: "int8" });
+    const extremeDecoded = await edgeCodec.decode({ bytes: extremeBytes, shape: [5], dtype: "int8" });
+    expect(Array.from(extremeDecoded).every(Number.isFinite)).toBe(true);
+    expect(extremeDecoded[0]).toBeCloseTo(extreme[0], -30);
+    expect(extremeDecoded[4]).toBeCloseTo(extreme[4], -30);
+  });
+
+  it("rejects malformed shapes and invalid sequence values before storing payloads", async () => {
+    const { sender, store } = setup();
+    await expect(sender.send({
+      taskId: "task-1", conversationId: "conversation-1",
+      recipient: capability("critic", "recipient"), sequence: -1,
+      hiddenState: new Float32Array([1]), shape: [1],
+      expiresAt: "2026-11-19T04:05:00.000Z"
+    })).rejects.toThrow(/sequence/);
+    await expect(codec.encode({
+      hiddenState: new Float32Array([1]), shape: [1, 0], dtype: "int8"
+    })).rejects.toThrow(/dimensions/);
+    expect(await store.get("not-created")).toBeNull();
   });
 
   it("rejects heterogeneous model revisions instead of guessing latent compatibility", async () => {
@@ -133,8 +163,8 @@ describe("latent channel runtime proof of concept", () => {
       shape: [3],
       expiresAt: "2026-11-19T04:05:00.000Z"
     });
-    await recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" });
-    await expect(recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" })).rejects.toThrow(/replay|duplicate/);
+    await recipient.receive(envelope, { taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher" });
+    await expect(recipient.receive(envelope, { taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher" })).rejects.toThrow(/replay|duplicate/);
   });
 
   it("rejects tampered binary payloads before decode", async () => {
@@ -154,6 +184,6 @@ describe("latent channel runtime proof of concept", () => {
       if (bytes) bytes[8] = bytes[8] ^ 1;
       return bytes;
     };
-    await expect(recipient.receive(envelope, { taskId: "task-1", senderAgentId: "researcher" })).rejects.toThrow(/digest mismatch/);
+    await expect(recipient.receive(envelope, { taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher" })).rejects.toThrow(/digest mismatch/);
   });
 });
