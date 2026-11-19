@@ -266,7 +266,7 @@ export async function runEastTaskWithLifecycle(
         retryable: false,
         // Provider/tool failures may occur after an external side effect. Without
         // a provider-specific definitive-failure receipt, preserve uncertainty.
-        outcome: "unknown"
+        outcome: claim.stepId === "assign-core-agents" ? "definitive" : "unknown"
       });
       throw error;
     }
