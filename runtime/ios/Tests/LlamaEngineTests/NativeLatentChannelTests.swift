@@ -59,7 +59,7 @@ final class NativeLatentChannelTests: XCTestCase {
             ]
         )
         let codec = try NativeGIESequenceCodec(codebook: codebook)
-        let hex = "474945310104000200020200000003000200" +
+        let hex = "474945310104000200020200030000000200" +
             String(repeating: "aa", count: 32) +
             "02000100" +
             "01000001" +
@@ -75,7 +75,7 @@ final class NativeLatentChannelTests: XCTestCase {
         XCTAssertEqual(decoded.tokenCount, 3)
         XCTAssertEqual(decoded.embeddingDimension, 4)
         XCTAssertEqual(decoded.segmentTokenCounts, [2, 1])
-        XCTAssertEqual(decoded.segmentEmbeddings, [3.5, 4.25, 9, 18, 0.5, 1.75, 31, 42])
+        XCTAssertEqual(decoded.segmentEmbeddings, [3.5, 4.25, 10, 18, 1, 2, 9, 22])
     }
 
     func testGIE1DecoderRejectsWrongModelAndCorruptPayloads() throws {
