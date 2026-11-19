@@ -11,6 +11,29 @@ public struct NativeLatentModelIdentity: Codable, Sendable, Equatable {
     }
 }
 
+public enum NativeLatentDType: String, Codable, Sendable {
+    case int8
+}
+
+/// Mirrors the TypeScript LatentCodecSelection wire contract.
+public struct NativeLatentCodecSelection: Codable, Sendable, Equatable {
+    public let codecId: String
+    public let codecVersion: String
+    public let encoderModel: NativeLatentModelIdentity
+    public let decoderModel: NativeLatentModelIdentity
+    public let dtype: NativeLatentDType
+    public let maxPayloadBytes: Int
+}
+
+/// Mirrors the TypeScript LatentPayloadReference wire contract.
+public struct NativeLatentPayloadReference: Codable, Sendable, Equatable {
+    public let blobRef: String
+    public let byteLength: Int
+    public let sha256: String
+}
+
+/// Mirrors LatentTransferEnvelope v1. Timestamps are ISO-8601 strings and
+/// binary tensor data remains out-of-band in the referenced blob.
 public struct NativeLatentTransferEnvelope: Codable, Sendable, Equatable {
     public let protocolVersion: Int
     public let transferId: UUID
@@ -19,15 +42,11 @@ public struct NativeLatentTransferEnvelope: Codable, Sendable, Equatable {
     public let senderAgentId: String
     public let recipientAgentId: String
     public let sequence: UInt64
-    public let createdAt: Date
-    public let expiresAt: Date
-    public let modelIdentity: NativeLatentModelIdentity
-    public let codecId: String
-    public let codecVersion: String
+    public let createdAt: String
+    public let expiresAt: String
+    public let codec: NativeLatentCodecSelection
     public let shape: [Int]
-    public let blobReference: String
-    public let payloadByteLength: Int
-    public let payloadSHA256: String
+    public let payload: NativeLatentPayloadReference
 }
 
 public struct NativeLatentReceived: Sendable, Equatable {
@@ -38,14 +57,8 @@ public struct NativeLatentReceived: Sendable, Equatable {
     public let embedding: [Float]
 }
 
-public struct NativeLatentBlobReceipt: Sendable, Equatable {
-    public let reference: String
-    public let byteLength: Int
-    public let sha256: String
-}
-
 public protocol NativeLatentBlobStore: Sendable {
-    func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentBlobReceipt
+    func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentPayloadReference
     func get(_ reference: String) async throws -> Data?
 }
 
@@ -55,7 +68,7 @@ public protocol NativeLatentAuthorization: Sendable {
         conversationId: String,
         senderAgentId: String,
         recipientAgentId: String,
-        modelIdentity: NativeLatentModelIdentity,
+        codec: NativeLatentCodecSelection,
         payloadByteCount: Int
     ) async -> Bool
 }
@@ -236,8 +249,16 @@ public actor NativeLatentChannel {
         guard expiresAt > createdAt else { throw NativeLatentChannelError.invalidExpiry }
         guard output.modelId == modelIdentity.modelId else { throw NativeLatentChannelError.invalidIdentity }
 
+        let selection = NativeLatentCodecSelection(
+            codecId: AffineInt8NativeLatentCodec.codecId,
+            codecVersion: AffineInt8NativeLatentCodec.codecVersion,
+            encoderModel: modelIdentity,
+            decoderModel: modelIdentity,
+            dtype: .int8,
+            maxPayloadBytes: AffineInt8NativeLatentCodec.maximumPayloadBytes
+        )
         let bytes = try codec.encode(output)
-        guard bytes.count <= AffineInt8NativeLatentCodec.maximumPayloadBytes else {
+        guard bytes.count <= selection.maxPayloadBytes else {
             throw NativeLatentChannelError.invalidShape
         }
         guard await authorization.authorize(
@@ -245,17 +266,17 @@ public actor NativeLatentChannel {
             conversationId: conversationId,
             senderAgentId: localAgentId,
             recipientAgentId: recipientAgentId,
-            modelIdentity: modelIdentity,
+            codec: selection,
             payloadByteCount: bytes.count
         ) else {
             throw NativeLatentChannelError.authorizationDenied
         }
 
         let digest = NativeLatentSHA256.digest(bytes)
-        let receipt = try await blobStore.put(bytes, expiresAt: expiresAt)
-        guard receipt.byteLength == bytes.count,
-              receipt.sha256.lowercased() == digest,
-              validIdentifier(receipt.reference, maximum: 1024) else {
+        let payload = try await blobStore.put(bytes, expiresAt: expiresAt)
+        guard payload.byteLength == bytes.count,
+              payload.sha256.lowercased() == digest,
+              validIdentifier(payload.blobRef, maximum: 1024) else {
             throw NativeLatentChannelError.invalidBlobReceipt
         }
 
@@ -267,15 +288,11 @@ public actor NativeLatentChannel {
             senderAgentId: localAgentId,
             recipientAgentId: recipientAgentId,
             sequence: sequence,
-            createdAt: createdAt,
-            expiresAt: expiresAt,
-            modelIdentity: modelIdentity,
-            codecId: AffineInt8NativeLatentCodec.codecId,
-            codecVersion: AffineInt8NativeLatentCodec.codecVersion,
+            createdAt: iso8601(createdAt),
+            expiresAt: iso8601(expiresAt),
+            codec: selection,
             shape: output.shape,
-            blobReference: receipt.reference,
-            payloadByteLength: receipt.byteLength,
-            payloadSHA256: receipt.sha256.lowercased()
+            payload: payload
         )
     }
 
@@ -291,31 +308,39 @@ public actor NativeLatentChannel {
               validIdentifier(envelope.conversationId, maximum: 256),
               validIdentifier(envelope.senderAgentId, maximum: 128),
               validIdentifier(envelope.recipientAgentId, maximum: 128),
-              validIdentifier(envelope.modelIdentity.modelId, maximum: 256),
-              validIdentifier(envelope.modelIdentity.modelRevision, maximum: 256),
+              validIdentifier(envelope.codec.encoderModel.modelId, maximum: 256),
+              validIdentifier(envelope.codec.encoderModel.modelRevision, maximum: 256),
+              validIdentifier(envelope.codec.decoderModel.modelId, maximum: 256),
+              validIdentifier(envelope.codec.decoderModel.modelRevision, maximum: 256),
               envelope.taskId == expectedTaskId,
               envelope.conversationId == expectedConversationId,
               envelope.senderAgentId == expectedSenderAgentId,
               envelope.recipientAgentId == localAgentId,
-              envelope.modelIdentity == modelIdentity else {
+              envelope.codec.encoderModel == modelIdentity,
+              envelope.codec.decoderModel == modelIdentity else {
             throw NativeLatentChannelError.invalidRoute
         }
-        guard envelope.createdAt <= current,
-              envelope.createdAt < envelope.expiresAt,
-              envelope.expiresAt > current else {
+        guard let createdAt = parseISO8601(envelope.createdAt),
+              let expiresAt = parseISO8601(envelope.expiresAt),
+              createdAt <= current,
+              createdAt < expiresAt,
+              expiresAt > current else {
             throw NativeLatentChannelError.invalidExpiry
         }
-        guard envelope.codecId == AffineInt8NativeLatentCodec.codecId,
-              envelope.codecVersion == AffineInt8NativeLatentCodec.codecVersion else {
+        guard envelope.codec.codecId == AffineInt8NativeLatentCodec.codecId,
+              envelope.codec.codecVersion == AffineInt8NativeLatentCodec.codecVersion,
+              envelope.codec.dtype == .int8,
+              envelope.codec.maxPayloadBytes > 0,
+              envelope.codec.maxPayloadBytes <= AffineInt8NativeLatentCodec.maximumPayloadBytes else {
             throw NativeLatentChannelError.unsupportedCodec
         }
         guard envelope.shape.count == 1,
               let count = envelope.shape.first,
               count > 0,
               count <= AffineInt8NativeLatentCodec.maximumElements,
-              envelope.payloadByteLength == count + 8,
-              envelope.payloadByteLength <= AffineInt8NativeLatentCodec.maximumPayloadBytes,
-              envelope.payloadSHA256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
+              envelope.payload.byteLength == count + 8,
+              envelope.payload.byteLength <= envelope.codec.maxPayloadBytes,
+              envelope.payload.sha256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
             throw NativeLatentChannelError.invalidShape
         }
         guard await authorization.authorize(
@@ -323,34 +348,34 @@ public actor NativeLatentChannel {
             conversationId: envelope.conversationId,
             senderAgentId: envelope.senderAgentId,
             recipientAgentId: envelope.recipientAgentId,
-            modelIdentity: envelope.modelIdentity,
-            payloadByteCount: envelope.payloadByteLength
+            codec: envelope.codec,
+            payloadByteCount: envelope.payload.byteLength
         ) else {
             throw NativeLatentChannelError.authorizationDenied
         }
 
-        guard let bytes = try await blobStore.get(envelope.blobReference) else {
+        guard let bytes = try await blobStore.get(envelope.payload.blobRef) else {
             throw NativeLatentChannelError.missingBlob
         }
-        guard bytes.count == envelope.payloadByteLength else {
+        guard bytes.count == envelope.payload.byteLength else {
             throw NativeLatentChannelError.payloadLengthMismatch
         }
-        guard NativeLatentSHA256.digest(bytes) == envelope.payloadSHA256 else {
+        guard NativeLatentSHA256.digest(bytes) == envelope.payload.sha256 else {
             throw NativeLatentChannelError.payloadDigestMismatch
         }
 
         let replayKey = try replayKey(for: envelope)
-        guard await replayGuard.claim(replayKey, expiresAt: envelope.expiresAt) else {
+        guard await replayGuard.claim(replayKey, expiresAt: expiresAt) else {
             throw NativeLatentChannelError.replayRejected
         }
-        let embedding = try codec.decode(bytes, shape: envelope.shape, modelIdentity: envelope.modelIdentity)
+        let embedding = try codec.decode(bytes, shape: envelope.shape, modelIdentity: envelope.codec.decoderModel)
         guard embedding.count == count, embedding.allSatisfy(\.isFinite) else {
             throw NativeLatentChannelError.invalidDecodedVector
         }
         return NativeLatentReceived(
             transferId: envelope.transferId,
             senderAgentId: envelope.senderAgentId,
-            modelIdentity: envelope.modelIdentity,
+            modelIdentity: modelIdentity,
             shape: envelope.shape,
             embedding: embedding
         )
@@ -368,6 +393,19 @@ public actor NativeLatentChannel {
     private func validIdentifier(_ value: String, maximum: Int) -> Bool {
         !value.isEmpty && value.utf8.count <= maximum && !value.contains("\0")
     }
+
+    private func iso8601(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    private func parseISO8601(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: value)
+            ?? ISO8601DateFormatter().date(from: value)
+    }
 }
 
 public actor InMemoryNativeLatentBlobStore: NativeLatentBlobStore {
@@ -382,14 +420,14 @@ public actor InMemoryNativeLatentBlobStore: NativeLatentBlobStore {
         self.now = now
     }
 
-    public func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentBlobReceipt {
+    public func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentPayloadReference {
         guard !data.isEmpty, expiresAt > now() else {
             throw NativeLatentChannelError.invalidExpiry
         }
-        let reference = "memory:" + UUID().uuidString
-        entries[reference] = Entry(data: Data(data), expiresAt: expiresAt)
-        return NativeLatentBlobReceipt(
-            reference: reference,
+        let blobRef = "memory:" + UUID().uuidString
+        entries[blobRef] = Entry(data: Data(data), expiresAt: expiresAt)
+        return NativeLatentPayloadReference(
+            blobRef: blobRef,
             byteLength: data.count,
             sha256: NativeLatentSHA256.digest(data)
         )
@@ -435,7 +473,7 @@ public struct StaticNativeLatentAuthorization: NativeLatentAuthorization {
         conversationId: String,
         senderAgentId: String,
         recipientAgentId: String,
-        modelIdentity: NativeLatentModelIdentity,
+        codec: NativeLatentCodecSelection,
         payloadByteCount: Int
     ) async -> Bool {
         allowed
