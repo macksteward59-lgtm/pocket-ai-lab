@@ -100,6 +100,25 @@ int pocket_llama_generate(
     char * err,
     size_t err_len);
 
+/*
+ * Copies the final generated token's output embedding into caller-owned storage.
+ * The caller first queries the required count with out=NULL/capacity=0, then
+ * supplies a float buffer. This is a final-layer output embedding, not every
+ * transformer layer's hidden state.
+ */
+int pocket_llama_copy_last_embedding(
+    pocket_llama * engine,
+    float * out,
+    size_t out_capacity,
+    size_t * out_count,
+    char * err,
+    size_t err_len);
+int pocket_llama_set_embeddings(
+    pocket_llama * engine,
+    int enabled,
+    char * err,
+    size_t err_len);
+
 void pocket_llama_free(pocket_llama * engine);
 
 #ifdef __cplusplus
