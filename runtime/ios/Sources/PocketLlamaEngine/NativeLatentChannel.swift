@@ -282,6 +282,11 @@ public actor NativeLatentChannel {
               validIdentifier(payload.blobRef, maximum: 1024) else {
             throw NativeLatentChannelError.invalidBlobReceipt
         }
+        let canonicalPayload = NativeLatentPayloadReference(
+            blobRef: payload.blobRef,
+            byteLength: payload.byteLength,
+            sha256: digest
+        )
 
         return NativeLatentTransferEnvelope(
             protocolVersion: 1,
@@ -295,7 +300,7 @@ public actor NativeLatentChannel {
             expiresAt: iso8601(expiresAt),
             codec: selection,
             shape: output.shape,
-            payload: payload
+            payload: canonicalPayload
         )
     }
 
@@ -367,7 +372,7 @@ public actor NativeLatentChannel {
         guard bytes.count == envelope.payload.byteLength else {
             throw NativeLatentChannelError.payloadLengthMismatch
         }
-        guard NativeLatentSHA256.digest(bytes) == envelope.payload.sha256 else {
+        guard NativeLatentSHA256.digest(bytes) == envelope.payload.sha256.lowercased() else {
             throw NativeLatentChannelError.payloadDigestMismatch
         }
 
