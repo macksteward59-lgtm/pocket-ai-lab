@@ -216,7 +216,7 @@ private actor TamperingNativeLatentBlobStore: NativeLatentBlobStore {
     private var stored: Data?
     private var reference: String?
 
-    func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentBlobReceipt {
+    func put(_ data: Data, expiresAt: Date) async throws -> NativeLatentPayloadReference {
         let id = "tamper:" + UUID().uuidString
         stored = Data(data)
         reference = id
