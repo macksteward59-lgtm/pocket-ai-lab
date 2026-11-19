@@ -264,8 +264,8 @@ final class LlamaEngineTests: XCTestCase {
             let latentRMSE = sqrt(latentSquaredError / Double(latent.embedding.count))
             XCTAssertEqual(reconstructed.embedding.count, latent.embedding.count)
             XCTAssertLessThan(latentRMSE, 0.1)
-            XCTAssertLessThan(latentEnvelope.payloadByteLength, latent.embedding.count * MemoryLayout<Float>.size)
-            print("POCKET_LLAMA_LATENT_CHANNEL dimension=\\(latent.embedding.count) payloadBytes=\\(latentEnvelope.payloadByteLength) rawFloat32Bytes=\\(latent.embedding.count * MemoryLayout<Float>.size) rmse=\\(latentRMSE)")
+            XCTAssertLessThan(latentEnvelope.payload.byteLength, latent.embedding.count * MemoryLayout<Float>.size)
+            print("POCKET_LLAMA_LATENT_CHANNEL dimension=\\(latent.embedding.count) payloadBytes=\\(latentEnvelope.payload.byteLength) rawFloat32Bytes=\\(latent.embedding.count * MemoryLayout<Float>.size) rmse=\\(latentRMSE)")
             XCTAssertEqual(try Self.sha256(fileAt: modelURL), digest, "The pinned model bytes changed during evaluation.")
 
             let afterGeneration = await runtime.snapshot()
