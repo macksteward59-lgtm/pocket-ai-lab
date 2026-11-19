@@ -331,7 +331,7 @@ private actor UppercaseDigestNativeLatentBlobStore: NativeLatentBlobStore {
     }
 
     func get(_ reference: String) async throws -> Data? {
-        entries[reference].map(Data.init)
+        entries[reference].map { Data($0) }
     }
 }
 
