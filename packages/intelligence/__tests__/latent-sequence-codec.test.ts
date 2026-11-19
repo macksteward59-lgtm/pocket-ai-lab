@@ -78,7 +78,10 @@ describe("GIE pooled product quantizer", () => {
   it("rejects an input embedding dimension that differs from the codebook", () => {
     const codec = train();
     const incompatible = sequence(11);
+    const original = incompatible.tokenEmbeddings;
     incompatible.embeddingDimension = 8;
+    incompatible.tokenEmbeddings = new Float32Array(incompatible.tokenCount * 8);
+    incompatible.tokenEmbeddings.set(original);
     expect(() => codec.encode(incompatible, identity)).toThrow(/dimension does not match the codebook/);
   });
 
