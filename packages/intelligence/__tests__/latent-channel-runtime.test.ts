@@ -5,8 +5,8 @@ import {
   InMemoryLatentReplayGuard,
   LatentChannelRuntime,
   type LatentDigest
-} from "../LatentChannelRuntime";
-import { AffineInt8LatentCodec } from "../AffineInt8LatentCodec";
+} from "../latent-communication/LatentChannelRuntime";
+import { AffineInt8LatentCodec } from "../latent-communication/AffineInt8LatentCodec";
 
 const digest: LatentDigest = {
   async sha256(bytes) {
