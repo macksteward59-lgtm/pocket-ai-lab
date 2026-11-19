@@ -37,6 +37,37 @@ function train() {
 }
 
 describe("GIE pooled product quantizer", () => {
+  it("decodes the shared GIE1 fixture used by the Swift implementation", () => {
+    const fixtureHex =
+      "474945310104000200020200030000000200" +
+      "a".repeat(64) +
+      "02000100" +
+      "01000001" +
+      "00010100";
+    const bytes = Uint8Array.from(
+      fixtureHex.match(/.{2}/g)!.map(byte => Number.parseInt(byte, 16))
+    );
+    const codec = new PooledProductQuantizer({
+      codebookId,
+      modelId: identity.modelId,
+      modelRevision: identity.modelRevision,
+      embeddingDimension: 4,
+      subspaces: 2,
+      codebookSize: 2,
+      residualStages: 2,
+      maxTokensPerSegment: 2,
+      stages: [
+        [new Float64Array([1, 2, 3, 4]), new Float64Array([10, 20, 30, 40])],
+        [new Float64Array([0.5, 0.25, -0.5, -0.25]), new Float64Array([1, 2, -1, -2])]
+      ]
+    });
+    const decoded = codec.decode(bytes, identity);
+    expect(decoded.tokenCount).toBe(3);
+    expect(decoded.embeddingDimension).toBe(4);
+    expect(decoded.segmentTokenCounts).toEqual([2, 1]);
+    expect(Array.from(decoded.segmentEmbeddings)).toEqual([3.5, 4.25, 10, 18, 1, 2, 9, 22]);
+  });
+
   it("trains shared residual codebooks and round-trips ordered pooled segments", () => {
     const codec = train();
     const input = sequence(7, 7);
