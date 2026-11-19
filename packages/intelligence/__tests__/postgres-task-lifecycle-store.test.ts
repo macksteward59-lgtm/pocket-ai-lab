@@ -96,6 +96,8 @@ function cloneRow(row: FakeRow): FakeRow {
 
 function task(id: string): TaskRecord {
   return {
+    expiryPolicyVersion: 1,
+    events: [],
     id,
     objective: "Persist one bounded lifecycle",
     status: "ready",
