@@ -39,7 +39,8 @@ export const LatentCodecSelectionSchema = z.object({
   codecVersion: z.string().min(1).max(64),
   encoderModel: ModelIdentitySchema,
   decoderModel: ModelIdentitySchema,
-  dtype: LatentDTypeSchema
+  dtype: LatentDTypeSchema,
+  maxPayloadBytes: z.number().int().positive().max(MAX_LATENT_PAYLOAD_BYTES)
 }).strict();
 export type LatentCodecSelection = z.infer<typeof LatentCodecSelectionSchema>;
 
@@ -67,6 +68,9 @@ export const LatentTransferEnvelopeSchema = z.object({
   const elements = transfer.shape.reduce((total, dimension) => total * dimension, 1);
   if (!Number.isSafeInteger(elements) || elements > MAX_LATENT_ELEMENTS) {
     ctx.addIssue({ code: "custom", path: ["shape"], message: "Latent tensor exceeds the element limit" });
+  }
+  if (transfer.payload.byteLength > transfer.codec.maxPayloadBytes) {
+    ctx.addIssue({ code: "custom", path: ["payload", "byteLength"], message: "Payload exceeds the negotiated codec limit" });
   }
   if (Date.parse(transfer.expiresAt) <= Date.parse(transfer.createdAt)) {
     ctx.addIssue({ code: "custom", path: ["expiresAt"], message: "Transfer expiry must be after creation" });
@@ -134,7 +138,8 @@ export function negotiateLatentCodec(
       codecVersion: encoder.codecVersion,
       encoderModel: sender.model,
       decoderModel: recipient.model,
-      dtype
+      dtype,
+      maxPayloadBytes: Math.min(encoder.maxPayloadBytes, decoder.maxPayloadBytes)
     });
   }
   return null;
