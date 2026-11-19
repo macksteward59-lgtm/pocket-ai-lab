@@ -107,6 +107,13 @@ export class LatentChannelRuntime {
     expiresAt: string;
   }): Promise<LatentTransferEnvelope> {
     const now = this.options.now?.() ?? new Date();
+    if (!Number.isSafeInteger(input.sequence) || input.sequence < 0) {
+      throw new Error("Latent transfer sequence must be a non-negative safe integer");
+    }
+    if (typeof input.taskId !== "string" || input.taskId.length < 1 || input.taskId.length > 256 ||
+        typeof input.conversationId !== "string" || input.conversationId.length < 1 || input.conversationId.length > 256) {
+      throw new Error("Latent transfer task and conversation identifiers are invalid");
+    }
     const sender = LatentCapabilitySchema.parse(this.options.localCapability);
     const recipient = LatentCapabilitySchema.parse(input.recipient);
     const selection = negotiateLatentCodec(sender, recipient);
@@ -117,7 +124,8 @@ export class LatentChannelRuntime {
     if (elements !== input.hiddenState.length) {
       throw new Error("Latent tensor shape does not match hidden-state length");
     }
-    if (Date.parse(input.expiresAt) <= now.getTime()) {
+    const expiry = Date.parse(input.expiresAt);
+    if (!Number.isFinite(expiry) || expiry <= now.getTime()) {
       throw new Error("Latent transfer expiry must be in the future");
     }
 
@@ -126,7 +134,7 @@ export class LatentChannelRuntime {
       shape: input.shape,
       dtype: selection.dtype
     });
-    if (bytes.byteLength === 0 || bytes.byteLength > selection.maxPayloadBytes) {
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > selection.maxPayloadBytes) {
       throw new Error("Encoded latent payload exceeds negotiated codec limits");
     }
 
@@ -141,6 +149,9 @@ export class LatentChannelRuntime {
     if (!authorized) throw new Error("Latent transfer denied by host authorization policy");
 
     const expectedDigest = (await this.options.digest.sha256(bytes)).toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(expectedDigest)) {
+      throw new Error("Digest adapter returned an invalid SHA-256 value");
+    }
     const payload = await this.options.blobStore.put(bytes, { expiresAt: input.expiresAt });
     if (payload.byteLength !== bytes.byteLength || payload.sha256.toLowerCase() !== expectedDigest) {
       throw new Error("Binary store returned an inconsistent payload receipt");
@@ -164,7 +175,7 @@ export class LatentChannelRuntime {
 
   async receive(
     envelopeInput: unknown,
-    expected: { taskId: string; senderAgentId: string }
+    expected: { taskId: string; conversationId: string; senderAgentId: string }
   ): Promise<{
     hiddenState: Float32Array;
     shape: number[];
@@ -174,6 +185,7 @@ export class LatentChannelRuntime {
     const local = LatentCapabilitySchema.parse(this.options.localCapability);
     const envelope = validateLatentTransfer(envelopeInput, {
       taskId: expected.taskId,
+      conversationId: expected.conversationId,
       senderAgentId: expected.senderAgentId,
       recipientAgentId: local.agentId
     }, this.options.now?.() ?? new Date());
@@ -211,7 +223,10 @@ export class LatentChannelRuntime {
       throw new Error("Latent binary payload digest mismatch");
     }
 
-    const replayKey = [envelope.taskId, envelope.conversationId, envelope.senderAgentId, envelope.sequence].join(":");
+    const replayKey = JSON.stringify([
+      envelope.taskId, envelope.conversationId, envelope.senderAgentId,
+      envelope.recipientAgentId, envelope.sequence
+    ]);
     if (!await this.options.replayGuard.claim(replayKey, envelope.expiresAt)) {
       throw new Error("Latent transfer replay or duplicate sequence rejected");
     }
@@ -222,7 +237,7 @@ export class LatentChannelRuntime {
       dtype: envelope.codec.dtype
     });
     const expectedElements = checkedElementCount(envelope.shape);
-    if (hiddenState.length !== expectedElements ||
+    if (!(hiddenState instanceof Float32Array) || hiddenState.length !== expectedElements ||
         Array.from(hiddenState).some(value => !Number.isFinite(value))) {
       throw new Error("Decoded latent tensor failed shape or numeric validation");
     }
