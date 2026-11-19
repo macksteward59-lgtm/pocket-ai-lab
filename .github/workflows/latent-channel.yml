@@ -1,0 +1,33 @@
+name: Latent channel focused CI
+
+on:
+  pull_request:
+    paths:
+      - 'packages/intelligence/latent-communication/**'
+      - 'packages/intelligence/__tests__/latent-channel-runtime.test.ts'
+      - 'packages/intelligence/index.ts'
+      - '.github/workflows/latent-channel.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/intelligence/latent-communication/**'
+      - 'packages/intelligence/__tests__/latent-channel-runtime.test.ts'
+      - 'packages/intelligence/index.ts'
+      - '.github/workflows/latent-channel.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  latent-channel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Run latent channel runtime tests
+        run: npx vitest run packages/intelligence/__tests__/latent-channel-runtime.test.ts packages/intelligence/latent-communication/__tests__/LatentChannel.test.ts
+      - name: Type-check latent channel modules
+        run: npx tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck packages/intelligence/latent-communication/LatentChannel.ts packages/intelligence/latent-communication/LatentChannelRuntime.ts
