@@ -87,4 +87,39 @@ final class NativeGIECodebookArtifactTests: XCTestCase {
             )
         ))
     }
+
+    func testRejectsUnsupportedVersionAndReservedFlags() throws {
+        let (fixture, data) = try fixture()
+        for (offset, value) in [(4, UInt8(2)), (5, UInt8(1)), (13, UInt8(1))] {
+            var changed = data
+            changed[offset] = value
+            XCTAssertThrowsError(try NativeGIECodebookArtifact.load(
+                changed, expectedSHA256: digest(changed),
+                expectedModelIdentity: NativeLatentModelIdentity(modelId: fixture.modelId, modelRevision: fixture.modelRevision)
+            ))
+        }
+    }
+
+    func testRejectsMalformedUTF8Identity() throws {
+        let (fixture, data) = try fixture()
+        var changed = data
+        changed[20] = 0xff
+        XCTAssertThrowsError(try NativeGIECodebookArtifact.load(
+            changed, expectedSHA256: digest(changed),
+            expectedModelIdentity: NativeLatentModelIdentity(modelId: fixture.modelId, modelRevision: fixture.modelRevision)
+        ))
+    }
+
+    func testRejectsNegativeZeroAndNonFiniteFloat32() throws {
+        let (fixture, data) = try fixture()
+        let valueOffset = 20 + fixture.modelId.utf8.count + fixture.modelRevision.utf8.count
+        for pattern: [UInt8] in [[0x00, 0x00, 0x00, 0x80], [0x00, 0x00, 0xc0, 0x7f]] {
+            var changed = data
+            changed.replaceSubrange(valueOffset..<(valueOffset + 4), with: pattern)
+            XCTAssertThrowsError(try NativeGIECodebookArtifact.load(
+                changed, expectedSHA256: digest(changed),
+                expectedModelIdentity: NativeLatentModelIdentity(modelId: fixture.modelId, modelRevision: fixture.modelRevision)
+            ))
+        }
+    }
 }
