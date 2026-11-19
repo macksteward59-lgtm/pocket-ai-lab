@@ -70,6 +70,11 @@ export class PooledProductQuantizer {
     validateCodebook(codebook);
   }
 
+  /**
+   * Train deterministic codebooks. The caller must hash the canonical
+   * serialized codebook artifact with SHA-256 and pass that digest as
+   * codebookId; artifact loading must independently verify the same digest.
+   */
   static train(
     calibrationSequences: readonly LatentSequence[],
     identity: { modelId: string; modelRevision: string },
