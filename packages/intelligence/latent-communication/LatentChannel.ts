@@ -59,7 +59,7 @@ export const LatentTransferEnvelopeSchema = z.object({
   conversationId: z.string().min(1).max(256),
   senderAgentId: z.string().min(1).max(128),
   recipientAgentId: z.string().min(1).max(128),
-  sequence: z.number().int().nonnegative(),
+  sequence: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   createdAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
   codec: LatentCodecSelectionSchema,
@@ -158,6 +158,9 @@ export function validateLatentTransfer(
       transfer.senderAgentId !== expected.senderAgentId ||
       transfer.recipientAgentId !== expected.recipientAgentId) {
     throw new Error("Latent transfer identity does not match the authorized route");
+  }
+  if (Date.parse(transfer.createdAt) > now.getTime()) {
+    throw new Error("Latent transfer creation time is in the future");
   }
   if (Date.parse(transfer.expiresAt) <= now.getTime()) {
     throw new Error("Latent transfer has expired");
