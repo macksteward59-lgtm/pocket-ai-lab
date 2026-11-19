@@ -88,6 +88,25 @@ public struct LlamaLatentOutput: Sendable, Equatable {
     }
 }
 
+/// Ordered generated-token output embeddings captured from one inference request.
+public struct LlamaLatentSequenceOutput: Sendable, Equatable {
+    public let modelId: String
+    public let text: String
+    /// Row-major generated-token embeddings with shape [tokenCount, embeddingDimension].
+    public let embeddings: [Float]
+    public let tokenCount: Int
+    public let embeddingDimension: Int
+    public var shape: [Int] { [tokenCount, embeddingDimension] }
+
+    public init(modelId: String, text: String, embeddings: [Float], tokenCount: Int, embeddingDimension: Int) {
+        self.modelId = modelId
+        self.text = text
+        self.embeddings = embeddings
+        self.tokenCount = tokenCount
+        self.embeddingDimension = embeddingDimension
+    }
+}
+
 /// What the linked llama.cpp build reported. `offloadedLayers` is -1 when llama.cpp did not log an offload line.
 public struct LlamaOffloadReport: Sendable, Equatable {
     public let metalDeviceUsableAtLoad: Bool
@@ -125,6 +144,16 @@ public protocol LatentExportingLlamaEngine: LlamaEngine {
     func generateWithLatent(session: RuntimeSession, request: GenerationRequest) async throws -> LlamaLatentOutput
 }
 
+/// Optional capability for bounded, ordered generated-token embedding sequences.
+public protocol LatentSequenceExportingLlamaEngine: LatentExportingLlamaEngine {
+    func generateWithLatentSequence(
+        session: RuntimeSession,
+        request: GenerationRequest,
+        maxLatentTokens: Int,
+        maxLatentBytes: Int
+    ) async throws -> LlamaLatentSequenceOutput
+}
+
 /// No backend is linked. Load and generate refuse instead of inventing a session or tokens.
 public actor PlaceholderLlamaEngine: LlamaEngine {
     public init() {}
@@ -141,6 +170,56 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
         throw LlamaEngineError.backendUnavailable("The placeholder engine cannot export latent representations.")
     }
 
+    public func generateWithLatentSequence(
+        session: RuntimeSession,
+        request: GenerationRequest,
+        maxLatentTokens: Int = 256,
+        maxLatentBytes: Int = 16 * 1024 * 1024
+    ) async throws -> LlamaLatentSequenceOutput {
+        #if !POCKET_LLAMA_LINKED
+        throw LlamaEngineError.backendUnavailable("llama.cpp Metal is not linked in this build. No latent sequence was produced.")
+        #else
+        try LlamaEngineSupport.validateRequest(request)
+        guard maxLatentTokens > 0, maxLatentTokens <= 256,
+              maxLatentBytes > 0, maxLatentBytes <= 16 * 1024 * 1024,
+              request.maxTokens <= maxLatentTokens else {
+            throw LlamaEngineError.invalidRequest("Latent sequence limits are invalid or smaller than the requested generation.")
+        }
+        guard let loaded = sessions[session.id] else {
+            throw LlamaEngineError.sessionNotLoaded("Session \\(session.id) is not loaded.")
+        }
+        guard generation[session.id] == nil else {
+            throw LlamaEngineError.invalidRequest("This runtime session already has an active generation.")
+        }
+        guard let token = UUID(uuidString: request.requestId) else {
+            throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
+        }
+        generation[session.id] = token
+        let task = Task.detached {
+            try loaded.generateWithLatentSequence(
+                request,
+                modelId: session.modelId,
+                maxTokens: maxLatentTokens,
+                maxBytes: maxLatentBytes
+            )
+        }
+        latentSequenceTasks[session.id] = (requestId: token.uuidString, task: task)
+        do {
+            let result = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
+            }
+            guard generation[session.id] == token else { throw LlamaEngineError.cancelled }
+            finishGeneration(sessionId: session.id, token: token)
+            return result
+        } catch {
+            finishGeneration(sessionId: session.id, token: token)
+            throw error
+        }
+        #endif
+    }
+
     public func cancel(sessionId: String, requestId: String) async {}
 
     public func cancelAndWait(sessionId: String, requestId: String) async {}
@@ -154,7 +233,7 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
 /// load throws `backendUnavailable` and does not read the model into a session.
 /// Pass `requireMetal: false` only for an explicit CPU run. CPU text is still llama.cpp
 /// output. This engine yields one completed string, not a fabricated partial.
-public actor LlamaCppMetalBackend: LatentExportingLlamaEngine {
+public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
     private let requireMetal: Bool
     private let treatMetalAsUnavailable: Bool
     #if POCKET_LLAMA_LINKED
@@ -165,6 +244,7 @@ public actor LlamaCppMetalBackend: LatentExportingLlamaEngine {
     private var generationTasks: [String: (requestId: String, task: Task<Void, Never>)] = [:]
     #if POCKET_LLAMA_LINKED
     private var latentGenerationTasks: [String: (requestId: String, task: Task<LlamaLatentOutput, Error>)] = [:]
+    private var latentSequenceTasks: [String: (requestId: String, task: Task<LlamaLatentSequenceOutput, Error>)] = [:]
     #endif
 
     public init(requireMetal: Bool = true) {
@@ -375,6 +455,12 @@ public actor LlamaCppMetalBackend: LatentExportingLlamaEngine {
            active.requestId.caseInsensitiveCompare(requestId) == .orderedSame {
             await cancel(sessionId: sessionId, requestId: requestId)
             _ = try? await active.task.value
+            return
+        }
+        if let active = latentSequenceTasks[sessionId],
+           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame {
+            await cancel(sessionId: sessionId, requestId: requestId)
+            _ = try? await active.task.value
         }
         #endif
     }
@@ -387,11 +473,15 @@ public actor LlamaCppMetalBackend: LatentExportingLlamaEngine {
         if let active = latentGenerationTasks[sessionId] {
             await cancelAndWait(sessionId: sessionId, requestId: active.requestId)
         }
+        if let active = latentSequenceTasks[sessionId] {
+            await cancelAndWait(sessionId: sessionId, requestId: active.requestId)
+        }
         #endif
         generation[sessionId] = nil
         generationTasks[sessionId] = nil
         #if POCKET_LLAMA_LINKED
         latentGenerationTasks[sessionId] = nil
+        latentSequenceTasks[sessionId] = nil
         #endif
         reports[sessionId] = nil
         #if POCKET_LLAMA_LINKED
@@ -414,6 +504,9 @@ public actor LlamaCppMetalBackend: LatentExportingLlamaEngine {
         #if POCKET_LLAMA_LINKED
         if latentGenerationTasks[sessionId]?.requestId.caseInsensitiveCompare(token.uuidString) == .orderedSame {
             latentGenerationTasks[sessionId] = nil
+        }
+        if latentSequenceTasks[sessionId]?.requestId.caseInsensitiveCompare(token.uuidString) == .orderedSame {
+            latentSequenceTasks[sessionId] = nil
         }
         #endif
     }
@@ -527,6 +620,84 @@ private final class LoadedSession: @unchecked Sendable {
             throw LlamaEngineError.backendFailed("The final-token embedding contained non-finite values.")
         }
         return LlamaLatentOutput(modelId: modelId, text: text, embedding: embedding)
+    }
+
+    func generateWithLatentSequence(
+        _ request: GenerationRequest,
+        modelId: String,
+        maxTokens: Int,
+        maxBytes: Int
+    ) throws -> LlamaLatentSequenceOutput {
+        lock.lock()
+        defer { lock.unlock() }
+        guard alive else {
+            throw LlamaEngineError.sessionNotLoaded("Session is not loaded.")
+        }
+        guard maxTokens > 0, maxTokens <= 256, maxBytes > 0, maxBytes <= 16 * 1024 * 1024,
+              request.maxTokens <= maxTokens else {
+            throw LlamaEngineError.invalidRequest("Latent sequence limits are invalid or smaller than the requested generation.")
+        }
+        try setSequenceCapture(maxTokens: maxTokens, maxBytes: maxBytes)
+        defer { try? setSequenceCapture(maxTokens: 0, maxBytes: 0) }
+        let text = try generateLocked(request)
+
+        var tokenCount = 0
+        var dimension = 0
+        var err = [CChar](repeating: 0, count: 768)
+        let queryRC = err.withUnsafeMutableBufferPointer { errBuffer in
+            pocket_llama_copy_embedding_sequence(
+                handle, nil, 0, &tokenCount, &dimension, errBuffer.baseAddress, errBuffer.count
+            )
+        }
+        guard queryRC == POCKET_LLAMA_OK, tokenCount > 0, dimension > 0,
+              tokenCount <= maxTokens,
+              tokenCount <= Int.max / dimension,
+              tokenCount * dimension <= maxBytes / MemoryLayout<Float>.size else {
+            throw Self.map(queryRC, err)
+        }
+
+        var embeddings = [Float](repeating: 0, count: tokenCount * dimension)
+        var copiedTokens = 0
+        var copiedDimension = 0
+        let copyRC = embeddings.withUnsafeMutableBufferPointer { outputBuffer in
+            err.withUnsafeMutableBufferPointer { errBuffer in
+                pocket_llama_copy_embedding_sequence(
+                    handle,
+                    outputBuffer.baseAddress,
+                    outputBuffer.count,
+                    &copiedTokens,
+                    &copiedDimension,
+                    errBuffer.baseAddress,
+                    errBuffer.count
+                )
+            }
+        }
+        guard copyRC == POCKET_LLAMA_OK,
+              copiedTokens == tokenCount, copiedDimension == dimension,
+              embeddings.allSatisfy(\\.isFinite) else {
+            throw Self.map(copyRC, err)
+        }
+        return LlamaLatentSequenceOutput(
+            modelId: modelId,
+            text: text,
+            embeddings: embeddings,
+            tokenCount: tokenCount,
+            embeddingDimension: dimension
+        )
+    }
+
+    private func setSequenceCapture(maxTokens: Int, maxBytes: Int) throws {
+        var err = [CChar](repeating: 0, count: 768)
+        let rc = err.withUnsafeMutableBufferPointer { errBuffer in
+            pocket_llama_set_sequence_capture(
+                handle,
+                maxTokens,
+                maxBytes,
+                errBuffer.baseAddress,
+                errBuffer.count
+            )
+        }
+        guard rc == POCKET_LLAMA_OK else { throw Self.map(rc, err) }
     }
 
     private func setEmbeddingCapture(_ enabled: Bool) throws {
