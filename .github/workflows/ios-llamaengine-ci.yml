@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/latent-channel-runtime-poc
+      - codex/ios-final-embedding-export
     paths:
       - "runtime/ios/**"
       - "ios/**"
