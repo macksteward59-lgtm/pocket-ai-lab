@@ -112,6 +112,18 @@ describe("GIE pooled product quantizer", () => {
       maxSequenceRmse: 0.01,
       maxPayloadBytes: 128
     })).toBeNull();
+    expect(() => chooseRateDistortionCandidate(candidates, {
+      maxSequenceRmse: Number.POSITIVE_INFINITY,
+      maxPayloadBytes: 128
+    })).toThrow(/limits must be finite/);
+    expect(() => chooseRateDistortionCandidate(candidates, {
+      maxSequenceRmse: 0.1,
+      maxPayloadBytes: Number.MAX_SAFE_INTEGER + 1
+    })).toThrow(/safely bounded/);
+    expect(() => chooseRateDistortionCandidate(candidates, {
+      maxSequenceRmse: -0.1,
+      maxPayloadBytes: 128
+    })).toThrow(/non-negative/);
   });
 });
 
