@@ -72,6 +72,9 @@ describe("latent communication contract", () => {
     expect(LatentTransferEnvelopeSchema.safeParse(transfer({
       payload: { blobRef: "blob", byteLength: 2049, sha256: "a".repeat(64) }
     })).success).toBe(false);
+    expect(LatentTransferEnvelopeSchema.safeParse(transfer({
+      payload: { blobRef: "blob", byteLength: 2049, sha256: "a".repeat(64) }
+    })).success).toBe(false);
   });
 
   it("binds transfer identity to the authorized task route and checks expiry", () => {
