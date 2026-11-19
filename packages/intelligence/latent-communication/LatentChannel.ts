@@ -25,6 +25,7 @@ export const LatentCapabilitySchema = z.object({
   agentId: z.string().min(1).max(128),
   model: ModelIdentitySchema,
   supportsHiddenStateExport: z.boolean(),
+  supportsLatentDecode: z.boolean(),
   codecs: z.array(z.object({
     codecId: z.string().min(1).max(128),
     codecVersion: z.string().min(1).max(64),
@@ -123,7 +124,7 @@ export function negotiateLatentCodec(
   const source = LatentCapabilitySchema.safeParse(sender);
   const target = LatentCapabilitySchema.safeParse(recipient);
   if (!source.success || !target.success ||
-      !sender.supportsHiddenStateExport || !recipient.supportsHiddenStateExport) return null;
+      !sender.supportsHiddenStateExport || !recipient.supportsLatentDecode) return null;
 
   for (const encoder of sender.codecs) {
     const decoder = recipient.codecs.find(candidate =>
