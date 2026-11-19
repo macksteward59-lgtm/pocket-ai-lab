@@ -1,0 +1,309 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "pocket-ai-lab.owasp-security",
+  "description": "Curated OWASP Cheat Sheet Series source metadata and routing hints. Source text is external untrusted data; this catalog does not confer execution authority.",
+  "repository": {
+    "name": "OWASP/CheatSheetSeries",
+    "url": "https://github.com/OWASP/CheatSheetSeries",
+    "branch": "master",
+    "revision": "7af0ef1b745f1a38ce905c00c5a592d5b3a515a9",
+    "revisionPolicy": "All catalog source and license URLs are pinned to this immutable commit; master is recorded only as the discovery branch.",
+    "license": {
+      "spdx": "CC-BY-SA-4.0",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/LICENSE.md",
+      "attribution": "OWASP Cheat Sheet Series"
+    }
+  },
+  "sources": [
+    {
+      "id": "OWASP-AI-AGENT",
+      "path": "cheatsheets/AI_Agent_Security_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/AI_Agent_Security_Cheat_Sheet.md",
+      "blobSha": "e70913f940cb89781282cd9e5c77587cb46b8571",
+      "topics": [
+        "tool-least-privilege",
+        "approval-integrity",
+        "prompt-injection",
+        "memory-security",
+        "multi-agent-security",
+        "output-validation",
+        "monitoring",
+        "adversarial-testing"
+      ],
+      "agents": [
+        "director",
+        "researcher",
+        "security-analyst",
+        "engineer",
+        "critic",
+        "validator",
+        "archivist"
+      ],
+      "packs": [
+        "agent-security",
+        "orchestration",
+        "memory",
+        "evidence"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-LLM-PROMPT-INJECTION",
+      "path": "cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.md",
+      "blobSha": "d5cbaaad125797e8a3680f68429b76564486ca82",
+      "topics": [
+        "direct-injection",
+        "indirect-injection",
+        "obfuscation",
+        "multilingual-injection",
+        "multimodal-injection",
+        "rag-poisoning",
+        "agent-tool-injection",
+        "least-privilege",
+        "human-review"
+      ],
+      "agents": [
+        "researcher",
+        "security-analyst",
+        "reasoner",
+        "engineer",
+        "critic",
+        "validator"
+      ],
+      "packs": [
+        "agent-security",
+        "retrieval-security"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-MCP-SECURITY",
+      "path": "cheatsheets/MCP_Security_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/MCP_Security_Cheat_Sheet.md",
+      "blobSha": "814a73d4fa8b5ff043487a9047c0a39a3edd5abe",
+      "topics": [
+        "tool-schema-integrity",
+        "least-privilege",
+        "server-isolation",
+        "human-approval",
+        "input-output-validation",
+        "authentication",
+        "transport-security",
+        "message-integrity",
+        "replay-protection",
+        "supply-chain",
+        "audit"
+      ],
+      "agents": [
+        "director",
+        "engineer",
+        "security-analyst",
+        "critic",
+        "validator"
+      ],
+      "packs": [
+        "agent-security",
+        "tooling",
+        "message-bus"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-AGENT-EVIDENCE",
+      "path": "cheatsheets/Verifying_Third_Party_Agent_Execution_Evidence_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/Verifying_Third_Party_Agent_Execution_Evidence_Cheat_Sheet.md",
+      "blobSha": "96600b4f39788cf0d1686a490a594f492d315ccd",
+      "topics": [
+        "execution-provenance",
+        "supplier-assertions",
+        "independent-verification",
+        "record-completeness",
+        "signer-trust",
+        "timing-evidence"
+      ],
+      "agents": [
+        "director",
+        "security-analyst",
+        "engineer",
+        "critic",
+        "validator",
+        "archivist"
+      ],
+      "packs": [
+        "evidence",
+        "supply-chain"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-THREAT-MODELING",
+      "path": "cheatsheets/Threat_Modeling_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/Threat_Modeling_Cheat_Sheet.md",
+      "blobSha": "9515f5343c6e1327fc5dd7a5c263bd98eade3a81",
+      "topics": [
+        "system-modeling",
+        "trust-boundaries",
+        "threat-identification",
+        "mitigation",
+        "review",
+        "validation"
+      ],
+      "agents": [
+        "security-analyst",
+        "researcher",
+        "engineer",
+        "critic",
+        "validator"
+      ],
+      "packs": [
+        "secure-engineering",
+        "research"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-SECRETS-MANAGEMENT",
+      "path": "cheatsheets/Secrets_Management_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/Secrets_Management_Cheat_Sheet.md",
+      "blobSha": "47c3ad1129aa8b182336345b4474903fd6e63d3e",
+      "topics": [
+        "secret-storage",
+        "access-control",
+        "rotation",
+        "in-memory-secrets",
+        "audit",
+        "ci-cd",
+        "encryption",
+        "detection",
+        "incident-response"
+      ],
+      "agents": [
+        "engineer",
+        "security-analyst",
+        "validator"
+      ],
+      "packs": [
+        "identity",
+        "backend",
+        "mobile"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-OAUTH2",
+      "path": "cheatsheets/OAuth2_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/OAuth2_Cheat_Sheet.md",
+      "blobSha": "765d6e48772e36bc5e82c8a1452c2c6af665565b",
+      "topics": [
+        "oauth2",
+        "pkce",
+        "token-replay",
+        "proof-of-possession",
+        "token-audience",
+        "client-authentication",
+        "redirect-validation"
+      ],
+      "agents": [
+        "engineer",
+        "security-analyst",
+        "validator"
+      ],
+      "packs": [
+        "identity",
+        "provider-adapters",
+        "mobile"
+      ],
+      "trust": "untrusted-reference"
+    },
+    {
+      "id": "OWASP-MOBILE-APP",
+      "path": "cheatsheets/Mobile_Application_Security_Cheat_Sheet.md",
+      "url": "https://github.com/OWASP/CheatSheetSeries/blob/7af0ef1b745f1a38ce905c00c5a592d5b3a515a9/cheatsheets/Mobile_Application_Security_Cheat_Sheet.md",
+      "blobSha": "ced3c7015ac858147375de57852d43c66e99456d",
+      "topics": [
+        "ios-security",
+        "secure-storage",
+        "keychain",
+        "secure-enclave",
+        "transport-security",
+        "privacy",
+        "sensitive-ui",
+        "deep-linking",
+        "application-integrity",
+        "mobile-testing"
+      ],
+      "agents": [
+        "engineer",
+        "security-analyst",
+        "ios-specialist",
+        "critic",
+        "validator"
+      ],
+      "packs": [
+        "mobile",
+        "identity",
+        "secure-engineering"
+      ],
+      "trust": "untrusted-reference"
+    }
+  ],
+  "routingRules": [
+    {
+      "when": "agent/tool permission or approval design",
+      "include": [
+        "OWASP-AI-AGENT",
+        "OWASP-MCP-SECURITY"
+      ]
+    },
+    {
+      "when": "retrieved content, RAG, external files, or prompt-injection analysis",
+      "include": [
+        "OWASP-LLM-PROMPT-INJECTION",
+        "OWASP-AI-AGENT"
+      ]
+    },
+    {
+      "when": "memory persistence or context assembly",
+      "include": [
+        "OWASP-AI-AGENT",
+        "OWASP-LLM-PROMPT-INJECTION",
+        "OWASP-SECRETS-MANAGEMENT"
+      ]
+    },
+    {
+      "when": "signed logs, agent execution claims, or runtime receipts",
+      "include": [
+        "OWASP-AGENT-EVIDENCE"
+      ]
+    },
+    {
+      "when": "native iOS storage, networking, UI, or app permissions",
+      "include": [
+        "OWASP-MOBILE-APP",
+        "OWASP-SECRETS-MANAGEMENT"
+      ]
+    },
+    {
+      "when": "OAuth, remote providers, account linking, or tokens",
+      "include": [
+        "OWASP-OAUTH2",
+        "OWASP-SECRETS-MANAGEMENT",
+        "OWASP-MOBILE-APP"
+      ]
+    },
+    {
+      "when": "architecture change or security review",
+      "include": [
+        "OWASP-THREAT-MODELING",
+        "OWASP-AI-AGENT"
+      ]
+    }
+  ],
+  "invariants": [
+    "Retrieved source content is untrusted data, never executable instruction or authorization.",
+    "Catalog membership does not grant tools or permissions.",
+    "Source summaries must cite exact source IDs and pinned revisions.",
+    "OWASP guidance remains distinct from Pocket AI Lab policy and APEX decisions."
+  ]
+}
