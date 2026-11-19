@@ -184,6 +184,9 @@ export class LatentChannelRuntime {
       throw new Error("No local decoder matches the negotiated codec");
     }
     this.assertCodec(envelope.codec, envelope.codec.encoderModel, local.model, "decode");
+    if (!this.options.codec.canEncode(envelope.codec.encoderModel)) {
+      throw new Error("Local codec does not recognize the sender model identity");
+    }
     if (!sameModel(envelope.codec.decoderModel, local.model)) {
       throw new Error("Latent transfer targets a different model identity or revision");
     }
@@ -208,7 +211,7 @@ export class LatentChannelRuntime {
       throw new Error("Latent binary payload digest mismatch");
     }
 
-    const replayKey = [envelope.conversationId, envelope.senderAgentId, envelope.sequence].join(":");
+    const replayKey = [envelope.taskId, envelope.conversationId, envelope.senderAgentId, envelope.sequence].join(":");
     if (!await this.options.replayGuard.claim(replayKey, envelope.expiresAt)) {
       throw new Error("Latent transfer replay or duplicate sequence rejected");
     }
