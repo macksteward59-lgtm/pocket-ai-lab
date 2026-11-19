@@ -126,6 +126,7 @@ struct pocket_llama {
     int32_t requested_gpu_layers;
     int offloaded_layers;
     int offload_total;
+    int capture_embeddings;
     atomic_int cancel;
     pthread_mutex_t mu;
     int mu_ready;
@@ -333,9 +334,8 @@ int pocket_llama_load(
     uint32_t batch = n_ctx < 512 ? (uint32_t) n_ctx : 512;
     ctx_params.n_batch = batch;
     ctx_params.n_ubatch = batch;
-    // Only the last token of each decode batch is marked for logits output.
-    // Reserve one output row so optional final-token embedding export has a
-    // bounded memory cost rather than allocating for the full logical batch.
+    // Prompt prefill is batched with embeddings disabled. Embedding capture is
+    // enabled only for one-token decode steps, so one output row is sufficient.
     ctx_params.n_outputs_max = 1;
     ctx_params.n_outputs_max_per_seq = 1;
     ctx_params.abort_callback = should_abort;
@@ -577,6 +577,10 @@ int pocket_llama_generate(
 
     pthread_mutex_lock(&engine->mu);
     atomic_store(&engine->cancel, 0);
+    // A batched prompt prefill can contain hundreds of tokens. Capturing every
+    // embedding would exceed the deliberately bounded one-row output buffer.
+    // Capture is enabled only after prefill, for the one-token generation steps.
+    llama_set_embeddings(engine->ctx, false);
 
     const struct llama_vocab * vocab = llama_model_get_vocab(engine->model);
     if (!vocab) {
@@ -623,6 +627,10 @@ int pocket_llama_generate(
             return rc;
         }
         offset += chunk;
+    }
+
+    if (engine->capture_embeddings) {
+        llama_set_embeddings(engine->ctx, true);
     }
 
     struct llama_sampler * sampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
@@ -747,7 +755,10 @@ int pocket_llama_set_embeddings(pocket_llama * engine, int enabled, char * err, 
         return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "The embedding capture toggle was rejected.");
     }
     pthread_mutex_lock(&engine->mu);
-    llama_set_embeddings(engine->ctx, enabled == 1);
+    // Defer the llama.cpp toggle until pocket_llama_generate has completed
+    // batched prompt prefill. Enabling it before prefill can request one output
+    // embedding per prompt token while n_outputs_max is intentionally one.
+    engine->capture_embeddings = (enabled == 1);
     pthread_mutex_unlock(&engine->mu);
     if (err && err_len) err[0] = '\0';
     return POCKET_LLAMA_OK;
