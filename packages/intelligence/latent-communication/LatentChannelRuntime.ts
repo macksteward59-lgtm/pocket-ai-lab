@@ -111,7 +111,7 @@ export class LatentChannelRuntime {
     const recipient = LatentCapabilitySchema.parse(input.recipient);
     const selection = negotiateLatentCodec(sender, recipient);
     if (!selection) throw new Error("No compatible latent codec; caller must fall back to text");
-    this.assertCodec(selection, sender.model, recipient.model, "encode");
+    this.assertCodec(selection, sender.model, recipient.model);
 
     const elements = checkedElementCount(input.shape);
     if (elements !== input.hiddenState.length) {
@@ -183,7 +183,7 @@ export class LatentChannelRuntime {
         envelope.codec.codecVersion !== this.options.codec.codecVersion) {
       throw new Error("No local decoder matches the negotiated codec");
     }
-    this.assertCodec(envelope.codec, envelope.codec.encoderModel, local.model, "decode");
+    this.assertCodec(envelope.codec, envelope.codec.encoderModel, local.model);
     if (!this.options.codec.canEncode(envelope.codec.encoderModel)) {
       throw new Error("Local codec does not recognize the sender model identity");
     }
@@ -237,8 +237,7 @@ export class LatentChannelRuntime {
   private assertCodec(
     selection: LatentCodecSelection,
     encoderModel: { modelId: string; modelRevision: string },
-    decoderModel: { modelId: string; modelRevision: string },
-    operation: "encode" | "decode"
+    decoderModel: { modelId: string; modelRevision: string }
   ): void {
     if (selection.codecId !== this.options.codec.codecId ||
         selection.codecVersion !== this.options.codec.codecVersion) {
