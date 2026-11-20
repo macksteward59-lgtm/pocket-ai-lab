@@ -10,6 +10,7 @@ on:
       - codex/native-gie1-sequence-encoder
       - codex/gie-native-standalone-smoke-20261120
       - codex/gie-native-capture-integration-20261120
+      - codex/native-input-embedding-evaluation-20261120
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -263,7 +264,8 @@ jobs:
       - name: Point the macOS smoke test at that GGUF
         run: runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$(tail -n 1 /tmp/gguf-path.txt)"
 
-      - name: XCTest on macOS
+      - name: Build macOS tests once
+        id: mac-build
         timeout-minutes: 20
         run: |
           set -o pipefail
@@ -274,14 +276,237 @@ jobs:
           mkdir -p runtime/ios/build
           rsync -a --exclude '.build' --exclude 'build/simulator-xctest.log' runtime/ios/ /tmp/pocket-host/
           cd /tmp/pocket-host
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -scheme PocketLlamaEngine \
             -destination "platform=macOS,arch=$(uname -m)" \
             -derivedDataPath /tmp/pocket-derived-mac \
             -parallel-testing-enabled NO \
             CODE_SIGNING_ALLOWED=NO \
-            | tee "$GITHUB_WORKSPACE/runtime/ios/build/macos-xctest.log"
+            | tee "$GITHUB_WORKSPACE/runtime/ios/build/macos-build.log"
+          # Discover the generated test target instead of assuming SwiftPM's name.
+          # Build without filters so the same test product can run in both steps.
+          python3 - <<'PY'
+          import glob, os, plistlib
+          paths = glob.glob('/tmp/pocket-derived-mac/Build/Products/*.xctestrun')
+          if len(paths) != 1:
+              raise SystemExit(f'Expected one macOS xctestrun, found {paths}')
+          with open(paths[0], 'rb') as source:
+              plan = plistlib.load(source)
+          if 'TestConfigurations' in plan:
+              candidates = [target for config in plan['TestConfigurations']
+                            for target in config.get('TestTargets', [])]
+          else:
+              candidates = [dict(value, _identifier=key) for key, value in plan.items()
+                            if isinstance(value, dict) and 'TestBundlePath' in value]
+          targets = [target for target in candidates
+                     if target.get('TestBundlePath', '').endswith('/LlamaEngineTests.xctest')]
+          if len(targets) != 1:
+              raise SystemExit(f'Expected one LlamaEngineTests target, found {targets}')
+          target = targets[0]
+          if target.get('OnlyTestIdentifiers') or target.get('SkipTestIdentifiers'):
+              raise SystemExit('macOS test product unexpectedly contains test filters')
+          identifier = target.get('BlueprintName') or target.get('_identifier')
+          if not identifier or '/' in identifier or '\n' in identifier:
+              raise SystemExit('Invalid generated test target identifier')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'xctestrun={paths[0]}\ntarget={identifier}\n')
+          print(f'Mac test product: {paths[0]}; target: {identifier}')
+          PY
+
+      - name: XCTest on macOS
+        timeout-minutes: 20
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -xctestrun "${{ steps.mac-build.outputs.xctestrun }}" \
+            -destination "platform=macOS,arch=$(uname -m)" \
+            -parallel-testing-enabled NO \
+            "-skip-testing:${{ steps.mac-build.outputs.target }}/NativeRecipientTextBenchmarkTests" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee runtime/ios/build/macos-xctest.log
           exit "${PIPESTATUS[0]}"
+
+      - name: Frozen native text recipient benchmark on macOS
+        # A regression in the earlier, separate test process must remain failed
+        # while this frozen measurement still records its independent evidence.
+        if: ${{ !cancelled() && steps.mac-build.outcome == 'success' }}
+        timeout-minutes: 20
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -xctestrun "${{ steps.mac-build.outputs.xctestrun }}" \
+            -destination "platform=macOS,arch=$(uname -m)" \
+            -parallel-testing-enabled NO \
+            "-only-testing:${{ steps.mac-build.outputs.target }}/NativeRecipientTextBenchmarkTests" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee runtime/ios/build/native-recipient-text-xctest.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Preserve and independently verify recipient benchmark evidence
+        if: always() && steps.mac-build.outcome == 'success'
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, math, os, pathlib, re, uuid
+          root = pathlib.Path('runtime/ios')
+          log = root / 'build/native-recipient-text-xctest.log'
+          destination = root / 'build/native-recipient-text'
+          destination.mkdir(parents=True, exist_ok=True)
+          records = {'START': [], 'TRIAL': [], 'SUMMARY': []}
+          decode_errors = []
+          for line in log.read_text(encoding='utf-8', errors='replace').split('\n') if log.exists() else []:
+              match = re.search(r'\bPOCKET_RECIPIENT_TEXT_(START|TRIAL|SUMMARY) (\{.*\})\s*$', line)
+              if match:
+                  try:
+                      records[match[1]].append(json.loads(match[2]))
+                  except json.JSONDecodeError as error:
+                      decode_errors.append(str(error))
+          # Save all observed rows before enforcing completion. Timeout/failure
+          # evidence must survive even when there is no final summary.
+          for kind, values in records.items():
+              (destination / f'{kind.lower()}.jsonl').write_text(
+                  ''.join(json.dumps(value, sort_keys=True) + '\n' for value in values))
+          (destination / 'capture-status.json').write_text(json.dumps({
+              'recordCounts': {kind: len(values) for kind, values in records.items()},
+              'decodeErrors': decode_errors,
+          }, indent=2) + '\n')
+          assert not decode_errors, decode_errors
+          assert len(records['START']) == len(records['SUMMARY']) == 1, 'Missing/duplicate run metadata'
+          assert len(records['TRIAL']) == 36, 'Expected exactly 36 recorded trial rows'
+          start, summary = records['START'][0], records['SUMMARY'][0]
+          manifest = start['manifestASCII'].encode('ascii')
+          (destination / 'manifest.txt').write_bytes(manifest)
+          source = (root / 'Sources/PocketLlamaEngine/NativeRecipientTextBenchmark.swift').read_text()
+          expected_manifest = re.search(r'expectedManifestSHA256 = "([0-9a-f]{64})"', source)[1]
+          assert hashlib.sha256(manifest).hexdigest() == start['manifestSHA256'] == expected_manifest
+          pin = json.loads((root / 'pin/smoke-gguf.json').read_text())
+          llama_pin = json.loads((root / 'pin/llama-cpp.json').read_text())
+          assert start['modelArtifactSHA256'] == pin['sha256']
+          assert start['modelId'] == 'sha256-' + pin['sha256']
+          assert start['providerKind'] == 'llamaCpp'
+          assert start['executionSetting'] == summary['executionSetting'] == 'cpu-requested'
+          assert start['offload'] == summary['offload']
+          assert start['offload']['requestedGpuLayers'] == 0
+          assert start['llamaCppPinCommit'] == llama_pin['commit']
+          assert (start['contextLength'], start['maxTokens'], start['temperature'],
+                  start['maxOutputBytes'], start['maximumDurationSeconds']) == (512, 4, 0, 128, 900)
+
+          # Decode the canonical length-prefixed manifest, not a second prompt
+          # template. This binds every returned trial to its frozen prompt/key/order.
+          header = b'PAL-RECIPIENT-TEXT-MANIFEST-1\n'
+          assert manifest.startswith(header)
+          offset, fields = len(header), []
+          while offset < len(manifest):
+              end = manifest.index(b'\n', offset)
+              name, count = manifest[offset:end].decode('ascii').rsplit(':', 1)
+              offset = end + 1
+              length = int(count)
+              value = manifest[offset:offset + length].decode('ascii')
+              assert manifest[offset + length:offset + length + 1] == b'\n'
+              fields.append((name, value))
+              offset += length + 1
+          planned, case_id, trial = [], None, None
+          for name, value in fields:
+              if name == 'case.id':
+                  case_id = value
+              elif name == 'trial.ordinal':
+                  trial = {'ordinal': int(value), 'caseId': case_id}
+              elif name == 'trial.condition':
+                  trial['condition'] = value
+              elif name == 'trial.expectedAnswer':
+                  trial['expectedAnswer'] = value
+              elif name == 'trial.prompt':
+                  assert len(value.encode('ascii')) <= 512
+                  trial['promptSHA256'] = hashlib.sha256(value.encode('ascii')).hexdigest()
+                  planned.append(trial)
+          assert len(planned) == 36
+          assert {name: value for name, value in fields if not name.startswith(('case.', 'trial.'))}['caseCount'] == '12'
+
+          observed = [record['trial'] for record in records['TRIAL']]
+          run = summary['run']
+          assert run['trials'] == observed, 'Summary and incremental records differ'
+          assert run['status'] == 'completed'
+          for key in ('suiteID', 'suiteVersion', 'manifestSHA256', 'modelId', 'modelArtifactSHA256', 'providerKind'):
+              assert run[key] == start[key], key
+          assert (run['suiteID'], run['suiteVersion']) == ('pocket-recipient-private-facts', '1')
+          assert run['maximumDurationSeconds'] == 900
+          assert isinstance(run['elapsedMilliseconds'], int) and run['elapsedMilliseconds'] >= 0
+          request_ids, scored = set(), {}
+          invalid_count = 0
+          for wrapper, actual, expected in zip(records['TRIAL'], observed, planned):
+              assert wrapper['manifestSHA256'] == expected_manifest
+              assert wrapper['modelArtifactSHA256'] == pin['sha256']
+              for key, value in expected.items():
+                  assert actual[key] == value, (key, actual, expected)
+              assert actual['status'] == 'completed' and actual['errorMessage'] is None
+              request_id = str(uuid.UUID(actual['requestId']))
+              assert request_id not in request_ids
+              request_ids.add(request_id)
+              assert isinstance(actual['rawOutput'], str)
+              stripped = actual['rawOutput'].strip(' \t\r\n')
+              answer = stripped if stripped in ('A', 'B') else None
+              assert actual['parsedAnswer'] == answer
+              correct = answer == expected['expectedAnswer']
+              assert actual['scoredCorrect'] == correct
+              assert isinstance(actual['latencyMilliseconds'], int) and actual['latencyMilliseconds'] >= 0
+              invalid_count += answer is None
+              scored[(actual['caseId'], actual['condition'])] = correct
+          case_ids = sorted({row['caseId'] for row in observed})
+          assert len(case_ids) == 12 and len(scored) == 36
+          correct_count = sum(scored[(case, 'correct')] for case in case_ids)
+          absent_count = sum(scored[(case, 'absent')] for case in case_ids)
+          counter_count = sum(scored[(case, 'counterfactual')] for case in case_ids)
+          wins = sum(scored[(case, 'correct')] and not scored[(case, 'absent')] for case in case_ids)
+          losses = sum(scored[(case, 'absent')] and not scored[(case, 'correct')] for case in case_ids)
+          pairs = sum(scored[(case, 'correct')] and scored[(case, 'counterfactual')] for case in case_ids)
+          counts = dict(caseCount=12, scheduledTrialCount=36, attemptedTrialCount=36,
+                        completedTrialCount=36, generationFailedCount=0, notRunBudgetCount=0,
+                        invalidAnswerCount=invalid_count, correctAnswerCount=correct_count,
+                        absentAnswerCount=absent_count, counterfactualFollowingCount=counter_count,
+                        correctOnlyVsAbsentCount=wins, absentOnlyVsCorrectCount=losses,
+                        correctAndCounterfactualPairCount=pairs)
+          rates = dict(correctAccuracy=correct_count/12, absentAccuracy=absent_count/12,
+                       counterfactualFollowingRate=counter_count/12,
+                       correctMinusAbsentAccuracy=(correct_count-absent_count)/12,
+                       correctAndCounterfactualPairRate=pairs/12)
+          for key, value in counts.items():
+              assert run['metrics'][key] == value, key
+          for key, value in rates.items():
+              assert math.isclose(run['metrics'][key], value, rel_tol=0, abs_tol=1e-12), key
+          cleanup = summary['cleanup']
+          assert cleanup['leaseReleased'] is True
+          assert cleanup['activeLeaseCountBeforeRelease'] == 1
+          for key in ('activeUseCountBeforeRelease', 'activeRequestsBeforeRelease', 'waitingRequestsBeforeRelease',
+                      'activeLeaseCount', 'activeUseCount', 'reservedMemoryMB', 'activeRequests', 'waitingRequests'):
+              assert cleanup[key] == 0, key
+          for key in ('loadedModelIDs', 'pendingModelIDs', 'unloadingModelIDs'):
+              assert cleanup[key] == [], key
+          (destination / 'verified-summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write('\n## Frozen native text recipient benchmark\n\n')
+              output.write('All 36 requests completed; this is an execution gate with no minimum quality score.\n\n')
+              output.write(f'Manifest: `{expected_manifest}`. Model: `{pin["sha256"]}`.\n\n')
+              output.write(f'CPU-requested offload report: `{json.dumps(start["offload"], sort_keys=True)}`.\n\n')
+              output.write('| Measure | Observed |\n| --- | --- |\n')
+              for label, value in [('Correct message', f'{correct_count}/12'), ('Absent message', f'{absent_count}/12'),
+                                   ('Specific counterfactual following', f'{counter_count}/12'),
+                                   ('Correct + counterfactual answer switch', f'{pairs}/12'),
+                                   ('Paired correct-only / absent-only', f'{wins} / {losses}'),
+                                   ('Invalid outputs', f'{invalid_count}/36'),
+                                   ('Runner elapsed milliseconds', run['elapsedMilliseconds'])]:
+                  output.write(f'| {label} | {value} |\n')
+          print('Verified all 36 frozen trials, their exact provenance, strict parser scores, fixed denominators, and cleanup.')
+          PY
+
+      - name: Upload recipient benchmark evidence including partial runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-recipient-text-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            runtime/ios/build/native-recipient-text/
+            runtime/ios/build/native-recipient-text-xctest.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Record what this runner actually did
         if: always()
@@ -293,6 +518,6 @@ jobs:
             echo "Simulator destination: ${{ steps.sim.outputs.name }} (\`${{ steps.sim.outputs.id }}\`)."
             echo
             echo '```'
-            grep -h "POCKET_LLAMA_" runtime/ios/build/simulator-xctest.log runtime/ios/build/macos-xctest.log || true
+            grep -hE "POCKET_LLAMA_[A-Z_]+ " runtime/ios/build/simulator-xctest.log runtime/ios/build/macos-xctest.log || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
