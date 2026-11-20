@@ -1,6 +1,11 @@
 // Inspect the pinned vocabulary and frozen prompt tokenization without creating
 // an inference context, loading model weights, or decoding/generating tokens.
 // The companion runner verifies the model pin before and after this executable.
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+// Darwin hides O_NOFOLLOW in strict POSIX mode unless its extensions are enabled.
+// Keep the no-follow checks themselves unchanged.
+#define _DARWIN_C_SOURCE 1
+#endif
 #define _POSIX_C_SOURCE 200809L
 
 #include "llama.h"

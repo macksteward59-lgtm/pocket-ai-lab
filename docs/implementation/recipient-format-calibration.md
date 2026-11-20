@@ -147,3 +147,28 @@ Apple Silicon device. Source/fixture validation, empirical tokenization,
 measurement completion, format feasibility and task scores must each be reported
 with their own exact source/run result. Any new prompt, parser, schedule or
 acceptance interpretation after observation requires a new experiment version.
+
+## Initial hosted portability correction
+
+The first source `811b02646fc30cba4eea86dc53adecde208b7222` passed general CI
+and all 43 Python evidence tests. In [native run 44774751361](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44774751361),
+pinned dependencies and metadata/prompt preparation passed, but Darwin compilation
+of the new standalone C probe failed because `O_NOFOLLOW` was undeclared. The
+source requested strict POSIX declarations; Darwin's [fcntl.h](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/fcntl.h)
+gates that name behind its extensions, as selected by [cdefs.h](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/cdefs.h).
+The follow-up enables `_DARWIN_C_SOURCE` on Apple targets before including headers
+and retains the actual no-follow operations unchanged.
+
+That attempt loaded no vocabulary and generated no model responses. Artifact
+14650660530 (39,323 bytes, SHA-256
+`8e934e88330f6d47023e5112f911925b329ef6c626dd118397e8861dcb3cd819`)
+retains the compiler errors, empty tokenization transcript, zero captured runtime
+records and failed integrity audits. All 87 original ZIP members and 86 provenance
+digests were independently verified. The resulting partial audit is not a measured
+zero quality score.
+
+The exact manifest, template, settings, acceptance assertions, production runtime
+and original v1 remain unchanged. The local executor became unavailable before
+this repair could be compiled there; hosted CI must establish the new Darwin
+compile and actual probe/experiment results. No local compile pass is claimed for
+the correction.
