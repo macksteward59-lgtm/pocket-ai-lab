@@ -14,12 +14,14 @@ final class LocalChatModel: ObservableObject {
     @Published var historyStatus = "Conversation history is stored only on this device."
     @Published private(set) var agentTaskHistory: [AgentTaskHistoryEntry] = []
     @Published var agentTaskHistoryStatus = "Agent Team task history is stored only on this device."
+    @Published var cloudAnalysisStatus = "Cloud analysis is optional and sends only the text you approve."
     @Published private(set) var evaluationEvents: [NativeEvaluationJournalEvent] = []
     @Published var evaluationStatus = "No self-evaluation run recorded."
 
     private let conversationStore: LocalConversationStore
     private let agentTaskHistoryStore: LocalAgentTaskHistoryStore
     private let modelCatalogStore: LocalModelCatalogStore
+    private let cloudAnalysisClient: any CloudAnalysisSending
     private var evaluationJournal: NativeEvaluationJournal?
     @Published var isBusy = false
     @Published var metalStatus = "Checking Metal runtime…"
@@ -37,11 +39,13 @@ final class LocalChatModel: ObservableObject {
         agentTaskHistoryStore: LocalAgentTaskHistoryStore = LocalAgentTaskHistoryStore(),
         modelCatalogStore: LocalModelCatalogStore? = nil,
         evaluationJournal: NativeEvaluationJournal? = nil,
+        cloudAnalysisClient: any CloudAnalysisSending = CloudAnalysisClient(),
         availableMemoryMB: @escaping @Sendable () -> Int = { Int(os_proc_available_memory() / (1_024 * 1_024)) }
     ) {
         self.conversationStore = conversationStore
         self.agentTaskHistoryStore = agentTaskHistoryStore
         self.evaluationJournal = evaluationJournal
+        self.cloudAnalysisClient = cloudAnalysisClient
         let resolvedModelDirectory = modelDirectory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Models", isDirectory: true)
         self.modelDirectory = resolvedModelDirectory
@@ -621,6 +625,68 @@ final class LocalChatModel: ObservableObject {
         }
     }
 
+    /// A supplemental assessment of a terminal task. It never replaces the
+    /// local team's result, loads a remote model into ModelPool, or runs tools.
+    func runCloudAnalysis(request: CloudAnalysisRequest, configuration: CloudAnalysisConfiguration) async {
+        guard !isBusy else {
+            cloudAnalysisStatus = "Finish the current operation before requesting cloud analysis."
+            return
+        }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            try request.validate(configuration: configuration, now: Date())
+            try Task.checkCancellation()
+            try agentTaskHistoryStore.beginCloudAnalysis(request: request, configuration: configuration)
+        } catch {
+            cloudAnalysisStatus = "Cloud analysis was not sent. Its approved request and existing task could not be validated and saved."
+            return
+        }
+        // snapshot() does not recover this live attempt as interrupted.
+        agentTaskHistory = (try? agentTaskHistoryStore.snapshot()) ?? agentTaskHistory
+        cloudAnalysisStatus = "Waiting for the selected cloud model."
+
+        let result: CloudAnalysisResult
+        do {
+            result = try await cloudAnalysisClient.send(request: request, configuration: configuration)
+            // Validate even a custom/injected client before persisting output.
+            try result.validate(for: request)
+        } catch {
+            let cloudError = error as? CloudAnalysisError
+            let outcome = cloudError?.remoteOutcome ?? .unknown
+            let code: String
+            if let cloudError, case .gateway(let gatewayCode, _) = cloudError {
+                code = gatewayCode
+            } else {
+                code = outcome == .notStarted ? "client_rejected" : "remote_outcome_unknown"
+            }
+            do {
+                try agentTaskHistoryStore.endCloudAnalysis(
+                    taskID: request.taskID, attemptID: request.attemptID, outcome: outcome, code: code
+                )
+                agentTaskHistory = try agentTaskHistoryStore.snapshot()
+                cloudAnalysisStatus = outcome == .notStarted
+                    ? "Cloud analysis was rejected before provider dispatch."
+                    : "Remote outcome is unknown. No retry was started; the provider may still have processed the request."
+            } catch {
+                cloudAnalysisStatus = "The cloud outcome could not be saved. The pending attempt is preserved for recovery; no retry was started."
+            }
+            return
+        }
+
+        do {
+            try agentTaskHistoryStore.completeCloudAnalysis(
+                taskID: request.taskID, attemptID: request.attemptID, result: result
+            )
+            agentTaskHistory = try agentTaskHistoryStore.snapshot()
+            cloudAnalysisStatus = "Cloud analysis saved with this task. The local team result is unchanged."
+        } catch {
+            // A returned result and a failed local save are different outcomes.
+            // Leave the attempt recoverable; never report durable completion.
+            cloudAnalysisStatus = "The cloud returned a result, but it could not be saved with the task. No retry was started."
+        }
+    }
+
     private static func estimatedMemoryMB(for url: URL) throws -> Int {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard let number = attributes[.size] as? NSNumber else {
@@ -790,6 +856,7 @@ struct LocalChatView: View {
     @State private var importError: String?
     @State private var showClearHistoryConfirmation = false
     @State private var showEvaluationHistory = false
+    @State private var cloudAnalysisTask: AgentTaskHistoryEntry?
     @State private var capabilityDrafts: [String: String] = [:]
     @State private var selectedAgentIDs = NativeAgentCatalog.permanentAgents.map(\.id)
     @State private var specialistTemplateID = NativeAgentCatalog.specialistTemplates.first?.id ?? ""
@@ -894,6 +961,12 @@ struct LocalChatView: View {
                                     if let failure = task.failureSummary {
                                         Text(failure).font(.caption).foregroundStyle(.secondary)
                                     }
+                                    CloudAnalysisTaskSection(
+                                        attempts: task.cloudAnalysisAttempts ?? [],
+                                        isDisabled: model.isBusy || task.status == .running ||
+                                            (task.cloudAnalysisAttempts ?? []).count >= LocalAgentTaskHistoryStore.maximumCloudAttemptsPerTask,
+                                        onRequest: { cloudAnalysisTask = task }
+                                    )
                                     Text("Task history is a record only. Interrupted tasks are not automatically resumed.")
                                         .font(.caption2).foregroundStyle(.secondary)
                                 } label: {
@@ -1024,6 +1097,9 @@ struct LocalChatView: View {
             }
             .sheet(isPresented: $showEvaluationHistory) {
                 NativeEvaluationHistoryView(events: model.evaluationEvents, selectedModelID: model.selectedModelID)
+            }
+            .sheet(item: $cloudAnalysisTask) { task in
+                CloudAnalysisView(model: model, task: task)
             }
             .task { await model.loadEvaluationHistory() }
             .alert("Import failed", isPresented: Binding(get: { importError != nil },

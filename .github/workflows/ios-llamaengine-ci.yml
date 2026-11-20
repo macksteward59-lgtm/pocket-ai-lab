@@ -12,6 +12,7 @@ on:
       - codex/gie-native-capture-integration-20261120
       - codex/native-input-embedding-evaluation-20261120
       - codex/native-recipient-text-benchmark-20261120
+      - codex/recipient-format-calibration-20261120
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
