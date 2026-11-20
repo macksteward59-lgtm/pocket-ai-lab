@@ -9,6 +9,14 @@
 
 > This handoff consolidates the durable product decisions and technical requirements available from prior project discussions and the repository's current coordination records. The master checklist remains the detailed requirement baseline; the traceability matrix remains the requirement-level audit ledger. This document connects those records into one implementation-ready plan. If an original source artifact is unavailable, its contents are explicitly marked as needing recovery rather than reconstructed by guesswork.
 
+## 2026-11-19–20 update — G.I.R.L. and unified product acceptance
+
+The owner confirmed **G.I.R.L. = Geometric Intelligence Representation Layer** as a historical, experimental geometric/latent agent-communication direction. It now has explicit integration, compatibility, quality, security, user-interface, and device acceptance requirements in [G.I.R.L. Integration and End-to-End POC Gates](GIRL_GEOMETRIC_LATENT_INTEGRATION_2026-11-19.md). G.I.R.L. complements existing AgentProtocol/MessageBus, GIE1/GCB1, Director/APEX, East/e3, native inference, memory and Evidence; it does **not** replace them or establish cross-model latent alignment.
+
+The canonical checklist now contains **343 unchecked requirements**. The traceability ledger contains **344 records**: the original 316 rows plus 28 previously untracked historical, security, and G.I.R.L. requirements. One of the 344 entries (PAL-05-001) is a separately retained original module-inventory recovery item, rather than a checkbox. The 316-row count refers only to the November 16 **historical snapshot**. No new requirement has been marked verified merely because it is now indexed.
+
+The immediate functional gate is native GIE1 same-model cross-runtime parity (PR #224) followed by real recipient consumption, bounded provider-backed agent communication, documented text fallback, durable authorization/task evidence and physical iPhone testing. Hosted codec CI alone is not a product demonstration.
+
 ## 1. Product vision
 
 Pocket AI Lab is intended to be a unified, personal, offline-first AI environment—not merely a chatbot, model launcher, web wrapper, or collection of disconnected agents.
@@ -350,7 +358,7 @@ This section is a dated coordination snapshot. Recheck exact PR heads and workfl
 ### 12.1 Master requirements and traceability
 
 - `docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md` is the existing 27-section master product/engineering checklist.
-- `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md` is the requirement-level ledger for 316 baseline requirements.
+- `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md` tracks 316 original baseline entries plus 28 separately identified post-baseline requirements (344 ledger entries total); the master checklist has 343 unchecked checkboxes and a separately tracked module-inventory recovery entry.
 - Last recorded matrix counts: 184 unassessed, 85 implemented-unverified, 37 partial, 10 blocked, 0 verified, 0 missing. These are historical baseline counts, not a new audit result. Do not alter counts without row-level evidence.
 - Recover the original M01–M42 registry; do not invent identifiers.
 
@@ -419,7 +427,7 @@ A capability is not complete until the relevant gates pass:
 6. Keep Agent Team native exposure separate until its own bounded bridge and approval contract is ready.
 
 ### P0 — Reconcile requirements and original module registry
-1. Preserve the 316-row matrix and its current historical status counts until row-by-row re-audit.
+1. Preserve the original 316-row snapshot and 28 explicit addenda (344 tracked entries), maintaining honest per-row statuses until requirement-specific re-audit.
 2. Recover authoritative original M01–M42 source and map exact IDs to six layers.
 3. Map every requirement to code, tests, PR, CI, device evidence, and owner.
 4. Resolve duplicate/stale coordination claims and current branch ownership without overwriting collaborators.
@@ -489,7 +497,7 @@ The product is complete only when the native iPhone Air experience can, with evi
 2. Re-poll PRs #171, #174, #175, #180, and #181 for exact current head, base, changed files, draft/open state, and exact-head CI. Also reconcile the active native Agent Team, East, memory, and APEX PR stack before assigning new work.
 3. Do not touch files claimed by an active collaborator. Use the board and PR file lists to choose a non-overlapping slice.
 4. Prioritize native shared-session and physical-device generation acceptance, while keeping Agent Team native dispatch separately gated.
-5. Preserve the 316-row traceability baseline and recover the original M01–M42 registry before asserting full requirement coverage.
+5. Preserve the historical 316-row traceability baseline plus the 28 indexed addenda, and recover original M01–M42 detailed descriptions and six-layer/tier mappings before asserting full coverage.
 6. Report what is confirmed, what is candidate implementation, what is blocked, and what has not been tested. Never convert a plan into a completion claim.
 
 ## 19. Owner decisions / source artifacts still required
