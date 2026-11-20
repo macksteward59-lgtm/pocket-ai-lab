@@ -734,6 +734,11 @@ static int decode_tokens(
         batch.logits[i] = (i == n_tokens - 1) ? 1 : 0;
     }
     int32_t rc = llama_decode(engine->ctx, batch);
+    // Decode may return while backend work is still queued. Ordinary generation
+    // has no output getter after its final token to perform an implicit drain.
+    // Keep the native invocation and model-use pin alive on success, abort and
+    // error paths, and observe cancellation again after the drain completes.
+    llama_synchronize(engine->ctx);
     llama_batch_free(batch);
     if (rc == 2 || atomic_load(&engine->cancel)) {
         return fail(err, err_len, POCKET_LLAMA_ERR_CANCELLED, "Generation was cancelled.");
