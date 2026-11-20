@@ -57,14 +57,17 @@ public enum NativeGIECodebookArtifact {
         let revisionData = Data(bytes[(20 + modelIdLength)..<stringsEnd])
         guard let modelId = String(data: modelIdData, encoding: .utf8),
               let revision = String(data: revisionData, encoding: .utf8),
-              modelId == modelId.precomposedStringWithCanonicalMapping,
-              revision == revision.precomposedStringWithCanonicalMapping,
+              modelIdData == Data(modelId.precomposedStringWithCanonicalMapping.utf8),
+              revisionData == Data(revision.precomposedStringWithCanonicalMapping.utf8),
               !modelId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !revision.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NativeGIESequenceCodecError.invalidModelIdentity
         }
         let identity = NativeLatentModelIdentity(modelId: modelId, modelRevision: revision)
-        guard identity == expectedModelIdentity else {
+        // Swift String equality accepts canonically equivalent spellings. GCB1
+        // requires already-NFC bytes and the same exact identity as TypeScript.
+        guard modelIdData == Data(expectedModelIdentity.modelId.utf8),
+              revisionData == Data(expectedModelIdentity.modelRevision.utf8) else {
             throw NativeGIESequenceCodecError.invalidModelIdentity
         }
 

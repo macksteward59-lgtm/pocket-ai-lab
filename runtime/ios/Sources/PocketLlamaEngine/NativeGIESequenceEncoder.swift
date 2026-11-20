@@ -13,6 +13,12 @@ public struct NativeGIESequenceEncoder: Sendable {
 
     public let codebook: NativeGIECodebook
 
+    /// A nonempty sequence always needs a header, one span, and one segment's
+    /// codeword indices. Hosts can reject impossible budgets before inference.
+    public var minimumPayloadByteLength: Int {
+        Self.headerBytes + 2 + codebook.residualStages * codebook.subspaces
+    }
+
     public init(codebook: NativeGIECodebook) throws {
         // Reuse the decoder's complete codebook structural validation.
         _ = try NativeGIESequenceCodec(codebook: codebook)

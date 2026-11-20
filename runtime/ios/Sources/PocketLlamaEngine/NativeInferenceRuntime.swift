@@ -201,6 +201,63 @@ public struct NativeInferenceRuntime: Sendable {
         }
     }
 
+    /// Generates an ordered, bounded sequence of final-layer embeddings under the same lease and scheduler permit.
+    public func generateWithLatentSequence(
+        lease: ModelPoolLease,
+        request: GenerationRequest,
+        maxLatentTokens: Int = 256,
+        maxLatentBytes: Int = 16 * 1024 * 1024,
+        maxOutputBytes: Int = 64_000
+    ) async throws -> LlamaLatentSequenceOutput {
+        guard maxOutputBytes > 0,
+              maxLatentTokens > 0, maxLatentTokens <= 256,
+              maxLatentBytes > 0, maxLatentBytes <= 16 * 1024 * 1024,
+              request.maxTokens <= maxLatentTokens else {
+            throw NativeInferenceRuntimeError.invalidOutputLimit
+        }
+        guard let sequenceEngine = engine as? any LatentSequenceExportingLlamaEngine else {
+            throw NativeInferenceRuntimeError.latentExportUnavailable
+        }
+        let use = try await pool.beginUse(lease)
+        do {
+            let result = try await scheduler.withPermit {
+                do {
+                    let output = try await sequenceEngine.generateWithLatentSequence(
+                        session: lease.session,
+                        request: request,
+                        maxLatentTokens: maxLatentTokens,
+                        maxLatentBytes: maxLatentBytes
+                    )
+                    try Task.checkCancellation()
+                    let (expectedFloats, overflow) = output.tokenCount.multipliedReportingOverflow(by: output.embeddingDimension)
+                    guard !overflow,
+                          output.modelId == lease.session.modelId,
+                          output.tokenCount > 0, output.tokenCount <= maxLatentTokens,
+                          output.embeddingDimension > 0, output.embeddingDimension <= 65_536,
+                          expectedFloats == output.embeddings.count,
+                          expectedFloats <= maxLatentBytes / MemoryLayout<Float>.size,
+                          output.shape == [output.tokenCount, output.embeddingDimension],
+                          output.text.utf8.count <= maxOutputBytes,
+                          output.embeddings.allSatisfy(\.isFinite) else {
+                        throw NativeInferenceRuntimeError.invalidLatentOutput
+                    }
+                    return output
+                } catch {
+                    await sequenceEngine.cancelAndWait(
+                        sessionId: lease.session.id,
+                        requestId: request.requestId
+                    )
+                    throw error
+                }
+            }
+            await pool.endUse(use)
+            return result
+        } catch {
+            await pool.endUse(use)
+            throw error
+        }
+    }
+
     /// Evaluation variant of generate that retains partial output and structured failure details.
     /// It uses the same exact lease, use pin, scheduler permit, output bound, and cancellation drain
     /// as ordinary chat. Invalid/released/foreign leases still throw before inference.

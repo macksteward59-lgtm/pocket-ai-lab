@@ -8,6 +8,7 @@ on:
       - codex/neuralese-sequence-codec-poc
       - codex/gie-canonical-codebook-artifact
       - codex/native-gie1-sequence-encoder
+      - codex/gie-native-standalone-smoke-20261120
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
