@@ -1,0 +1,81 @@
+name: Recipient GGUF Template Contract
+
+on:
+  pull_request:
+    branches:
+      - main
+      - codex/native-generation-decode-drain-20261120
+    paths:
+      - runtime/ios/scripts/recipient_gguf_template.py
+      - runtime/ios/scripts/test_recipient_gguf_template.py
+      - runtime/ios/scripts/build-llama-cpp.sh
+      - runtime/ios/pin/smoke-gguf.json
+      - runtime/ios/pin/llama-cpp.json
+      - runtime/ios/Sources/LlamaCppBridge/include/pocket_llama_pin.h
+      - .github/workflows/recipient-template-contract-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recipient-template-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pinned-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Test bounded metadata parser with declared fixtures
+        run: python3 -m unittest discover -s runtime/ios/scripts -p test_recipient_gguf_template.py -v
+
+      - name: Fetch and verify the existing pinned smoke model
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          bash runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/recipient-template-gguf-path.txt
+          test -s /tmp/recipient-template-gguf-path.txt
+
+      - name: Extract exact template and tokenizer metadata without inference
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          mkdir -p runtime/ios/build/recipient-template-contract
+          python3 runtime/ios/scripts/recipient_gguf_template.py \
+            --model "$(tail -n 1 /tmp/recipient-template-gguf-path.txt)" \
+            --pin runtime/ios/pin/smoke-gguf.json \
+            --output runtime/ios/build/recipient-template-contract/metadata.json
+          cp runtime/ios/pin/smoke-gguf.json runtime/ios/build/recipient-template-contract/model-pin.json
+          cp runtime/ios/pin/llama-cpp.json runtime/ios/build/recipient-template-contract/llama-cpp-pin.json
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('runtime/ios/build/recipient-template-contract')
+          provenance = {
+              'kind': 'pinned-gguf-metadata-only',
+              'realModelExecution': False,
+              'githubRepository': os.environ['GITHUB_REPOSITORY'],
+              'githubSHA': os.environ['GITHUB_SHA'],
+              'githubRunId': os.environ['GITHUB_RUN_ID'],
+              'githubRunAttempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'files': {path.name: {'bytes': path.stat().st_size,
+                                    'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                        for path in sorted(root.glob('*.json'))},
+          }
+          (root / 'provenance.json').write_text(json.dumps(provenance, indent=2, sort_keys=True) + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('## Pinned GGUF template metadata\n\n')
+              summary.write('The existing model pin was verified and its exact chat template and declared tokenizer metadata were extracted.\n\n')
+              summary.write('This job performed no inference, tokenization, template execution, or recipient scoring. It does not establish response-format compliance.\n')
+          PY
+
+      - name: Upload metadata and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recipient-template-contract-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime/ios/build/recipient-template-contract/
+          if-no-files-found: warn
+          retention-days: 14
