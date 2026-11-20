@@ -7,6 +7,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <math.h>
 
 #if POCKET_LLAMA_LINKED
 #include "llama.h"
@@ -71,6 +72,7 @@ int pocket_llama_inspect_gguf(
 }
 
 void pocket_llama_request_cancel(pocket_llama * engine) { (void) engine; }
+void pocket_llama_reset_cancel(pocket_llama * engine) { (void) engine; }
 void pocket_llama_offload(const pocket_llama * engine, int * requested, int * layers, int * total) {
     (void) engine;
     if (requested) *requested = 0;
@@ -124,6 +126,24 @@ int pocket_llama_copy_embedding_sequence(pocket_llama * engine, float * out, siz
     (void) engine; (void) out; (void) out_capacity;
     if (token_count) *token_count = 0;
     if (embedding_dimension) *embedding_dimension = 0;
+    if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
+    return POCKET_LLAMA_ERR_NOT_LINKED;
+}
+
+int pocket_llama_get_input_embedding_info(pocket_llama * engine,
+    pocket_llama_input_embedding_info * out_info, char * err, size_t err_len) {
+    (void) engine;
+    if (out_info) memset(out_info, 0, sizeof(*out_info));
+    if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
+    return POCKET_LLAMA_ERR_NOT_LINKED;
+}
+
+int pocket_llama_evaluate_input_embeddings(pocket_llama * engine,
+    const float * embeddings, size_t input_count, int32_t token_count, int32_t input_dimension,
+    float * out_logits, size_t out_capacity, size_t * out_count, char * err, size_t err_len) {
+    (void) engine; (void) embeddings; (void) input_count; (void) token_count; (void) input_dimension;
+    (void) out_logits; (void) out_capacity;
+    if (out_count) *out_count = 0;
     if (err && err_len) snprintf(err, err_len, "llama.cpp is not linked in this build.");
     return POCKET_LLAMA_ERR_NOT_LINKED;
 }
@@ -527,6 +547,166 @@ void pocket_llama_offload(const pocket_llama * engine, int * requested, int * la
     if (requested) *requested = engine->requested_gpu_layers;
     if (layers) *layers = engine->offloaded_layers;
     if (total) *total = engine->offload_total;
+}
+
+/* Caller holds engine->mu. This is a metadata query, never a speculative logits read. */
+static int input_embedding_info_locked(pocket_llama * engine,
+    pocket_llama_input_embedding_info * info, char * err, size_t err_len) {
+    char architecture[32];
+    int32_t architecture_length = llama_model_meta_val_str(
+        engine->model, "general.architecture", architecture, sizeof(architecture));
+    if (architecture_length != 5 || strcmp(architecture, "llama") != 0 ||
+        llama_model_has_encoder(engine->model) || !llama_model_has_decoder(engine->model) ||
+        !llama_get_memory(engine->ctx)) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_UNSUPPORTED,
+            "Raw input evaluation currently supports only llama decoder-family models with context memory.");
+    }
+    const struct llama_vocab * vocab = llama_model_get_vocab(engine->model);
+    int32_t dimension = llama_model_n_embd_inp(engine->model);
+    int32_t vocabulary_size = vocab ? llama_vocab_n_tokens(vocab) : 0;
+    if (dimension < 1 || dimension > POCKET_LLAMA_INPUT_MAX_DIMENSION ||
+        vocabulary_size < 1 || vocabulary_size > POCKET_LLAMA_INPUT_MAX_LOGITS) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_UNSUPPORTED,
+            "The loaded model exceeds the raw input dimension or vocabulary bound.");
+    }
+    uint32_t rows = POCKET_LLAMA_INPUT_MAX_TOKENS;
+    uint32_t context_rows = llama_n_ctx_seq(engine->ctx);
+    uint32_t batch_rows = llama_n_batch(engine->ctx);
+    uint32_t microbatch_rows = llama_n_ubatch(engine->ctx);
+    if (context_rows < rows) rows = context_rows;
+    if (batch_rows < rows) rows = batch_rows;
+    if (microbatch_rows < rows) rows = microbatch_rows;
+    if (rows == 0) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_UNSUPPORTED,
+            "The loaded context has no bounded raw input batch capacity.");
+    }
+    info->input_dimension = dimension;
+    info->vocabulary_size = vocabulary_size;
+    info->max_token_count = (int32_t) rows;
+    info->max_input_bytes = POCKET_LLAMA_INPUT_MAX_BYTES;
+    return POCKET_LLAMA_OK;
+}
+
+int pocket_llama_get_input_embedding_info(pocket_llama * engine,
+    pocket_llama_input_embedding_info * out_info, char * err, size_t err_len) {
+    if (out_info) memset(out_info, 0, sizeof(*out_info));
+    if (!engine || !engine->ctx || !engine->model || !out_info) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Input evaluation metadata arguments were rejected.");
+    }
+    pthread_mutex_lock(&engine->mu);
+    int rc = input_embedding_info_locked(engine, out_info, err, err_len);
+    pthread_mutex_unlock(&engine->mu);
+    if (rc == POCKET_LLAMA_OK && err && err_len) err[0] = '\0';
+    return rc;
+}
+
+int pocket_llama_evaluate_input_embeddings(pocket_llama * engine,
+    const float * embeddings, size_t input_count, int32_t token_count, int32_t input_dimension,
+    float * out_logits, size_t out_capacity, size_t * out_count, char * err, size_t err_len) {
+    if (out_count) *out_count = 0;
+    if (!engine || !engine->ctx || !engine->model || !embeddings || !out_logits || !out_count ||
+        token_count < 1 || token_count > POCKET_LLAMA_INPUT_MAX_TOKENS ||
+        input_dimension < 1 || input_dimension > POCKET_LLAMA_INPUT_MAX_DIMENSION) {
+        return fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Raw input evaluation arguments were rejected.");
+    }
+    pthread_mutex_lock(&engine->mu);
+    struct pocket_llama_input_embedding_info info = {0};
+    int rc = input_embedding_info_locked(engine, &info, err, err_len);
+    if (rc != POCKET_LLAMA_OK) goto unlock;
+    if (input_dimension != info.input_dimension || token_count > info.max_token_count ||
+        (size_t) token_count > SIZE_MAX / (size_t) input_dimension ||
+        input_count != (size_t) token_count * (size_t) input_dimension ||
+        input_count > info.max_input_bytes / sizeof(float)) {
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Raw input shape or byte count exceeds the loaded model limits.");
+        goto unlock;
+    }
+    if (out_capacity < (size_t) info.vocabulary_size) {
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_BUFFER, "The full last-position logit row does not fit the output buffer.");
+        goto unlock;
+    }
+    for (size_t i = 0; i < input_count; i++) {
+        if (!isfinite(embeddings[i])) {
+            rc = fail(err, err_len, POCKET_LLAMA_ERR_ARGS, "Raw input embeddings must all be finite.");
+            goto unlock;
+        }
+    }
+    if (atomic_load(&engine->cancel)) {
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_CANCELLED, "Raw input evaluation was cancelled.");
+        goto unlock;
+    }
+
+    struct llama_batch batch = llama_batch_init(token_count, input_dimension, 1);
+    if (batch.token || !batch.embd || !batch.pos || !batch.n_seq_id || !batch.seq_id || !batch.logits) {
+        llama_batch_free(batch);
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "llama.cpp could not allocate an embedding input batch.");
+        goto unlock;
+    }
+    batch.n_tokens = token_count;
+    for (int32_t i = 0; i < token_count; i++) {
+        if (!batch.seq_id[i]) {
+            llama_batch_free(batch);
+            rc = fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "llama.cpp could not allocate embedding sequence metadata.");
+            goto unlock;
+        }
+        batch.pos[i] = i;
+        batch.n_seq_id[i] = 1;
+        batch.seq_id[i][0] = 0;
+        batch.logits[i] = i == token_count - 1 ? 1 : 0;
+    }
+    memcpy(batch.embd, embeddings, input_count * sizeof(float));
+
+    /* All admission checks precede context mutation. Do not reset cancellation here. */
+    if (atomic_load(&engine->cancel)) {
+        llama_batch_free(batch);
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_CANCELLED, "Raw input evaluation was cancelled.");
+        goto unlock;
+    }
+    llama_memory_t memory = llama_get_memory(engine->ctx);
+    engine->sequence_token_count = 0;
+    llama_set_embeddings(engine->ctx, false);
+    llama_memory_clear(memory, true);
+    int32_t decode_rc = llama_decode(engine->ctx, batch);
+    /* Drain even aborted/failed backend work before memory reset or releasing the caller's pin. */
+    llama_synchronize(engine->ctx);
+    llama_batch_free(batch);
+    size_t copied = 0;
+    if (decode_rc == 2 || atomic_load(&engine->cancel)) {
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_CANCELLED, "Raw input evaluation was cancelled.");
+    } else if (decode_rc != 0) {
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "llama.cpp rejected the raw input evaluation batch.");
+    } else {
+        /* Safe only after successful decode with the final input explicitly marked for logits. */
+        float * logits = llama_get_logits_ith(engine->ctx, -1);
+        if (!logits) {
+            rc = fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "llama.cpp did not expose the final-position logits.");
+        } else {
+            for (int32_t i = 0; i < info.vocabulary_size; i++) {
+                if (!isfinite(logits[i])) {
+                    rc = fail(err, err_len, POCKET_LLAMA_ERR_DECODE, "Raw input evaluation produced non-finite logits.");
+                    break;
+                }
+            }
+            if (rc == POCKET_LLAMA_OK && !atomic_load(&engine->cancel)) {
+                copied = (size_t) info.vocabulary_size;
+                memcpy(out_logits, logits, copied * sizeof(float));
+            }
+        }
+    }
+    /* Each evaluation is independent; no KV state or captured sequence escapes this operation. */
+    llama_memory_clear(memory, true);
+    llama_synchronize(engine->ctx);
+    if (atomic_load(&engine->cancel)) {
+        rc = fail(err, err_len, POCKET_LLAMA_ERR_CANCELLED, "Raw input evaluation was cancelled.");
+    }
+    if (rc == POCKET_LLAMA_OK) {
+        *out_count = copied;
+        if (err && err_len) err[0] = '\0';
+    } else if (copied) {
+        memset(out_logits, 0, copied * sizeof(float));
+    }
+unlock:
+    pthread_mutex_unlock(&engine->mu);
+    return rc;
 }
 
 static int decode_tokens(

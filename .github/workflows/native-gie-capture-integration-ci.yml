@@ -4,22 +4,26 @@ on:
   push:
     branches:
       - codex/gie-native-capture-integration-20261120
+      - codex/native-input-embedding-evaluation-20261120
     paths:
       - "runtime/ios/Sources/PocketLlamaEngine/**"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECodebookArtifactTests.swift"
       - "runtime/ios/Tests/LlamaEngineTests/GIECodebookTestSupport.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/NativeInputEmbeddingRuntimeTests.swift"
       - "runtime/ios/Tests/GIEStandaloneSmoke/**"
       - "runtime/ios/Tests/GIECaptureStandaloneSmoke/**"
       - ".github/workflows/native-gie-capture-integration-ci.yml"
   pull_request:
     branches:
       - codex/gie-native-standalone-smoke-20261120
+      - codex/gie-native-capture-integration-20261120
     paths:
       - "runtime/ios/Sources/PocketLlamaEngine/**"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECodebookArtifactTests.swift"
       - "runtime/ios/Tests/LlamaEngineTests/GIECodebookTestSupport.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/NativeInputEmbeddingRuntimeTests.swift"
       - "runtime/ios/Tests/GIEStandaloneSmoke/**"
       - "runtime/ios/Tests/GIECaptureStandaloneSmoke/**"
       - ".github/workflows/native-gie-capture-integration-ci.yml"
