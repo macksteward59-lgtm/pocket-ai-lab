@@ -35,10 +35,16 @@ jobs:
         run: |
           swift --version
           xcodebuild -version
-      - name: Typecheck entire unlinked native engine including the new capture adapter
+      - name: Typecheck native engine and capture adapter without a linked C bridge
         run: |
-          swiftc -swift-version 5 -typecheck -parse-as-library \
-            runtime/ios/Sources/PocketLlamaEngine/*.swift
+          # GGUFMetadata.swift unconditionally imports the C bridge. It is
+          # validated by full native iOS CI; this isolated no-C pass exercises
+          # the engine, model pool, scheduler and new GIE adapter only.
+          sources=()
+          for source in runtime/ios/Sources/PocketLlamaEngine/*.swift; do
+            [[ "$source" == */GGUFMetadata.swift ]] || sources+=("$source")
+          done
+          swiftc -swift-version 5 -typecheck -parse-as-library "${sources[@]}"
       - name: Build same production GCB1/GIE1 files with shared-fixture native check
         run: |
           swiftc -swift-version 5 \
