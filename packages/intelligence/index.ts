@@ -85,3 +85,23 @@ export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFl
 
 export { AuthorizationRelationshipModel, checkAuthorizationRelationships } from "./research-science";
 export type { PermissionEffect, OwnershipRequirement, AuthorizationInvariantKind, RolePermissionGrant, ResourceOwnershipRule, AuthorizationRouteBinding, AuthorizationInvariant, AuthorizationRelationshipModelInput, AuthorizationCounterexample, AuthorizationRelationshipCheck } from "./research-science";
+
+export { normalizeProgramPolicy, ProgramPolicyError, evaluateTargetScope, evaluateProgramAction } from "./bug-bounty";
+export {
+  interpretPolicySnapshot,
+  validateInterpretationEvidence,
+  createPolicyReviewAssignments,
+  PolicyInterpretationError
+} from "./bug-bounty/interpretation";
+export type {
+  ExtractedPolicyClause,
+  InterpretationEvidenceValidation,
+  PolicyClauseKind,
+  PolicyExtractionMethod,
+  PolicyInterpretation,
+  PolicyInterpretationInput,
+  PolicyInterpretationIssue,
+  PolicyInterpretationIssueCode,
+  PolicyCandidateValue,
+  PolicyReviewAssignment
+} from "./bug-bounty/interpretation";

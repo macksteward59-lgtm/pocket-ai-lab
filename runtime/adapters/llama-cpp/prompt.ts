@@ -74,7 +74,9 @@ export function buildLlamaCppPrompt(
   return [
     "You are a local inference backend for one Pocket AI Lab agent turn.",
     roleGuidance(request.agentId) ?? "",
-    isLlamaCppDeliberationStage(request.stage) ? `What to do now: ${STAGE_GUIDANCE[request.stage]}` : "",
+    request.responseContract === "bug-bounty-policy-review"
+      ? "What to do now: independently review the policy interpretation and return summary/findings only."
+      : isLlamaCppDeliberationStage(request.stage) ? `What to do now: ${STAGE_GUIDANCE[request.stage]}` : "",
     "Return only a single JSON object. Do not wrap it in markdown.",
     AUTH_NOTE,
     hint,
@@ -148,7 +150,9 @@ export function buildLlamaCppMessages(
     roleGuidance(request.agentId) ?? `You are the ${request.agentId} agent in Pocket AI Lab.`,
     "You are one member of a local multi-agent team that works through stages: independent analysis, cross-review, challenge, revision, verification, and synthesis.",
     `Stage: ${request.stage}`,
-    isLlamaCppDeliberationStage(request.stage) ? `What to do now: ${STAGE_GUIDANCE[request.stage]}` : "",
+    request.responseContract === "bug-bounty-policy-review"
+      ? "What to do now: independently review the policy interpretation and return summary/findings only."
+      : isLlamaCppDeliberationStage(request.stage) ? `What to do now: ${STAGE_GUIDANCE[request.stage]}` : "",
     "Output format: return only a single JSON object, no markdown fence.",
     hint,
     AUTH_NOTE,
@@ -167,6 +171,9 @@ export function buildLlamaCppMessages(
 }
 
 function stageHint(request: InferenceRequest): string {
+  if (request.responseContract === "bug-bounty-policy-review") {
+    return 'Required JSON object: {"summary": string, "findings": array of policy-review findings}';
+  }
   return isLlamaCppDeliberationStage(request.stage)
     ? LLAMA_CPP_STAGE_HINTS[request.stage]
     : "Required JSON object: a stage payload this adapter recognizes.";
