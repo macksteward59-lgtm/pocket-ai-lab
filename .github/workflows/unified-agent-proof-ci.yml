@@ -1,0 +1,44 @@
+name: Unified agent provider proof CI
+
+on:
+  push:
+    branches:
+      - codex/unified-agent-provider-proof-20261120
+    paths:
+      - "scripts/desktop/unified-agent-proof.*"
+      - "docs/implementation/unified-agent-provider-proof.md"
+      - ".github/workflows/unified-agent-proof-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/desktop/unified-agent-proof.*"
+      - "docs/implementation/unified-agent-provider-proof.md"
+      - ".github/workflows/unified-agent-proof-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unified-agent-provider-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scoped-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install repository dependencies
+        run: npm install --no-package-lock
+      - name: Verify JavaScript entrypoint syntax
+        run: |
+          node --check scripts/desktop/unified-agent-proof.mjs
+          node --check scripts/desktop/unified-agent-proof.test.mjs
+      - name: Run deterministic seven-attempt integration proof
+        run: node --import tsx --test scripts/desktop/unified-agent-proof.test.mjs
