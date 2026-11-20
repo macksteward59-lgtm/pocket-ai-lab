@@ -58,7 +58,8 @@ let package = Package(
             path: "Tests/LlamaEngineTests",
             resources: [
                 .copy("Fixtures/gie-codebook-artifact-v1.json"),
-                .copy("Fixtures/gie-verified-sequence-v1.json")
+                .copy("Fixtures/gie-verified-sequence-v1.json"),
+                .copy("Fixtures/recipient-format-calibration-v1.json")
             ]
         )
     ]
