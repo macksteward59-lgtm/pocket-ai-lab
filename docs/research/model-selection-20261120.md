@@ -10,6 +10,8 @@ Granite combines a publisher-provided approximately 2.24 GB Q4_K_M artifact with
 
 Keep **Qwen3.5 2B** as a lower-memory text alternative. Consider **LFM3 1.7B** for narrow structured-output/tool-selection work, and **Gemma 4 E2B** for a later text/multimodal comparison. Do not install all candidates or load one model per logical role. Preserve the shared pool, sequential deliberation, `InferenceProvider`, APEX/Director, East/e3 and existing authorization boundaries.
 
+The later DeepSeek follow-up in section 9 adds **DeepSeek-R1-Distill-Qwen-1.5B** as a native reasoning candidate and separately identifies optional large-model API/host routes. No candidate has been accepted by this research.
+
 ## 1. Repository and device constraints
 
 The inspected heads were:
@@ -48,6 +50,7 @@ File sizes below are decimal GB for a specific text-model artifact. They exclude
 | **IBM Granite 4.2 3B** | Publisher Q4_K_M, **2.24 GB** | Apache 2.0 | First general text/tool candidate | Correct mode, sampler and tool parser; physical-phone performance; `granite` excluded by numerical guard |
 | **Qwen3.5 4B** | ggml-org Q4_K_M, **3.03 GB** | Apache 2.0 | Broader-capability challenger | More memory; explicit nonthinking configuration; `qwen35` excluded by numerical guard |
 | **MiniCPM5 2B** | Publisher Q4_K_M, **1.56 GB** | Apache 2.0 | Compact reasoning and numerical-input preflight | Only thinking mode officially supported; `llama` is only one precondition, not learned GIE compatibility |
+| **DeepSeek-R1-Distill-Qwen-1.5B** | Bartowski community Q4_K_M, **1.12 GB** | MIT release; Qwen base provenance | Additional compact reasoning comparison; see section 9 | Distinct from flagship DeepSeek; release-specific prompting; `qwen2` excluded by numerical guard |
 | **Qwen3.5 2B** | Bartowski community Q4_K_M, **1.40 GB** | Apache 2.0 | Smaller general-text comparison | Community conversion needs its own full pin; quality and runtime behavior remain unmeasured |
 | **LFM3 1.7B** | Publisher Q4_K_M, **1.10 GB** | LFM Open License v1.0 | Narrow tools/structured output | Publisher discourages agentic coding and complex reasoning; custom commercial conditions |
 | **Gemma 4 E2B** | Google QAT Q4_0, **3.35 GB** | Apache 2.0 | Later text/multimodal comparison | Limited margin under current estimate; projectors and modality API are separate work |
@@ -163,3 +166,41 @@ Useful existing components: [ModelSource](https://github.com/macksteward59-lgtm/
 This research used publisher model cards and licenses, Hugging Face artifact listings/pointers, exact repository source, llama.cpp source and Apple documentation. Vendor benchmark tables were used to identify plausible candidates; different harnesses, precision, reasoning budgets and scaffolds prevent a reliable cross-card performance ranking. None of the retrieved sources proves that a selected Q4 artifact passes Pocket's native tests on the target phone, or succeeds in a separately authorized host-side ExploitGym evaluation with its actual inference location and configuration recorded.
 
 The immediate engineering handoff is a **versioned native model-profile and reference-comparison experiment**, starting with Granite for ordinary text and retaining MiniCPM as a distinct numerical-path candidate. Keep the existing ExploitGym restoration and implement its missing adapter under the established host boundary. This document changes no runtime, frozen gate, authority, model installation, PR merge or device-acceptance status.
+
+## 9. DeepSeek follow-up — include a local reasoning candidate and optional remote models
+
+The user's follow-up correctly identifies a missing family in the initial shortlist. **DeepSeek can be used through the same model-independent architecture.** Add **DeepSeek-R1-Distill-Qwen-1.5B** as an additional native text/reasoning candidate. Larger DeepSeek models belong in a separately declared host/API comparison. ExploitGym remains the retained benchmark environment.
+
+### Phone candidate and provenance
+
+The official [DeepSeek-R1-Distill-Qwen-1.5B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B) is a Qwen2.5-Math-based student trained with DeepSeek-R1-generated samples. Distillation transfers behavior into a different smaller model; its results must not inherit the full teacher's benchmark scores. Quantization then compresses that student's weights and creates another artifact to qualify.
+
+A concrete community conversion is [Bartowski's Q4_K_M](https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF). Its [remote pointer](https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/raw/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf) records:
+
+- Filename: `DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf`.
+- Size: **1,117,320,800 bytes**, approximately **1.12 GB**, excluding runtime allocations.
+- SHA-256: `1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f`.
+- Provenance: official DeepSeek checkpoint, community GGUF conversion; repository revision still needs freezing before a run.
+
+The [official configuration](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B/blob/main/config.json) and GGUF listing report `qwen2`. The pinned runtime contains [Qwen2 model support](https://github.com/ggml-org/llama.cpp/blob/5f490d7bfe78844e6390c869454c149fd7e003a8/src/models/qwen2.cpp), including the 28-layer/1536-width configuration. This supports a native-text preflight, not an actual load or device acceptance claim. It remains outside Pocket's current `llama`-only numerical-input guard.
+
+DeepSeek's R1 releases use MIT licensing with base-model provenance conditions. Its Qwen distills derive from Apache-licensed Qwen models; the separate Llama distills retain the relevance of their Llama base licenses. Preserve the correct notices for the exact selected artifact. See [official R1 licensing and usage](https://github.com/deepseek-ai/DeepSeek-R1).
+
+### Invocation must be specific to the chosen DeepSeek release
+
+For the original R1 distill, the publisher recommends temperature around 0.6, instructions in the user prompt rather than a system prompt, and a reasoning-prefix convention. This does not remove host-enforced APEX/East authority. Freeze the actual template, sampler, reasoning/final-answer parser and bounded completion budget before testing.
+
+The newer [R1-0528-Qwen3-8B](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B) has different guidance: its documentation supports system prompts and does not require the earlier forced thinking prefix. Its Qwen3 architecture also does not satisfy the current numerical guard. Do not apply one generic DeepSeek profile to all releases or assume every teacher-model capability is present in a distill.
+
+The selected 1.5B artifact is a plausible small-phone experiment; actual sustained memory, latency, output quality and completion within the app's turn limits remain unmeasured. Representative community Q4_K_M files are **4,683,073,504 bytes** for [R1-Distill-Qwen-7B](https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/raw/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf) and **4,920,736,608 bytes** for [R1-Distill-Llama-8B](https://huggingface.co/bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF/raw/main/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf). Their weights alone exceed the current 4,096 MiB pool budget; this describes those artifacts and the current configuration, not an impossibility result for every phone or quantization. Larger variants require their own artifact and measured memory decision.
+
+### Current flagship/API route and ExploitGym evidence
+
+As checked on 20 November 2026, the [official API model table](https://api-docs.deepseek.com/quick_start/pricing/) maps `deepseek-flash` to **DeepSeek-V4.1-Flash-1017** and `deepseek-v4-pro` to **DeepSeek-V4-Pro-0813**. These are optional remote-provider candidates with network, credentials, cost and data-routing implications; they are not local phone models or automatic fallback routes. Record the actual served version because API aliases can change.
+
+The [original V4.1 Flash card](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash) lists a 552B-parameter backbone and additional conditional-memory parameters. Active parameters per token do not describe the full stored model. It reports **15.3 ExploitGym pass@1** in the publisher's comparison table. This is evidence for considering a host-side DeepSeek evaluation, not a replicated Pocket result, an R1-distill result, or an established score for the newer 1017 release.
+
+ExploitGym's [official page](https://www.cybergym.io/exploitgym/) warns that submissions may use different subsets. Before comparing the published number with a Pocket run, establish task/image revisions, defenses, scaffold, budgets, scoring and actual model identity. Keep the existing `flag_captured` / `on_target` distinction and existing host boundary.
+
+**Updated recommendation:** include R1-Distill-Qwen-1.5B in the small native reasoning comparison; retain Granite's ordinary-text priority and MiniCPM's separate numerical-path investigation; consider current DeepSeek API/host models only as an optional, explicitly identified provider. This follow-up changes research documentation, not runtime selection, historical scores or model readiness.
+
