@@ -117,7 +117,8 @@ private func run() throws {
         modelIdentity: identity
     )
     try require(encoded.count == sequence.payloadByteLength, "GIE1 byte count")
-    try require(encoded == (try bytes(hex: sequence.payloadHex)), "exact shared TypeScript GIE1 wire bytes")
+    let expectedWireBytes = try bytes(hex: sequence.payloadHex)
+    try require(encoded == expectedWireBytes, "exact shared TypeScript GIE1 wire bytes")
 
     let decoded = try codec.decode(encoded, modelIdentity: identity)
     try require(decoded.tokenCount == sequence.tokenCount, "token count")
