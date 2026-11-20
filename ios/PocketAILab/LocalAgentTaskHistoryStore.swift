@@ -16,6 +16,24 @@ struct AgentTaskHistoryEntry: Codable, Equatable, Identifiable {
     var roleResults: [AgentTaskRoleResult]
     var finalResponse: String?
     var failureSummary: String?
+    /// Optional so existing v1 archives remain readable without migration.
+    /// These supplemental results do not change the local team's outcome.
+    var cloudAnalysisAttempts: [CloudAnalysisAttempt]? = nil
+}
+
+enum CloudAnalysisAttemptStatus: String, Codable, Equatable {
+    case submitting, completed, rejected, unknown
+}
+
+struct CloudAnalysisAttempt: Codable, Equatable, Identifiable {
+    var id: String { request.attemptID }
+    let request: CloudAnalysisRequest
+    let gatewayOrigin: String
+    let createdAt: Date
+    var updatedAt: Date
+    var status: CloudAnalysisAttemptStatus
+    var result: CloudAnalysisResult?
+    var failureCode: String?
 }
 
 struct AgentTaskRoleResult: Codable, Equatable, Identifiable {
@@ -108,6 +126,7 @@ struct LocalAgentTaskHistoryStore {
     static let maximumRoleResults = 8
     static let maximumRoleTextBytes = 8_000
     static let maximumFailureSummaryBytes = 1_000
+    static let maximumCloudAttemptsPerTask = 4
 
     private let fileURL: URL
     private let fileManager: FileManager
@@ -128,6 +147,7 @@ struct LocalAgentTaskHistoryStore {
     func load() throws -> [AgentTaskHistoryEntry] {
         let cutoff = now().addingTimeInterval(-Self.retentionInterval)
         var changed = false
+        var recoveredCloudTaskIDs = Set<String>()
         let recovered = try readTasks()
             .filter { $0.updatedAt >= cutoff }
             .map { task in
@@ -138,11 +158,98 @@ struct LocalAgentTaskHistoryStore {
                     value.failureSummary = "App ended before this task recorded a terminal result. It was not resumed."
                     changed = true
                 }
+                if let attempts = value.cloudAnalysisAttempts {
+                    value.cloudAnalysisAttempts = attempts.map { attempt in
+                        guard attempt.status == .submitting else { return attempt }
+                        var recovered = attempt
+                        recovered.status = .unknown
+                        recovered.updatedAt = now()
+                        recovered.failureCode = "interrupted"
+                        recovered.result = nil
+                        recoveredCloudTaskIDs.insert(value.id)
+                        value.updatedAt = now()
+                        changed = true
+                        return recovered
+                    }
+                }
                 return value
             }
             .sorted { $0.updatedAt > $1.updatedAt }
-        if changed { try write(recovered) }
+        if changed { try write(recovered, protecting: recoveredCloudTaskIDs) }
         return recovered
+    }
+
+    /// Refresh during an active request without treating it as restart recovery.
+    func snapshot() throws -> [AgentTaskHistoryEntry] {
+        let cutoff = now().addingTimeInterval(-Self.retentionInterval)
+        return try readTasks().filter { $0.updatedAt >= cutoff }.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    /// Persist before dispatch. Promote the target to the archive front so the
+    /// bounded writer cannot silently evict the attempt being submitted.
+    func beginCloudAnalysis(request: CloudAnalysisRequest, configuration: CloudAnalysisConfiguration) throws {
+        try request.validate(configuration: configuration, now: now())
+        var tasks = try readTasks()
+        guard let index = tasks.firstIndex(where: { $0.id == request.taskID }) else {
+            throw StoreError.taskNotFound
+        }
+        guard tasks[index].status != .running,
+              (tasks[index].cloudAnalysisAttempts ?? []).count < Self.maximumCloudAttemptsPerTask,
+              !tasks.flatMap({ $0.cloudAnalysisAttempts ?? [] }).contains(where: {
+                  $0.id.lowercased() == request.attemptID.lowercased() || $0.status == .submitting
+              }) else {
+            throw StoreError.invalidTransition
+        }
+        var task = tasks.remove(at: index)
+        let timestamp = now()
+        var attempts = task.cloudAnalysisAttempts ?? []
+        attempts.append(CloudAnalysisAttempt(
+            request: request, gatewayOrigin: configuration.origin.absoluteString,
+            createdAt: timestamp, updatedAt: timestamp, status: .submitting,
+            result: nil, failureCode: nil
+        ))
+        task.cloudAnalysisAttempts = attempts
+        task.updatedAt = timestamp
+        tasks.insert(task, at: 0)
+        try write(tasks, protecting: [request.taskID])
+        guard try readTasks().first(where: { $0.id == request.taskID })?
+            .cloudAnalysisAttempts?.contains(where: { $0.id == request.attemptID && $0.status == .submitting }) == true else {
+            throw StoreError.invalidTransition
+        }
+    }
+
+    func completeCloudAnalysis(taskID: String, attemptID: String, result: CloudAnalysisResult) throws {
+        try updateCloudAnalysis(taskID: taskID, attemptID: attemptID) { attempt in
+            try result.validate(for: attempt.request)
+            attempt.status = .completed
+            attempt.result = result
+            attempt.failureCode = nil
+        }
+    }
+
+    func endCloudAnalysis(taskID: String, attemptID: String, outcome: CloudAnalysisRemoteOutcome, code: String) throws {
+        try updateCloudAnalysis(taskID: taskID, attemptID: attemptID) { attempt in
+            attempt.status = outcome == .notStarted ? .rejected : .unknown
+            attempt.result = nil
+            attempt.failureCode = Self.clipped(code, limit: 128)
+        }
+    }
+
+    private func updateCloudAnalysis(
+        taskID: String, attemptID: String, update: (inout CloudAnalysisAttempt) throws -> Void
+    ) throws {
+        var tasks = try readTasks()
+        guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { throw StoreError.taskNotFound }
+        var task = tasks.remove(at: index)
+        guard task.status != .running, var attempts = task.cloudAnalysisAttempts,
+              let attemptIndex = attempts.firstIndex(where: { $0.id == attemptID }),
+              attempts[attemptIndex].status == .submitting else { throw StoreError.invalidTransition }
+        try update(&attempts[attemptIndex])
+        attempts[attemptIndex].updatedAt = now()
+        task.cloudAnalysisAttempts = attempts
+        task.updatedAt = now()
+        tasks.insert(task, at: 0)
+        try write(tasks, protecting: [taskID])
     }
 
     private func readTasks() throws -> [AgentTaskHistoryEntry] {
@@ -266,9 +373,12 @@ struct LocalAgentTaskHistoryStore {
         try write(tasks)
     }
 
-    private func write(_ input: [AgentTaskHistoryEntry]) throws {
+    private func write(_ input: [AgentTaskHistoryEntry], protecting taskIDs: Set<String> = []) throws {
         let cutoff = now().addingTimeInterval(-Self.retentionInterval)
         var tasks = Array(input.filter { $0.updatedAt >= cutoff }.prefix(Self.maximumTasks))
+        if !taskIDs.isSubset(of: Set(tasks.map(\.id))) {
+            throw StoreError.invalidTransition
+        }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         func encode(_ values: [AgentTaskHistoryEntry]) throws -> Data {
@@ -276,7 +386,13 @@ struct LocalAgentTaskHistoryStore {
         }
         var data = try encode(tasks)
         while data.count > Self.maximumArchiveBytes, !tasks.isEmpty {
-            tasks.removeLast()
+            // Cloud request/finalization must fail before replacing the file if
+            // the protected task alone exceeds the encoded archive capacity.
+            // Byte limits on text do not bound JSON escape expansion.
+            guard let removable = tasks.lastIndex(where: { !taskIDs.contains($0.id) }) else {
+                throw CocoaError(.fileWriteOutOfSpace)
+            }
+            tasks.remove(at: removable)
             data = try encode(tasks)
         }
         guard data.count <= Self.maximumArchiveBytes else {

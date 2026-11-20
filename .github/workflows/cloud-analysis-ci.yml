@@ -1,0 +1,109 @@
+name: Native Cloud Analysis
+
+on:
+  push:
+    branches:
+      - main
+      - codex/native-cloud-analysis-20261120
+    paths:
+      - packages/intelligence/serverless/cloud-analysis/**
+      - scripts/cloud-analysis/**
+      - ios/PocketAILab/CloudAnalysis*.swift
+      - ios/PocketAILab/LocalAgentTaskHistoryStore.swift
+      - ios/PocketAILab/LocalChatView.swift
+      - ios/PocketAILabTests/CloudAnalysis*.swift
+      - ios/Tests/CloudAnalysisClient/**
+      - .github/workflows/cloud-analysis-ci.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - packages/intelligence/serverless/cloud-analysis/**
+      - scripts/cloud-analysis/**
+      - ios/PocketAILab/CloudAnalysis*.swift
+      - ios/PocketAILab/LocalAgentTaskHistoryStore.swift
+      - ios/PocketAILab/LocalChatView.swift
+      - ios/PocketAILabTests/CloudAnalysis*.swift
+      - ios/Tests/CloudAnalysisClient/**
+      - .github/workflows/cloud-analysis-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Typecheck the project
+        run: npm run build
+      - name: Exercise disclosure, limits, attribution and failure handling
+        run: npx vitest run packages/intelligence/serverless/cloud-analysis/cloudAnalysis.test.ts
+
+  swift-client:
+    runs-on: macos-15-intel
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Compile the actual Foundation client and standalone contract tests
+        run: |
+          mkdir -p /tmp/pocket-cloud-check
+          swiftc -swift-version 5 -parse-as-library \
+            ios/PocketAILab/CloudAnalysisClient.swift \
+            ios/Tests/CloudAnalysisClient/main.swift \
+            -o /tmp/pocket-cloud-check/client-tests
+      - name: Run existing and new history XCTest against the actual storage source
+        run: |
+          set -euo pipefail
+          package_root=/tmp/pocket-cloud-check/history-package
+          mkdir -p "$package_root/Sources/PocketAILab" "$package_root/Tests/CloudHistoryTests"
+          cp ios/PocketAILab/CloudAnalysisClient.swift ios/PocketAILab/LocalAgentTaskHistoryStore.swift "$package_root/Sources/PocketAILab/"
+          cp ios/PocketAILabTests/LocalAgentTaskHistoryStoreTests.swift ios/PocketAILabTests/CloudAnalysisHistoryTests.swift "$package_root/Tests/CloudHistoryTests/"
+          cat > "$package_root/Package.swift" <<'SWIFT'
+          // swift-tools-version: 5.9
+          import PackageDescription
+          let package = Package(name: "CloudHistoryValidation", platforms: [.macOS(.v13)], targets: [
+              .target(name: "PocketAILab"),
+              .testTarget(name: "CloudHistoryTests", dependencies: ["PocketAILab"])
+          ])
+          SWIFT
+          swift test --package-path "$package_root" 2>&1 | tee /tmp/pocket-cloud-check/history-tests.log
+      - name: Test the native client against the real gateway with a declared provider fixture
+        run: |
+          set -euo pipefail
+          node --import tsx scripts/cloud-analysis/fixture-server.mts \
+            --ready-file /tmp/pocket-cloud-check/ready.json \
+            > /tmp/pocket-cloud-check/fixture.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
+          python3 - <<'PY'
+          import pathlib, time
+          ready = pathlib.Path('/tmp/pocket-cloud-check/ready.json')
+          for _ in range(100):
+              if ready.exists():
+                  break
+              time.sleep(0.1)
+          else:
+              print(pathlib.Path('/tmp/pocket-cloud-check/fixture.log').read_text())
+              raise SystemExit('Fixture server did not become ready')
+          PY
+          export CLOUD_ANALYSIS_FIXTURE_ORIGIN="$(python3 -c 'import json; print(json.load(open("/tmp/pocket-cloud-check/ready.json"))["origin"])')"
+          /tmp/pocket-cloud-check/client-tests | tee /tmp/pocket-cloud-check/client-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloud-client-fixture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/pocket-cloud-check/*.log
+          if-no-files-found: warn
