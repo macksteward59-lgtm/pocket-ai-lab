@@ -137,6 +137,25 @@ final class CloudAnalysisHistoryTests: XCTestCase {
             if (try Data(contentsOf: file)).count > 510_000 { break }
         }
         XCTAssertTrue(try store.snapshot().contains(where: { $0.id == "task-1" }))
+        // Place the archive exactly 2,000 bytes below capacity, independent of
+        // platform JSON overhead. Replacing ASCII with escaped controls/quotes
+        // keeps this existing objective within its 4,000-byte input limit.
+        var archive = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        var archivedTasks = try XCTUnwrap(archive["tasks"] as? [[String: Any]])
+        let encoded = try JSONSerialization.data(withJSONObject: archive, options: [.sortedKeys])
+        let additionalBytes = LocalAgentTaskHistoryStore.maximumArchiveBytes - 2_000 - encoded.count
+        XCTAssertGreaterThan(additionalBytes, 0)
+        guard additionalBytes > 0 else { return }
+        let controls = additionalBytes / 5
+        let quotes = additionalBytes % 5
+        XCTAssertLessThanOrEqual(controls + quotes, 4_000)
+        guard controls + quotes <= 4_000 else { return }
+        archivedTasks[0]["objective"] = String(repeating: "\u{0001}", count: controls) +
+            String(repeating: "\"", count: quotes) + String(repeating: "x", count: 4_000 - controls - quotes)
+        archive["tasks"] = archivedTasks
+        let filled = try JSONSerialization.data(withJSONObject: archive, options: [.sortedKeys])
+        XCTAssertEqual(filled.count, LocalAgentTaskHistoryStore.maximumArchiveBytes - 2_000)
+        try filled.write(to: file, options: .atomic)
         let previousCount = try store.snapshot().count
         let request = try request(text: String(repeating: "z", count: 4_000))
         try store.beginCloudAnalysis(request: request, configuration: configuration())
