@@ -178,7 +178,7 @@ describe("latent channel runtime proof of concept", () => {
     };
     await expect(recipient.receive(tampered, {
       taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher"
-    })).rejects.toThrow(/model identity/);
+    })).rejects.toThrow(/identical model ID and revision/);
   });
 
   it("fails closed when host authorization denies transfer", async () => {
