@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LatentCapabilitySchema,
+  LatentCodecSelectionSchema,
   LatentTransferEnvelopeSchema,
   negotiateLatentCodec,
   validateLatentTransfer
@@ -17,7 +18,7 @@ const sender = {
 const recipient = {
   protocolVersion: 1 as const,
   agentId: "critic",
-  model: { modelId: "model-b", modelRevision: "rev-2" },
+  model: sender.model,
   supportsHiddenStateExport: false,
   supportsLatentDecode: true,
   codecs: [{ codecId: "codec-a", codecVersion: "1", dtypes: ["int8" as const], maxPayloadBytes: 2048 }]
@@ -62,6 +63,29 @@ describe("latent communication contract", () => {
     expect(negotiateLatentCodec({ ...sender, supportsHiddenStateExport: false }, recipient)).toBeNull();
     expect(negotiateLatentCodec(sender, { ...recipient, supportsLatentDecode: false })).toBeNull();
     expect(negotiateLatentCodec(sender, { ...recipient, codecs: [{ ...recipient.codecs[0], codecVersion: "2" }] })).toBeNull();
+  });
+
+  it("never negotiates heterogeneous model identities or revisions in latent v1", () => {
+    expect(negotiateLatentCodec(sender, {
+      ...recipient, model: { modelId: "model-b", modelRevision: sender.model.modelRevision }
+    })).toBeNull();
+    expect(negotiateLatentCodec(sender, {
+      ...recipient, model: { modelId: sender.model.modelId, modelRevision: "rev-2" }
+    })).toBeNull();
+    expect(negotiateLatentCodec(sender, {
+      ...recipient, model: { modelId: "model-b", modelRevision: "rev-2" }
+    })).toBeNull();
+
+    const valid = transfer();
+    const foreignCodec = {
+      ...valid.codec,
+      decoderModel: { modelId: "model-b", modelRevision: "rev-2" }
+    };
+    // A forged envelope cannot bypass the negotiation fallback by supplying
+    // otherwise matching codec/version/dtype and digest metadata directly.
+    expect(LatentCodecSelectionSchema.safeParse(foreignCodec).success).toBe(false);
+    expect(LatentTransferEnvelopeSchema.safeParse(transfer({ codec: foreignCodec })).success).toBe(false);
+    expect(LatentTransferEnvelopeSchema.safeParse(valid).success).toBe(true);
   });
 
   it("rejects unbounded tensors and oversized payload references", () => {

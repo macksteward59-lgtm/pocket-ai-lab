@@ -125,6 +125,39 @@ describe("latent channel runtime proof of concept", () => {
     })).rejects.toThrow(/compatible latent codec|model identity/);
   });
 
+  it("rejects forged cross-model envelopes before authorization or blob lookup", async () => {
+    let authorizations = 0;
+    const { sender, recipient, store } = setup({
+      async authorize() { authorizations += 1; return true; }
+    });
+    const envelope = await sender.send({
+      taskId: "task-1",
+      conversationId: "conversation-1",
+      recipient: capability("critic", "recipient"),
+      sequence: 11,
+      hiddenState: new Float32Array([0.1, 0.2]),
+      shape: [2],
+      expiresAt: "2026-11-19T04:05:00.000Z"
+    });
+    expect(authorizations).toBe(1);
+    let blobLookups = 0;
+    const originalGet = store.get.bind(store);
+    store.get = async ref => { blobLookups += 1; return originalGet(ref); };
+
+    const forged = {
+      ...envelope,
+      codec: {
+        ...envelope.codec,
+        decoderModel: { modelId: "unrelated-model", modelRevision: model.modelRevision }
+      }
+    };
+    await expect(recipient.receive(forged, {
+      taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher"
+    })).rejects.toThrow(/identical model ID and revision/);
+    expect(authorizations).toBe(1);
+    expect(blobLookups).toBe(0);
+  });
+
   it("rejects envelopes claiming a different encoder model revision", async () => {
     const { sender, recipient } = setup();
     const envelope = await sender.send({
@@ -145,7 +178,7 @@ describe("latent channel runtime proof of concept", () => {
     };
     await expect(recipient.receive(tampered, {
       taskId: "task-1", conversationId: "conversation-1", senderAgentId: "researcher"
-    })).rejects.toThrow(/model identity/);
+    })).rejects.toThrow(/identical model ID and revision/);
   });
 
   it("fails closed when host authorization denies transfer", async () => {
