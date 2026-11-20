@@ -90,7 +90,6 @@ public enum NativeGIECaptureEncoder {
         expectedModelIdentity: NativeLatentModelIdentity,
         codebookArtifact: Data,
         expectedCodebookSHA256: String,
-        providerKind: NativeInferenceProviderKind = .other,
         maxLatentTokens: Int = maximumLatentTokens,
         maxLatentBytes: Int = maximumLatentBytes,
         maxPayloadBytes: Int = maximumPayloadBytes
@@ -110,7 +109,7 @@ public enum NativeGIECaptureEncoder {
             captured,
             expectedModelIdentity: expectedModelIdentity,
             encoder: encoder,
-            providerKind: providerKind,
+            providerKind: .other, // Caller-supplied vectors cannot attest a provider.
             maxLatentTokens: maxLatentTokens,
             maxLatentBytes: maxLatentBytes,
             maxPayloadBytes: maxPayloadBytes
