@@ -217,7 +217,9 @@ test("loopback HTTP mock exercises the real llama.cpp adapter across the seven-a
     assert.equal(proof.inference.actualProviderCallsReturned, 7);
     assert.equal(proof.executionKind, "test-double");
     assert.deepEqual(calls.map(call => call.stage), EXPECTED_ATTEMPTS.map(row => row[0]));
-    // llama.cpp native /completion uses the backend-loaded model and does\n    // not carry a trustworthy per-request model ID on the wire.\n    assert.ok(calls.every(call => call.model === undefined));
+    // llama.cpp native /completion uses the backend-loaded model and does
+    // not carry a trustworthy per-request model ID on the wire.
+    assert.ok(calls.every(call => call.model === undefined));
     assert.ok(calls.every(call => call.schema));
     assert.ok(calls.every(call => call.promptContainsTrustNote));
     assert.equal(proof.memory.records[0].verified, false);
