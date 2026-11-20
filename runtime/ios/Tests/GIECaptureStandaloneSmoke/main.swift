@@ -144,7 +144,8 @@ private enum GIECaptureSmoke {
         try check(after == 1, "expected exactly one fixture-engine sequence call")
         try check(encoded.providerKind == .other, "mock engine claimed llama.cpp identity")
         try check(encoded.modelIdentity == identity, "wrong model or revision")
-        try check(encoded.payload == (try bytes(hex: sample.payloadHex)), "GIE1 bytes differ from TypeScript fixture")
+        let expectedPayload = try bytes(hex: sample.payloadHex)
+        try check(encoded.payload == expectedPayload, "GIE1 bytes differ from TypeScript fixture")
         let codebook = try NativeGIECodebookArtifact.load(
             codebookBytes, expectedSHA256: artifact.sha256, expectedModelIdentity: identity
         )
