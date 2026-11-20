@@ -1,0 +1,53 @@
+name: ProofHunt PostgreSQL Integration
+
+on:
+  push:
+    branches:
+      - "codex/**"
+    paths:
+      - "packages/intelligence/security/proofhunt/**"
+      - ".github/workflows/proofhunt-postgres-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/intelligence/security/proofhunt/**"
+      - ".github/workflows/proofhunt-postgres-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proofhunt-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: proofhunt_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: proofhunt_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d proofhunt_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: proofhunt_ci_password
+      PGDATABASE: proofhunt_ci
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Apply ProofHunt migration to PostgreSQL 16
+        run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/security/proofhunt/migrations/001_proofhunt_scopeguard.sql
+      - name: Verify RLS, immutable history, exact scope, policy checks, and revocation
+        run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/security/proofhunt/tests/postgres-integration.sql

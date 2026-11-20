@@ -85,3 +85,21 @@ export type { MultiFileSource, ResolvedImportEdge, UnresolvedImport, CrossFileFl
 
 export { AuthorizationRelationshipModel, checkAuthorizationRelationships } from "./research-science";
 export type { PermissionEffect, OwnershipRequirement, AuthorizationInvariantKind, RolePermissionGrant, ResourceOwnershipRule, AuthorizationRouteBinding, AuthorizationInvariant, AuthorizationRelationshipModelInput, AuthorizationCounterexample, AuthorizationRelationshipCheck } from "./research-science";
+
+export { normalizeProgramPolicy, ProgramPolicyError, evaluateTargetScope, evaluateProgramAction } from "./bug-bounty";
+export {
+  ScopeGuard, ScopeGuardError, normalizeTargetHostname, hashNormalizedProgramPolicy,
+  hashAssessmentPolicy, hashAssessmentScope, PROOFHUNT_SAFE_CHECKS
+} from "./security/proofhunt";
+export type {
+  AuthorizationRecordKind, EmergencyStopProvider, ExplicitTarget, OperationalApprovalVerifier,
+  OperationalAuthorizationRecord, ProgramAuthorizationRecord, ProgramEvidenceVerifier,
+  ProofHuntAssessmentConfig, ProofHuntAssessmentPolicy, ProofHuntEnvironment,
+  ProofHuntSafeCheck, ScopeGuardAuditWriter, ScopeGuardDecision, ScopeGuardOptions
+} from "./security/proofhunt";
+
+export type {
+  ActionDecision, AssetKind, BountyPlatform, NormalizedProgramPolicy, NormalizedScopeRule,
+  PolicyReviewState, ProgramAction, ProgramPolicyCandidate, ScopeDisposition, ScopeEvaluation,
+  ScopeRuleInput, RateLimitInput, TestingWindowInput
+} from "./bug-bounty";
