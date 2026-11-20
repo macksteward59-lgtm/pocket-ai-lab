@@ -568,3 +568,25 @@ Use one row per requirement or a stable requirement group. Expand groups into in
 - [ ] Test fail-closed behavior for out-of-scope targets, ambiguous authorization, exclusions, unsafe sample handling, cancellation, and unsupported claims.
 
 **Detailed requirements:** [ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md](ADVANCED_SECURITY_RESEARCH_REQUIREMENTS.md). This is a requirements addition only; no security testing or exploit execution is authorized or claimed.
+
+
+## 28. G.I.R.L. — Geometric Intelligence Representation Layer and machine-native agent communication
+
+The owner recovered and confirmed the original acronym **G.I.R.L. = Geometric Intelligence Representation Layer**. This is a candidate geometric/latent representation between model-specific inference and authorized agent messaging. It is not a claim that multiple models inherently share an internal language, nor a replacement for APEX/East governance, typed MessageBus, native inference, or ordinary-language fallback.
+
+- [ ] Define G.I.R.L. as an experimental, model-independent *adapter boundary* with exact provenance, rather than an assumed universal common latent language.
+- [ ] Require explicit sender/recipient capability negotiation for model ID, immutable revision, codec ID/version, shape, codebook identity, supported latent ingestion, and privacy classification.
+- [ ] Capture genuinely generated native token-level vector sequences within validated memory, token, dimension, runtime-session, and cancellation bounds; record vector layer/position semantics.
+- [ ] Preserve byte-for-byte compatible TypeScript and native Swift GIE1 encoding/decoding against canonical shared fixtures; do not silently alter the wire protocol.
+- [ ] Load canonical GCB1 codebook artifacts with independently checked SHA-256 bytes, exact model/revision binding, and separately trusted publisher/provenance verification before production use.
+- [ ] Preserve the strict typed JSON MessageBus as the control plane while transferring latent tensors only through separately bounded, integrity-addressed binary blobs.
+- [ ] Enforce independent APEX/Director approval for exact task, sender, recipient, codec, scope, payload size, expiry, and privacy policy, with East/e3 durable execution ownership.
+- [ ] Enforce authenticated route binding, digest and length checks, replay prevention, expiration, quotas, cancellation/drain, and rejection of mismatched or tampered latent transfers.
+- [ ] Test text fallback or fail-closed rejection when models, revisions, decoders, artifacts, runtime readiness, quality thresholds, or authorization do not meet negotiated constraints.
+- [ ] Demonstrate a real two-agent same-model communication round trip in which the recipient **consumes** the reconstructed representation and completes a measured downstream task, not merely decoding bytes.
+- [ ] Evaluate Minimal Surface-inspired relationship/order preservation as an optional, versioned experimental sidecar, never an unnegotiated extension of GIE1 v1.
+- [ ] Permit heterogeneous-model latent exchange only through separately trained/versioned alignment adapters with held-out task-quality, safety, and distribution-shift evidence; otherwise fall back to text.
+- [ ] Compare text, raw latent, affine-int8, GIE1/GCB1, and optional geometric/relationship variants for payload bytes, numerical error, task success, end-to-end latency, memory, battery/thermal behavior, and evidence reproducibility.
+- [ ] Integrate negotiated G.I.R.L. into the native user-visible agent task path with clear model/route attribution, approval state, explicit failure/fallback, physical iPhone testing, and safe interruption/recovery.
+
+**Integration contract and test matrix:** [G.I.R.L. Integration and End-to-End POC Gates](../../coordination/GIRL_GEOMETRIC_LATENT_INTEGRATION_2026-11-19.md). All requirements above remain unchecked pending requirement-specific acceptance evidence. This is a post-November-16 addition to the original 316-row traceability snapshot.
