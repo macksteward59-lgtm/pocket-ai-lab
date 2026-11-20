@@ -1,10 +1,10 @@
 const $ = (id) => document.getElementById(id);
-const state = { model: "model not connected", busy: false };
+const state = { model: "model not connected", busy: false, cloudConfigured: false };
 const views = ["chat","agents","memory","activity","settings"];
 function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
 function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
-async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
+async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";state.cloudConfigured=j.cloud?.configured===true;const cloudConsent=$("cloud-consent");if(cloudConsent)cloudConsent.disabled=!state.cloudConfigured;const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
 let agentController=null;
 async function checkAgentHealth(){
  const status=$("agent-status");
@@ -64,7 +64,22 @@ $("agent-form").addEventListener("submit",async event=>{
 });
 $("agent-stop").addEventListener("click",()=>agentController?.abort());
 
-async function sendMessage(text){if(!text.trim()||state.busy)return; $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";state.busy=true;$("send").disabled=true;const output=appendMessage("assistant","Connecting to your configured model…");try{const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");output.textContent=data.reply||"The model returned an empty response."; }catch(error){output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";}finally{state.busy=false;$("send").disabled=false;health();}}
+async function sendMessage(text){
+ if(!text.trim()||state.busy)return;
+ const useCloud=$("cloud-consent")?.checked===true;
+ if(useCloud&&!state.cloudConfigured)return;
+ if(useCloud)$("cloud-consent").checked=false;
+ $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";
+ state.busy=true;$("send").disabled=true;
+ const output=appendMessage("assistant",useCloud?"Sending with the configured cloud provider…":"Connecting to your local model…");
+ if(useCloud){const hint=document.querySelector(".privacy-hint");if(hint)hint.textContent="⚠ This message is being sent to a remote provider";}
+ try{
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,provider:useCloud?"cloud":"local",remoteConsent:useCloud})});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");
+  output.textContent=data.reply||"The model returned an empty response.";
+ }catch(error){output.textContent="I couldn't reach the selected model. "+error.message+"\n\nNo simulated answer was generated.";}
+ finally{state.busy=false;$("send").disabled=false;health();}
+}
 $("composer").addEventListener("submit",e=>{e.preventDefault();sendMessage($("prompt").value);});
 $("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("composer").requestSubmit();}});
 document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));

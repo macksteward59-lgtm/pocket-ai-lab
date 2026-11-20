@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { assertLoopbackHost, createServer } from "../server.mjs";
 
-const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "TAVILY_API_KEY", "POCKET_MEMORY_DIR", "HOST", "POCKET_RATE_LIMIT_CHAT", "POCKET_RATE_LIMIT_MEMORY", "POCKET_RATE_LIMIT_AGENT", "POCKET_RATE_LIMIT_WINDOW_MS"];
+const ENV_KEYS = ["LLM_BASE_URL", "LLM_MODEL", "LLM_API_KEY", "POCKET_CLOUD_BASE_URL", "POCKET_CLOUD_API_KEY", "POCKET_CLOUD_MODEL", "LLAMACPP_BASE_URL", "LLAMACPP_API", "LLAMACPP_MODEL_ALIAS", "TAVILY_API_KEY", "POCKET_MEMORY_DIR", "HOST", "POCKET_RATE_LIMIT_CHAT", "POCKET_RATE_LIMIT_MEMORY", "POCKET_RATE_LIMIT_AGENT", "POCKET_RATE_LIMIT_WINDOW_MS"];
 
 async function withServer(fn, env = {}) {
   const previous = {};
@@ -87,6 +87,77 @@ test("health reports ready only after llama-server answers /health", async () =>
     await new Promise(resolve => llama.close(resolve));
   }
 });
+
+
+test("cloud chat is unavailable without explicit per-message consent", async () => withServer(async url => {
+  const response = await fetch(url + "/api/chat", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "private note", provider: "cloud" })
+  });
+  const data = await response.json();
+  assert.equal(response.status, 403);
+  assert.match(data.error, /Explicit consent/);
+}, {
+  POCKET_CLOUD_BASE_URL: "https://cloud.example.test/v1",
+  POCKET_CLOUD_API_KEY: "cloud-secret", POCKET_CLOUD_MODEL: "remote-model"
+}));
+
+test("cloud chat requires HTTPS and complete server-side configuration", async () => withServer(async url => {
+  const health = await (await fetch(url + "/api/health")).json();
+  assert.equal(health.cloud.configured, false);
+  assert.equal(JSON.stringify(health).includes("cloud-secret"), false);
+  const response = await fetch(url + "/api/chat", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "hello", provider: "cloud", remoteConsent: true })
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).reply, undefined);
+}, {
+  POCKET_CLOUD_BASE_URL: "http://cloud.example.test/v1",
+  POCKET_CLOUD_API_KEY: "cloud-secret", POCKET_CLOUD_MODEL: "remote-model"
+}));
+
+test("cloud chat sends consented content with server-side credentials and never returns the key", async () => withServer(async url => {
+  const original = globalThis.fetch;
+  let captured;
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === "https://cloud.example.test/v1/chat/completions") {
+      captured = { headers: init.headers, body: JSON.parse(init.body), redirect: init.redirect };
+      return new Response(JSON.stringify({ choices: [{ message: { content: "remote answer" } }] }), {
+        status: 200, headers: { "content-type": "application/json" }
+      });
+    }
+    return original(input, init);
+  };
+  try {
+    const response = await fetch(url + "/api/chat", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "send this", provider: "cloud", remoteConsent: true })
+    });
+    const data = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(data.reply, "remote answer");
+    assert.equal(data.provider, "openai-compatible");
+    assert.equal(data.remote, true);
+    assert.equal(data.authorized, false);
+    assert.equal(captured.headers.authorization, "Bearer cloud-secret");
+    assert.equal(captured.body.model, "remote-model");
+    assert.equal(captured.body.messages[0].content, "send this");
+    assert.equal(captured.redirect, "error");
+    assert.equal(JSON.stringify(data).includes("cloud-secret"), false);
+  } finally { globalThis.fetch = original; }
+}, {
+  POCKET_CLOUD_BASE_URL: "https://cloud.example.test/v1",
+  POCKET_CLOUD_API_KEY: "cloud-secret", POCKET_CLOUD_MODEL: "remote-model"
+}));
+
+test("cloud consent is rejected if local provider is selected", async () => withServer(async url => {
+  const response = await fetch(url + "/api/chat", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "hello", provider: "local", remoteConsent: true })
+  });
+  assert.equal(response.status, 400);
+}, { LLAMACPP_BASE_URL: "http://127.0.0.1:9" }));
 
 test("chat rejects empty messages", async () => withServer(async url => {
   const response = await fetch(url + "/api/chat", {

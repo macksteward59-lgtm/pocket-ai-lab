@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openMemoryManager } from "./memoryRuntime.ts";
+import { cloudProviderConfig, createCloudChatProvider } from "./cloudProvider.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
@@ -218,6 +219,12 @@ async function openProvider(timeoutMs) {
   };
 }
 
+function openCloudProvider() {
+  const cfg = cloudProviderConfig();
+  if (!cfg.configured) throw Object.assign(new Error("Cloud provider is not configured on this app host."), { code: "invalid_config" });
+  return { cfg, provider: createCloudChatProvider({ config: cfg }) };
+}
+
 function chatFailure(error) {
   const code = error && typeof error === "object" ? error.code : "";
   if (code === "timeout" || error?.name === "AbortError") {
@@ -263,7 +270,8 @@ export function createServer() {
           model: cfg.modelAlias || null,
           provider: "llama.cpp",
           mode: "local-first",
-          baseUrl: cfg.baseUrl
+          baseUrl: cfg.baseUrl,
+          cloud: { configured: cloudProviderConfig().configured, model: cloudProviderConfig().model || null, provider: "openai-compatible" }
         });
       }
       if (url.pathname === "/api/memory" || url.pathname.startsWith("/api/memory/")) {
@@ -486,26 +494,43 @@ export function createServer() {
         }
         if (typeof input.message !== "string" || !input.message.trim()) return json(res, 400, { error: "A non-empty message is required." });
         if (input.message.length > 12000) return json(res, 413, { error: "Message exceeds 12,000 characters." });
-        const { cfg, provider } = await openProvider(60000);
+        const requestedProvider = input.provider === undefined ? "local" : input.provider;
+        if (requestedProvider !== "local" && requestedProvider !== "cloud") {
+          return json(res, 400, { error: "Provider must be local or cloud. No reply was generated." });
+        }
+        if (requestedProvider === "cloud" && input.remoteConsent !== true) {
+          return json(res, 403, { error: "Explicit consent is required before this message can leave this device. No reply was generated." });
+        }
+        if (requestedProvider === "local" && input.remoteConsent === true) {
+          return json(res, 400, { error: "Remote consent requires the cloud provider to be selected. No reply was generated." });
+        }
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 60000);
         res.on("close", () => { if (!res.writableEnded) controller.abort(); });
         try {
-          const result = await provider.generate({
-            agentId: "chat",
-            modelId: cfg.modelAlias || "local",
-            prompt: input.message,
-            stage: "independent",
-            contextMessages: []
-          }, { signal: controller.signal });
+          let result;
+          let model;
+          let providerName;
+          if (requestedProvider === "cloud") {
+            const { cfg, provider } = openCloudProvider();
+            result = await provider.generate(input.message, { signal: controller.signal });
+            model = cfg.model;
+            providerName = "openai-compatible";
+          } else {
+            const { cfg, provider } = await openProvider(60000);
+            result = await provider.generate({
+              agentId: "chat", modelId: cfg.modelAlias || "local", prompt: input.message,
+              stage: "independent", contextMessages: []
+            }, { signal: controller.signal });
+            model = cfg.modelAlias || "local";
+            providerName = "llama.cpp";
+          }
           const payload = result && typeof result === "object" ? result.payload : undefined;
           const analysis = payload && typeof payload.analysis === "string" ? payload.analysis.trim() : "";
           if (!analysis) return json(res, 502, { error: "The model response was rejected. No reply was invented." });
           return json(res, 200, {
-            reply: analysis,
-            model: cfg.modelAlias || "local",
-            provider: "llama.cpp",
-            authorized: false
+            reply: analysis, model, provider: providerName,
+            remote: requestedProvider === "cloud", authorized: false
           });
         } catch (error) {
           const failure = chatFailure(error);
