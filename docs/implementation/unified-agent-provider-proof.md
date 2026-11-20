@@ -67,13 +67,14 @@ The CLI does not silently substitute a fixture response when the backend is abse
 ```bash
 npm install
 node --import tsx --test scripts/desktop/unified-agent-proof.test.mjs
-npm run test:desktop
-npm run build
+# Full project gates, currently blocked on main by unmerged East lifecycle:
+# npm run test:desktop
+# npm run build
 ```
 
 The deterministic test deliberately injects a test-double provider, and its `executionKind` is always `test-double`. It checks seven invocation/message pairs, stage context length, unverified memory, resource-denial, provider failure, and malformed output rejection. It cannot establish a live-model, native-device, authorization or memory-performance success.
 
-These tests are included in the existing `Pocket AI Lab CI` through `npm test` / `test:desktop`. However, current `main` has a **separate pre-existing full TypeScript build blocker**: checked-in `packages/intelligence/__tests__/autonomy.test.ts` imports East lifecycle components that are still unmerged in PR #157. The exact-head branch-wide Pocket AI Lab CI run fails at `Type-check and build` on those missing imports, so it cannot establish anything about this proof. To avoid reimplementing someone else's active East work or weakening the project build, `.github/workflows/unified-agent-proof-ci.yml` also runs an **isolated, explicitly scoped proof and desktop regression check**. A green scoped check does not make the failing full-project check green, and both outcomes must be reported separately.
+These tests are included in the existing `Pocket AI Lab CI` through `npm test` / `test:desktop`. However, current `main` has a **separate pre-existing full TypeScript build blocker**: checked-in `packages/intelligence/__tests__/autonomy.test.ts` imports East lifecycle components that are still unmerged in PR #157. The exact-head branch-wide Pocket AI Lab CI run fails at `Type-check and build` on those missing imports, so it cannot establish anything about this proof. To avoid reimplementing someone else's active East work or weakening the project build, `.github/workflows/unified-agent-proof-ci.yml` also runs an **isolated, explicitly scoped proof check**. The unmodified full desktop suite also fails its `archive-smoke.test.mjs` build assertion because its extracted archive runs the same blocked `npm run build`; the other 20 desktop tests (including all five new ones) passed in that attempted run. The focused CI intentionally does **not** claim a full desktop pass. A green scoped check does not make the failing full-project check green, and both outcomes must be reported separately.
 
 ## Integration into the full product
 
