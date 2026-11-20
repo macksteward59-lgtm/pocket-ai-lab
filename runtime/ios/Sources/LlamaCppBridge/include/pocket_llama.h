@@ -21,6 +21,25 @@ extern "C" {
 
 typedef struct pocket_llama pocket_llama;
 
+#define POCKET_LLAMA_METADATA_ARCH_MAX 64
+#define POCKET_LLAMA_METADATA_NAME_MAX 128
+#define POCKET_LLAMA_METADATA_TOKENIZER_MAX 64
+
+typedef struct pocket_llama_metadata {
+    int32_t gguf_version;
+    int32_t file_type;
+    int64_t training_context_length;
+    int64_t parameter_count;
+    uint64_t file_size_bytes;
+    int32_t metadata_key_count;
+    int32_t has_file_type;
+    int32_t has_training_context;
+    int32_t has_parameter_count;
+    char architecture[POCKET_LLAMA_METADATA_ARCH_MAX];
+    char model_name[POCKET_LLAMA_METADATA_NAME_MAX];
+    char tokenizer_model[POCKET_LLAMA_METADATA_TOKENIZER_MAX];
+} pocket_llama_metadata;
+
 /* 1 when this translation unit was compiled against llama.cpp. */
 int pocket_llama_linked(void);
 
@@ -52,6 +71,13 @@ int pocket_llama_load(
     int32_t n_ctx,
     int32_t n_gpu_layers,
     pocket_llama ** out_engine,
+    char * err,
+    size_t err_len);
+
+/* Reads bounded GGUF metadata without allocating model tensor weights. */
+int pocket_llama_inspect_gguf(
+    const char * path,
+    pocket_llama_metadata * out_metadata,
     char * err,
     size_t err_len);
 
