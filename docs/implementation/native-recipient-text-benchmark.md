@@ -155,9 +155,33 @@ Model output is always JSON-encoded rather than concatenated into log syntax.
 The native CI workflow builds the macOS test product once without selection
 filters. It discovers the generated `.xctestrun` and test target, runs the existing
 suite excluding this benchmark, then runs only the benchmark in a separate
-20-minute step. The existing real Metal smoke is unchanged. The simulator has no
+20-minute step. The benchmark runs after a successful macOS test build whenever
+the workflow has not been cancelled, including when the earlier regression suite
+failed. The earlier failure remains part of the job result; neither step uses
+`continue-on-error`. Each invocation starts a separate XCTest process, and the
+benchmark creates its own runtime, model session and lease. The simulator has no
 configured model and skips this new real-model test while running its contract
 tests.
+
+The first native run on `e47ca2126b2b3e5a067ebd4e44f1bef55f620951`
+([#44733326466](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44733326466))
+failed the pre-existing post-input greedy-text comparison before the benchmark
+was scheduled. All 16 benchmark contract tests passed on both engine platforms,
+but no real recipient requests ran. A/B/A numerical comparisons passed; that did
+not prove ordinary text restoration. The initial ordinary result was reported as
+33 characters, the post-input output had 34, and the assertion compared that
+post-input ordinary text with an earlier capture-enabled generation. The cause of
+the drift across the intervening sequence remains unresolved.
+
+Test-only diagnostics now add two adjacent ordinary generations immediately
+before A/B/A and assert their equality. The post-input ordinary result must match
+that immediate control and still satisfy the original captured-text comparison.
+`POCKET_LLAMA_TEXT_CONTROLS` emits exact JSON-escaped initial, captured and adjacent
+ordinary outputs, plus computed match flags, before and after the intervention.
+The numerical marker also reports observed booleans instead of unconditionally
+printing `textAfter=passed` after a nonfatal XCTest assertion. These controls do
+not change the native implementation or remove any prior assertion. The original
+20-minute test limits and frozen recipient configuration remain unchanged.
 
 A separate Python verification step preserves observed start/trial/summary JSONL
 before checking completion. It decodes the length-prefixed manifest, independently

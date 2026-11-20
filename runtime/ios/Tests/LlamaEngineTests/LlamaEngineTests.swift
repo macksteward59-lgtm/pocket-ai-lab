@@ -298,6 +298,36 @@ final class LlamaEngineTests: XCTestCase {
             // the shared deterministic fixture owns exact encoded-byte parity.
             print("POCKET_LLAMA_GIE_CAPTURE provider=\(gie.providerKind.rawValue) model_sha256=\(digest) codebook=synthetic-untrained codebook_sha256=\(gie.codebookSHA256) tokens=\(gie.tokenCount) dimension=\(gie.embeddingDimension) segments=\(expectedSpans.count) payloadBytes=\(gie.payloadByteLength)")
 
+            // Keep ordinary-generation controls adjacent to the numerical-input
+            // intervention. The older latent reference used a capture-enabled
+            // decode graph, and the initial ordinary result preceded several
+            // capture calls; neither alone isolates raw-input state restoration.
+            let textBeforeInputs = try await runtime.generate(
+                lease: lease,
+                request: GenerationRequest(prompt: "The capital of France is", maxTokens: 8, temperature: 0)
+            )
+            let textBeforeInputsRepeat = try await runtime.generate(
+                lease: lease,
+                request: GenerationRequest(prompt: "The capital of France is", maxTokens: 8, temperature: 0)
+            )
+            var controlOutputs = [
+                "initialOrdinary": result.output,
+                "earlierCaptured": latent.text,
+                "ordinaryBeforeInputs": textBeforeInputs,
+                "ordinaryBeforeInputsRepeat": textBeforeInputsRepeat
+            ]
+            var controlMatches = [
+                "ordinaryControlsMatch": textBeforeInputs == textBeforeInputsRepeat,
+                "initialOrdinaryMatchesControl": result.output == textBeforeInputsRepeat,
+                "earlierCapturedMatchesControl": latent.text == textBeforeInputsRepeat
+            ]
+            try Self.emitTextControls(stage: "before-inputs", modelSHA256: digest,
+                                      outputs: controlOutputs, matches: controlMatches)
+            XCTAssertFalse(textBeforeInputs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertFalse(textBeforeInputsRepeat.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertEqual(textBeforeInputs, textBeforeInputsRepeat,
+                           "Ordinary greedy generation must be repeatable before the raw-input intervention.")
+
             // Raw first-layer inputs are a separate representation from the
             // captured/pooled final-layer GIE vectors above. These deterministic,
             // non-collinear matrices are synthetic numerical probes, not tokens
@@ -343,14 +373,25 @@ final class LlamaEngineTests: XCTestCase {
                 lease: lease,
                 request: GenerationRequest(prompt: "The capital of France is", maxTokens: 8, temperature: 0)
             )
+            let textAfterMatchesControl = textAfterInputs == textBeforeInputsRepeat
+            let textAfterMatchesCaptured = textAfterInputs == latent.text
+            controlOutputs["ordinaryAfterInputs"] = textAfterInputs
+            controlMatches["ordinaryAfterMatchesControl"] = textAfterMatchesControl
+            controlMatches["ordinaryAfterMatchesCaptured"] = textAfterMatchesCaptured
+            try Self.emitTextControls(stage: "after-inputs", modelSHA256: digest,
+                                      outputs: controlOutputs, matches: controlMatches)
             XCTAssertFalse(textAfterInputs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertEqual(textAfterInputs, textBeforeInputsRepeat,
+                           "Stateless raw input evaluation must preserve its immediate ordinary greedy text control.")
+            // Retain the existing compatibility gate while diagnosing it. A
+            // passing same-mode comparison does not waive a cross-mode failure.
             XCTAssertEqual(textAfterInputs, latent.text, "Stateless raw input evaluation must preserve the ordinary greedy text path.")
             let afterInputs = await runtime.snapshot()
             let schedulerAfterInputs = await runtime.schedulerSnapshot()
             XCTAssertEqual(afterInputs.activeUseCount, 0)
             XCTAssertEqual(schedulerAfterInputs.activeRequests, 0)
             XCTAssertEqual(schedulerAfterInputs.waitingRequests, 0)
-            print("POCKET_LLAMA_INPUT_EMBEDDING provider=\(runtime.providerKind.rawValue) model_sha256=\(digest) input=synthetic-first-layer sequence=A-B-A rows=\(inputRows) dimension=\(inputWidth) logits=\(inputCapabilities.vocabularySize) repeatMaxDelta=\(repeatMaxDelta) changedMaxDelta=\(changedMaxDelta) repeatTolerance=\(repeatTolerance) textAfter=passed")
+            print("POCKET_LLAMA_INPUT_EMBEDDING provider=\(runtime.providerKind.rawValue) model_sha256=\(digest) input=synthetic-first-layer sequence=A-B-A rows=\(inputRows) dimension=\(inputWidth) logits=\(inputCapabilities.vocabularySize) repeatMaxDelta=\(repeatMaxDelta) changedMaxDelta=\(changedMaxDelta) repeatTolerance=\(repeatTolerance) ordinaryControlsMatch=\(textBeforeInputs == textBeforeInputsRepeat) textAfterMatchesControl=\(textAfterMatchesControl) textAfterMatchesCaptured=\(textAfterMatchesCaptured)")
 
             // Exercise the complete native path: llama.cpp final-token embedding
             // -> same-model int8 codec -> binary blob reference -> digest/replay
@@ -422,6 +463,20 @@ final class LlamaEngineTests: XCTestCase {
             try? await runtime.unload(modelId: model.id)
             throw error
         }
+    }
+
+    private static func emitTextControls(
+        stage: String, modelSHA256: String, outputs: [String: String], matches: [String: Bool]
+    ) throws {
+        let record: [String: Any] = [
+            "stage": stage, "modelSHA256": modelSHA256,
+            "outputs": outputs, "matches": matches
+        ]
+        var line = Data("POCKET_LLAMA_TEXT_CONTROLS ".utf8)
+        line.append(try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]))
+        line.append(0x0A)
+        // Preserve exact, escaped controls even if later native work times out.
+        FileHandle.standardOutput.write(line)
     }
 
     private static func sha256(fileAt url: URL) throws -> String {

@@ -327,6 +327,9 @@ jobs:
           exit "${PIPESTATUS[0]}"
 
       - name: Frozen native text recipient benchmark on macOS
+        # A regression in the earlier, separate test process must remain failed
+        # while this frozen measurement still records its independent evidence.
+        if: ${{ !cancelled() && steps.mac-build.outcome == 'success' }}
         timeout-minutes: 20
         run: |
           set -o pipefail
