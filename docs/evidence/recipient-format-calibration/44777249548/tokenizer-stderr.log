@@ -1,0 +1,140 @@
+Vocabulary-only model pin verified: 105454432 bytes, sha256 2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: using embedded metal library
+ggml_metal_library_compile_all: compiled 'fa_aux' library in 5.471 sec
+ggml_metal_library_compile_all: compiled 'fa_f16' library in 10.152 sec
+ggml_metal_library_compile_all: compiled 'fa_f32' library in 4.409 sec
+ggml_metal_library_compile_all: compiled 'fa_q4_0' library in 4.824 sec
+ggml_metal_library_compile_all: compiled 'fa_q4_1' library in 9.506 sec
+ggml_metal_library_compile_all: compiled 'fa_q5_0' library in 14.608 sec
+ggml_metal_library_compile_all: compiled 'fa_q5_1' library in 15.521 sec
+ggml_metal_library_compile_all: compiled 'fa_q8_0' library in 19.016 sec
+ggml_metal_library_compile_all: compiled 'fa_tensor' library in 14.635 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_f16' library in 31.835 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_f32' library in 47.968 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q4_0' library in 26.655 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q4_1' library in 45.297 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q5_0' library in 49.124 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q5_1' library in 61.296 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q8_0' library in 60.524 sec
+ggml_metal_library_compile_all: compiled 'mul_mv' library in 68.348 sec
+ggml_metal_library_compile_all: compiled 'mul_mv_mma' library in 65.204 sec
+ggml_metal_library_compile_all: compiled 'mul_mm' library in 64.657 sec
+ggml_metal_library_compile_all: compiled 'quantize' library in 69.462 sec
+ggml_metal_library_compile_all: compiled 'softmax' library in 64.758 sec
+ggml_metal_library_compile_all: compiled 'norm' library in 64.914 sec
+ggml_metal_library_compile_all: compiled 'unary' library in 69.662 sec
+ggml_metal_library_compile_all: compiled 'binbcast' library in 65.038 sec
+ggml_metal_library_compile_all: compiled 'reduce' library in 69.717 sec
+ggml_metal_library_compile_all: compiled 'tri' library in 65.090 sec
+ggml_metal_library_compile_all: compiled 'ssm' library in 69.847 sec
+ggml_metal_library_compile_all: compiled 'wkv' library in 65.146 sec
+ggml_metal_library_compile_all: compiled 'gated_delta_net' library in 69.935 sec
+ggml_metal_library_compile_all: compiled 'solve_tri' library in 69.978 sec
+ggml_metal_library_compile_all: compiled 'rope' library in 65.286 sec
+ggml_metal_library_compile_all: compiled 'conv' library in 65.498 sec
+ggml_metal_library_compile_all: compiled 'upscale' library in 70.040 sec
+ggml_metal_library_compile_all: compiled 'argsort' library in 65.645 sec
+ggml_metal_library_compile_all: compiled 'pool' library in 70.095 sec
+ggml_metal_library_compile_all: compiled 'misc' library in 65.991 sec
+ggml_metal_library_compile_all: loaded 36 libraries from embedded data in 70.139 sec (max single = 70.095 sec)
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (Apple Paravirtual device)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon2 (3002)
+ggml_metal_device_init: simdgroup reduction   = false
+ggml_metal_device_init: simdgroup matrix mul. = false
+ggml_metal_device_init: has unified memory    = false
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  1073.74 MB
+llama_model_loader: loaded meta data with 37 key-value pairs and 272 tensors from /Users/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/build/models/SmolLM2-135M-Instruct-Q4_K_M.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = llama
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = Smollm2 135M 8k Lc100K Mix1 Ep2
+llama_model_loader: - kv   3:                       general.organization str              = HuggingFaceTB
+llama_model_loader: - kv   4:                           general.finetune str              = 8k-lc100k-mix1-ep2
+llama_model_loader: - kv   5:                           general.basename str              = smollm2
+llama_model_loader: - kv   6:                         general.size_label str              = 135M
+llama_model_loader: - kv   7:                            general.license str              = apache-2.0
+llama_model_loader: - kv   8:                          general.languages arr[str,1]       = ["en"]
+llama_model_loader: - kv   9:                          llama.block_count u32              = 30
+llama_model_loader: - kv  10:                       llama.context_length u32              = 8192
+llama_model_loader: - kv  11:                     llama.embedding_length u32              = 576
+llama_model_loader: - kv  12:                  llama.feed_forward_length u32              = 1536
+llama_model_loader: - kv  13:                 llama.attention.head_count u32              = 9
+llama_model_loader: - kv  14:              llama.attention.head_count_kv u32              = 3
+llama_model_loader: - kv  15:                       llama.rope.freq_base f32              = 100000.000000
+llama_model_loader: - kv  16:     llama.attention.layer_norm_rms_epsilon f32              = 0.000010
+llama_model_loader: - kv  17:                          general.file_type u32              = 15
+llama_model_loader: - kv  18:                           llama.vocab_size u32              = 49152
+llama_model_loader: - kv  19:                 llama.rope.dimension_count u32              = 64
+llama_model_loader: - kv  20:            tokenizer.ggml.add_space_prefix bool             = false
+llama_model_loader: - kv  21:               tokenizer.ggml.add_bos_token bool             = false
+llama_model_loader: - kv  22:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  23:                         tokenizer.ggml.pre str              = smollm
+llama_model_loader: - kv  24:                      tokenizer.ggml.tokens arr[str,49152]   = ["<|endoftext|>", "<|im_start|>", "<|...
+llama_model_loader: - kv  25:                  tokenizer.ggml.token_type arr[i32,49152]   = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, ...
+llama_model_loader: - kv  26:                      tokenizer.ggml.merges arr[str,48900]   = ["Ġ t", "Ġ a", "i n", "h e", "Ġ Ġ...
+llama_model_loader: - kv  27:                tokenizer.ggml.bos_token_id u32              = 1
+llama_model_loader: - kv  28:                tokenizer.ggml.eos_token_id u32              = 2
+llama_model_loader: - kv  29:            tokenizer.ggml.unknown_token_id u32              = 0
+llama_model_loader: - kv  30:            tokenizer.ggml.padding_token_id u32              = 2
+llama_model_loader: - kv  31:                    tokenizer.chat_template str              = {% for message in messages %}{% if lo...
+llama_model_loader: - kv  32:               general.quantization_version u32              = 2
+llama_model_loader: - kv  33:                      quantize.imatrix.file str              = /models_out/SmolLM2-135M-Instruct-GGU...
+llama_model_loader: - kv  34:                   quantize.imatrix.dataset str              = /training_dir/calibration_datav3.txt
+llama_model_loader: - kv  35:             quantize.imatrix.entries_count i32              = 210
+llama_model_loader: - kv  36:              quantize.imatrix.chunks_count i32              = 141
+llama_model_loader: - type  f32:   61 tensors
+llama_model_loader: - type q5_0:  166 tensors
+llama_model_loader: - type q8_0:   15 tensors
+llama_model_loader: - type q4_K:   16 tensors
+llama_model_loader: - type q6_K:   14 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 98.87 MiB (6.17 BPW) 
+llama_prepare_model_devices: using device MTL0 (Apple Paravirtual device) (unknown id) - 1024 MiB free
+init_tokenizer: initializing tokenizer for type 2
+load: 0 unused tokens
+load: control token:     16 '<empty_output>' is not marked as EOG
+load: control token:     15 '<jupyter_script>' is not marked as EOG
+load: control token:     14 '<jupyter_output>' is not marked as EOG
+load: control token:     13 '<jupyter_code>' is not marked as EOG
+load: control token:     12 '<jupyter_text>' is not marked as EOG
+load: control token:     11 '<jupyter_start>' is not marked as EOG
+load: control token:     10 '<issue_closed>' is not marked as EOG
+load: control token:      9 '<issue_comment>' is not marked as EOG
+load: control token:      8 '<issue_start>' is not marked as EOG
+load: control token:      7 '<gh_stars>' is not marked as EOG
+load: control token:      6 '<filename>' is not marked as EOG
+load: control token:      5 '<file_sep>' is not marked as EOG
+load: control token:      3 '<repo_name>' is not marked as EOG
+load: control token:      1 '<|im_start|>' is not marked as EOG
+load: printing all EOG tokens:
+load:   - 0 ('<|endoftext|>')
+load:   - 2 ('<|im_end|>')
+load:   - 4 ('<reponame>')
+load: special tokens cache size = 17
+load: token to piece cache size = 0.3170 MB
+print_info: arch                  = llama
+print_info: vocab_only            = 1
+print_info: no_alloc              = 0
+print_info: vocab type            = BPE
+print_info: n_vocab               = 49152
+print_info: n_merges              = 48900
+print_info: BOS token             = 1 '<|im_start|>'
+print_info: EOS token             = 2 '<|im_end|>'
+print_info: EOT token             = 2 '<|im_end|>'
+print_info: UNK token             = 0 '<|endoftext|>'
+print_info: PAD token             = 2 '<|im_end|>'
+print_info: LF token              = 198 'Ċ'
+print_info: FIM REP token         = 4 '<reponame>'
+print_info: EOG token             = 0 '<|endoftext|>'
+print_info: EOG token             = 2 '<|im_end|>'
+print_info: EOG token             = 4 '<reponame>'
+print_info: max token length      = 162
+llama_model_load: vocab only - skipping tensors
+Vocabulary-only model pin verified: 105454432 bytes, sha256 2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d

@@ -1,0 +1,14 @@
+{
+  "captureErrors": [
+    "[Errno 2] No such file or directory: 'runtime/ios/build/recipient-format-calibration/calibration-xctest.log'"
+  ],
+  "recordCounts": {
+    "START": 0,
+    "SUMMARY": 0,
+    "TRIAL": 0
+  },
+  "sequence": [],
+  "sourceLogBytes": 0,
+  "sourceLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "syntheticFixtureLabelPresent": false
+}

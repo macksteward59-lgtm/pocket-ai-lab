@@ -1,0 +1,8 @@
+Vocabulary-only model pin verified: 105454432 bytes, sha256 2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d
+/Users/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/Tests/RecipientTokenizationProbe/main.c:95:76: error: use of undeclared identifier 'O_NOFOLLOW'
+   95 |     const int descriptor = openat(directory, name, O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
+      |                                                                            ^
+/Users/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/Tests/RecipientTokenizationProbe/main.c:214:66: error: use of undeclared identifier 'O_NOFOLLOW'
+  214 |     const int directory = open(argv[2], O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+      |                                                                  ^
+2 errors generated.

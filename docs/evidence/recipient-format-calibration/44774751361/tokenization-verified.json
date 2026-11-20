@@ -1,0 +1,21 @@
+{
+  "errors": [
+    "Expected start, vocabulary, 72 prompts and summary"
+  ],
+  "evidenceBoundary": {
+    "contextCreated": false,
+    "inferencePerformed": false,
+    "mode": "vocab-only",
+    "modelPostHashVerified": false,
+    "note": "The workflow must separately require native runner success and its model post-hash check.",
+    "runnerExitStatusVerified": false
+  },
+  "inputBytes": 0,
+  "inputSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "integritySuccess": false,
+  "manifestSHA256": "95acbcd4237899a2234fd9c16f5e86823cec1595e6922c96cb54851d15432992",
+  "normalizedRecordsSHA256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "records": [],
+  "reportKind": "recipient-format-tokenization-audit",
+  "schemaVersion": 1
+}

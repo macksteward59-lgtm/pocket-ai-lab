@@ -1,0 +1,163 @@
+{
+  "capture": {
+    "captureErrors": [
+      "[Errno 2] No such file or directory: 'runtime/ios/build/recipient-format-calibration/calibration-xctest.log'"
+    ],
+    "recordCounts": {
+      "START": 0,
+      "SUMMARY": 0,
+      "TRIAL": 0
+    },
+    "sequence": [],
+    "sourceLogBytes": 0,
+    "sourceLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "syntheticFixtureLabelPresent": false
+  },
+  "chatFormatFeasible": false,
+  "errors": [
+    "[Errno 2] No such file or directory: 'runtime/ios/build/recipient-format-calibration/calibration-xctest.log'",
+    "Tokenizer audit did not pass"
+  ],
+  "evidenceBoundary": {
+    "inferencePerformedByVerifier": false,
+    "modelExecutionIndependentlyVerified": false,
+    "note": "Ordinary generation errors are retained negative data; source provenance and runner exit status are separate workflow gates. Partial metrics retain fixed denominators and do not substitute unpaired observations.",
+    "originalV1AcceptanceChanged": false,
+    "qualityGateApplied": false,
+    "sourceAuthenticationVerified": false
+  },
+  "integritySuccess": false,
+  "llamaCppPinCommit": "5f490d7bfe78844e6390c869454c149fd7e003a8",
+  "manifestSHA256": "95acbcd4237899a2234fd9c16f5e86823cec1595e6922c96cb54851d15432992",
+  "metrics": {
+    "pairedFormatsByCondition": {
+      "absent": {
+        "bothCorrect": 0,
+        "chatMinusRawAccuracy": 0.0,
+        "chatOnlyCorrect": 0,
+        "denominator": 12,
+        "neitherCorrect": 0,
+        "observedPairs": 0,
+        "rawOnlyCorrect": 0
+      },
+      "correct": {
+        "bothCorrect": 0,
+        "chatMinusRawAccuracy": 0.0,
+        "chatOnlyCorrect": 0,
+        "denominator": 12,
+        "neitherCorrect": 0,
+        "observedPairs": 0,
+        "rawOnlyCorrect": 0
+      },
+      "counterfactual": {
+        "bothCorrect": 0,
+        "chatMinusRawAccuracy": 0.0,
+        "chatOnlyCorrect": 0,
+        "denominator": 12,
+        "neitherCorrect": 0,
+        "observedPairs": 0,
+        "rawOnlyCorrect": 0
+      }
+    },
+    "perFormat": {
+      "chat": {
+        "absentOnlyVsCorrectCount": 0,
+        "attemptedCount": 0,
+        "completedCount": 0,
+        "conditions": {
+          "absent": {
+            "accuracy": 0.0,
+            "completedCount": 0,
+            "correctAnswerCount": 0,
+            "denominator": 12,
+            "generationFailedCount": 0,
+            "observedRows": 0,
+            "strictValidAnswerCount": 0
+          },
+          "correct": {
+            "accuracy": 0.0,
+            "completedCount": 0,
+            "correctAnswerCount": 0,
+            "denominator": 12,
+            "generationFailedCount": 0,
+            "observedRows": 0,
+            "strictValidAnswerCount": 0
+          },
+          "counterfactual": {
+            "accuracy": 0.0,
+            "completedCount": 0,
+            "correctAnswerCount": 0,
+            "denominator": 12,
+            "generationFailedCount": 0,
+            "observedRows": 0,
+            "strictValidAnswerCount": 0
+          }
+        },
+        "correctMinusAbsentAccuracy": 0.0,
+        "correctOnlyVsAbsentCount": 0,
+        "denominator": 36,
+        "generationFailedCount": 0,
+        "intendedCounterfactualSwitchCount": 0,
+        "intendedCounterfactualSwitchRate": 0.0,
+        "invalidAnswerCount": 0,
+        "notRunBudgetCount": 0,
+        "observedCorrectAbsentPairs": 0,
+        "observedRows": 0,
+        "strictValidAnswerCount": 0,
+        "unverifiedOrMissingRows": 36
+      },
+      "raw": {
+        "absentOnlyVsCorrectCount": 0,
+        "attemptedCount": 0,
+        "completedCount": 0,
+        "conditions": {
+          "absent": {
+            "accuracy": 0.0,
+            "completedCount": 0,
+            "correctAnswerCount": 0,
+            "denominator": 12,
+            "generationFailedCount": 0,
+            "observedRows": 0,
+            "strictValidAnswerCount": 0
+          },
+          "correct": {
+            "accuracy": 0.0,
+            "completedCount": 0,
+            "correctAnswerCount": 0,
+            "denominator": 12,
+            "generationFailedCount": 0,
+            "observedRows": 0,
+            "strictValidAnswerCount": 0
+          },
+          "counterfactual": {
+            "accuracy": 0.0,
+            "completedCount": 0,
+            "correctAnswerCount": 0,
+            "denominator": 12,
+            "generationFailedCount": 0,
+            "observedRows": 0,
+            "strictValidAnswerCount": 0
+          }
+        },
+        "correctMinusAbsentAccuracy": 0.0,
+        "correctOnlyVsAbsentCount": 0,
+        "denominator": 36,
+        "generationFailedCount": 0,
+        "intendedCounterfactualSwitchCount": 0,
+        "intendedCounterfactualSwitchRate": 0.0,
+        "invalidAnswerCount": 0,
+        "notRunBudgetCount": 0,
+        "observedCorrectAbsentPairs": 0,
+        "observedRows": 0,
+        "strictValidAnswerCount": 0,
+        "unverifiedOrMissingRows": 36
+      }
+    },
+    "taskQualityInterpretation": "Descriptive only; format feasibility does not establish useful private-fact or GIE communication."
+  },
+  "metricsAreCompleteMeasurement": false,
+  "modelSHA256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+  "reportKind": "recipient-format-calibration-audit",
+  "schemaVersion": 1,
+  "tokenizerAuditSHA256": "004f8b59a4b32ddba1516ee7b579326b3c1ff272fc9e5c4e8cdf81cc19933064"
+}

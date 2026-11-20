@@ -1,0 +1,36 @@
+Command line invocation:
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/pocket-derived-format/Build/Products/PocketLlamaEngine_PocketLlamaEngine_macosx15.5-x86_64.xctestrun -destination platform=macOS,arch=x86_64 -parallel-testing-enabled NO "-only-testing:LlamaEngineTests/RecipientFormatCalibrationContractTests" CODE_SIGNING_ALLOWED=NO
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Test Suite 'Selected tests' started at 2026-11-20 16:53:58.782.
+Test Suite 'LlamaEngineTests.xctest' started at 2026-11-20 16:53:58.788.
+Test Suite 'RecipientFormatCalibrationContractTests' started at 2026-11-20 16:53:58.791.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testAllFrozenRequestsReachExistingRuntimeUnchanged]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testAllFrozenRequestsReachExistingRuntimeUnchanged]' passed (0.123 seconds).
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testBudgetKeepsAllRowsAndDoesNotStartRemainingRequests]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testBudgetKeepsAllRowsAndDoesNotStartRemainingRequests]' passed (0.028 seconds).
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testCancellationIsPropagatedWithoutSchedulingOtherRows]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testCancellationIsPropagatedWithoutSchedulingOtherRows]' passed (0.040 seconds).
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testChangedModelArtifactIsRejectedBeforeRequestsAndAfterCallbacks]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testChangedModelArtifactIsRejectedBeforeRequestsAndAfterCallbacks]' passed (0.044 seconds).
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testFailuresAndInvalidOutputStaySeparateWithoutRetries]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testFailuresAndInvalidOutputStaySeparateWithoutRetries]' passed (0.027 seconds).
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testFrozenManifestAndLiteralTemplateExpansion]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testFrozenManifestAndLiteralTemplateExpansion]' passed (0.018 seconds).
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testReleasedLeaseDoesNotBecomeAnOrdinaryMeasuredError]' started.
+Test Case '-[LlamaEngineTests.RecipientFormatCalibrationContractTests testReleasedLeaseDoesNotBecomeAnOrdinaryMeasuredError]' passed (0.016 seconds).
+Test Suite 'RecipientFormatCalibrationContractTests' passed at 2026-11-20 16:53:59.093.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.296 (0.302) seconds
+Test Suite 'LlamaEngineTests.xctest' passed at 2026-11-20 16:53:59.093.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.296 (0.305) seconds
+Test Suite 'Selected tests' passed at 2026-11-20 16:53:59.094.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.296 (0.312) seconds
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/pocket-format-host-bdqbpzxjqzkhewddhymbxoctseun/Logs/Test/Test-PocketLlamaEngine-2026.11.20_16-53-52-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
