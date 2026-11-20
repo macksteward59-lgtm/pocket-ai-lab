@@ -1,0 +1,61 @@
+name: GIE native standalone codec smoke CI
+
+on:
+  push:
+    branches:
+      - codex/gie-native-standalone-smoke-20261120
+    paths:
+      - "runtime/ios/Tests/GIEStandaloneSmoke/**"
+      - "runtime/ios/Sources/PocketLlamaEngine/NativeGIE*.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-*.json"
+      - ".github/workflows/gie-native-standalone-ci.yml"
+  pull_request:
+    branches:
+      - codex/gie-verified-artifact-roundtrip-20261119
+    paths:
+      - "runtime/ios/Tests/GIEStandaloneSmoke/**"
+      - "runtime/ios/Sources/PocketLlamaEngine/NativeGIE*.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-*.json"
+      - ".github/workflows/gie-native-standalone-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gie-native-standalone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Identify compiler
+        run: |
+          swift --version
+          xcodebuild -version
+          uname -m
+      - name: Compile production GIE1/GCB1 Swift sources in isolation
+        run: |
+          swiftc -swift-version 5 \
+            runtime/ios/Sources/PocketLlamaEngine/NativeGIESequenceCodec.swift \
+            runtime/ios/Sources/PocketLlamaEngine/NativeGIECodebookArtifact.swift \
+            runtime/ios/Sources/PocketLlamaEngine/NativeGIESequenceEncoder.swift \
+            runtime/ios/Tests/GIEStandaloneSmoke/main.swift \
+            -o "$RUNNER_TEMP/gie-native-smoke"
+      - name: Verify exact shared fixture, decoder, encoder, and tamper rejection
+        run: |
+          "$RUNNER_TEMP/gie-native-smoke" \
+            runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json \
+            runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-verified-sequence-v1.json
+      - name: Record limited verification scope
+        if: always()
+        run: |
+          {
+            echo "## Standalone GIE1/GCB1 Swift source parity"
+            echo "Compiled the repository's actual Swift encoder, decoder and artifact loader."
+            echo "Checked the same canonical fixture shared with TypeScript."
+            echo "This did not build the iOS app, run XCTest, load GGUF, test a physical iPhone, or authorize agent traffic."
+          } >> "$GITHUB_STEP_SUMMARY"
