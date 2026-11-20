@@ -8,6 +8,7 @@ on:
       - "runtime/ios/Sources/PocketLlamaEngine/**"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
       - "runtime/ios/Tests/GIEStandaloneSmoke/**"
+      - "runtime/ios/Tests/GIECaptureStandaloneSmoke/**"
       - ".github/workflows/native-gie-capture-integration-ci.yml"
   pull_request:
     branches:
@@ -16,6 +17,7 @@ on:
       - "runtime/ios/Sources/PocketLlamaEngine/**"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
       - "runtime/ios/Tests/GIEStandaloneSmoke/**"
+      - "runtime/ios/Tests/GIECaptureStandaloneSmoke/**"
       - ".github/workflows/native-gie-capture-integration-ci.yml"
 
 permissions:
@@ -54,6 +56,19 @@ jobs:
             runtime/ios/Tests/GIEStandaloneSmoke/main.swift \
             -o "$RUNNER_TEMP/gie-native-smoke"
           "$RUNNER_TEMP/gie-native-smoke" \
+            runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json \
+            runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-verified-sequence-v1.json
+      - name: Compile and exercise native model-pool and GIE adapter with a declared fixture engine
+        run: |
+          sources=()
+          for source in runtime/ios/Sources/PocketLlamaEngine/*.swift; do
+            [[ "$source" == */GGUFMetadata.swift ]] || sources+=("$source")
+          done
+          swiftc -swift-version 5 -emit-executable -parse-as-library \
+            "${sources[@]}" \
+            runtime/ios/Tests/GIECaptureStandaloneSmoke/main.swift \
+            -o "$RUNNER_TEMP/gie-capture-smoke"
+          "$RUNNER_TEMP/gie-capture-smoke" \
             runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json \
             runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-verified-sequence-v1.json
       - name: Explicit verification limits
