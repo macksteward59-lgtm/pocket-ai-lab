@@ -7,6 +7,7 @@ on:
       - codex/latent-channel-runtime-poc
       - codex/neuralese-sequence-codec-poc
       - codex/gie-canonical-codebook-artifact
+      - codex/native-gie1-sequence-encoder
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"

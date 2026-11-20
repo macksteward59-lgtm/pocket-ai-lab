@@ -223,7 +223,10 @@ final class LlamaEngineTests: XCTestCase {
             // Exercise the complete native path: llama.cpp final-token embedding
             // -> same-model int8 codec -> binary blob reference -> digest/replay
             // checks -> reconstructed vector. Authorization remains injected.
-            let channelNow = Date()
+            // Freeze to a representable whole second: ISO8601 encoding may
+            // round fractional seconds, otherwise the decoded createdAt can
+            // appear later than the frozen now and spuriously fail expiry.
+            let channelNow = Date(timeIntervalSince1970: 1_700_000_000)
             let latentStore = InMemoryNativeLatentBlobStore(now: { channelNow })
             let replayGuard = InMemoryNativeLatentReplayGuard(now: { channelNow })
             let latentIdentity = NativeLatentModelIdentity(modelId: model.id, modelRevision: digest)
