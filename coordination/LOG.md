@@ -4580,3 +4580,12 @@ Scope excludes PR #236 source/UI/gateway files, web PR #152, APEX/East changes, 
 
 
 Publication reconciliation: preserved concurrent coordination update `83d4834` for PR #236. Its new exact-head general/cloud checks passed; full native remained pending. The additive Google scope remains unchanged.
+
+
+## 2026-11-20 22:24:18 UTC — Claim independent exact-source native validation lane
+
+- The native cloud integration is implemented in draft PR #236 at `e38c80144e06f51d9809c35971f53ac25d0841f5`. General and cloud-specific CI pass on this head, but older native run #44820593206 remains active and replacement #44827406603 remains pending with no job. The outstanding app build/XCTest evidence is still unavailable in that lane.
+- Root claims CI execution only on `codex/native-cloud-validation-20261120`: create a branch pointing to the exact same e38c801 commit and a separate draft validation PR targeting the same PR #234 branch/head `6a61281a1d28a6b8ee1a292c74f8515c2250d110`. Verify its merge checkout tree equals `07289e7408d4818d3b59927263ce5f9236d7ab5d`. No implementation, workflow, test or scoring changes are introduced.
+- The unchanged native workflow runs under the new PR's ordinary concurrency identity. This is independent execution evidence, not a waiver of PR #236 checks or the frozen recipient gate. Record exact run/head/tree and actual outcomes; keep this validation PR draft and never merge it. Close it after evidence is captured. Preserve existing runs with their actual eventual terminal status.
+- The current GitHub connector exposes read/rerun operations but no workflow cancellation action; local gh is installed but unauthenticated. The public live job page confirms in-progress status and requires separate browser sign-in for live logs. No credentials were requested, recovered or transferred. No account/access/security setting changes, provider cost, model promotion, deployment or main merge.
+- Reconciled concurrent coordination `eca55dfc03260b78a50335dc592fab7c46e9d9a6` before this claim. Preserve the new additive Google Cloud component workstream on its separate branch; this validation lane changes none of its files and introduces no provider/gateway/orchestrator.
