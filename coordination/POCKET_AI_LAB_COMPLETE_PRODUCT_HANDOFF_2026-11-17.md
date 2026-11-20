@@ -9,6 +9,12 @@
 
 > This handoff consolidates the durable product decisions and technical requirements available from prior project discussions and the repository's current coordination records. The master checklist remains the detailed requirement baseline; the traceability matrix remains the requirement-level audit ledger. This document connects those records into one implementation-ready plan. If an original source artifact is unavailable, its contents are explicitly marked as needing recovery rather than reconstructed by guesswork.
 
+## 2026-11-20 supplementary native GIE evidence — standalone Swift test
+
+[Draft PR #228](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/228) adds a **test-only**, independently compiled macOS Swift source check stacked on PR #226. Exact-head [CI #44705759309](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44705759309) passed native production-source compilation and shared canonical GCB1/GIE1 fixture/tamper checks, without depending on pinned llama.cpp or the full iOS app build. This is useful codec-level evidence but neither a full iOS XCTest nor a physical iPhone, live model-generation, APEX/East, G.I.R.L. recipient consumption or release acceptance result. Do not mark master requirements verified from this isolated test.
+
+The earlier full native PR #226 attempt #1 [#44657025676](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44657025676) was **cancelled** during native app build. A targeted rerun of the same exact head was accepted and is running as attempt #2; do not report success until the run concludes. Preserve the full native workflow and the test-only PR as independent evidence gates.
+
 ## 2026-11-20 latest verified integration checkpoint (supersedes older CI statuses below)
 
 - **GIE integration:** [PR #226](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/226), current merge commit `4df8e74d9351605bea72bda3338a3c28cb4bf322`, now **6 commits ahead / 0 behind** current parent PR #224. Its diff is limited to the original five GCB1/GIE1 fixture/CI/resource files, and reconciliation used a non-force two-parent merge; no duplicate encoder implementation or rewritten branch. Exact-head [GCB1 CI #44657025607](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44657025607) passed. [Native CI #44657025676](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44657025676) was **pending runner** at last check.
