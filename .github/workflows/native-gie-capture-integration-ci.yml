@@ -1,0 +1,60 @@
+name: Native sequence-to-GIE source integration CI
+
+on:
+  push:
+    branches:
+      - codex/gie-native-capture-integration-20261120
+    paths:
+      - "runtime/ios/Sources/PocketLlamaEngine/**"
+      - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
+      - "runtime/ios/Tests/GIEStandaloneSmoke/**"
+      - ".github/workflows/native-gie-capture-integration-ci.yml"
+  pull_request:
+    branches:
+      - codex/gie-native-standalone-smoke-20261120
+    paths:
+      - "runtime/ios/Sources/PocketLlamaEngine/**"
+      - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
+      - "runtime/ios/Tests/GIEStandaloneSmoke/**"
+      - ".github/workflows/native-gie-capture-integration-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-gie-capture-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift-integration:
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift compiler and Xcode information
+        run: |
+          swift --version
+          xcodebuild -version
+      - name: Typecheck entire unlinked native engine including the new capture adapter
+        run: |
+          swiftc -swift-version 5 -typecheck -parse-as-library \
+            runtime/ios/Sources/PocketLlamaEngine/*.swift
+      - name: Build same production GCB1/GIE1 files with shared-fixture native check
+        run: |
+          swiftc -swift-version 5 \
+            runtime/ios/Sources/PocketLlamaEngine/NativeGIESequenceCodec.swift \
+            runtime/ios/Sources/PocketLlamaEngine/NativeGIECodebookArtifact.swift \
+            runtime/ios/Sources/PocketLlamaEngine/NativeGIESequenceEncoder.swift \
+            runtime/ios/Tests/GIEStandaloneSmoke/main.swift \
+            -o "$RUNNER_TEMP/gie-native-smoke"
+          "$RUNNER_TEMP/gie-native-smoke" \
+            runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json \
+            runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-verified-sequence-v1.json
+      - name: Explicit verification limits
+        if: always()
+        run: |
+          {
+            echo "## Native GIE integration source checks"
+            echo "Typechecked full Swift module **without** linked llama.cpp. Tested canonical GIE source bytes."
+            echo "Full native iOS app, XCTest, generated token capture from a real GGUF, recipient ingestion, signed evidence and physical iPhone are NOT established here."
+          } >> "$GITHUB_STEP_SUMMARY"
