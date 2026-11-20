@@ -1,0 +1,32 @@
+{
+  "observedAt": "2026-11-20 16:20:11 UTC",
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "pullRequest": 233,
+  "headSHA": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+  "runs": [
+    {
+      "id": 44768313233,
+      "name": "Recipient GGUF Template Contract",
+      "headSHA": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44768313233",
+      "updatedAt": "2026-11-20T15:56:45Z"
+    },
+    {
+      "id": 44768245546,
+      "name": "Pocket AI Lab CI",
+      "headSHA": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44768245546",
+      "updatedAt": "2026-11-20T15:57:04Z"
+    }
+  ],
+  "scope": "Metadata extraction and general CI passed. This does not replace the inherited failed frozen native recipient v1 benchmark gates."
+}
+

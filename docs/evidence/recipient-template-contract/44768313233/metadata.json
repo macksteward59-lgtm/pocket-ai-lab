@@ -1,0 +1,100 @@
+{
+  "chatTemplate": {
+    "metadataKey": "tokenizer.chat_template",
+    "present": true,
+    "sha256": "872be49dbb638044ad01b60388f48d469ff2980e5f0dccdc22ec907db54d0788",
+    "text": "{% for message in messages %}{% if loop.first and messages[0]['role'] != 'system' %}{{ '<|im_start|>system\nYou are a helpful AI assistant named SmolLM, trained by Hugging Face<|im_end|>\n' }}{% endif %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}",
+    "utf8Base64": "eyUgZm9yIG1lc3NhZ2UgaW4gbWVzc2FnZXMgJX17JSBpZiBsb29wLmZpcnN0IGFuZCBtZXNzYWdlc1swXVsncm9sZSddICE9ICdzeXN0ZW0nICV9e3sgJzx8aW1fc3RhcnR8PnN5c3RlbQpZb3UgYXJlIGEgaGVscGZ1bCBBSSBhc3Npc3RhbnQgbmFtZWQgU21vbExNLCB0cmFpbmVkIGJ5IEh1Z2dpbmcgRmFjZTx8aW1fZW5kfD4KJyB9fXslIGVuZGlmICV9e3snPHxpbV9zdGFydHw+JyArIG1lc3NhZ2VbJ3JvbGUnXSArICcKJyArIG1lc3NhZ2VbJ2NvbnRlbnQnXSArICc8fGltX2VuZHw+JyArICcKJ319eyUgZW5kZm9yICV9eyUgaWYgYWRkX2dlbmVyYXRpb25fcHJvbXB0ICV9e3sgJzx8aW1fc3RhcnR8PmFzc2lzdGFudAonIH19eyUgZW5kaWYgJX0=",
+    "utf8ByteLength": 368
+  },
+  "evidenceBoundary": {
+    "inferenceExecuted": false,
+    "note": "Artifact declarations only. Missing flags remain unknown. No Jinja/template execution, model loading, runtime readiness, publisher authentication or authorization is established.",
+    "recipientQualityEstablished": false,
+    "runtimeDefaultFlagsInferred": false,
+    "templateRendered": false,
+    "tokenizationExecuted": false
+  },
+  "gguf": {
+    "byteOrder": "little",
+    "headerAndMetadataBytes": 1769787,
+    "metadataKeyCount": 37,
+    "tensorCountDeclared": 272,
+    "tensorDirectoryValidated": false,
+    "tensorPayloadParsed": false,
+    "version": 3
+  },
+  "limits": {
+    "arrayElements": 1000000,
+    "keyBytes": 512,
+    "metadataKeys": 4096,
+    "metadataPrefixBytes": 16777216,
+    "specialTokenIDs": 64,
+    "stringBytes": 1048576,
+    "tensorsDeclared": 1000000,
+    "tokenBytes": 16384
+  },
+  "missingTokenizerMetadataKeys": [
+    "tokenizer.ggml.add_eos_token",
+    "tokenizer.ggml.clean_spaces",
+    "tokenizer.ggml.remove_extra_whitespaces"
+  ],
+  "probe": "pinned-gguf-recipient-template-metadata",
+  "schemaVersion": 1,
+  "specialTokens": {
+    "tokenizer.ggml.bos_token_id": {
+      "ggufType": "UINT32",
+      "id": 1,
+      "tokenString": {
+        "sha256": "17a9ea43212df48ca4fca436c080e1e35cded043b9197b44a4bd53fbb04f3193",
+        "text": "<|im_start|>",
+        "utf8ByteLength": 12
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.eos_token_id": {
+      "ggufType": "UINT32",
+      "id": 2,
+      "tokenString": {
+        "sha256": "d6b60b51acc9448b15da9cb03f644d0ec8c410e37735817f39e15764aa75a37f",
+        "text": "<|im_end|>",
+        "utf8ByteLength": 10
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.padding_token_id": {
+      "ggufType": "UINT32",
+      "id": 2,
+      "tokenString": {
+        "sha256": "d6b60b51acc9448b15da9cb03f644d0ec8c410e37735817f39e15764aa75a37f",
+        "text": "<|im_end|>",
+        "utf8ByteLength": 10
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.unknown_token_id": {
+      "ggufType": "UINT32",
+      "id": 0,
+      "tokenString": {
+        "sha256": "3d0c1cf596181258a003e9f95c836c765d44353532e67c70d7dff48b05f64840",
+        "text": "<|endoftext|>",
+        "utf8ByteLength": 13
+      },
+      "tokenStringStatus": "present"
+    }
+  },
+  "tokenizerMetadata": {
+    "tokenizer.ggml.add_bos_token": false,
+    "tokenizer.ggml.add_space_prefix": false,
+    "tokenizer.ggml.model": "gpt2",
+    "tokenizer.ggml.pre": "smollm"
+  },
+  "verifiedModel": {
+    "bytes": 105454432,
+    "sha256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d"
+  },
+  "vocabulary": {
+    "count": 49152,
+    "present": true
+  }
+}

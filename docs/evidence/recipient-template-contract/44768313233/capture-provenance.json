@@ -1,0 +1,40 @@
+{
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "pr": 233,
+  "run_id": 44768313233,
+  "run_attempt": 1,
+  "run_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44768313233",
+  "run_status": "completed",
+  "run_conclusion": "success",
+  "run_created_at": "2026-11-20T15:56:35Z",
+  "run_updated_at": "2026-11-20T15:56:45Z",
+  "job_id": 136398845400,
+  "source_sha": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+  "source_tree_sha": "3464c517402ac5e4e6e8bb64dfbedb48d884b307",
+  "checkout_sha": "2b4fa78a666d6e3c226483380f4c2b6c1efccfd3",
+  "checkout_tree_sha": "3464c517402ac5e4e6e8bb64dfbedb48d884b307",
+  "checkout_parents": [
+    "1a3a9d2813ab8d0a5a6c582b8b93144b63ee4bd5",
+    "be72e9f6873b8890a2ccd5c8d78709e073109868"
+  ],
+  "source_and_checkout_trees_identical": true,
+  "artifact": {
+    "id": 14645708185,
+    "name": "recipient-template-contract-44768313233-1",
+    "size_in_bytes": 3177,
+    "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/artifacts/14645708185",
+    "archive_download_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/artifacts/14645708185/zip",
+    "expired": false,
+    "created_at": "2026-11-20T15:56:42Z",
+    "expires_at": "2026-12-04T15:56:42Z",
+    "updated_at": "2026-11-20T15:56:42Z",
+    "digest": "sha256:540b5cdbd303147cd701defea5dd48ba8b63811df3076ea799ad5b75c2a1011a",
+    "workflow_run": {
+      "id": 44768313233,
+      "repository_id": 1442661211,
+      "head_repository_id": 1442661211,
+      "head_branch": "codex/recipient-template-contract-probe-20261120",
+      "head_sha": "be72e9f6873b8890a2ccd5c8d78709e073109868"
+    }
+  }
+}

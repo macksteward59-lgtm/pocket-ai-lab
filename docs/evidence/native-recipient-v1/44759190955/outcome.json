@@ -1,0 +1,206 @@
+{
+  "artifact": {
+    "extractedPath": "/workspace/scratch/7ab02b6bb258/pr231-native-recipient-evidence",
+    "id": 14644254061,
+    "matchesGitHubDigest": true,
+    "name": "native-recipient-text-44759190955-1",
+    "zipBytes": 30131,
+    "zipPath": "/workspace/scratch/7ab02b6bb258/pr231-native-recipient-evidence.zip",
+    "zipSHA256": "9642c4be702b24d48e0208775faddaa3453281b3e6ccdecb2ff04907ae0d6167"
+  },
+  "cleanup": {
+    "activeLeaseCount": 0,
+    "activeLeaseCountBeforeRelease": 1,
+    "activeRequests": 0,
+    "activeRequestsBeforeRelease": 0,
+    "activeUseCount": 0,
+    "activeUseCountBeforeRelease": 0,
+    "leaseReleased": true,
+    "loadedModelIDs": [],
+    "pendingModelIDs": [],
+    "reservedMemoryMB": 0,
+    "unloadingModelIDs": [],
+    "waitingRequests": 0,
+    "waitingRequestsBeforeRelease": 0
+  },
+  "comparedWithPR232": {
+    "contentFieldsCompared": [
+      "ordinal",
+      "caseId",
+      "condition",
+      "promptSHA256",
+      "rawOutput",
+      "status",
+      "parsedAnswer",
+      "expectedAnswer",
+      "scoredCorrect",
+      "errorMessage"
+    ],
+    "differentRows": [],
+    "identicalAfterExcludingRequestUUIDsAndLatencies": true,
+    "rowCount": 36,
+    "source": {
+      "branch": "codex/native-generation-decode-drain-20261120",
+      "frozenBenchmarkOriginalHeadSHA": "e47ca2126b2b3e5a067ebd4e44f1bef55f620951",
+      "frozenBenchmarkSourceBlob": "297ad2438166e08ba3c499dcd9645c6c06a16f47",
+      "headSHA": "1a3a9d2813ab8d0a5a6c582b8b93144b63ee4bd5",
+      "pullRequest": 232,
+      "repository": "macksteward59-lgtm/pocket-ai-lab",
+      "workflowRunAttempt": 1,
+      "workflowRunID": 44762948524,
+      "workflowRunURL": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44762948524"
+    }
+  },
+  "consistencyAudit": "passed",
+  "elapsedMilliseconds": 110137,
+  "failureOrdinals": [
+    6,
+    14,
+    26,
+    29
+  ],
+  "frozenCIAcceptance": "failed",
+  "fullAuditPath": "/workspace/scratch/7ab02b6bb258/pr231-native-evidence-audit.json",
+  "fullJobLog": {
+    "bytes": 3622932,
+    "encoding": "UTF-8 decoded API log, materialized with its leading BOM",
+    "path": "/workspace/scratch/7ab02b6bb258/pr231-native-job.log",
+    "sha256": "49b6b5fdba7aaaec8f6da2c62dff0c9f880b51a6062e8ced1a45f50d68fcdd10"
+  },
+  "inputEmbeddingMeasurement": {
+    "changedMaxDelta": 11.335649490356445,
+    "inputDimension": 576,
+    "inputRows": 2,
+    "logitsPerEvaluation": 49152,
+    "ordinaryControlsMatch": true,
+    "repeatMaxDelta": 0.0,
+    "repeatTolerance": 0.001,
+    "sequence": "A-B-A",
+    "textAfterMatchesCaptured": true,
+    "textAfterMatchesControl": true
+  },
+  "limits": [
+    "This consistency audit does not turn the failed frozen CI acceptance gate into a pass.",
+    "No token IDs or termination reason were recorded for empty-text errors.",
+    "The earlier ordinary-text drift did not reproduce on this pre-drain diagnostic head.",
+    "This single pre-fix run and the separate child run do not prove a cause for the earlier drift.",
+    "Hosted macOS evidence is not physical iPhone Air acceptance or general performance measurement."
+  ],
+  "offload": {
+    "metalDeviceUsableAtLoad": true,
+    "offloadedLayers": 0,
+    "reportedLayerCount": 31,
+    "requestedGpuLayers": 0
+  },
+  "rawOutputFrequencies": [
+    {
+      "count": 29,
+      "rawOutput": "\n\nWhat is"
+    },
+    {
+      "count": 3,
+      "rawOutput": " cedar\n\nWhat"
+    },
+    {
+      "count": 4,
+      "rawOutput": null
+    }
+  ],
+  "recomputedMetrics": {
+    "absentAccuracy": 0.0,
+    "absentAnswerCount": 0,
+    "absentOnlyVsCorrectCount": 0,
+    "attemptedTrialCount": 36,
+    "caseCount": 12,
+    "completedTrialCount": 32,
+    "correctAccuracy": 0.0,
+    "correctAndCounterfactualPairCount": 0,
+    "correctAndCounterfactualPairRate": 0.0,
+    "correctAnswerCount": 0,
+    "correctMinusAbsentAccuracy": 0.0,
+    "correctOnlyVsAbsentCount": 0,
+    "counterfactualFollowingCount": 0,
+    "counterfactualFollowingRate": 0.0,
+    "generationFailedCount": 4,
+    "invalidAnswerCount": 32,
+    "notRunBudgetCount": 0,
+    "scheduledTrialCount": 36
+  },
+  "recordCounts": {
+    "START": 1,
+    "SUMMARY": 1,
+    "TRIAL": 36
+  },
+  "recordedErrors": [
+    "backendFailed(\"llama.cpp returned empty text. No token was invented.\")"
+  ],
+  "source": {
+    "attempt": 1,
+    "commit": "0a3bc9df657445de4433f534c597ebdea0a34725",
+    "conclusion": "failure",
+    "finalUpdatedAt": "2026-11-20T15:55:38Z",
+    "jobID": 136366867224,
+    "pullRequest": 231,
+    "runID": 44759190955,
+    "url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44759190955"
+  },
+  "testResults": {
+    "engineMacOS": {
+      "failures": 0,
+      "skips": 1,
+      "tests": 145
+    },
+    "engineSimulator": {
+      "failures": 0,
+      "skips": 4,
+      "tests": 146
+    },
+    "nativeApp": {
+      "failures": 0,
+      "tests": 60
+    },
+    "recipient": {
+      "assertionFailures": 2,
+      "completedTrialCountObserved": 32,
+      "completedTrialCountRequired": 36,
+      "generationFailedCountObserved": 4,
+      "generationFailedCountRequired": 0,
+      "tests": 1
+    }
+  },
+  "textControls": [
+    {
+      "matches": {
+        "earlierCapturedMatchesControl": true,
+        "initialOrdinaryMatchesControl": true,
+        "ordinaryControlsMatch": true
+      },
+      "modelSHA256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+      "outputs": {
+        "earlierCaptured": " Paris. Paris is a city known for",
+        "initialOrdinary": " Paris. Paris is a city known for",
+        "ordinaryBeforeInputs": " Paris. Paris is a city known for",
+        "ordinaryBeforeInputsRepeat": " Paris. Paris is a city known for"
+      },
+      "stage": "before-inputs"
+    },
+    {
+      "matches": {
+        "earlierCapturedMatchesControl": true,
+        "initialOrdinaryMatchesControl": true,
+        "ordinaryAfterMatchesCaptured": true,
+        "ordinaryAfterMatchesControl": true,
+        "ordinaryControlsMatch": true
+      },
+      "modelSHA256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+      "outputs": {
+        "earlierCaptured": " Paris. Paris is a city known for",
+        "initialOrdinary": " Paris. Paris is a city known for",
+        "ordinaryAfterInputs": " Paris. Paris is a city known for",
+        "ordinaryBeforeInputs": " Paris. Paris is a city known for",
+        "ordinaryBeforeInputsRepeat": " Paris. Paris is a city known for"
+      },
+      "stage": "after-inputs"
+    }
+  ]
+}

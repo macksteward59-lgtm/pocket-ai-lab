@@ -1,0 +1,683 @@
+PAL-RECIPIENT-TEXT-MANIFEST-1
+suiteID:30
+pocket-recipient-private-facts
+suiteVersion:1
+1
+seed:16
+50414c5245435631
+generator:120
+splitmix64-v1;nonce-low32-uppercase8hex;one-draw-per-case;six-permutations-each-A-then-B;options-swap-on-odd-permutation
+source:28
+host-generated-private-facts
+promptFormat:14
+plain-ascii-v1
+maxPromptBytes:3
+512
+maxTokens:1
+4
+temperature:1
+0
+maxOutputBytes:3
+128
+maximumDurationSeconds:3
+900
+parser:50
+trim-bytes-09-0a-0d-20;exact-A-or-B;completed-only
+scoring:85
+fixed-case-denominator;failed-invalid-unrun-score-zero;counterfactual-key-is-opposite
+pairedMetrics:83
+correct-only-minus-absent-only;correct-and-counterfactual-both-follow-specific-keys
+budget:85
+monotonic-check-between-requests;unstarted-rows-notRunBudget;no-hard-per-call-timeout
+caseCount:2
+12
+trialCount:2
+36
+case.id:7
+case-01
+case.objectId:12
+OBJ-AB40EC30
+case.optionA:5
+cedar
+case.optionB:5
+maple
+case.correctAnswer:1
+A
+case.conditionOrder:29
+correct,absent,counterfactual
+trial.ordinal:1
+1
+trial.condition:7
+correct
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-AB40EC30 is cedar.
+Question: Which word is stored for OBJ-AB40EC30?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:1
+2
+trial.condition:6
+absent
+trial.expectedAnswer:1
+A
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-AB40EC30.
+Question: Which word is stored for OBJ-AB40EC30?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:1
+3
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-AB40EC30 is maple.
+Question: Which word is stored for OBJ-AB40EC30?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-02
+case.objectId:12
+OBJ-CE12B00D
+case.optionA:5
+cedar
+case.optionB:5
+maple
+case.correctAnswer:1
+B
+case.conditionOrder:29
+correct,absent,counterfactual
+trial.ordinal:1
+4
+trial.condition:7
+correct
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-CE12B00D is maple.
+Question: Which word is stored for OBJ-CE12B00D?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:1
+5
+trial.condition:6
+absent
+trial.expectedAnswer:1
+B
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-CE12B00D.
+Question: Which word is stored for OBJ-CE12B00D?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:1
+6
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-CE12B00D is cedar.
+Question: Which word is stored for OBJ-CE12B00D?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-03
+case.objectId:12
+OBJ-9427F894
+case.optionA:5
+maple
+case.optionB:5
+cedar
+case.correctAnswer:1
+A
+case.conditionOrder:29
+correct,counterfactual,absent
+trial.ordinal:1
+7
+trial.condition:7
+correct
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-9427F894 is maple.
+Question: Which word is stored for OBJ-9427F894?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:1
+8
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-9427F894 is cedar.
+Question: Which word is stored for OBJ-9427F894?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:1
+9
+trial.condition:6
+absent
+trial.expectedAnswer:1
+A
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-9427F894.
+Question: Which word is stored for OBJ-9427F894?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-04
+case.objectId:12
+OBJ-C2CA1E40
+case.optionA:5
+maple
+case.optionB:5
+cedar
+case.correctAnswer:1
+B
+case.conditionOrder:29
+correct,counterfactual,absent
+trial.ordinal:2
+10
+trial.condition:7
+correct
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-C2CA1E40 is cedar.
+Question: Which word is stored for OBJ-C2CA1E40?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+11
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-C2CA1E40 is maple.
+Question: Which word is stored for OBJ-C2CA1E40?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+12
+trial.condition:6
+absent
+trial.expectedAnswer:1
+B
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-C2CA1E40.
+Question: Which word is stored for OBJ-C2CA1E40?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-05
+case.objectId:12
+OBJ-9446327A
+case.optionA:5
+cedar
+case.optionB:5
+maple
+case.correctAnswer:1
+A
+case.conditionOrder:29
+absent,correct,counterfactual
+trial.ordinal:2
+13
+trial.condition:6
+absent
+trial.expectedAnswer:1
+A
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-9446327A.
+Question: Which word is stored for OBJ-9446327A?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+14
+trial.condition:7
+correct
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-9446327A is cedar.
+Question: Which word is stored for OBJ-9446327A?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+15
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-9446327A is maple.
+Question: Which word is stored for OBJ-9446327A?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-06
+case.objectId:12
+OBJ-2BD4F1C7
+case.optionA:5
+cedar
+case.optionB:5
+maple
+case.correctAnswer:1
+B
+case.conditionOrder:29
+absent,correct,counterfactual
+trial.ordinal:2
+16
+trial.condition:6
+absent
+trial.expectedAnswer:1
+B
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-2BD4F1C7.
+Question: Which word is stored for OBJ-2BD4F1C7?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+17
+trial.condition:7
+correct
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-2BD4F1C7 is maple.
+Question: Which word is stored for OBJ-2BD4F1C7?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+18
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-2BD4F1C7 is cedar.
+Question: Which word is stored for OBJ-2BD4F1C7?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-07
+case.objectId:12
+OBJ-5635CC63
+case.optionA:5
+maple
+case.optionB:5
+cedar
+case.correctAnswer:1
+A
+case.conditionOrder:29
+absent,counterfactual,correct
+trial.ordinal:2
+19
+trial.condition:6
+absent
+trial.expectedAnswer:1
+A
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-5635CC63.
+Question: Which word is stored for OBJ-5635CC63?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+20
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-5635CC63 is cedar.
+Question: Which word is stored for OBJ-5635CC63?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+21
+trial.condition:7
+correct
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-5635CC63 is maple.
+Question: Which word is stored for OBJ-5635CC63?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-08
+case.objectId:12
+OBJ-89BD80FC
+case.optionA:5
+maple
+case.optionB:5
+cedar
+case.correctAnswer:1
+B
+case.conditionOrder:29
+absent,counterfactual,correct
+trial.ordinal:2
+22
+trial.condition:6
+absent
+trial.expectedAnswer:1
+B
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-89BD80FC.
+Question: Which word is stored for OBJ-89BD80FC?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+23
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-89BD80FC is maple.
+Question: Which word is stored for OBJ-89BD80FC?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+24
+trial.condition:7
+correct
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-89BD80FC is cedar.
+Question: Which word is stored for OBJ-89BD80FC?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-09
+case.objectId:12
+OBJ-1F34C2A0
+case.optionA:5
+cedar
+case.optionB:5
+maple
+case.correctAnswer:1
+A
+case.conditionOrder:29
+counterfactual,correct,absent
+trial.ordinal:2
+25
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-1F34C2A0 is maple.
+Question: Which word is stored for OBJ-1F34C2A0?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+26
+trial.condition:7
+correct
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-1F34C2A0 is cedar.
+Question: Which word is stored for OBJ-1F34C2A0?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+27
+trial.condition:6
+absent
+trial.expectedAnswer:1
+A
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-1F34C2A0.
+Question: Which word is stored for OBJ-1F34C2A0?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-10
+case.objectId:12
+OBJ-F987FDF1
+case.optionA:5
+cedar
+case.optionB:5
+maple
+case.correctAnswer:1
+B
+case.conditionOrder:29
+counterfactual,correct,absent
+trial.ordinal:2
+28
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-F987FDF1 is cedar.
+Question: Which word is stored for OBJ-F987FDF1?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+29
+trial.condition:7
+correct
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-F987FDF1 is maple.
+Question: Which word is stored for OBJ-F987FDF1?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+30
+trial.condition:6
+absent
+trial.expectedAnswer:1
+B
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-F987FDF1.
+Question: Which word is stored for OBJ-F987FDF1?
+A: cedar
+B: maple
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-11
+case.objectId:12
+OBJ-97DD2BB4
+case.optionA:5
+maple
+case.optionB:5
+cedar
+case.correctAnswer:1
+A
+case.conditionOrder:29
+counterfactual,absent,correct
+trial.ordinal:2
+31
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-97DD2BB4 is cedar.
+Question: Which word is stored for OBJ-97DD2BB4?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+32
+trial.condition:6
+absent
+trial.expectedAnswer:1
+A
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-97DD2BB4.
+Question: Which word is stored for OBJ-97DD2BB4?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+33
+trial.condition:7
+correct
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-97DD2BB4 is maple.
+Question: Which word is stored for OBJ-97DD2BB4?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+case.id:7
+case-12
+case.objectId:12
+OBJ-2061C525
+case.optionA:5
+maple
+case.optionB:5
+cedar
+case.correctAnswer:1
+B
+case.conditionOrder:29
+counterfactual,absent,correct
+trial.ordinal:2
+34
+trial.condition:14
+counterfactual
+trial.expectedAnswer:1
+A
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-2061C525 is maple.
+Question: Which word is stored for OBJ-2061C525?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+35
+trial.condition:6
+absent
+trial.expectedAnswer:1
+B
+trial.prompt:197
+Read the message and answer the question.
+Message: No stored word is supplied for OBJ-2061C525.
+Question: Which word is stored for OBJ-2061C525?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
+trial.ordinal:2
+36
+trial.condition:7
+correct
+trial.expectedAnswer:1
+B
+trial.prompt:195
+Read the message and answer the question.
+Message: The stored word for OBJ-2061C525 is cedar.
+Question: Which word is stored for OBJ-2061C525?
+A: maple
+B: cedar
+Reply with exactly A or B.
+Answer:
