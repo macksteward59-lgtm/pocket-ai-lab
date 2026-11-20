@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - codex/neuralese-sequence-codec-poc
+      - codex/native-gie1-sequence-encoder
     paths:
       - "packages/intelligence/**"
       - "runtime/ios/Tests/LlamaEngineTests/Fixtures/gie-codebook-artifact-v1.json"
