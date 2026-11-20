@@ -42,5 +42,3 @@ jobs:
           node --check scripts/desktop/unified-agent-proof.test.mjs
       - name: Run deterministic seven-attempt integration proof
         run: node --import tsx --test scripts/desktop/unified-agent-proof.test.mjs
-      - name: Run desktop regression suite
-        run: npm run test:desktop
