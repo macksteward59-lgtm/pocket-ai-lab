@@ -9,6 +9,7 @@ on:
       - codex/gie-canonical-codebook-artifact
       - codex/native-gie1-sequence-encoder
       - codex/gie-native-standalone-smoke-20261120
+      - codex/gie-native-capture-integration-20261120
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -114,11 +115,17 @@ jobs:
       - name: Typecheck the unlinked fail-closed branch
         run: |
           sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          sources=()
+          for source in runtime/ios/Sources/PocketLlamaEngine/*.swift; do
+            # This metadata parser unconditionally imports the C bridge. The
+            # linked package builds below validate it; all other sources stay
+            # in the unlinked check as optional engine protocols gain types.
+            [[ "$source" == */GGUFMetadata.swift ]] || sources+=("$source")
+          done
           xcrun swiftc -typecheck -parse-as-library \
             -target arm64-apple-ios16.0-simulator \
             -sdk "$sdk" \
-            runtime/ios/Sources/PocketLlamaEngine/LlamaEngine.swift \
-            runtime/ios/Sources/PocketLlamaEngine/LlamaEngineSupport.swift
+            "${sources[@]}"
 
       - name: Link PocketLlamaEngine for physical iOS device
         working-directory: runtime/ios

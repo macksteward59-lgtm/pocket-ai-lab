@@ -5,6 +5,10 @@ public enum NativeInferenceRuntimeError: Error, Equatable, Sendable {
     case responseTooLarge
     case latentExportUnavailable
     case invalidLatentOutput
+    case inputEmbeddingUnavailable
+    case invalidInputEmbeddingCapabilities
+    case invalidInputEmbeddingRequest
+    case invalidInputEmbeddingOutput
 }
 
 
@@ -105,6 +109,92 @@ public struct NativeInferenceRuntime: Sendable {
             return result
         } catch {
             _ = await pool.release(lease)
+            throw error
+        }
+    }
+
+    /// Reads the loaded engine's numerical input support under an exact lease
+    /// and the shared scheduler. Routing capability labels are not consulted.
+    public func inputEmbeddingCapabilities(
+        lease: ModelPoolLease
+    ) async throws -> NativeInputEmbeddingCapabilities {
+        guard let inputEngine = engine as? any InputEmbeddingEvaluatingLlamaEngine else {
+            throw NativeInferenceRuntimeError.inputEmbeddingUnavailable
+        }
+        let use = try await pool.beginUse(lease)
+        do {
+            let capabilities = try await scheduler.withPermit {
+                guard NativeInputEmbeddingValidation.modelIDsMatch(lease.model.id, lease.session.modelId) else {
+                    throw NativeInferenceRuntimeError.invalidInputEmbeddingCapabilities
+                }
+                let capabilities = try await inputEngine.inputEmbeddingCapabilities(session: lease.session)
+                try Task.checkCancellation()
+                try NativeInputEmbeddingValidation.validateCapabilities(
+                    capabilities,
+                    expectedModelId: lease.model.id
+                )
+                return capabilities
+            }
+            await pool.endUse(use)
+            return capabilities
+        } catch {
+            await pool.endUse(use)
+            throw error
+        }
+    }
+
+    /// Evaluates a bounded matrix of first-layer inputs and returns final-position
+    /// vocabulary logits. This does not convert GIE data or enable agent routing.
+    /// The exact lease and scheduler permit remain held through cancellation drain.
+    public func evaluateInputEmbeddings(
+        lease: ModelPoolLease,
+        request: NativeInputEmbeddingRequest
+    ) async throws -> NativeInputEmbeddingEvaluationResult {
+        try NativeInputEmbeddingValidation.validateRequest(request)
+        guard NativeInputEmbeddingValidation.modelIDsMatch(request.modelId, lease.model.id),
+              NativeInputEmbeddingValidation.modelIDsMatch(request.modelId, lease.session.modelId) else {
+            throw NativeInferenceRuntimeError.invalidInputEmbeddingRequest
+        }
+        guard let inputEngine = engine as? any InputEmbeddingEvaluatingLlamaEngine else {
+            throw NativeInferenceRuntimeError.inputEmbeddingUnavailable
+        }
+        let use = try await pool.beginUse(lease)
+        do {
+            let result = try await scheduler.withPermit {
+                // Query directly within this permit: calling the runtime query
+                // here would attempt to acquire the same admission slot again.
+                let capabilities = try await inputEngine.inputEmbeddingCapabilities(session: lease.session)
+                try Task.checkCancellation()
+                try NativeInputEmbeddingValidation.validateCapabilities(
+                    capabilities,
+                    expectedModelId: lease.model.id
+                )
+                try NativeInputEmbeddingValidation.validateRequest(request, capabilities: capabilities)
+                do {
+                    try Task.checkCancellation()
+                    let result = try await inputEngine.evaluateInputEmbeddings(
+                        session: lease.session,
+                        request: request
+                    )
+                    try Task.checkCancellation()
+                    try NativeInputEmbeddingValidation.validateResult(
+                        result,
+                        request: request,
+                        capabilities: capabilities
+                    )
+                    return result
+                } catch {
+                    await inputEngine.cancelAndWait(
+                        sessionId: lease.session.id,
+                        requestId: request.requestId.uuidString
+                    )
+                    throw error
+                }
+            }
+            await pool.endUse(use)
+            return result
+        } catch {
+            await pool.endUse(use)
             throw error
         }
     }

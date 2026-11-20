@@ -183,7 +183,7 @@ public actor PlaceholderLlamaEngine: LlamaEngine {
 /// load throws `backendUnavailable` and does not read the model into a session.
 /// Pass `requireMetal: false` only for an explicit CPU run. CPU text is still llama.cpp
 /// output. This engine yields one completed string, not a fabricated partial.
-public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
+public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine, InputEmbeddingEvaluatingLlamaEngine {
     private let requireMetal: Bool
     private let treatMetalAsUnavailable: Bool
     #if POCKET_LLAMA_LINKED
@@ -191,10 +191,12 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
     #endif
     private var reports: [String: LlamaOffloadReport] = [:]
     private var generation: [String: UUID] = [:]
-    private var generationTasks: [String: (requestId: String, task: Task<Void, Never>)] = [:]
+    private var unloadingSessions: Set<String> = []
+    private var generationTasks: [String: (requestId: String, token: UUID, task: Task<Void, Never>)] = [:]
     #if POCKET_LLAMA_LINKED
-    private var latentGenerationTasks: [String: (requestId: String, task: Task<LlamaLatentOutput, Error>)] = [:]
-    private var latentSequenceTasks: [String: (requestId: String, task: Task<LlamaLatentSequenceOutput, Error>)] = [:]
+    private var latentGenerationTasks: [String: (requestId: String, token: UUID, task: Task<LlamaLatentOutput, Error>)] = [:]
+    private var latentSequenceTasks: [String: (requestId: String, token: UUID, task: Task<LlamaLatentSequenceOutput, Error>)] = [:]
+    private var inputEmbeddingTasks: [String: (requestId: String, token: UUID, task: Task<NativeInputEmbeddingEvaluationResult, Error>)] = [:]
     #endif
 
     public init(requireMetal: Bool = true) {
@@ -305,12 +307,13 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         guard let loaded = sessions[session.id] else {
             throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
-        guard generation[session.id] == nil else {
+        guard !hasActiveOperation(sessionId: session.id) else {
             throw LlamaEngineError.invalidRequest("This runtime session already has an active generation. Cancel or finish it before starting another.")
         }
-        guard let token = UUID(uuidString: request.requestId) else {
+        guard UUID(uuidString: request.requestId) != nil else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        let token = UUID()
         loaded.resetCancel()
         generation[session.id] = token
         let slot = TaskSlot()
@@ -334,11 +337,11 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
             slot.task = task
             continuation.onTermination = { @Sendable _ in
                 task.cancel()
-                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
+                Task { await self.cancelAndWait(sessionId: session.id, token: token) }
             }
         }
         if let task = slot.task {
-            generationTasks[session.id] = (requestId: token.uuidString, task: task)
+            generationTasks[session.id] = (requestId: request.requestId, token: token, task: task)
         }
         return stream
         #endif
@@ -353,23 +356,24 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         guard let loaded = sessions[session.id] else {
             throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
-        guard generation[session.id] == nil else {
+        guard !hasActiveOperation(sessionId: session.id) else {
             throw LlamaEngineError.invalidRequest("This runtime session already has an active generation. Cancel or finish it before starting another.")
         }
-        guard let token = UUID(uuidString: request.requestId) else {
+        guard UUID(uuidString: request.requestId) != nil else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        let token = UUID()
         loaded.resetCancel()
         generation[session.id] = token
         let task = Task.detached {
             try loaded.generateWithLatent(request, modelId: session.modelId)
         }
-        latentGenerationTasks[session.id] = (requestId: token.uuidString, task: task)
+        latentGenerationTasks[session.id] = (requestId: request.requestId, token: token, task: task)
         do {
             let result = try await withTaskCancellationHandler {
                 try await task.value
             } onCancel: {
-                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
+                Task { await self.cancelAndWait(sessionId: session.id, token: token) }
             }
             guard generation[session.id] == token else {
                 throw LlamaEngineError.cancelled
@@ -401,12 +405,13 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         guard let loaded = sessions[session.id] else {
             throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
-        guard generation[session.id] == nil else {
+        guard !hasActiveOperation(sessionId: session.id) else {
             throw LlamaEngineError.invalidRequest("This runtime session already has an active generation.")
         }
-        guard let token = UUID(uuidString: request.requestId) else {
+        guard UUID(uuidString: request.requestId) != nil else {
             throw LlamaEngineError.invalidRequest("Generation request ID must be a UUID.")
         }
+        let token = UUID()
         loaded.resetCancel()
         generation[session.id] = token
         let task = Task.detached {
@@ -417,12 +422,12 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
                 maxBytes: maxLatentBytes
             )
         }
-        latentSequenceTasks[session.id] = (requestId: token.uuidString, task: task)
+        latentSequenceTasks[session.id] = (requestId: request.requestId, token: token, task: task)
         do {
             let result = try await withTaskCancellationHandler {
                 try await task.value
             } onCancel: {
-                Task { await self.cancelAndWait(sessionId: session.id, requestId: token.uuidString) }
+                Task { await self.cancelAndWait(sessionId: session.id, token: token) }
             }
             guard generation[session.id] == token else { throw LlamaEngineError.cancelled }
             finishGeneration(sessionId: session.id, token: token)
@@ -434,12 +439,84 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         #endif
     }
 
-    public func cancel(sessionId: String, requestId: String) async {
-        guard let active = generation[sessionId],
-              active.uuidString.caseInsensitiveCompare(requestId) == .orderedSame else {
-            // A stale or unrelated request must never cancel a newer generation.
-            return
+    public func inputEmbeddingCapabilities(session: RuntimeSession) async throws -> NativeInputEmbeddingCapabilities {
+        #if !POCKET_LLAMA_LINKED
+        throw LlamaEngineError.backendUnavailable("llama.cpp is not linked in this build. Raw input evaluation is unavailable.")
+        #else
+        try Task.checkCancellation()
+        guard let loaded = sessions[session.id] else {
+            throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
         }
+        guard NativeInputEmbeddingValidation.modelIDsMatch(session.modelId, loaded.modelId) else {
+            throw NativeInferenceRuntimeError.invalidInputEmbeddingCapabilities
+        }
+        guard !hasActiveOperation(sessionId: session.id) else {
+            throw LlamaEngineError.invalidRequest("This runtime session already has an active operation.")
+        }
+        let capabilities = try loaded.inputEmbeddingCapabilities()
+        try NativeInputEmbeddingValidation.validateCapabilities(capabilities, expectedModelId: loaded.modelId)
+        try Task.checkCancellation()
+        return capabilities
+        #endif
+    }
+
+    /// Evaluates explicitly supplied first-layer model inputs, independently of GIE output export.
+    public func evaluateInputEmbeddings(
+        session: RuntimeSession,
+        request: NativeInputEmbeddingRequest
+    ) async throws -> NativeInputEmbeddingEvaluationResult {
+        #if !POCKET_LLAMA_LINKED
+        throw LlamaEngineError.backendUnavailable("llama.cpp is not linked in this build. No input logits were produced.")
+        #else
+        try NativeInputEmbeddingValidation.validateRequest(request)
+        try Task.checkCancellation()
+        guard let loaded = sessions[session.id] else {
+            throw LlamaEngineError.sessionNotLoaded("Session \(session.id) is not loaded.")
+        }
+        guard NativeInputEmbeddingValidation.modelIDsMatch(session.modelId, loaded.modelId),
+              NativeInputEmbeddingValidation.modelIDsMatch(request.modelId, loaded.modelId) else {
+            throw NativeInferenceRuntimeError.invalidInputEmbeddingRequest
+        }
+        guard !hasActiveOperation(sessionId: session.id) else {
+            throw LlamaEngineError.invalidRequest("This runtime session already has an active operation.")
+        }
+        let capabilities = try loaded.inputEmbeddingCapabilities()
+        try NativeInputEmbeddingValidation.validateCapabilities(capabilities, expectedModelId: loaded.modelId)
+        try NativeInputEmbeddingValidation.validateRequest(request, capabilities: capabilities)
+        try Task.checkCancellation()
+        // Reset on this actor before launching work, never inside the detached native worker.
+        loaded.resetCancel()
+        // A unique invocation token keeps delayed cancellation handlers isolated
+        // even if a caller deliberately reuses its public request UUID.
+        let token = UUID()
+        generation[session.id] = token
+        let task = Task.detached { try loaded.evaluateInputEmbeddings(request) }
+        inputEmbeddingTasks[session.id] = (requestId: request.requestId.uuidString, token: token, task: task)
+        do {
+            let result = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                Task { await self.cancelAndWait(sessionId: session.id, token: token) }
+            }
+            try Task.checkCancellation()
+            guard generation[session.id] == token else { throw LlamaEngineError.cancelled }
+            finishGeneration(sessionId: session.id, token: token)
+            return result
+        } catch {
+            // task.value has drained the native operation before its registry is released.
+            finishGeneration(sessionId: session.id, token: token)
+            throw error
+        }
+        #endif
+    }
+
+    public func cancel(sessionId: String, requestId: String) async {
+        guard let token = operationToken(sessionId: sessionId, requestId: requestId) else { return }
+        cancelOperation(sessionId: sessionId, token: token)
+    }
+
+    private func cancelOperation(sessionId: String, token: UUID) {
+        guard generation[sessionId] == token else { return }
         generation[sessionId] = nil
         #if POCKET_LLAMA_LINKED
         sessions[sessionId]?.requestCancel()
@@ -447,28 +524,59 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
     }
 
     public func cancelAndWait(sessionId: String, requestId: String) async {
+        guard let token = operationToken(sessionId: sessionId, requestId: requestId) else { return }
+        await cancelAndWait(sessionId: sessionId, token: token)
+    }
+
+    private func operationToken(sessionId: String, requestId: String) -> UUID? {
         if let active = generationTasks[sessionId],
-           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame {
-            await cancel(sessionId: sessionId, requestId: requestId)
+           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame { return active.token }
+        #if POCKET_LLAMA_LINKED
+        if let active = latentGenerationTasks[sessionId],
+           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame { return active.token }
+        if let active = latentSequenceTasks[sessionId],
+           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame { return active.token }
+        if let active = inputEmbeddingTasks[sessionId],
+           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame { return active.token }
+        #endif
+        return nil
+    }
+
+    private func cancelAndWait(sessionId: String, token: UUID) async {
+        if let active = generationTasks[sessionId],
+           active.token == token {
+            cancelOperation(sessionId: sessionId, token: token)
             await active.task.value
+            finishGeneration(sessionId: sessionId, token: token)
             return
         }
         #if POCKET_LLAMA_LINKED
         if let active = latentGenerationTasks[sessionId],
-           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame {
-            await cancel(sessionId: sessionId, requestId: requestId)
+           active.token == token {
+            cancelOperation(sessionId: sessionId, token: token)
             _ = try? await active.task.value
+            finishGeneration(sessionId: sessionId, token: token)
             return
         }
         if let active = latentSequenceTasks[sessionId],
-           active.requestId.caseInsensitiveCompare(requestId) == .orderedSame {
-            await cancel(sessionId: sessionId, requestId: requestId)
+           active.token == token {
+            cancelOperation(sessionId: sessionId, token: token)
             _ = try? await active.task.value
+            finishGeneration(sessionId: sessionId, token: token)
+            return
+        }
+        if let active = inputEmbeddingTasks[sessionId],
+           active.token == token {
+            cancelOperation(sessionId: sessionId, token: token)
+            _ = try? await active.task.value
+            finishGeneration(sessionId: sessionId, token: token)
         }
         #endif
     }
 
     public func unload(sessionId: String) async {
+        unloadingSessions.insert(sessionId)
+        defer { unloadingSessions.remove(sessionId) }
         if let active = generationTasks[sessionId] {
             await cancelAndWait(sessionId: sessionId, requestId: active.requestId)
         }
@@ -479,17 +587,34 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         if let active = latentSequenceTasks[sessionId] {
             await cancelAndWait(sessionId: sessionId, requestId: active.requestId)
         }
+        if let active = inputEmbeddingTasks[sessionId] {
+            await cancelAndWait(sessionId: sessionId, requestId: active.requestId)
+        }
         #endif
         generation[sessionId] = nil
         generationTasks[sessionId] = nil
         #if POCKET_LLAMA_LINKED
         latentGenerationTasks[sessionId] = nil
         latentSequenceTasks[sessionId] = nil
+        inputEmbeddingTasks[sessionId] = nil
         #endif
         reports[sessionId] = nil
         #if POCKET_LLAMA_LINKED
         let loaded = sessions.removeValue(forKey: sessionId)
         loaded?.close()
+        #endif
+    }
+
+    private func hasActiveOperation(sessionId: String) -> Bool {
+        // Cancellation clears generation identity before the native task has drained.
+        // Retain exclusivity until every operation registry is clear, including unload.
+        if unloadingSessions.contains(sessionId) || generation[sessionId] != nil || generationTasks[sessionId] != nil {
+            return true
+        }
+        #if POCKET_LLAMA_LINKED
+        return latentGenerationTasks[sessionId] != nil || latentSequenceTasks[sessionId] != nil || inputEmbeddingTasks[sessionId] != nil
+        #else
+        return false
         #endif
     }
 
@@ -501,15 +626,18 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
         if generation[sessionId] == token {
             generation[sessionId] = nil
         }
-        if generationTasks[sessionId]?.requestId.caseInsensitiveCompare(token.uuidString) == .orderedSame {
+        if generationTasks[sessionId]?.token == token {
             generationTasks[sessionId] = nil
         }
         #if POCKET_LLAMA_LINKED
-        if latentGenerationTasks[sessionId]?.requestId.caseInsensitiveCompare(token.uuidString) == .orderedSame {
+        if latentGenerationTasks[sessionId]?.token == token {
             latentGenerationTasks[sessionId] = nil
         }
-        if latentSequenceTasks[sessionId]?.requestId.caseInsensitiveCompare(token.uuidString) == .orderedSame {
+        if latentSequenceTasks[sessionId]?.token == token {
             latentSequenceTasks[sessionId] = nil
+        }
+        if inputEmbeddingTasks[sessionId]?.token == token {
+            inputEmbeddingTasks[sessionId] = nil
         }
         #endif
     }
@@ -529,13 +657,15 @@ public actor LlamaCppMetalBackend: LatentSequenceExportingLlamaEngine {
 #if POCKET_LLAMA_LINKED
 private final class LoadedSession: @unchecked Sendable {
     let report: LlamaOffloadReport
+    let modelId: String
     private let handle: OpaquePointer
     private let lock = NSLock()
     private var alive = true
 
-    private init(handle: OpaquePointer, report: LlamaOffloadReport) {
+    private init(handle: OpaquePointer, report: LlamaOffloadReport, modelId: String) {
         self.handle = handle
         self.report = report
+        self.modelId = modelId
     }
 
     static func open(model: ModelDescriptor, gpuLayers: Int32, metalDeviceUsable: Bool) throws -> LoadedSession {
@@ -564,7 +694,7 @@ private final class LoadedSession: @unchecked Sendable {
             offloadedLayers: Int(layers),
             reportedLayerCount: Int(total)
         )
-        return LoadedSession(handle: handle, report: report)
+        return LoadedSession(handle: handle, report: report, modelId: model.id)
     }
 
     func generate(_ request: GenerationRequest) throws -> String {
@@ -687,6 +817,66 @@ private final class LoadedSession: @unchecked Sendable {
             tokenCount: tokenCount,
             embeddingDimension: dimension
         )
+    }
+
+    func inputEmbeddingCapabilities() throws -> NativeInputEmbeddingCapabilities {
+        lock.lock()
+        defer { lock.unlock() }
+        guard alive else { throw LlamaEngineError.sessionNotLoaded("Session is not loaded.") }
+        return try inputEmbeddingCapabilitiesLocked()
+    }
+
+    private func inputEmbeddingCapabilitiesLocked() throws -> NativeInputEmbeddingCapabilities {
+        var info = pocket_llama_input_embedding_info()
+        var err = [CChar](repeating: 0, count: 768)
+        let rc = err.withUnsafeMutableBufferPointer { buffer in
+            pocket_llama_get_input_embedding_info(handle, &info, buffer.baseAddress, buffer.count)
+        }
+        if rc == POCKET_LLAMA_ERR_UNSUPPORTED { throw NativeInferenceRuntimeError.inputEmbeddingUnavailable }
+        guard rc == POCKET_LLAMA_OK else { throw Self.map(rc, err) }
+        let capabilities = NativeInputEmbeddingCapabilities(
+            modelId: modelId,
+            inputDimension: Int(info.input_dimension),
+            vocabularySize: Int(info.vocabulary_size),
+            maxTokenCount: Int(info.max_token_count),
+            maxInputBytes: info.max_input_bytes
+        )
+        try NativeInputEmbeddingValidation.validateCapabilities(capabilities, expectedModelId: modelId)
+        return capabilities
+    }
+
+    func evaluateInputEmbeddings(_ request: NativeInputEmbeddingRequest) throws -> NativeInputEmbeddingEvaluationResult {
+        lock.lock()
+        defer { lock.unlock() }
+        guard alive else { throw LlamaEngineError.sessionNotLoaded("Session is not loaded.") }
+        let capabilities = try inputEmbeddingCapabilitiesLocked()
+        try NativeInputEmbeddingValidation.validateRequest(request, capabilities: capabilities)
+        var logits = [Float](repeating: 0, count: capabilities.vocabularySize)
+        var count = 0
+        var err = [CChar](repeating: 0, count: 768)
+        let rc = request.embeddings.withUnsafeBufferPointer { input in
+            logits.withUnsafeMutableBufferPointer { output in
+                err.withUnsafeMutableBufferPointer { errorBuffer in
+                    pocket_llama_evaluate_input_embeddings(
+                        handle, input.baseAddress, input.count,
+                        Int32(request.tokenCount), Int32(request.embeddingDimension),
+                        output.baseAddress, output.count, &count,
+                        errorBuffer.baseAddress, errorBuffer.count
+                    )
+                }
+            }
+        }
+        if rc == POCKET_LLAMA_ERR_UNSUPPORTED { throw NativeInferenceRuntimeError.inputEmbeddingUnavailable }
+        guard rc == POCKET_LLAMA_OK else { throw Self.map(rc, err) }
+        guard count == capabilities.vocabularySize else {
+            throw NativeInferenceRuntimeError.invalidInputEmbeddingOutput
+        }
+        let result = NativeInputEmbeddingEvaluationResult(
+            requestId: request.requestId, modelId: modelId,
+            tokenCount: request.tokenCount, embeddingDimension: request.embeddingDimension, logits: logits
+        )
+        try NativeInputEmbeddingValidation.validateResult(result, request: request, capabilities: capabilities)
+        return result
     }
 
     private func setSequenceCapture(maxTokens: Int, maxBytes: Int) throws {

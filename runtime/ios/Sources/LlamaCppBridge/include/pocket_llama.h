@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/* Status codes. A non-zero code means no text was produced for the caller to treat as success. */
+/* Status codes. A non-zero code means no result may be treated as success. */
 #define POCKET_LLAMA_OK 0
 #define POCKET_LLAMA_ERR_NOT_LINKED 1
 #define POCKET_LLAMA_ERR_MODEL 2
@@ -18,8 +18,22 @@ extern "C" {
 #define POCKET_LLAMA_ERR_CANCELLED 7
 #define POCKET_LLAMA_ERR_ARGS 8
 #define POCKET_LLAMA_ERR_BUFFER 9
+#define POCKET_LLAMA_ERR_UNSUPPORTED 10
 
 typedef struct pocket_llama pocket_llama;
+
+/* Independent of final-layer embedding export and GIE pooled output vectors. */
+#define POCKET_LLAMA_INPUT_MAX_TOKENS 256
+#define POCKET_LLAMA_INPUT_MAX_DIMENSION 8192
+#define POCKET_LLAMA_INPUT_MAX_BYTES (16 * 1024 * 1024)
+#define POCKET_LLAMA_INPUT_MAX_LOGITS 262144
+
+typedef struct pocket_llama_input_embedding_info {
+    int32_t input_dimension;
+    int32_t vocabulary_size;
+    int32_t max_token_count;
+    size_t max_input_bytes;
+} pocket_llama_input_embedding_info;
 
 #define POCKET_LLAMA_METADATA_ARCH_MAX 64
 #define POCKET_LLAMA_METADATA_NAME_MAX 128
@@ -82,7 +96,7 @@ int pocket_llama_inspect_gguf(
     size_t err_len);
 
 void pocket_llama_request_cancel(pocket_llama * engine);
-/* Reset cancellation before scheduling a new generation, never inside generate. */
+/* Reset cancellation before scheduling a new operation, never inside a worker. */
 void pocket_llama_reset_cancel(pocket_llama * engine);
 
 /* layers and total are -1 when llama.cpp did not log an offload line. */
@@ -99,6 +113,39 @@ int pocket_llama_generate(
     float temperature,
     char * out,
     size_t out_len,
+    char * err,
+    size_t err_len);
+
+/*
+ * Mechanical limits for the loaded llama decoder-family model and context.
+ * Does not run inference, imply semantic compatibility, or grant authority.
+ * Unsupported architectures fail explicitly. All fields are zero on failure.
+ */
+int pocket_llama_get_input_embedding_info(
+    pocket_llama * engine,
+    pocket_llama_input_embedding_info * out_info,
+    char * err,
+    size_t err_len);
+
+/*
+ * Experimental stateless prefill of one bounded row-major Float32 input matrix.
+ * These are first-layer MODEL INPUT embeddings, not captured final-layer outputs.
+ * No tokenization, BOS insertion, text suffix, sampling, or continuation occurs.
+ * Input count and output capacity are measured in floats. The exact input width
+ * and full vocabulary logit width come from get_input_embedding_info.
+ * Validates bounds/capacity/finiteness before changing context, requests only the
+ * last position's logits, then clears model memory after every attempted decode.
+ * On failure *out_count is zero; any logits copied by this call are cleared.
+ */
+int pocket_llama_evaluate_input_embeddings(
+    pocket_llama * engine,
+    const float * embeddings,
+    size_t input_count,
+    int32_t token_count,
+    int32_t input_dimension,
+    float * out_logits,
+    size_t out_capacity,
+    size_t * out_count,
     char * err,
     size_t err_len);
 

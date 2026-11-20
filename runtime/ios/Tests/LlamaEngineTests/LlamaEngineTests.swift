@@ -298,6 +298,60 @@ final class LlamaEngineTests: XCTestCase {
             // the shared deterministic fixture owns exact encoded-byte parity.
             print("POCKET_LLAMA_GIE_CAPTURE provider=\(gie.providerKind.rawValue) model_sha256=\(digest) codebook=synthetic-untrained codebook_sha256=\(gie.codebookSHA256) tokens=\(gie.tokenCount) dimension=\(gie.embeddingDimension) segments=\(expectedSpans.count) payloadBytes=\(gie.payloadByteLength)")
 
+            // Raw first-layer inputs are a separate representation from the
+            // captured/pooled final-layer GIE vectors above. These deterministic,
+            // non-collinear matrices are synthetic numerical probes, not tokens
+            // or a trained representation mapping. A/B/A must test actual model
+            // computation and independent context resets through the same lease.
+            let inputCapabilities = try await runtime.inputEmbeddingCapabilities(lease: lease)
+            XCTAssertEqual(inputCapabilities.modelId, model.id)
+            XCTAssertGreaterThanOrEqual(inputCapabilities.maxTokenCount, 2)
+            let inputRows = 2
+            let inputWidth = inputCapabilities.inputDimension
+            let inputsA: [Float] = (0..<(inputRows * inputWidth)).map {
+                Float(($0 * 17 + 3) % 41 - 20) / 128
+            }
+            let inputsB: [Float] = (0..<(inputRows * inputWidth)).map {
+                Float(($0 * 29 + 11) % 43 - 21) / 96
+            }
+            var inputResults: [NativeInputEmbeddingEvaluationResult] = []
+            for matrix in [inputsA, inputsB, inputsA] {
+                let inputRequest = NativeInputEmbeddingRequest(
+                    modelId: model.id, tokenCount: inputRows,
+                    embeddingDimension: inputWidth, embeddings: matrix
+                )
+                let evaluated = try await runtime.evaluateInputEmbeddings(lease: lease, request: inputRequest)
+                XCTAssertEqual(evaluated.requestId, inputRequest.requestId)
+                XCTAssertEqual(evaluated.modelId, model.id)
+                XCTAssertEqual(evaluated.tokenCount, inputRows)
+                XCTAssertEqual(evaluated.embeddingDimension, inputWidth)
+                XCTAssertEqual(evaluated.logits.count, inputCapabilities.vocabularySize)
+                XCTAssertTrue(evaluated.logits.allSatisfy(\.isFinite))
+                inputResults.append(evaluated)
+            }
+            let repeatMaxDelta = zip(inputResults[0].logits, inputResults[2].logits)
+                .map { abs(Double($0.0) - Double($0.1)) }.max() ?? .infinity
+            let changedMaxDelta = zip(inputResults[0].logits, inputResults[1].logits)
+                .map { abs(Double($0.0) - Double($0.1)) }.max() ?? 0
+            // Absolute logit tolerance, not text/hash equality. The changed input
+            // must exceed both a fixed numerical floor and measured repeat noise.
+            let repeatTolerance = 1e-3
+            XCTAssertLessThanOrEqual(repeatMaxDelta, repeatTolerance)
+            XCTAssertGreaterThan(changedMaxDelta, max(1e-2, repeatMaxDelta * 100))
+
+            let textAfterInputs = try await runtime.generate(
+                lease: lease,
+                request: GenerationRequest(prompt: "The capital of France is", maxTokens: 8, temperature: 0)
+            )
+            XCTAssertFalse(textAfterInputs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertEqual(textAfterInputs, latent.text, "Stateless raw input evaluation must preserve the ordinary greedy text path.")
+            let afterInputs = await runtime.snapshot()
+            let schedulerAfterInputs = await runtime.schedulerSnapshot()
+            XCTAssertEqual(afterInputs.activeUseCount, 0)
+            XCTAssertEqual(schedulerAfterInputs.activeRequests, 0)
+            XCTAssertEqual(schedulerAfterInputs.waitingRequests, 0)
+            print("POCKET_LLAMA_INPUT_EMBEDDING provider=\(runtime.providerKind.rawValue) model_sha256=\(digest) input=synthetic-first-layer sequence=A-B-A rows=\(inputRows) dimension=\(inputWidth) logits=\(inputCapabilities.vocabularySize) repeatMaxDelta=\(repeatMaxDelta) changedMaxDelta=\(changedMaxDelta) repeatTolerance=\(repeatTolerance) textAfter=passed")
+
             // Exercise the complete native path: llama.cpp final-token embedding
             // -> same-model int8 codec -> binary blob reference -> digest/replay
             // checks -> reconstructed vector. Authorization remains injected.
