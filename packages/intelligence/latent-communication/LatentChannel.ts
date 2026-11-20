@@ -42,7 +42,20 @@ export const LatentCodecSelectionSchema = z.object({
   decoderModel: ModelIdentitySchema,
   dtype: LatentDTypeSchema,
   maxPayloadBytes: z.number().int().positive().max(MAX_LATENT_PAYLOAD_BYTES)
-}).strict();
+}).strict().superRefine((selection, ctx) => {
+  // Protocol v1 has no authenticated, versioned cross-model alignment adapter.
+  // Sharing a codec name, tensor width, or codebook does not make foreign
+  // model activations semantically consumable. A future cross-model protocol
+  // must use an explicitly negotiated and separately evaluated version.
+  if (selection.encoderModel.modelId !== selection.decoderModel.modelId ||
+      selection.encoderModel.modelRevision !== selection.decoderModel.modelRevision) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["decoderModel"],
+      message: "Latent protocol v1 requires identical model ID and revision"
+    });
+  }
+});
 export type LatentCodecSelection = z.infer<typeof LatentCodecSelectionSchema>;
 
 export const LatentPayloadReferenceSchema = z.object({
@@ -124,7 +137,9 @@ export function negotiateLatentCodec(
   const source = LatentCapabilitySchema.safeParse(sender);
   const target = LatentCapabilitySchema.safeParse(recipient);
   if (!source.success || !target.success ||
-      !sender.supportsHiddenStateExport || !recipient.supportsLatentDecode) return null;
+      !sender.supportsHiddenStateExport || !recipient.supportsLatentDecode ||
+      sender.model.modelId !== recipient.model.modelId ||
+      sender.model.modelRevision !== recipient.model.modelRevision) return null;
 
   for (const encoder of sender.codecs) {
     const decoder = recipient.codecs.find(candidate =>
