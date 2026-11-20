@@ -1,0 +1,34 @@
+{
+  "format": "GIE1",
+  "version": 1,
+  "sourceArtifact": "gie-codebook-artifact-v1.json",
+  "codebookSha256": "a8b04c0cc3b84740c40f2fa37ccc93a98d2454ed319c500d4cc3c9767dde28f6",
+  "modelId": "fixture-model",
+  "modelRevision": "rev-1",
+  "tokenCount": 5,
+  "embeddingDimension": 2,
+  "tokenEmbeddings": [
+    1.25,
+    -2.5,
+    1.25,
+    -2.5,
+    1.25,
+    -2.5,
+    1.25,
+    -2.5,
+    3.75,
+    4.5
+  ],
+  "payloadByteLength": 56,
+  "payloadHex": "474945310102000100010200050000000200a8b04c0cc3b84740c40f2fa37ccc93a98d2454ed319c500d4cc3c9767dde28f6040001000001",
+  "segmentTokenCounts": [
+    4,
+    1
+  ],
+  "decodedSegmentEmbeddings": [
+    1.25,
+    -2.5,
+    3.75,
+    4.5
+  ]
+}
