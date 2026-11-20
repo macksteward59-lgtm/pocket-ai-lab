@@ -72,6 +72,11 @@ final class NativeGIECaptureEncoderTests: XCTestCase {
         )
         let lease = try await runtime.acquire(model: model, estimatedMemoryMB: 128)
         let request = GenerationRequest(prompt: "Synthetic sequence", maxTokens: 5, temperature: 0)
+        let codebook = try NativeGIECodebookArtifact.load(
+            bytes, expectedSHA256: artifact.sha256, expectedModelIdentity: id
+        )
+        let minimumPayloadBytes = try NativeGIESequenceEncoder(codebook: codebook).minimumPayloadByteLength
+        XCTAssertEqual(minimumPayloadBytes, 53, "The fixture requires a 50-byte header, one span and one index.")
 
         // Wrong model identity or corrupted canonical artifact must be rejected
         // before the injected engine is ever called.
@@ -97,8 +102,21 @@ final class NativeGIECaptureEncoderTests: XCTestCase {
             XCTFail("Wrong codebook digest should be rejected")
         } catch NativeGIESequenceCodecError.codebookMismatch {
         }
+        do {
+            _ = try await NativeGIECaptureEncoder.generate(
+                runtime: runtime, lease: lease, request: request,
+                expectedModelIdentity: id, codebookArtifact: bytes,
+                expectedCodebookSHA256: artifact.sha256,
+                maxPayloadBytes: minimumPayloadBytes - 1
+            )
+            XCTFail("A budget smaller than any nonempty GIE1 frame should fail before inference")
+        } catch NativeGIECaptureError.payloadTooLarge {
+        }
         let callsBeforeGeneration = await engine.sequenceCalls()
         XCTAssertEqual(callsBeforeGeneration, 0)
+        let schedulerBeforeGeneration = await runtime.schedulerSnapshot()
+        XCTAssertEqual(schedulerBeforeGeneration.activeRequests, 0)
+        XCTAssertEqual(schedulerBeforeGeneration.waitingRequests, 0)
 
         let encoded = try await NativeGIECaptureEncoder.generate(
             runtime: runtime, lease: lease, request: request,
@@ -116,17 +134,78 @@ final class NativeGIECaptureEncoderTests: XCTestCase {
         XCTAssertEqual(encoded.embeddingDimension, sample.embeddingDimension)
         XCTAssertEqual(encoded.payloadByteLength, sample.payloadByteLength)
         XCTAssertEqual(encoded.payload, try data(hex: sample.payloadHex))
-        let codebook = try NativeGIECodebookArtifact.load(
-            bytes, expectedSHA256: artifact.sha256, expectedModelIdentity: id
-        )
         let decoded = try NativeGIESequenceCodec(codebook: codebook).decode(
             encoded.payload, modelIdentity: id
         )
         XCTAssertEqual(decoded.segmentTokenCounts, sample.segmentTokenCounts)
         XCTAssertEqual(decoded.segmentEmbeddings, sample.decodedSegmentEmbeddings)
+
+        // This budget can hold one segment, so it must be admitted; the actual
+        // five-token result needs two segments and must still fail after capture.
+        do {
+            _ = try await NativeGIECaptureEncoder.generate(
+                runtime: runtime, lease: lease, request: request,
+                expectedModelIdentity: id, codebookArtifact: bytes,
+                expectedCodebookSHA256: artifact.sha256,
+                maxPayloadBytes: minimumPayloadBytes
+            )
+            XCTFail("Actual multi-segment payload should exceed the admitted minimum budget")
+        } catch NativeGIECaptureError.payloadTooLarge {
+        }
+        let callsAfterEncodingFailure = await engine.sequenceCalls()
+        XCTAssertEqual(callsAfterEncodingFailure, 2)
         let pool = await runtime.snapshot()
         XCTAssertEqual(pool.activeUseCount, 0)
         XCTAssertEqual(pool.activeLeaseCount, 1)
+        let schedulerAfterFailure = await runtime.schedulerSnapshot()
+        XCTAssertEqual(schedulerAfterFailure.activeRequests, 0)
+        XCTAssertEqual(schedulerAfterFailure.waitingRequests, 0)
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+        try await runtime.unload(modelId: model.id)
+    }
+
+    func testCanonicalIdentityRejectsDecomposedLeaseAndCapturedModelId() async throws {
+        let identity = NativeLatentModelIdentity(modelId: "model-caf\u{e9}", modelRevision: "revision-1")
+        let decomposedId = "model-cafe\u{301}"
+        let artifact = try GIECodebookTestSupport.artifact(
+            modelId: identity.modelId, modelRevision: identity.modelRevision, embeddingDimension: 2
+        )
+        let captured = LlamaLatentSequenceOutput(
+            modelId: decomposedId, text: "synthetic", embeddings: [-1, 1],
+            tokenCount: 1, embeddingDimension: 2
+        )
+        let engine = FixtureSequenceEngine(output: captured)
+        let runtime = try NativeInferenceRuntime(
+            engine: engine,
+            poolConfiguration: try ModelPoolConfiguration(
+                maxResidentMemoryMB: 1024, maxLoadedModels: 1, minimumFreeMemoryMB: 0
+            ),
+            availableMemoryMB: { 2048 }, maxConcurrentRequests: 1
+        )
+        let model = ModelDescriptor(
+            id: decomposedId, name: "Unicode fixture", path: "/tmp/not-a-loaded-real-model.gguf",
+            contextLength: 512
+        )
+        let lease = try await runtime.acquire(model: model, estimatedMemoryMB: 128)
+        do {
+            _ = try await NativeGIECaptureEncoder.generate(
+                runtime: runtime, lease: lease,
+                request: GenerationRequest(prompt: "Unicode fixture", maxTokens: 1, temperature: 0),
+                expectedModelIdentity: identity, codebookArtifact: artifact,
+                expectedCodebookSHA256: GIECodebookTestSupport.sha256(artifact)
+            )
+            XCTFail("Canonically equivalent lease IDs must not satisfy an exact byte identity")
+        } catch NativeGIECaptureError.modelIdentityMismatch {
+        }
+        let calls = await engine.sequenceCalls()
+        XCTAssertEqual(calls, 0)
+        XCTAssertThrowsError(try NativeGIECaptureEncoder.encodeCaptured(
+            captured, expectedModelIdentity: identity, codebookArtifact: artifact,
+            expectedCodebookSHA256: GIECodebookTestSupport.sha256(artifact)
+        )) { XCTAssertEqual($0 as? NativeGIECaptureError, .modelIdentityMismatch) }
+        let pool = await runtime.snapshot()
+        XCTAssertEqual(pool.activeUseCount, 0)
         let released = await runtime.release(lease)
         XCTAssertTrue(released)
         try await runtime.unload(modelId: model.id)

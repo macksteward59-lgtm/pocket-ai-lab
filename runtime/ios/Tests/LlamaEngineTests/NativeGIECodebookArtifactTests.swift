@@ -74,6 +74,49 @@ final class NativeGIECodebookArtifactTests: XCTestCase {
         ))
     }
 
+    func testRejectsNonCanonicalUnicodeBytesEvenWithMatchingDigestAndIdentity() throws {
+        let canonical = NativeLatentModelIdentity(modelId: "model-caf\u{e9}", modelRevision: "r\u{e9}vision")
+        let canonicalBytes = try GIECodebookTestSupport.artifact(
+            modelId: canonical.modelId, modelRevision: canonical.modelRevision,
+            embeddingDimension: 2
+        )
+        XCTAssertNoThrow(try NativeGIECodebookArtifact.load(
+            canonicalBytes, expectedSHA256: digest(canonicalBytes), expectedModelIdentity: canonical
+        ))
+
+        let decomposedIdentities = [
+            NativeLatentModelIdentity(modelId: "model-cafe\u{301}", modelRevision: canonical.modelRevision),
+            NativeLatentModelIdentity(modelId: canonical.modelId, modelRevision: "re\u{301}vision")
+        ]
+        for identity in decomposedIdentities {
+            let bytes = try GIECodebookTestSupport.artifact(
+                modelId: identity.modelId, modelRevision: identity.modelRevision,
+                embeddingDimension: 2
+            )
+            // Expected identity uses the same malformed bytes. Digest and
+            // identity matching cannot substitute for NFC byte validation.
+            XCTAssertThrowsError(try NativeGIECodebookArtifact.load(
+                bytes, expectedSHA256: digest(bytes), expectedModelIdentity: identity
+            )) { XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidModelIdentity) }
+        }
+    }
+
+    func testCanonicalArtifactRequiresByteExactExpectedUnicodeIdentity() throws {
+        let canonical = NativeLatentModelIdentity(modelId: "model-caf\u{e9}", modelRevision: "r\u{e9}vision")
+        let bytes = try GIECodebookTestSupport.artifact(
+            modelId: canonical.modelId, modelRevision: canonical.modelRevision,
+            embeddingDimension: 2
+        )
+        for expected in [
+            NativeLatentModelIdentity(modelId: "model-cafe\u{301}", modelRevision: canonical.modelRevision),
+            NativeLatentModelIdentity(modelId: canonical.modelId, modelRevision: "re\u{301}vision")
+        ] {
+            XCTAssertThrowsError(try NativeGIECodebookArtifact.load(
+                bytes, expectedSHA256: digest(bytes), expectedModelIdentity: expected
+            )) { XCTAssertEqual($0 as? NativeGIESequenceCodecError, .invalidModelIdentity) }
+        }
+    }
+
     func testRejectsTrailingBytesEvenWhenDigestMatchesBytes() throws {
         let (fixture, data) = try fixture()
         var changed = data

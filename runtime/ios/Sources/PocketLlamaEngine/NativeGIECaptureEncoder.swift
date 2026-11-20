@@ -44,8 +44,8 @@ public enum NativeGIECaptureEncoder {
         maxLatentBytes: Int = maximumLatentBytes,
         maxPayloadBytes: Int = maximumPayloadBytes
     ) async throws -> NativeGIEEncodedGeneration {
-        guard expectedModelIdentity.modelId == lease.model.id,
-              expectedModelIdentity.modelId == lease.session.modelId,
+        guard expectedModelIdentity.modelId.utf8.elementsEqual(lease.model.id.utf8),
+              expectedModelIdentity.modelId.utf8.elementsEqual(lease.session.modelId.utf8),
               !expectedModelIdentity.modelRevision.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NativeGIECaptureError.modelIdentityMismatch
         }
@@ -62,6 +62,9 @@ public enum NativeGIECaptureEncoder {
             expectedModelIdentity: expectedModelIdentity
         )
         let encoder = try NativeGIESequenceEncoder(codebook: codebook)
+        guard maxPayloadBytes >= encoder.minimumPayloadByteLength else {
+            throw NativeGIECaptureError.payloadTooLarge
+        }
         try Task.checkCancellation()
 
         let captured = try await runtime.generateWithLatentSequence(
@@ -105,6 +108,9 @@ public enum NativeGIECaptureEncoder {
             expectedModelIdentity: expectedModelIdentity
         )
         let encoder = try NativeGIESequenceEncoder(codebook: codebook)
+        guard maxPayloadBytes >= encoder.minimumPayloadByteLength else {
+            throw NativeGIECaptureError.payloadTooLarge
+        }
         return try encodeValidated(
             captured,
             expectedModelIdentity: expectedModelIdentity,
@@ -125,7 +131,7 @@ public enum NativeGIECaptureEncoder {
         maxLatentBytes: Int,
         maxPayloadBytes: Int
     ) throws -> NativeGIEEncodedGeneration {
-        guard captured.modelId == expectedModelIdentity.modelId else {
+        guard captured.modelId.utf8.elementsEqual(expectedModelIdentity.modelId.utf8) else {
             throw NativeGIECaptureError.modelIdentityMismatch
         }
         let (elements, overflow) = captured.tokenCount.multipliedReportingOverflow(by: captured.embeddingDimension)

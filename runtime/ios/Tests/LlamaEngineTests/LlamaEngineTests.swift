@@ -248,6 +248,56 @@ final class LlamaEngineTests: XCTestCase {
             XCTAssertTrue(latentSequence.embeddings.allSatisfy(\.isFinite))
             print("POCKET_LLAMA_LATENT_SEQUENCE tokens=\(latentSequence.tokenCount) dimension=\(latentSequence.embeddingDimension) bytes=\(latentSequence.embeddings.count * MemoryLayout<Float>.size)")
 
+            // Exercise a new, real llama.cpp generation through the complete
+            // capture adapter. This codebook is synthetic and untrained: its
+            // scalar [-1, +1] centroids validate plumbing, not task quality.
+            let gieIdentity = NativeLatentModelIdentity(modelId: model.id, modelRevision: digest)
+            let gieArtifact = try GIECodebookTestSupport.artifact(
+                modelId: model.id, modelRevision: digest,
+                embeddingDimension: latentSequence.embeddingDimension,
+                maxTokensPerSegment: 4
+            )
+            let gieArtifactDigest = GIECodebookTestSupport.sha256(gieArtifact)
+            let gie = try await NativeGIECaptureEncoder.generate(
+                runtime: runtime, lease: lease,
+                request: GenerationRequest(
+                    prompt: "The capital of France is", maxTokens: 8, temperature: 0
+                ),
+                expectedModelIdentity: gieIdentity,
+                codebookArtifact: gieArtifact,
+                expectedCodebookSHA256: gieArtifactDigest,
+                maxLatentTokens: 8,
+                maxLatentBytes: 8 * latentSequence.embeddingDimension * MemoryLayout<Float>.size
+            )
+            XCTAssertEqual(gie.providerKind, .llamaCpp)
+            XCTAssertEqual(gie.modelIdentity, gieIdentity)
+            XCTAssertEqual(gie.codebookSHA256, gieArtifactDigest)
+            XCTAssertEqual(gie.text, latentSequence.text)
+            XCTAssertEqual(gie.tokenCount, latentSequence.tokenCount)
+            XCTAssertEqual(gie.embeddingDimension, latentSequence.embeddingDimension)
+            XCTAssertGreaterThan(gie.tokenCount, 0)
+            XCTAssertLessThanOrEqual(gie.tokenCount, 8)
+
+            let gieCodebook = try NativeGIECodebookArtifact.load(
+                gieArtifact, expectedSHA256: gieArtifactDigest, expectedModelIdentity: gieIdentity
+            )
+            let gieDecoded = try NativeGIESequenceCodec(codebook: gieCodebook).decode(
+                gie.payload, modelIdentity: gieIdentity
+            )
+            let expectedSpans = stride(from: 0, to: gie.tokenCount, by: 4).map {
+                min(4, gie.tokenCount - $0)
+            }
+            XCTAssertEqual(gieDecoded.tokenCount, gie.tokenCount)
+            XCTAssertEqual(gieDecoded.embeddingDimension, gie.embeddingDimension)
+            XCTAssertEqual(gieDecoded.segmentTokenCounts, expectedSpans)
+            XCTAssertEqual(gieDecoded.segmentTokenCounts.reduce(0, +), gie.tokenCount)
+            XCTAssertEqual(gieDecoded.segmentEmbeddings.count, expectedSpans.count * gie.embeddingDimension)
+            XCTAssertTrue(gieDecoded.segmentEmbeddings.allSatisfy { $0.isFinite && ($0 == -1 || $0 == 1) })
+            XCTAssertEqual(gie.payloadByteLength, 50 + expectedSpans.count * (2 + gie.embeddingDimension))
+            // Separate native generations may differ at a quantization boundary;
+            // the shared deterministic fixture owns exact encoded-byte parity.
+            print("POCKET_LLAMA_GIE_CAPTURE provider=\(gie.providerKind.rawValue) model_sha256=\(digest) codebook=synthetic-untrained codebook_sha256=\(gie.codebookSHA256) tokens=\(gie.tokenCount) dimension=\(gie.embeddingDimension) segments=\(expectedSpans.count) payloadBytes=\(gie.payloadByteLength)")
+
             // Exercise the complete native path: llama.cpp final-token embedding
             // -> same-model int8 codec -> binary blob reference -> digest/replay
             // checks -> reconstructed vector. Authorization remains injected.
@@ -302,6 +352,9 @@ final class LlamaEngineTests: XCTestCase {
             let afterGeneration = await runtime.snapshot()
             XCTAssertEqual(afterGeneration.activeLeaseCount, 1)
             XCTAssertEqual(afterGeneration.activeUseCount, 0)
+            let afterGenerationScheduler = await runtime.schedulerSnapshot()
+            XCTAssertEqual(afterGenerationScheduler.activeRequests, 0)
+            XCTAssertEqual(afterGenerationScheduler.waitingRequests, 0)
             let released = await runtime.release(lease)
             XCTAssertTrue(released, "The exact evaluation lease must be releasable.")
             try await runtime.unload(modelId: model.id)

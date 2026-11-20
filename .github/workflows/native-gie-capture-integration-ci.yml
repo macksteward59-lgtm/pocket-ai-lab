@@ -7,6 +7,8 @@ on:
     paths:
       - "runtime/ios/Sources/PocketLlamaEngine/**"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/NativeGIECodebookArtifactTests.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/GIECodebookTestSupport.swift"
       - "runtime/ios/Tests/GIEStandaloneSmoke/**"
       - "runtime/ios/Tests/GIECaptureStandaloneSmoke/**"
       - ".github/workflows/native-gie-capture-integration-ci.yml"
@@ -16,6 +18,8 @@ on:
     paths:
       - "runtime/ios/Sources/PocketLlamaEngine/**"
       - "runtime/ios/Tests/LlamaEngineTests/NativeGIECaptureEncoderTests.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/NativeGIECodebookArtifactTests.swift"
+      - "runtime/ios/Tests/LlamaEngineTests/GIECodebookTestSupport.swift"
       - "runtime/ios/Tests/GIEStandaloneSmoke/**"
       - "runtime/ios/Tests/GIECaptureStandaloneSmoke/**"
       - ".github/workflows/native-gie-capture-integration-ci.yml"
@@ -66,6 +70,7 @@ jobs:
           done
           swiftc -swift-version 5 -emit-executable -parse-as-library \
             "${sources[@]}" \
+            runtime/ios/Tests/LlamaEngineTests/GIECodebookTestSupport.swift \
             runtime/ios/Tests/GIECaptureStandaloneSmoke/main.swift \
             -o "$RUNNER_TEMP/gie-capture-smoke"
           "$RUNNER_TEMP/gie-capture-smoke" \

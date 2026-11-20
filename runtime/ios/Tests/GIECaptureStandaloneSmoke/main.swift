@@ -93,6 +93,7 @@ private enum GIECaptureSmoke {
             Sequence.self, from: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[2]))
         )
         let codebookBytes = try bytes(hex: artifact.artifactHex)
+        try verifyCanonicalUnicodeIdentity()
         let identity = NativeLatentModelIdentity(
             modelId: artifact.modelId, modelRevision: artifact.modelRevision
         )
@@ -118,6 +119,11 @@ private enum GIECaptureSmoke {
         )
         let lease = try await runtime.acquire(model: model, estimatedMemoryMB: 128)
         let request = GenerationRequest(prompt: "Synthetic sequence", maxTokens: sample.tokenCount, temperature: 0)
+        let codebook = try NativeGIECodebookArtifact.load(
+            codebookBytes, expectedSHA256: artifact.sha256, expectedModelIdentity: identity
+        )
+        let minimumPayloadBytes = try NativeGIESequenceEncoder(codebook: codebook).minimumPayloadByteLength
+        try check(minimumPayloadBytes == 53, "wrong minimum GIE1 frame size for shared fixture")
 
         // Codebook preflight must fail before invoking any engine attempt.
         do {
@@ -130,8 +136,18 @@ private enum GIECaptureSmoke {
         } catch NativeGIESequenceCodecError.codebookMismatch {
             // Correct fail-closed behavior.
         }
+        do {
+            _ = try await NativeGIECaptureEncoder.generate(
+                runtime: runtime, lease: lease, request: request,
+                expectedModelIdentity: identity, codebookArtifact: codebookBytes,
+                expectedCodebookSHA256: artifact.sha256,
+                maxPayloadBytes: minimumPayloadBytes - 1
+            )
+            throw CheckFailure.mismatch("impossible payload budget was accepted")
+        } catch NativeGIECaptureError.payloadTooLarge {
+        }
         let before = await engine.count()
-        try check(before == 0, "codebook preflight performed inference")
+        try check(before == 0, "codebook or payload preflight performed inference")
 
         let encoded = try await NativeGIECaptureEncoder.generate(
             runtime: runtime, lease: lease, request: request,
@@ -146,20 +162,62 @@ private enum GIECaptureSmoke {
         try check(encoded.modelIdentity == identity, "wrong model or revision")
         let expectedPayload = try bytes(hex: sample.payloadHex)
         try check(encoded.payload == expectedPayload, "GIE1 bytes differ from TypeScript fixture")
-        let codebook = try NativeGIECodebookArtifact.load(
-            codebookBytes, expectedSHA256: artifact.sha256, expectedModelIdentity: identity
-        )
         let decoded = try NativeGIESequenceCodec(codebook: codebook).decode(
             encoded.payload, modelIdentity: identity
         )
         try check(decoded.segmentTokenCounts == sample.segmentTokenCounts, "ordered spans")
         try check(decoded.segmentEmbeddings == sample.decodedSegmentEmbeddings, "pooled vectors")
+        do {
+            _ = try await NativeGIECaptureEncoder.generate(
+                runtime: runtime, lease: lease, request: request,
+                expectedModelIdentity: identity, codebookArtifact: codebookBytes,
+                expectedCodebookSHA256: artifact.sha256,
+                maxPayloadBytes: minimumPayloadBytes
+            )
+            throw CheckFailure.mismatch("oversized actual payload was accepted")
+        } catch NativeGIECaptureError.payloadTooLarge {
+        }
+        let afterFailure = await engine.count()
+        try check(afterFailure == 2, "valid minimum budget should allow capture before actual-size rejection")
         let snapshot = await runtime.snapshot()
         try check(snapshot.activeUseCount == 0, "model use pin leaked")
         try check(snapshot.activeLeaseCount == 1, "lease released unexpectedly")
+        let scheduler = await runtime.schedulerSnapshot()
+        try check(scheduler.activeRequests == 0 && scheduler.waitingRequests == 0, "scheduler permit leaked")
         let released = await runtime.release(lease)
         try check(released, "lease release failed")
         try await runtime.unload(modelId: model.id)
-        print("POCKET_GIE_CAPTURE_OK execution=fixture-engine nativeProvider=other GIE1Bytes=\(encoded.payload.count) segments=\(decoded.segmentTokenCounts.count) generationCalls=\(after)")
+        print("POCKET_GIE_CAPTURE_OK execution=fixture-engine nativeProvider=other GIE1Bytes=\(encoded.payload.count) segments=\(decoded.segmentTokenCounts.count) generationCalls=\(afterFailure) preflightCalls=\(before) unicodeRejections=4 failureCleanup=passed")
+    }
+
+    private static func verifyCanonicalUnicodeIdentity() throws {
+        let canonical = NativeLatentModelIdentity(modelId: "model-caf\u{e9}", modelRevision: "r\u{e9}vision")
+        let canonicalBytes = try GIECodebookTestSupport.artifact(
+            modelId: canonical.modelId, modelRevision: canonical.modelRevision, embeddingDimension: 2
+        )
+        _ = try NativeGIECodebookArtifact.load(
+            canonicalBytes,
+            expectedSHA256: GIECodebookTestSupport.sha256(canonicalBytes),
+            expectedModelIdentity: canonical
+        )
+        for identity in [
+            NativeLatentModelIdentity(modelId: "model-cafe\u{301}", modelRevision: canonical.modelRevision),
+            NativeLatentModelIdentity(modelId: canonical.modelId, modelRevision: "re\u{301}vision")
+        ] {
+            let nonCanonicalBytes = try GIECodebookTestSupport.artifact(
+                modelId: identity.modelId, modelRevision: identity.modelRevision, embeddingDimension: 2
+            )
+            for bytesToLoad in [nonCanonicalBytes, canonicalBytes] {
+                do {
+                    _ = try NativeGIECodebookArtifact.load(
+                        bytesToLoad,
+                        expectedSHA256: GIECodebookTestSupport.sha256(bytesToLoad),
+                        expectedModelIdentity: identity
+                    )
+                    throw CheckFailure.mismatch("noncanonical or non-exact Unicode identity was accepted")
+                } catch NativeGIESequenceCodecError.invalidModelIdentity {
+                }
+            }
+        }
     }
 }
