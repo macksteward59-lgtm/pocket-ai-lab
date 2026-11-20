@@ -98,3 +98,30 @@ throughput or memory improvement is claimed. The hosted runners do not establish
 physical iPhone Air or Apple Silicon acceptance. Frozen benchmark configuration,
 model weights, GIE representation, APEX/East permissions and production routing
 are unchanged.
+
+## Independent CI scheduling
+
+The first diagnostic continuation spent more than its configured simulator boot
+window with startup still reported active and no finalized log. That ordering
+blocked the independent macOS regression and recipient measurement before either
+could execute. The earlier decode-drain revision passed its hosted Darwin fixture
+and generic device link, then reached the same simulator stage.
+
+The workflow therefore runs the macOS package build, regression, frozen recipient
+measurement and evidence upload before simulator startup. It keeps every iOS
+stage and the original timeouts. Explicit non-cancellation and dependency checks
+allow simulator selection and generic app compilation after a prior macOS failure;
+simulator-dependent tests require successful boot, and app XCTest additionally
+requires its app build. Any failure still fails the job. No `continue-on-error`
+is used, and successful later stages do not erase an earlier failure.
+
+The required GGUF path is written only into the isolated `/tmp/pocket-host`
+package. The source checkout's `SmokePath.swift` remains unchanged, with no model
+configured for the later simulator tests. This preserves their existing real-model
+skip behavior and prevents the host path from accidentally enabling those tests
+inside the simulator. The same model pin, test source and benchmark configuration
+are used for macOS execution.
+
+This is a scheduling change, not a simulator fix or a test pass. The overall native
+gate still requires all its stages. The changed order also means hosted timing
+differences cannot be attributed solely to the C synchronization repair.
