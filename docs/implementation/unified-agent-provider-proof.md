@@ -73,7 +73,7 @@ npm run build
 
 The deterministic test deliberately injects a test-double provider, and its `executionKind` is always `test-double`. It checks seven invocation/message pairs, stage context length, unverified memory, resource-denial, provider failure, and malformed output rejection. It cannot establish a live-model, native-device, authorization or memory-performance success.
 
-These tests are automatically covered by the existing `Pocket AI Lab CI` on `codex/**` branches and main-targeting pull requests, via `npm test` / `test:desktop`. **No second, competing CI workflow is needed.**
+These tests are included in the existing `Pocket AI Lab CI` through `npm test` / `test:desktop`. However, current `main` has a **separate pre-existing full TypeScript build blocker**: checked-in `packages/intelligence/__tests__/autonomy.test.ts` imports East lifecycle components that are still unmerged in PR #157. The exact-head branch-wide Pocket AI Lab CI run fails at `Type-check and build` on those missing imports, so it cannot establish anything about this proof. To avoid reimplementing someone else's active East work or weakening the project build, `.github/workflows/unified-agent-proof-ci.yml` also runs an **isolated, explicitly scoped proof and desktop regression check**. A green scoped check does not make the failing full-project check green, and both outcomes must be reported separately.
 
 ## Integration into the full product
 
