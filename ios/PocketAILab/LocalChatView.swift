@@ -961,12 +961,12 @@ struct LocalChatView: View {
                                     if let failure = task.failureSummary {
                                         Text(failure).font(.caption).foregroundStyle(.secondary)
                                     }
-                                    ForEach(task.cloudAnalysisAttempts ?? []) { attempt in
-                                        CloudAnalysisAttemptView(attempt: attempt)
-                                    }
-                                    Button("Request cloud analysis") { cloudAnalysisTask = task }
-                                        .disabled(model.isBusy || task.status == .running ||
-                                            (task.cloudAnalysisAttempts ?? []).count >= LocalAgentTaskHistoryStore.maximumCloudAttemptsPerTask)
+                                    CloudAnalysisTaskSection(
+                                        attempts: task.cloudAnalysisAttempts ?? [],
+                                        isDisabled: model.isBusy || task.status == .running ||
+                                            (task.cloudAnalysisAttempts ?? []).count >= LocalAgentTaskHistoryStore.maximumCloudAttemptsPerTask,
+                                        onRequest: { cloudAnalysisTask = task }
+                                    )
                                     Text("Task history is a record only. Interrupted tasks are not automatically resumed.")
                                         .font(.caption2).foregroundStyle(.secondary)
                                 } label: {

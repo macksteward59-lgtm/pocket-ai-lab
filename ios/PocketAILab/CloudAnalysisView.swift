@@ -25,47 +25,10 @@ struct CloudAnalysisView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Selected task") {
-                    Text(task.objective).font(.subheadline)
-                    Text("Add a separate cloud assessment to this task. The local Agent Team result remains available.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Section("Cloud connection") {
-                    TextField("Gateway HTTPS address", text: $origin)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
-                    TextField("Gateway profile", text: $profileID)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    TextField("DeepSeek model", text: $requestedModel)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    SecureField("Gateway access token", text: $applicationToken)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    Text("Use an explicitly configured gateway. Its access token is kept for this sheet only. Your DeepSeek API key belongs on the server.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                .disabled(isSubmitting)
-                Section("Text to send") {
-                    TextEditor(text: $inputText).frame(minHeight: 150).disabled(isSubmitting)
-                    Text("\(inputText.utf8.count) / 4,000 bytes · standard response mode · up to 512 output tokens")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("Only this selected text and task identifiers are sent to the gateway. It sends the text to DeepSeek. Other task results, conversation history and saved memories are not included.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Section {
-                    Toggle("Allow this one request to the displayed gateway and DeepSeek model", isOn: $consent)
-                        .disabled(isSubmitting)
-                    Button("Send cloud analysis") { submit() }
-                        .disabled(!consent || isSubmitting || model.isBusy || inputText.utf8.count > 4_000)
-                    if isSubmitting {
-                        ProgressView("Waiting for cloud analysis")
-                        Button("Stop waiting", role: .cancel) { requestTask?.cancel() }
-                        Text("Stopping the wait does not confirm that the provider stopped processing or billing the request.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let validationMessage {
-                        Text(validationMessage).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Text(model.cloudAnalysisStatus).font(.caption).foregroundStyle(.secondary)
-                }
+                selectedTaskSection
+                connectionSection
+                selectedTextSection
+                submissionSection
             }
             .navigationTitle("Cloud analysis")
             .toolbar {
@@ -83,6 +46,59 @@ struct CloudAnalysisView: View {
                 consent = false
                 applicationToken = ""
             }
+        }
+    }
+
+    private var selectedTaskSection: some View {
+        Section("Selected task") {
+            Text(task.objective).font(.subheadline)
+            Text("Add a separate cloud assessment to this task. The local Agent Team result remains available.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var connectionSection: some View {
+        Section("Cloud connection") {
+            TextField("Gateway HTTPS address", text: $origin)
+                .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
+            TextField("Gateway profile", text: $profileID)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+            TextField("DeepSeek model", text: $requestedModel)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+            SecureField("Gateway access token", text: $applicationToken)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+            Text("Use an explicitly configured gateway. Its access token is kept for this sheet only. Your DeepSeek API key belongs on the server.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .disabled(isSubmitting)
+    }
+
+    private var selectedTextSection: some View {
+        Section("Text to send") {
+            TextEditor(text: $inputText).frame(minHeight: 150).disabled(isSubmitting)
+            Text("\(inputText.utf8.count) / 4,000 bytes · standard response mode · up to 512 output tokens")
+                .font(.caption).foregroundStyle(.secondary)
+            Text("Only this selected text and task identifiers are sent to the gateway. It sends the text to DeepSeek. Other task results, conversation history and saved memories are not included.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var submissionSection: some View {
+        Section {
+            Toggle("Allow this one request to the displayed gateway and DeepSeek model", isOn: $consent)
+                .disabled(isSubmitting)
+            Button("Send cloud analysis") { submit() }
+                .disabled(!consent || isSubmitting || model.isBusy || inputText.utf8.count > 4_000)
+            if isSubmitting {
+                ProgressView("Waiting for cloud analysis")
+                Button("Stop waiting", role: .cancel) { requestTask?.cancel() }
+                Text("Stopping the wait does not confirm that the provider stopped processing or billing the request.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if let validationMessage {
+                Text(validationMessage).font(.caption).foregroundStyle(.secondary)
+            }
+            Text(model.cloudAnalysisStatus).font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -136,5 +152,23 @@ struct CloudAnalysisAttemptView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Keeps the task-row cloud controls in their own typechecked expression.
+/// Group preserves the surrounding task disclosure's existing layout.
+struct CloudAnalysisTaskSection: View {
+    let attempts: [CloudAnalysisAttempt]
+    let isDisabled: Bool
+    let onRequest: () -> Void
+
+    var body: some View {
+        Group {
+            ForEach(attempts) { attempt in
+                CloudAnalysisAttemptView(attempt: attempt)
+            }
+            Button("Request cloud analysis", action: onRequest)
+                .disabled(isDisabled)
+        }
     }
 }
