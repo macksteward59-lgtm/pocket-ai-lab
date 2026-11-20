@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import {
   runUnifiedAgentProof,
   EXPECTED_ATTEMPTS
@@ -68,6 +70,8 @@ test("unified PoC uses existing orchestrator and links seven distinct calls, mes
   assert.equal(result.limits.nativeIphoneExecution, false);
   assert.equal(result.model.modelArtifactIdentityAttested, false);
   assert.match(result.localRecordSha256, /^[a-f0-9]{64}$/);
+  const { localRecordSha256, ...record } = result;
+  assert.equal(localRecordSha256, createHash("sha256").update(JSON.stringify(record)).digest("hex"));
 });
 
 test("inference failure rejects; the harness never fabricates missing agent messages", async () => {
@@ -116,4 +120,28 @@ test("negative verification remains an unverified memory even when synthesis is 
   assert.match(proof.outcome.synthesis, /Fixture synthesis/);
   assert.equal(proof.memory.unverifiedEpisodicRecords, 1);
   assert.equal(proof.memory.records[0].verified, false);
+});
+
+test("CLI rejects non-loopback inference and requires explicit live-model opt-in", () => {
+  const path = new URL("./unified-agent-proof.mjs", import.meta.url).pathname;
+  const remote = spawnSync(process.execPath, ["--import", "tsx", path], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    timeout: 15_000,
+    env: {
+      ...process.env,
+      POCKET_UNIFIED_POC: "1",
+      POCKET_POC_BASE_URL: "https://example.com"
+    }
+  });
+  assert.equal(remote.status, 1);
+  assert.match(remote.stderr, /loopback llama-server/);
+  const unapproved = spawnSync(process.execPath, ["--import", "tsx", path], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    timeout: 15_000,
+    env: { ...process.env, POCKET_UNIFIED_POC: "0" }
+  });
+  assert.equal(unapproved.status, 1);
+  assert.match(unapproved.stderr, /POCKET_UNIFIED_POC=1/);
 });
