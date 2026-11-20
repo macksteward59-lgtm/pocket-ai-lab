@@ -28,12 +28,14 @@ final class NativeGIESequenceEncoderTests: XCTestCase {
         let encoder = try NativeGIESequenceEncoder(codebook: codebook())
 
         // Segment means are [10.5, 20.25, 2, 2] and
-        // [1.5, 2.25, 29.5, 39.75], selecting the shared fixture's
-        // exact stage/subspace index sequence.
+        // [0.5, 1.75, 31, 42], selecting the shared fixture's
+        // exact stage/subspace index sequence. In particular, the
+        // second segment selects residual-stage indices [1, 0],
+        // not [0, 1], for the two subspaces.
         let input: [Float] = [
             10.5, 20.25, 2, 2,
             10.5, 20.25, 2, 2,
-            1.5, 2.25, 29.5, 39.75
+            0.5, 1.75, 31, 42
         ]
         let encoded = try encoder.encode(
             tokenEmbeddings: input,
