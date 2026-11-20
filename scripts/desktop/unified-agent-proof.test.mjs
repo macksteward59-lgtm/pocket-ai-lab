@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { createServer } from "node:http";
+import { LlamaCppInferenceProvider } from "../../runtime/adapters/llama-cpp/LlamaCppInferenceProvider.ts";
 import {
   runUnifiedAgentProof,
   EXPECTED_ATTEMPTS
@@ -144,4 +146,84 @@ test("CLI rejects non-loopback inference and requires explicit live-model opt-in
   });
   assert.equal(unapproved.status, 1);
   assert.match(unapproved.stderr, /POCKET_UNIFIED_POC=1/);
+});
+
+test("loopback HTTP mock exercises the real llama.cpp adapter across the seven-agent path", async () => {
+  // This server is a declared TEST DOUBLE, NOT a GGUF model or live inference.
+  // It still exercises the same HTTP backend, schema parser, Orchestrator,
+  // ModelRouter, typed MessageBus and MemoryManager used by the live CLI.
+  const calls = [];
+  const stages = {
+    independent: { analysis: "This is a deterministic transport test analysis." },
+    "cross-review": { question: "Which independent source validates the test observations?" },
+    verification: { claim: "A simulated endpoint answered", verified: false, reason: "HTTP fixture, not real model evidence" },
+    synthesis: { synthesis: "The transport fixture completed without authorizing anything.", evidenceRefs: [] }
+  };
+  const server = createServer(async (request, response) => {
+    if (request.url === "/health" && request.method === "GET") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ status: "ok" }));
+      return;
+    }
+    if (request.url !== "/completion" || request.method !== "POST") {
+      response.writeHead(404);
+      response.end();
+      return;
+    }
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    let body;
+    try {
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    } catch {
+      response.writeHead(400);
+      response.end();
+      return;
+    }
+    const stage = /Stage: (independent|cross-review|verification|synthesis)/.exec(body.prompt)?.[1];
+    if (!stage || !Object.hasOwn(stages, stage)) {
+      response.writeHead(422);
+      response.end();
+      return;
+    }
+    calls.push({
+      stage,
+      model: body.model,
+      schema: Boolean(body.json_schema),
+      promptContainsTrustNote: body.prompt.includes("Model output is not permission")
+    });
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ content: JSON.stringify(stages[stage]) }));
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    const provider = new LlamaCppInferenceProvider({
+      baseUrl: "http://127.0.0.1:" + address.port,
+      api: "completion",
+      promptFormat: "flat",
+      repairAttempts: 0,
+      requireSubstantive: true,
+      maxTokens: 128
+    });
+    await provider.checkHealth();
+    const proof = await runUnifiedAgentProof({
+      ...base, provider, executionKind: "test-double", taskId: "synthetic:http-transport-task"
+    });
+    assert.equal(proof.inference.actualProviderCallsReturned, 7);
+    assert.equal(proof.executionKind, "test-double");
+    assert.deepEqual(calls.map(call => call.stage), EXPECTED_ATTEMPTS.map(row => row[0]));
+    assert.ok(calls.every(call => call.model === base.modelId));
+    assert.ok(calls.every(call => call.schema));
+    assert.ok(calls.every(call => call.promptContainsTrustNote));
+    assert.equal(proof.memory.records[0].verified, false);
+    assert.equal(proof.limits.productionApexAuthorization, false);
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
 });
