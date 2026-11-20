@@ -1,0 +1,52 @@
+name: Google Cloud Agent Foundation
+
+on:
+  push:
+    branches:
+      - main
+      - codex/google-cloud-agent-foundation-20261120
+    paths:
+      - packages/intelligence/cloud/google-cloud/**
+      - packages/intelligence/serverless/cloud-analysis/**
+      - packages/intelligence/autonomy/**
+      - scripts/google-cloud/**
+      - .github/workflows/google-cloud-agent-ci.yml
+  pull_request:
+    # Stacked PRs must receive their own exact-source validation as well.
+    paths:
+      - packages/intelligence/cloud/google-cloud/**
+      - packages/intelligence/serverless/cloud-analysis/**
+      - packages/intelligence/autonomy/**
+      - scripts/google-cloud/**
+      - .github/workflows/google-cloud-agent-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-cloud-agent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-and-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Typecheck project and operator entrypoint
+        run: |
+          npm run build
+          npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --strict --esModuleInterop --skipLibCheck scripts/google-cloud/preview.mts
+      - name: Test Vertex contract, approval, lifecycle and existing gateway regressions
+        run: >-
+          npx vitest run
+          packages/intelligence/cloud/google-cloud/*.test.ts
+          scripts/google-cloud/preview.test.ts
+          packages/intelligence/serverless/cloud-analysis/cloudAnalysis.test.ts
+      # No cloud credentials, SDK authentication, deployment or paid provider calls.
