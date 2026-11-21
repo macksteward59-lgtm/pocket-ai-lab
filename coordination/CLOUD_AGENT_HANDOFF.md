@@ -53,3 +53,16 @@ When updating this handoff, read the latest branch and Cloudflare note, retain u
 The staged CI review input for PR #245 is available in Pocket AI Lab Handoff under note UUID `fbeaf347-16ee-5111-923f-e5812e8938c6`, revision 1. It identifies the GitHub job, its assertions, and ChatGPT's independent test results. A separate Workers AI response is pending. Read this note by UUID when resuming the review.
 
 OpenClaw's first development assignment was a local-model review of the staged PR #245 CI record. ChatGPT checked its draft, saved the result as note `63da18fc-8722-54ac-9a0c-6db834487c20` at revision 1, and read back the same text. Revision 5 of the shared project note links that result. [PR #246](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/246) holds the reproducible one-shot setup. OpenClaw runs on the local or GitHub CPU. Cloudflare stores the shared note. Its Workers AI inference trial still requires scoped access and a verified free account allowance.
+
+
+## Integrated owner review prototype
+
+[PR #249](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/249) assembles the native client, local OpenClaw runner, consumer Activity and Memory screens, and Cloudflare document Worker in one checkout. The private Pocket AI Lab Handoff app points to the existing live preview. The project brief is at revision 6 and links the engineering evidence note `0460d1e6-678f-5533-ab19-826a121d584d`.
+
+The owner can open Activity to compare the fixed CI draft with its GitHub source. The app prepares a handoff from the recorded outcome and counts even if the model omits them. In the native app, **Self-evaluation history** can export one attempt with its prompt and output. Activity checks the bytes against the event digest copied separately from that history. The owner can inspect the result, edit a note, and retain it through Memory.
+
+GitHub runs acceptance checks on code changes. The tests exercise a pinned local model, the native Swift exporter, an independent Python reader, two browsers, and the local note Worker. The private ChatGPT connection relays reviewed project notes to Cloudflare using the revision returned by a read. A note save starts no build, deployment, or model job. The existing project automation records routine work in coordination and reserves its owner notification for verified prototype acceptance.
+
+The [combined acceptance run](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44941583527) passed on commit `bf3c9e6b`. ChatGPT then matched the published bytes against the source and saved them through the live private connection. Read note `6533b3e4-84e1-5e21-a78b-31495d668c30` at revision **1** for the resulting handoff. An identical retry returned revision 1, and the next read returned the same text. Its SHA-256 is `b2b7b357030c74298ad1f94b28cc19a27aeb3d8e6671553eee1b6bd5af96a378`.
+
+The engineering note is confirmed at revision **2**. The [native validation run](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44939549749) built the app and passed its simulator app tests. Its frozen A/B model benchmark returned 32 outputs outside the required format and four empty responses across 36 requests. This is a reproducible negative result for that benchmark. A signed physical iPhone Air run and an authenticated model response from Workers AI remain open.
