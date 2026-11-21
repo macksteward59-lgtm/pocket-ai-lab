@@ -139,6 +139,11 @@ for (const engine of [chromium, webkit]) {
       await check.click();
       await reopened.getByText("The file does not match the digest you supplied.").waitFor();
       await reopened.locator("#native-review-hash").fill(expected);
+      const wrongType = JSON.parse(packet);
+      wrongType.eventID = [wrongType.eventID];
+      await uploadNative(Buffer.from(JSON.stringify(wrongType)));
+      await check.click();
+      await reopened.getByText("This file does not contain a supported evaluation event.").waitFor();
       const changed = JSON.parse(packet);
       changed.payloadJSON = changed.payloadJSON.replace("café", "cafe");
       await uploadNative(Buffer.from(JSON.stringify(changed)));
