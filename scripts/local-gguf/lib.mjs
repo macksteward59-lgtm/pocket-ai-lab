@@ -36,21 +36,35 @@ export function assertPin(pin) {
     if (pin?.[key] === undefined || pin[key] === null || pin[key] === "") {
       throw new Error("GGUF pin is missing " + key);
     }
+    if (key !== "bytes" && typeof pin[key] !== "string") {
+      throw new Error("GGUF pin " + key + " must be a string");
+    }
   }
   if (!/^[a-f0-9]{64}$/.test(pin.sha256)) throw new Error("GGUF pin sha256 must be 64 hex characters");
   if (!/^[a-f0-9]{40}$/.test(pin.revision)) throw new Error("GGUF pin revision must be a 40-character commit");
-  if (!Number.isInteger(pin.bytes) || pin.bytes <= 0) throw new Error("GGUF pin bytes must be a positive integer");
-  if (pin.filename.includes("/") || pin.filename.includes("\\") || !pin.filename.endsWith(".gguf")) {
+  if (!Number.isSafeInteger(pin.bytes) || pin.bytes <= 0) throw new Error("GGUF pin bytes must be a positive safe integer");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.gguf$/.test(pin.filename)) {
     throw new Error("GGUF pin filename must be a single .gguf file name");
   }
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(pin.repo)) {
+    throw new Error("GGUF pin repo must identify one Hugging Face owner and model");
+  }
   const url = new URL(pin.sourceUrl);
-  if (url.protocol !== "https:" || url.hostname !== "huggingface.co") {
+  if (url.protocol !== "https:" || url.hostname !== "huggingface.co" || url.username || url.password || url.port) {
     throw new Error("GGUF pin source must be https://huggingface.co");
   }
-  if (!url.pathname.includes("/" + pin.revision + "/") || !url.pathname.endsWith("/" + pin.filename)) {
-    throw new Error("GGUF pin URL must include the pinned revision and filename");
+  const exactSource = "https://huggingface.co/" + pin.repo + "/resolve/" + pin.revision + "/" + pin.filename;
+  if (pin.sourceUrl !== exactSource) {
+    throw new Error("GGUF pin URL must exactly match the pinned repo, revision and filename");
   }
-  if (pin.license !== "apache-2.0") throw new Error("GGUF pin license changed; review it before downloading");
+  // Reviewed license identifiers: existing SmolLM2/Qwen pins use Apache-2.0.
+  // DeepSeek's R1-Distill-Qwen-1.5B release uses MIT, with Qwen2.5-Math
+  // Apache-2.0 ancestry. The official MIT text is pinned at:
+  // https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B/blob/ad9f0ae0864d7fbcd1cd905e3c6c5b069cc8b562/LICENSE
+  // This allowlist does not replace the source/license evidence in each pin.
+  if (!["apache-2.0", "mit"].includes(pin.license)) {
+    throw new Error("GGUF pin license changed; review it before downloading");
+  }
   return pin;
 }
 
@@ -98,14 +112,14 @@ export function formatLlamaServerCommand(argv) {
   return argv.map(shellQuote).join(" ");
 }
 
-export async function sha256File(file) {
+export async function sha256File(file, { signal, maxBytes } = {}) {
   const hash = createHash("sha256");
-  await new Promise((resolve, reject) => {
-    const stream = createReadStream(file);
-    stream.on("data", chunk => hash.update(chunk));
-    stream.on("error", reject);
-    stream.on("end", resolve);
-  });
+  let bytes = 0;
+  for await (const chunk of createReadStream(file, { signal })) {
+    bytes += chunk.length;
+    if (maxBytes !== undefined && bytes > maxBytes) throw new Error("File exceeds the pinned size");
+    hash.update(chunk);
+  }
   return hash.digest("hex");
 }
 
