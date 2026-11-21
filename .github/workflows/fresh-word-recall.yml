@@ -1,0 +1,37 @@
+name: Fresh word-pair recall
+on:
+  push:
+    branches: [codex/recipient-choice-diagnostic]
+    paths:
+      - tools/recipient-choice/measure.py
+      - tools/recipient-choice/run.sh
+      - tools/recipient-choice/fresh.py
+      - tools/recipient-choice/fresh-cases.json
+      - .github/workflows/fresh-word-recall.yml
+permissions:
+  contents: read
+jobs:
+  compare:
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [smol, qwen]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Evaluate the frozen word pairs
+        run: bash tools/recipient-choice/run.sh "$RUNNER_TEMP/choices" "${{ matrix.model }}"
+      - name: Show experimental results
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/choices/summary.md"; then
+            cat "$RUNNER_TEMP/choices/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve measurement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-word-recall-${{ matrix.model }}
+          path: ${{ runner.temp }}/choices
+          if-no-files-found: warn

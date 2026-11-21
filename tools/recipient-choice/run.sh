@@ -3,6 +3,8 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 out=$(realpath -m "${1:?specify a new output directory}")
+mode=${2:-original}
+case "$mode" in original|smol|qwen) ;; *) echo "Unknown comparison mode" >&2; exit 2 ;; esac
 mkdir "$out"
 stage=$(mktemp -d)
 server_pid=''
@@ -22,9 +24,18 @@ release=b12233
 archive_sha=9f4a78cc4e4c9f5a166102a43f1d8f8e4e9d75e76823eb9505d05bbba288abd5
 fetch_checked "https://github.com/ggml-org/llama.cpp/releases/download/$release/llama-$release-bin-ubuntu-x64.tar.gz" "$stage/llama.tar.gz" "$archive_sha"
 tar -xzf "$stage/llama.tar.gz" -C "$stage"
-pin=runtime/ios/pin/smoke-gguf.json
-fetch_checked "$(jq -r .sourceUrl "$pin")" "$stage/model.gguf" "$(jq -r .sha256 "$pin")"
-[[ "$(stat -c %s "$stage/model.gguf")" == "$(jq -r .bytes "$pin")" ]]
+if [[ "$mode" == qwen ]]; then
+  model_url='https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true'
+  model_sha=6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+else
+  pin=runtime/ios/pin/smoke-gguf.json
+  model_url=$(jq -r .sourceUrl "$pin")
+  model_sha=$(jq -r .sha256 "$pin")
+fi
+fetch_checked "$model_url" "$stage/model.gguf" "$model_sha"
+if [[ "$mode" != qwen ]]; then
+  [[ "$(stat -c %s "$stage/model.gguf")" == "$(jq -r .bytes "$pin")" ]]
+fi
 "$stage/llama-$release/llama-server" --host 127.0.0.1 --port 18083 --model "$stage/model.gguf" \
     --ctx-size 512 --parallel 1 --threads 2 --n-gpu-layers 0 --no-warmup >"$stage/server.log" 2>&1 &
 server_pid=$!
@@ -34,4 +45,8 @@ for ((attempt=0; attempt<90; attempt++)); do
   sleep 1
 done
 curl -fsS http://127.0.0.1:18083/health >/dev/null
-python3 tools/recipient-choice/measure.py "$out"
+if [[ "$mode" == original ]]; then
+  python3 tools/recipient-choice/measure.py "$out"
+else
+  python3 tools/recipient-choice/fresh.py "$out" "$mode" "$model_sha"
+fi

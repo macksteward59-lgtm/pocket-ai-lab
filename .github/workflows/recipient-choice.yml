@@ -3,7 +3,8 @@ on:
   push:
     branches: [codex/recipient-choice-diagnostic]
     paths:
-      - tools/recipient-choice/**
+      - tools/recipient-choice/measure.py
+      - tools/recipient-choice/run.sh
       - .github/workflows/recipient-choice.yml
 permissions:
   contents: read

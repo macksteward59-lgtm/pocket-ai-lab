@@ -15,3 +15,11 @@ Set the following criteria before obtaining results. Format passes at 36/36. For
 ## Reproduce
 
 From the repository root on Linux x86_64, run `bash tools/recipient-choice/run.sh /tmp/choice-evidence` with an unused output directory. The runner downloads two checksum-pinned files and uses a loopback server. It writes preflight evidence, one record for each scheduled inference, a JSON summary and a Markdown table. GitHub Actions publishes these files even if a measurement error interrupts the run.
+
+## Fresh word-pair comparison
+
+The first run produced a valid letter on every constrained attempt, always B. The follow-up compares the SmolLM2 smoke model with the Qwen2.5-1.5B-Instruct Q4_K_M model used for OpenClaw review. Use the same b12233 Linux CPU server, exact-letter grammar, four-token limit and greedy decoding for both. Each model uses its own embedded chat template. The comparison is between the two models as configured.
+
+The 12 new cases in `fresh-cases.json` use distinct invented card records and 24 distinct words. Each card has an original message, an omitted message and a reversed message. Each supplied-message condition has six A and six B answers. Rotate condition order across cards. Inference receives the card prompt alone. Freeze the case list, question text and following thresholds in git before either model is run. Count a candidate as passing this task at 36/36 valid letters, at least 10/12 correct on both original and reversed messages separately, and at least 9/12 correct on both messages for the same card. Omitted-message accuracy describes guessing against the hidden answer. Every scheduled response and generation error contributes to the fixed denominators.
+
+Run each model in a fresh server process using `bash tools/recipient-choice/run.sh /tmp/choice-smol smol` or `bash tools/recipient-choice/run.sh /tmp/choice-qwen qwen`. Each writes the rendered prompts, input token IDs, scores, model hash and raw responses. The experiment tests a single English question format on CPU.
