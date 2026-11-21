@@ -174,3 +174,28 @@ A second attempt to retrieve the entire body with a broad exact-title query retu
 ### Corrected unresolved wording
 
 The exact October 29 response is known to contain layer mappings and capability-layer content. What remains unrecovered into this repository is the *actual wording and mapping data*. In particular, do not assume those October 29 mappings are identical to the canonical six layer titles recovered from the November 1 discussion until the source texts are compared directly.
+
+
+## Source-located addendum — 2026-11-21 14:00:57 UTC
+
+**Status: source located and available for authorized source recovery.** This addendum records the primary ChatGPT coordinator's report of verified conversation organization and delegated source inspection. It supplements the earlier retrieval limitations without replacing the historical findings above.
+
+### Located conversations and source headings
+
+The coordinator reports that **60 verified relevant build/source conversations** were moved into the existing **Pocket AI Lab** ChatGPT Project; the current conversation was already there. This is an organization checkpoint, not an exhaustive transcript or requirements audit.
+
+| Conversation title | Source-presence finding | Recovery limit |
+|---|---|---|
+| **Mr. Robot's Technical Skills** | Contains the actual **user-authored RLS Architecture Specification v3.12 — SQL and Concurrency Corrections**, with adjacent v3.10/v3.11 material. A distinct assistant independent-review heading is also present; keep that review separate from the user-authored specification. | A delegated inspection examined approximately 10,449 characters of relevant content. The full specification has not been transcribed or reconciled by this documentation checkpoint. |
+| **Mr. Robot's Technical Skills** | The **Mr. Robot — Comprehensive Cybersecurity Skill Set** dossier heading is present. | This establishes a source location. It does not fill the unresolved exact module descriptions, mappings, tier assignments or permission matrix. |
+| **AI Integrator & Automator.** | Original packaged repository, FastAPI, test and CI source was located in the conversation. | Package/artifact bytes, exact API schemas and correspondence to the current repository have not been verified by this checkpoint. |
+
+The inspected v3.12 material includes section 1 concerning row locking and `GET DIAGNOSTICS`, and section 2 concerning the V38a five-column privilege matrix. The source contains the identifiers `app.submit_breakglass_grant`, `app.column_privilege_matrix` and `app.v38a_violations`. These are abstract source-presence anchors, not a transcription of the SQL or an assertion that the repository implements those clauses.
+
+### Required next recovery and reconciliation
+
+1. Recover the complete **user-authored** v3.12 text from the located conversation, preserving its section order and exact wording in an authorized source-recovery workflow. Keep adjacent v3.10/v3.11 material and the assistant's independent review separately attributed.
+2. Reconcile that exact source clause by clause against `docs/implementation/apex-rls-v3.12-reconciliation.md`, the existing APEX/East contracts and their implementation evidence. Keep every untranscribed or unresolved clause explicitly open; do not reconstruct missing SQL, transaction/outbox rules, privilege semantics or API schemas from headings and summaries.
+3. Complete that transcription and reconciliation, and the applicable boundary review, **before changing APEX/East authority, RLS policies, receipts or approval behavior**. Recover the original dossier and packaged application source separately before updating their unresolved requirement fields.
+
+No private transcript excerpts, chat IDs/URLs, authentication/account details or attachments are included in this addendum. Source location does not establish a full transcript audit, verified implementation, completed API schemas, model/runtime readiness or product acceptance. No application code, security authority, model execution, deployment or merge changed.
