@@ -5,7 +5,7 @@ final class MemoryRecoveryTests: XCTestCase {
     func testSavedNoteRetainsBothReferencesAfterInterruptedEdit() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
-        let original = "Record " + String(UUID().uuidString.prefix(8))
+        let original = "Record " + String(Int.random(in: 100_000...999_999))
         let sources = ["Review, Appendix A", "Sheet 4"]
         app.launch()
 
@@ -15,21 +15,24 @@ final class MemoryRecoveryTests: XCTestCase {
             tab.tap()
         }
 
-        func openEditor(for content: String) {
-            let note = app.staticTexts[content]
-            XCTAssertTrue(note.waitForExistence(timeout: 10))
-            let row = app.cells.containing(.staticText, identifier: content).firstMatch
-            XCTAssertTrue(row.exists)
-            // A partial swipe reveals Edit without invoking the destructive full swipe.
-            let start = row.coordinate(withNormalizedOffset: CGVector(dx: 0.86, dy: 0.5))
-            let end = row.coordinate(withNormalizedOffset: CGVector(dx: 0.36, dy: 0.5))
-            start.press(forDuration: 0.1, thenDragTo: end)
-            let edit = app.buttons["Edit"].firstMatch
-            XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        let content = app.textViews["Information to remember"]
+        var noteButtonID: String?
+        func openEditor(for expected: String) {
+            let edit: XCUIElement
+            if let noteButtonID {
+                edit = app.buttons[noteButtonID]
+            } else {
+                // The newly saved memory is the first row. Verify its contents before any edit.
+                edit = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "edit-memory-")).firstMatch
+            }
+            XCTAssertTrue(edit.waitForExistence(timeout: 12),
+                          "Edit control missing. Editor visible: \(content.exists), storage alert: \(app.alerts.firstMatch.exists)")
+            noteButtonID = edit.identifier
             edit.tap()
+            XCTAssertTrue(content.waitForExistence(timeout: 8))
+            XCTAssertEqual(content.value as? String, expected)
         }
 
-        let content = app.textViews["Information to remember"]
         let fields = app.textFields.matching(identifier: "memory-reference")
         func checkReferences() {
             XCTAssertTrue(fields.firstMatch.waitForExistence(timeout: 5))
@@ -45,6 +48,7 @@ final class MemoryRecoveryTests: XCTestCase {
         // Enter content first, then scroll the form as needed above the keyboard.
         content.tap()
         content.typeText(original)
+        XCTAssertEqual(content.value as? String, original)
         for (index, source) in sources.enumerated() {
             let field = fields.element(boundBy: index)
             if !field.isHittable { app.swipeUp() }

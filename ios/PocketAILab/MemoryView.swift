@@ -32,6 +32,11 @@ struct MemoryView: View {
                                     Spacer()
                                     Text(entry.provenance.verified ? "Verified" : "Unverified")
                                         .font(.caption2).foregroundStyle(entry.provenance.verified ? Color.green : Color.secondary)
+                                    Button { beginEdit(entry) } label: {
+                                        Label("Edit memory", systemImage: "pencil").labelStyle(.iconOnly)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .accessibilityIdentifier("edit-memory-" + entry.id)
                                 }
                                 Text(entry.content).textSelection(.enabled)
                                 HStack(spacing: 8) {
