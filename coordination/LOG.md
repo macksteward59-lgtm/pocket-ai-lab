@@ -4843,3 +4843,7 @@ ChatGPT recorded the owner's shared project brief in [CLOUD_AGENT_HANDOFF.md](./
 ## 2026-11-21 — Project chat recovered the shared handoff
 
 A new chat inside Pocket AI Lab recovered the handoff UUID from GitHub and reported the current delivery status. The private Cloud Agent plugin v0.6.0 and the existing daily project automation both reference the shared handoff. The new chat did not expose an authenticated Cloudflare note reader. The tested editor deployment still awaits Cloudflare device authentication. The owner's permission for that one preview deployment and its live synthetic note test is recorded.
+
+## 2026-11-21 - Live Cloudflare handoff revision 1
+
+The owner authenticated the one-time deployment of [PR #245](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/245) at `66cedc4bec7c402dd30f13e2478d4dba8dc7aa07` to the existing preview. Worker version `4ef460aa-d55c-49b3-a025-d978b63800e0` saved the [shared project handoff](./CLOUD_AGENT_HANDOFF.md) at revision 1. An authenticated client read back the exact text. Live synthetic checks verified edits, an idempotent retry, a stale-revision conflict and role restrictions. Wrangler signed out. The project-notes chat received the receipt and reported that neither native Cloudflare note tool was exposed in that chat. Cross-chat GitHub handoff remains available.
