@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const state = { model: "model not connected", busy: false };
 const views = ["chat","agents","memory","activity","settings"];
-function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
+function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();if(name==="activity"&&!reviewSource)loadBundledReview();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
 function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
 async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
@@ -209,5 +209,90 @@ $("memory-form").addEventListener("submit",async event=>{
  finally{button.disabled=false;}
 });
 $("memory-refresh").addEventListener("click",loadMemories);
+let reviewSource = null;
+let reviewGeneration = 0;
+
+function clearReview(message) {
+  $("review-details").hidden = true;
+  $("review-status").textContent = message;
+  $("review-action-status").textContent = "";
+}
+
+function displayReview(record, origin) {
+  const baseline = reviewSource.bundled;
+  const receipt = record?.receipt;
+  if ((record?.format !== undefined && record.format !== "pocket-ai-lab.ci-review.v1") ||
+      record?.evidence_sha256 !== reviewSource.digest || record?.model_sha256 !== baseline.model_sha256 ||
+      record?.source?.job_id !== reviewSource.jobId || receipt?.ok !== true ||
+      receipt.provider !== baseline.receipt.provider || receipt.model !== baseline.receipt.model ||
+      typeof receipt.final !== "string" || !receipt.final.trim() || receipt.final.length > 2000) {
+    throw new Error("The file does not match this review’s source, model or record format.");
+  }
+  const draft = receipt.final;
+  const local = draft.split("\n").find(line => line.startsWith("Local checks: ")) || "";
+  const figures = local.match(/\b\d+\b/g) || [];
+  const match = draft.startsWith("Hosted CI job " + reviewSource.jobId + ":") &&
+    figures.includes(String(reviewSource.localTests)) && figures.includes(String(reviewSource.localFiles));
+  $("review-job").href = reviewSource.job;
+  $("review-job").textContent = "GitHub job " + reviewSource.jobId;
+  $("review-evidence").textContent = reviewSource.evidence;
+  $("review-draft").textContent = draft;
+  $("review-comparison").textContent = match
+    ? "The job and both counts appear in the draft. Check their meaning against the source."
+    : "Correction needed. The draft omits or changes the job or local test counts.";
+  $("review-status").textContent = origin + " · " + receipt.model;
+  $("review-details").hidden = false;
+}
+
+async function loadBundledReview() {
+  const generation = ++reviewGeneration;
+  clearReview("Loading the review…");
+  reviewSource = null;
+  $("review-file").disabled = true;
+  $("review-file").value = "";
+  try {
+    const response = await fetch("/api/activity/openclaw-245");
+    if (!response.ok) throw new Error("The project evidence could not be loaded.");
+    const source = await response.json();
+    if (generation !== reviewGeneration) return;
+    reviewSource = source;
+    displayReview(source.bundled, "Bundled local run");
+    $("review-file").disabled = false;
+  } catch (error) {
+    if (generation === reviewGeneration) {
+      reviewSource = null;
+      clearReview(error.message);
+    }
+  }
+}
+
+$("review-reset").addEventListener("click", loadBundledReview);
+$("review-file").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file || !reviewSource) return;
+  const generation = ++reviewGeneration;
+  clearReview("Reading the selected file…");
+  try {
+    if (file.size > 65536) throw new Error("Choose a review file of 64 KiB or less.");
+    const record = JSON.parse(await file.text());
+    if (generation === reviewGeneration) displayReview(record, "Imported draft");
+  } catch (error) {
+    if (generation === reviewGeneration) clearReview(error instanceof SyntaxError ? "Invalid review JSON." : error.message);
+  }
+});
+$("review-to-memory").addEventListener("click", () => {
+  if (!reviewSource || $("review-details").hidden) return;
+  if ($("memory-content").value.trim() || $("memory-source").value.trim()) {
+    $("review-action-status").textContent = "A note is already being edited in Memory. Save or clear it first.";
+    return;
+  }
+  $("memory-content").value = "PR #245 CI evidence\n\n" + reviewSource.evidence +
+    "\n\nEvidence SHA-256: " + reviewSource.digest +
+    "\n\nOpenClaw draft (" + $("review-status").textContent + ")\n" + $("review-draft").textContent;
+  $("memory-source").value = reviewSource.job;
+  $("memory-layer").value = "episodic";
+  setView("memory");
+  $("memory-content").focus();
+});
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 health();
