@@ -77,3 +77,12 @@ python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$e
 ```
 
 A match shows that the selected event’s hashed bytes match that digest. Hardware identity, an Apple signature, review of the result, and physical-device acceptance each require separate evidence. A running journal detects a removed tail. Across restarts, retain an independent digest to identify a previously seen event.
+
+To check a literal task answer, record the event digest before closing Pocket AI Lab. Reopen the app, export the same attempt, and supply the prompt and expected answer independently. For the starter suite’s `task-exact-token` case, run the following command.
+
+```bash
+python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$event_hash" \
+  --expect-answer "Return exactly this token and nothing else: PAL_TASK_COMPLETE" "PAL_TASK_COMPLETE"
+```
+
+The checker requires a completed attempt and compares the recorded prompt and output exactly, including whitespace. Suite 1.1.0 also uses a literal comparison in its four exact-answer cases. Earlier attempts retain their original suite version and score. Record the physical device and observed run separately.

@@ -34,7 +34,7 @@ struct NativeEvaluationCase: Sendable {
 /// inside one prompt; this does not claim durable cross-session memory.
 enum NativeEvaluationSuite {
     static let id = "pocket-ai-core-capabilities"
-    static let version = "1.0.0"
+    static let version = "1.1.0"
 
     static let cases: [NativeEvaluationCase] = [
         NativeEvaluationCase(
@@ -221,7 +221,7 @@ struct NativeEvaluationRunner: Sendable {
         case .manualReview:
             deterministicPassed = nil
         case .exactMatch:
-            deterministicPassed = status == .completed && output.trimmingCharacters(in: .whitespacesAndNewlines) == evaluationCase.expectedOutcome
+            deterministicPassed = status == .completed && output.utf8.elementsEqual(evaluationCase.expectedOutcome.utf8)
         }
         let deterministicScore = deterministicPassed.map { $0 ? 1.0 : 0.0 }
         let providerKind: NativeEvaluationAttempt.ProviderKind =

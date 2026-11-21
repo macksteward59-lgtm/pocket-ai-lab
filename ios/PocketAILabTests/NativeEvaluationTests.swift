@@ -123,6 +123,27 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertTrue(released)
     }
 
+    func testExactAnswerScoresTheBytesDeliveredByTheRuntime() async throws {
+        let task = try XCTUnwrap(NativeEvaluationSuite.cases.first { $0.caseID == "task-exact-token" })
+        let expected = task.expectedOutcome
+        let outputs = [" " + expected, expected + "\n", expected]
+        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: outputs.map { [$0] })
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
+        for output in outputs {
+            let attempt = try await runner.run(task)
+            XCTAssertEqual(attempt.output, output)
+            XCTAssertEqual(attempt.status, .completed)
+            XCTAssertEqual(attempt.deterministicPassed, output == expected)
+            XCTAssertEqual(attempt.deterministicScore, output == expected ? 1 : 0)
+        }
+        let reopened = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("history.ndjson"))
+        let events = try await reopened.events()
+        XCTAssertEqual(events.compactMap { $0.payload.attempt?.deterministicPassed }, [false, false, true])
+        let released = await runtime.release(lease)
+        XCTAssertTrue(released)
+    }
+
     func testPartialOutputAndRetriesArePersistedWithoutOverwritingHistory() async throws {
         let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(
             responses: [["partial answer"], ["42"]], failAfterOutput: true
