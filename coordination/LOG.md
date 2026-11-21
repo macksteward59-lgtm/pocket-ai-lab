@@ -4855,3 +4855,7 @@ A fresh Pocket AI Lab Work chat used the owner-private [Pocket AI Lab Handoff](h
 ## 2026-11-21 - Competitive bug bounty research scope restored to both handoffs
 
 The owner clarified the offensive red-team purpose of the bug bounty division. The November 14 discussion names experienced human hunters as the benchmark and prioritizes business-logic research. Section 13, Gate 9, and PAL-13-001 through PAL-13-015 supply the program-scope and evidence requirements. ChatGPT saved the revised [shared project brief](./CLOUD_AGENT_HANDOFF.md) through the private handoff app and read back revision 2 verbatim. The handoff identifies comparison measures as proposals pending benchmark evidence.
+
+## 2026-11-21 - APEX and ExploitGym in the full Pocket AI Lab ecosystem
+
+The owner clarified the ambition to replace a fragmented research workflow and to create a provisional artifact before the system fully understands the problem. The [complete product handoff](./POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md) now relates that goal to the recovered companion, agent, learning, native, cloud, temporal, and research decisions. The [shared project brief](./CLOUD_AGENT_HANDOFF.md) mirrors Cloudflare revision 3, which ChatGPT saved and read back. Physical-iPhone product acceptance, comparative research performance, and the exact unrecovered source mappings are still open.

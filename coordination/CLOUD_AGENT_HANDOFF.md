@@ -4,13 +4,21 @@ Use this page to resume the Cloudflare and ChatGPT project handoff from another 
 
 ## Owner-approved project brief
 
-Pocket AI Lab is a local-first iPhone research workspace with model-backed roles, durable memory, and independent APEX and East/e3 controls. Its bug bounty division supports authorized offensive red-team research. The owner's goal is to outperform experienced human bounty hunters, especially on business-logic flaws where software permits an outcome its own rules forbid.
+Pocket AI Lab is meant to replace a fragmented cybersecurity research workflow with one iPhone-first environment for research, creation, evaluation, learning, and reporting. APEX and ExploitGym form its core. The owner gives an objective from an iPhone Air. The lab can create a provisional artifact before it fully understands the problem, test its assumptions, revise it, and return the result with supporting evidence. The owner can see progress, intervene, or inspect the details when needed.
 
-The research scope comes from each program's versioned policy, which specifies eligible assets, exclusions, permitted methods, time windows, and limits. Ambiguous scope goes to human review. APEX governs authorization independently of East/e3 execution. A finding needs independent validation, evidence of impact, and human review before submission.
+Director/APEX selects work and enforces scope, permissions, and resource limits. East/e3 carries the same task identity through checkpoints, cancellation, and recovery. ExploitGym is the isolated evaluation environment. Critic and Validator examine the results independently. A candidate can be wrong, inconclusive, or worth keeping. The record preserves its source, model, assumptions, changes, and evidence.
 
-ExploitGym is the isolated evaluation setting for the prototype. The current harness milestone uses inert fixtures and precomputed results. A proposed comparison would give human and model reviewers the same held-out case evidence and time budget, then score confirmed findings, false positives, impact accuracy, and report quality independently. Superior performance is a goal awaiting comparative evidence.
+One native workspace brings together the personal companion, AI Integrator & Automator, models, agents, tasks, approvals, and memory. The AI owns its work queue separately from the owner's personal to-do list. Collaborative, Security Analyst, Engineering, Learning, and Independent Review modes share the same contracts. Director, Reasoner, Researcher, Engineer, Security Analyst, Critic, Validator, and Archivist can bring in temporary specialists. Real model calls must identify the provider. Work starts locally and offline where feasible. Approved private or cloud compute can return versioned results within privacy, cost, and device limits.
 
-ChatGPT coordinates work from available project decisions. GitHub's agent-coordination branch records scope, ownership, code references, and test evidence. Cloudflare stores the revisioned shared note for project chats. Verify each milestone against its source, test, and runtime. The interactive handoff has passed its read, save, and read-back check.
+Research with sources, software development and repair, threat modeling, and authorized red-team and bounty research share memory, knowledge, and evidence. The original security framework has six layers and 42 named modules. The competitive goal is to outperform experienced human bounty hunters, especially on business-logic flaws. Each program's current written scope, exclusions, and limits apply. Findings need independent validation and human review before submission. A proposed benchmark compares human and model reviews of the same held-out evidence with equal time, scoring confirmed findings, false positives, impact accuracy, and report quality.
+
+The learning system should remember events, facts, relationships, and useful procedures with provenance. Users can correct, export, and delete memory. Temporal intelligence distinguishes real events from simulations. Mind mapping, multidimensional reasoning, and Minimal Surface ideas are research directions. G.I.R.L. (Geometric Intelligence Representation Layer) explores compact exchanges between compatible models with an ordinary-text fallback. Learned skills and changes to models or workflows require separate evaluation and a rollback path.
+
+ChatGPT and GitHub coordinate development. Cloudflare stores this shared brief. The app's MessageBus carries runtime messages. The first complete proof is one real, authorized task on a physical iPhone Air with attributable model work, an independently checked artifact, and recovery after interruption. The handoff works today. Whole-product acceptance and competitive performance still require evidence.
+
+## Full ecosystem and sources
+
+The [complete product handoff](./POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md#2026-11-21--how-the-ecosystem-should-work-for-its-owner) maps this brief to the companion, agent team, APEX/East, ExploitGym, native and cloud compute, learning and memory, temporal reasoning, experimental communication, research scope, release gates, and open source-recovery questions. It includes an example of how a provisional artifact becomes a reviewed result. The November 21 project chat clarified that the owner should be able to give the objective without directing the steps.
 
 ## Basis for the competitive goal
 
@@ -34,6 +42,6 @@ A fresh Work chat inside Pocket AI Lab attached the owner-private [Pocket AI Lab
 
 To resume, open a Work chat in this project, select **Pocket AI Lab Handoff** from the `@` menu, and ask it to read the shared project note. To record a decision, read the latest revision, save the revised text, then read it back and record the returned revision here. The existing daily workflow records which destinations it reached.
 
-On November 21, ChatGPT saved the revised shared brief above and read it back verbatim from Cloudflare at revision **2**.
+On November 21, ChatGPT saved the competitive research scope and read it back verbatim from Cloudflare at revision **2**. The subsequent ecosystem reconciliation was saved and read back at revision **3**.
 
 When updating this handoff, read the latest branch and Cloudflare note, retain unresolved decisions, and record the observed note revision. Include the verified change in the active conversation and append its evidence to the coordination log. Future readers should distinguish the author of each note from the service that stored it.
