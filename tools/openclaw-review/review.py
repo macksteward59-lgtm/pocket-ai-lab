@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -10,24 +11,35 @@ import socket
 import subprocess
 import tempfile
 import time
-import urllib.error
 import urllib.request
 
 MODEL = "qwen2.5-1.5b-instruct-q4_k_m"
 MODEL_SHA256 = "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
 EVIDENCE = Path(__file__).with_name("pr-245.txt")
+# The model writes the summaries and selects an uncertainty listed in the evidence.
+REVIEW_GRAMMAR = r'''root ::= "Hosted CI job " [0-9]{1,18} ": " line "\nLocal checks: " line "\nUnverified: " limit
+line ::= [^.\n\r]{4,170} "."
+limit ::= "Live model inference." | "Remaining Workers AI allowance." | "Deployment to production." | "Execution on a physical iPhone."
+'''
 
 
 def model_config(port, key):
+    provider = {
+        "baseUrl": f"http://127.0.0.1:{port}/v1",
+        "api": "openai-completions",
+        "apiKey": key,
+        "agentRuntime": {"id": "openclaw"},
+        "models": [{"id": MODEL, "name": MODEL, "contextWindow": 32768, "maxTokens": 384,
+                    "compat": {"supportsTools": False}}],
+    }
+    defaults = {
+        "contextInjection": "never",
+        "params": {"temperature": 0, "extra_body": {"grammar": REVIEW_GRAMMAR}},
+        "model": {"primary": f"pocket-local/{MODEL}", "fallbacks": []},
+    }
     return {
-        "models": {"mode": "replace", "providers": {"pocket-local": {
-            "baseUrl": f"http://127.0.0.1:{port}/v1", "api": "openai-completions",
-            "apiKey": key, "agentRuntime": {"id": "openclaw"},
-            "models": [{"id": MODEL, "name": MODEL, "contextWindow": 32768, "maxTokens": 384}],
-        }}},
-        "agents": {"defaults": {"contextInjection": "never", "params": {"temperature": 0}, "model": {
-            "primary": f"pocket-local/{MODEL}", "fallbacks": [],
-        }}},
+        "models": {"mode": "replace", "providers": {"pocket-local": provider}},
+        "agents": {"defaults": defaults},
         "tools": {"profile": "minimal", "deny": ["*"]},
         "skills": {"allowBundled": []},
         "plugins": {"slots": {"memory": "none"}, "deny": ["memory-core"]},
@@ -45,7 +57,7 @@ def wait_for_model(server, port, key):
             with local_http.open(request, timeout=1) as response:
                 if MODEL in [row["id"] for row in json.load(response)["data"]]:
                     return
-        except (OSError, urllib.error.URLError):
+        except OSError:
             pass
         time.sleep(1)
     raise TimeoutError("Local model did not become ready")
@@ -83,11 +95,21 @@ def review(args):
             server = subprocess.Popen(cmd, env=env, stdout=log, stderr=log)
             try:
                 wait_for_model(server, port, key)
-                prompt = (EVIDENCE.read_text() + "\nWrite the review directly in plain English. "
-                          "The record above contains everything needed. Answer in three lines. "
-                          "Hosted CI: give the numeric job ID and steps that passed. "
-                          "Local checks: give the test count, file count, and Worker test result. "
-                          "Still unverified: name one claim the evidence does not establish.")
+                record = EVIDENCE.read_text().partition("\nReview request:")[0]
+                job = re.search(r"/job/(\d+)", record)
+                counts = re.search(r"(\d+) provider, lifecycle and compatibility tests passed across (\d+) files", record)
+                if job is None or counts is None:
+                    raise ValueError("GitHub job ID or local test totals are missing from the evidence")
+                job_id = job.group(1)
+                test_count, file_count = counts.groups()
+                facts = "\n".join(line.split(". ", 1)[0] + "." if line.startswith("The local-worker") else line
+                                  for line in record.splitlines() if line.startswith(("The local-worker", "ChatGPT independently")))
+                prompt = (f"Draft a short test report from the following facts. Job ID: {job_id}. "
+                          f"Independent local test count: {test_count}. Local test file count: {file_count}. "
+                          f"Evidence: {facts}\n\nWrite three short lines of plain English, headed "
+                          f"'Hosted CI job {job_id}:', 'Local checks:' and 'Unverified:'. Include the "
+                          "local counts as digits. Write one complete sentence per line. Keep the first "
+                          "two sentences under 20 words. Select one evidence limit for the third line.")
                 result = subprocess.run([openclaw, "agent", "exec", "--config", str(config),
                     "--model", f"pocket-local/{MODEL}", "--cwd", str(workspace), "--message-file",
                     "-", "--code-mode", "direct", "--thinking", "off", "--timeout", "300", "--json"],
@@ -100,6 +122,13 @@ def review(args):
                         or receipt.get("toolSummary", {}).get("calls", 0)
                         or not receipt.get("final", "").strip()):
                     raise ValueError("Unexpected model, tool activity or empty review")
+                draft = receipt["final"]
+                local_checks = draft.partition("\nLocal checks: ")[2].partition("\n")[0]
+                if (not draft.startswith(f"Hosted CI job {job_id}: ")
+                        or not re.search(rf"\b{test_count}\b", local_checks)
+                        or not re.search(rf"\b{file_count}\b", local_checks)
+                        or "\nUnverified: " not in draft or len(draft.splitlines()) != 3):
+                    raise ValueError(f"Draft failed the source check: {draft[:650]}")
                 print(json.dumps({"evidence_sha256": hashlib.sha256(EVIDENCE.read_bytes()).hexdigest(),
                                   "model_sha256": MODEL_SHA256, "receipt": receipt}, indent=2))
             finally:
