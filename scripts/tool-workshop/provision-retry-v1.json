@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "experiment": "workshop-utf8-code-repair-v1",
+  "previousHead": "1b81519c5eeb9b465fc0feae1d934dd03c28f38b",
+  "previousRun": 44877989061,
+  "failedJob": 136767096493,
+  "failedStage": "llama-server build, before model acquisition or inference",
+  "observedModelCalls": 0,
+  "reason": "Pinned llama.cpp attempted optional prebuilt web UI provisioning and failed its asset check.",
+  "change": "Disable LLAMA_BUILD_UI and LLAMA_USE_PREBUILT_UI; this host uses only the inference API.",
+  "upstreamOptionSource": "https://github.com/ggml-org/llama.cpp/blob/5f490d7bfe78844e6390c869454c149fd7e003a8/tools/ui/CMakeLists.txt",
+  "unchanged": ["fixture", "model artifact", "model profile", "prompts", "generation budget", "held-out gate", "grading", "runtime source pin"]
+}
