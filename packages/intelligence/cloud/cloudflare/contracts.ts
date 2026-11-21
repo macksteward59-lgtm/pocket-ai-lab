@@ -6,6 +6,7 @@ import {
   type ComponentRelease, type SelectedTextPurpose
 } from "../shared/selectedTextContract";
 import { CLOUDFLARE_AGENT_ID, CLOUDFLARE_COMPONENT_ID } from "./profile";
+import type { CloudflareUsage } from "./CloudflareAnalysisProvider";
 
 export const CLOUDFLARE_ANALYSIS_MODELS = Object.freeze(["@cf/openai/gpt-oss-120b"] as const);
 export type CloudflareAnalysisModel = typeof CLOUDFLARE_ANALYSIS_MODELS[number];
@@ -38,10 +39,41 @@ export interface CloudflarePreview {
   digest: string;
 }
 
+/** Provider-reported candidate evidence; absent provenance and counters remain null. */
+export interface CloudflareEvidence {
+  schemaVersion: 1;
+  kind: "cloud-analysis-candidate";
+  agentID: typeof CLOUDFLARE_AGENT_ID;
+  componentID: typeof CLOUDFLARE_COMPONENT_ID;
+  taskID: string;
+  attemptID: string;
+  lifecycleTaskID: string;
+  previewDigest: string;
+  inputSHA256: string;
+  purpose: SelectedTextPurpose;
+  release: ComponentRelease;
+  destination: CloudflareDestination;
+  providerID: "cloudflare-workers-ai";
+  execution: "cloud";
+  requestedModel: string;
+  returnedModel: string | null;
+  providerResponseID: string | null;
+  text: string;
+  usage: CloudflareUsage;
+  maxOutputTokens: number;
+  reasoning: "low";
+  reasoningBudgetSemantics: "unverified";
+  reasoningOutputDiscarded: boolean;
+  finishReason: "stop";
+  authorized: false;
+  verified: false;
+}
+
 export type CloudflareJobErrorCode =
   | "invalid_request" | "invalid_configuration" | "preview_mismatch" | "consent_expired"
-  | "approval_required" | "approval_denied" | "cancelled" | "deadline_exceeded"
-  | "upstream_failed" | "invalid_response";
+  | "approval_required" | "approval_denied" | "release_unapproved" | "task_unavailable"
+  | "duplicate_attempt" | "persistence_failed" | "cancelled" | "deadline_exceeded"
+  | "provider_mismatch" | "upstream_failed" | "invalid_response";
 
 /** Fixed public codes only; raw credentials, selected text and upstream errors never escape. */
 export class CloudflareJobFailure extends Error {
