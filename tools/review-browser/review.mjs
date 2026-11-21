@@ -25,10 +25,10 @@ async function startServer(directory) {
       const match = /listening on (http:\/\/127\.0\.0\.1:[1-9][0-9]*)$/.exec(line);
       if (match) return {
         url: match[1],
-        async stop() {
+        async stop(signal = "SIGTERM") {
           if (child.exitCode !== null || child.signalCode !== null) return;
           const exit = once(child, "exit");
-          child.kill();
+          child.kill(signal);
           await exit;
         }
       };
@@ -54,6 +54,52 @@ async function importFile(page, data) {
 }
 
 for (const engine of [chromium, webkit]) {
+  test(engine.name() + " preserves separate citations after an edit and an abrupt server restart",
+    { timeout: 60000 }, async t => {
+      const directory = await mkdtemp(path.join(tmpdir(), "pocket-citation-recovery-"));
+      t.after(() => rm(directory, { recursive: true, force: true }));
+      let server = await startServer(directory);
+      t.after(() => server.stop());
+      const refs = ["Research notebook, page 4", "https://example.org/study?pages=1,2"];
+      const created = await fetch(server.url + "/api/memory", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "Initial finding", sourceRefs: refs })
+      });
+      assert.equal(created.status, 201);
+      const original = (await created.json()).entry;
+      assert.deepEqual(original.provenance.sourceRefs, refs);
+      const browser = await engine.launch();
+      t.after(() => browser.close());
+      const page = await browser.newPage(device);
+      page.setDefaultTimeout(10000);
+      await page.goto(server.url);
+      await openView(page, "memory");
+      const edit = page.getByRole("button", { name: "Edit", exact: true });
+      const save = page.getByRole("button", { name: "Save changes" });
+      const card = page.locator(".memory-entry");
+      await edit.click();
+      await page.getByLabel("Memory content", { exact: true }).fill("Reviewed finding");
+      await save.click();
+      await card.getByText("Reviewed finding", { exact: true }).waitFor();
+      assert.deepEqual(await card.locator(".memory-source").allTextContents(), refs.map(r => "Source: " + r));
+      await edit.click();
+      const revised = [refs[0], "https://example.org/study?pages=2,4", "Review log, row 7"];
+      await page.getByLabel("Source 2 (optional)", { exact: true }).fill(revised[1]);
+      await page.getByRole("button", { name: "Add source" }).click();
+      await page.getByLabel("Source 3 (optional)", { exact: true }).fill(revised[2]);
+      await save.click();
+      await card.getByText("Source: " + revised[2], { exact: true }).waitFor();
+      await server.stop("SIGKILL");
+      server = await startServer(directory);
+      await page.goto(server.url);
+      await openView(page, "memory");
+      await card.getByText("Reviewed finding", { exact: true }).waitFor();
+      assert.deepEqual(await card.locator(".memory-source").allTextContents(), revised.map(r => "Source: " + r));
+      const list = await (await fetch(server.url + "/api/memory")).json();
+      assert.deepEqual(list.entries, [{ ...original, content: "Reviewed finding",
+        provenance: { ...original.provenance, verified: false, sourceRefs: revised } }]);
+    });
+
   test(engine.name() + " reads a local draft and recovers the saved assessment after a process restart",
     { timeout: 90000 }, async t => {
       const directory = await mkdtemp(path.join(tmpdir(), "pocket-review-"));

@@ -110,6 +110,25 @@ export function localApiAllowed(req, env = process.env) {
   return true;
 }
 
+// Omitted on an edit means keep the stored references. An explicit empty list clears them.
+function memorySourceRefs(input) {
+  if (Object.hasOwn(input, "sourceRefs")) {
+    if (Object.hasOwn(input, "source") || !Array.isArray(input.sourceRefs)) {
+      throw new Error("Use a sourceRefs array or a single source.");
+    }
+    for (const ref of input.sourceRefs) {
+      if (typeof ref !== "string" || !ref.trim()) throw new Error("Each source reference must contain text.");
+      if (ref.length > 500) throw new Error("Source reference exceeds 500 characters.");
+    }
+    return input.sourceRefs;
+  }
+  if (!Object.hasOwn(input, "source")) return undefined;
+  if (typeof input.source !== "string") throw new Error("Source reference must be text.");
+  const source = input.source.trim();
+  if (source.length > 500) throw new Error("Source reference exceeds 500 characters.");
+  return source ? [source] : [];
+}
+
 function jsonContentType(req) {
   return /^application\/json(?:\s*;|$)/i.test(req.headers["content-type"] || "");
 }
@@ -324,8 +343,12 @@ export function createServer() {
           }
           const layers = ["working", "episodic", "semantic", "procedural"];
           const layer = layers.includes(input.layer) ? input.layer : "semantic";
-          const source = typeof input.source === "string" ? input.source.trim() : "";
-          if (source.length > 500) return json(res, 400, { error: "Source reference exceeds 500 characters." });
+          let sourceRefs;
+          try {
+            sourceRefs = memorySourceRefs(input);
+          } catch (error) {
+            return json(res, 400, { error: error.message });
+          }
           try {
             const manager = await openMemoryManager();
             const id = await manager.write({
@@ -334,7 +357,7 @@ export function createServer() {
               provenance: {
                 agentId: "user",
                 verified: false,
-                sourceRefs: source ? [source] : []
+                sourceRefs: sourceRefs ?? []
               }
             });
             const entry = manager.list().find(item => item.id === id);
@@ -366,13 +389,17 @@ export function createServer() {
           if (input.content.length > 12000) {
             return json(res, 413, { error: "Memory content exceeds 12,000 characters." });
           }
-          const source = typeof input.source === "string" ? input.source.trim() : "";
-          if (source.length > 500) return json(res, 400, { error: "Source reference exceeds 500 characters." });
+          let sourceRefs;
+          try {
+            sourceRefs = memorySourceRefs(input);
+          } catch (error) {
+            return json(res, 400, { error: error.message });
+          }
           try {
             const manager = await openMemoryManager();
             const updated = await manager.update(id, {
               content: input.content,
-              sourceRefs: source ? [source] : []
+              sourceRefs
             });
             if (!updated) return json(res, 404, { error: "Memory entry not found." });
             const entry = manager.list().find(item => item.id === id);
