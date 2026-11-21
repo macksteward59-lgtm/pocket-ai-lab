@@ -102,8 +102,9 @@ def review(args):
                     raise ValueError("GitHub job ID or local test totals are missing from the evidence")
                 job_id = job.group(1)
                 test_count, file_count = counts.groups()
-                facts = "\n".join(line.split(". ", 1)[0] + "." if line.startswith("The local-worker") else line
-                                  for line in record.splitlines() if line.startswith(("The local-worker", "ChatGPT independently")))
+                hosted = next(line for line in record.splitlines() if line.startswith("The local-worker"))
+                independent = next(line for line in record.splitlines() if line.startswith("ChatGPT independently"))
+                facts = f"HOSTED JOB: {hosted.split('. ', 1)[0]}.\nINDEPENDENT LOCAL RUN: {independent}"
                 prompt = (f"Draft a short test report from the following facts. Job ID: {job_id}. "
                           f"Independent local test count: {test_count}. Local test file count: {file_count}. "
                           f"Evidence: {facts}\n\nWrite three short lines of plain English, headed "
@@ -124,13 +125,22 @@ def review(args):
                     raise ValueError("Unexpected model, tool activity or empty review")
                 draft = receipt["final"]
                 local_checks = draft.partition("\nLocal checks: ")[2].partition("\n")[0]
-                if (not draft.startswith(f"Hosted CI job {job_id}: ")
-                        or not re.search(rf"\b{test_count}\b", local_checks)
-                        or not re.search(rf"\b{file_count}\b", local_checks)
-                        or "\nUnverified: " not in draft or len(draft.splitlines()) != 3):
-                    raise ValueError(f"Draft failed the source check: {draft[:650]}")
-                print(json.dumps({"evidence_sha256": hashlib.sha256(EVIDENCE.read_bytes()).hexdigest(),
-                                  "model_sha256": MODEL_SHA256, "receipt": receipt}, indent=2))
+                figures_match = (
+                    draft.startswith(f"Hosted CI job {job_id}: ")
+                    and bool(re.search(rf"\b{test_count}\b", local_checks))
+                    and bool(re.search(rf"\b{file_count}\b", local_checks))
+                    and "\nUnverified: " in draft
+                    and len(draft.splitlines()) == 3
+                )
+                report = {
+                    "evidence_sha256": hashlib.sha256(EVIDENCE.read_bytes()).hexdigest(),
+                    "model_sha256": MODEL_SHA256,
+                    "source": {"job_id": job_id, "hosted_steps": hosted.split(". ", 1)[0] + ".",
+                               "local_tests": int(test_count), "local_files": int(file_count)},
+                    "review_status": "awaiting_source_review" if figures_match else "needs_correction",
+                    "receipt": receipt,
+                }
+                print(json.dumps(report, indent=2))
             finally:
                 server.terminate()
                 try:
