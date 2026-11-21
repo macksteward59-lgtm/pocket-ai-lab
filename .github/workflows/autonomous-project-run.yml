@@ -1,0 +1,98 @@
+name: Autonomous Project Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        type: choice
+        required: true
+        default: audit
+        options:
+          - audit
+          - resume
+      max_tasks:
+        description: "Maximum engineering tasks (reserved for the configured agent runner)"
+        type: choice
+        required: true
+        default: "1"
+        options:
+          - "1"
+          - "2"
+          - "3"
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: autonomous-project-run
+  cancel-in-progress: false
+
+jobs:
+  repository-audit:
+    name: Inspect repository and publish run report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Collect open pull requests and recent workflow status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          MODE: ${{ inputs.mode }}
+          MAX_TASKS: ${{ inputs.max_tasks }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p run-report
+          gh pr list --repo "$REPOSITORY" --state open --limit 100 \
+            --json number,title,state,isDraft,headRefName,baseRefName,updatedAt,url \
+            > run-report/open-pull-requests.json
+          gh run list --repo "$REPOSITORY" --limit 30 \
+            --json databaseId,name,status,conclusion,headBranch,headSha,createdAt,updatedAt,url \
+            > run-report/recent-workflow-runs.json
+          cat > run-report/summary.md <<EOF
+          # Autonomous Project Run
+
+          - Run: $RUN_ID (attempt $RUN_ATTEMPT)
+          - Mode requested: $MODE
+          - Task budget requested: $MAX_TASKS
+          - Repository: $REPOSITORY
+          - Commit inspected: $(git rev-parse HEAD)
+
+          ## Execution status
+
+          **Audit completed. Engineering-agent execution is not configured by this workflow.**
+
+          This workflow deliberately performs a read-only repository audit. It does not
+          modify branches, create commits or pull requests, merge changes, access secrets,
+          invoke a model provider, or claim that an autonomous engineering agent ran.
+
+          The `resume` mode is accepted as an intent marker only until a reviewed,
+          provider-backed runner with least-privilege write permissions is installed.
+          See `docs/implementation/autonomous-project-run.md` for the integration gate.
+
+          ## Captured evidence
+
+          - `open-pull-requests.json`: open PR inventory
+          - `recent-workflow-runs.json`: recent Actions runs
+          EOF
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-project-run-${{ github.run_id }}
+          path: run-report/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish run summary
+        run: cat run-report/summary.md >> "$GITHUB_STEP_SUMMARY"
