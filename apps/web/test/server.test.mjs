@@ -387,6 +387,8 @@ test("Activity loads the bounded model draft beside the independent PR #245 sour
     assert.equal(source.jobId, source.bundled.source.job_id);
     assert.equal(source.localTests, 359);
     assert.equal(source.localFiles, 11);
+    assert.match(source.sourceSummary, /passed 359 tests in 11 files/);
+    assert.ok(source.sourceSummary.includes("physical iPhone run"));
     assert.match(source.evidence, /359 provider, lifecycle and compatibility tests/);
     assert.match(source.evidence, /physical iPhone run/);
     assert.deepEqual(Object.keys(source.bundled.receipt).sort(), ["final", "model", "ok", "provider"]);

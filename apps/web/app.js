@@ -237,6 +237,7 @@ function displayReview(record, origin) {
   $("review-job").textContent = "GitHub job " + reviewSource.jobId;
   $("review-evidence").textContent = reviewSource.evidence;
   $("review-draft").textContent = draft;
+  $("review-summary").textContent = reviewSource.sourceSummary;
   $("review-comparison").textContent = match
     ? "The job and both counts appear in the draft. Check their meaning against the source."
     : "Correction needed. The draft omits or changes the job or local test counts.";
@@ -282,7 +283,7 @@ $("review-file").addEventListener("change", async event => {
 });
 $("review-to-memory").addEventListener("click", () => {
   if (!reviewSource || $("review-details").hidden) return;
-  prepareReviewNote("PR #245 CI evidence\n\n" + reviewSource.evidence +
+  prepareReviewNote("PR #245 CI evidence\n\n" + reviewSource.sourceSummary +
     "\n\nEvidence SHA-256: " + reviewSource.digest +
     "\n\nOpenClaw draft (" + $("review-status").textContent + ")\n" + $("review-draft").textContent,
     reviewSource.job, $("review-action-status"));

@@ -258,8 +258,15 @@ export function createServer() {
         const counts = /(\d+) provider, lifecycle and compatibility tests passed across (\d+) files/.exec(evidence);
         const summary = evidence.split("\n").filter(line =>
           line.startsWith("The local-worker") || line.startsWith("ChatGPT independently"));
-        if (!job || !counts || summary.length !== 2) throw new Error("Project review evidence is incomplete.");
+        const hosted = summary[0]?.split(". ", 1)[0];
+        const limits = /The tests do not establish [^\n]+/.exec(summary[1] || "");
+        if (!job || !counts || summary.length !== 2 || !hosted || !limits) {
+          throw new Error("Project review evidence is incomplete.");
+        }
+        const sourceSummary = hosted + ". Independent local validation passed " + counts[1] +
+          " tests in " + counts[2] + " files. " + limits[0];
         return json(res, 200, {
+          sourceSummary,
           job: job[1], jobId: job[2], localTests: Number(counts[1]), localFiles: Number(counts[2]),
           evidence: summary.join("\n\n"), digest: createHash("sha256").update(source).digest("hex"),
           bundled: JSON.parse(saved)
