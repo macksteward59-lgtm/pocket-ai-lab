@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 213060)
-Total output lines: 4826
-
 # Coordination Log
 
 Entries are append-only. Add new entries at the bottom; do not edit or remove prior entries.
@@ -1919,7 +1916,1691 @@ Verified by reading the tree at `698357a1fdd3cb510994deaab77b9078afdcab14`. Do n
 ## 2026-11-16 01:46 UTC — Corrected bounded-wait helper semantics and restarted exact-head validation
 
 - During patch review, caught a condition-inversion bug in the first bounded-wait helper implementation before accepting its validation: the helper initially waited for the opposite of the original loop's exit condition. Corrected the helper to continue while the original `while` condition remains true, so each test waits for the same state transition as before and now has a 15-second timeout.
-- Re-reviewed the three changed XCTest files and confirmed the original conditions are preserved: request registration, pending-acquirer counts, unload start, scheduler queue counts, and gate start/…63060 tokens truncated…ifier prototype
+- Re-reviewed the three changed XCTest files and confirmed the original conditions are preserved: request registration, pending-acquirer counts, unload start, scheduler queue counts, and gate start/order conditions.
+- Corrected exact PR #135 head is `374e865853c385d44349b277576a886c8b9bbf61`. Fresh exact-head CI has started, including iOS LlamaEngine CI run `43788021235`; all companion checks were in progress at the last poll. No new-head validation pass is claimed yet.
+- The earlier long-running #115/#135 iOS simulator jobs remain stale in GitHub's API with no fresh logs. The bounded waits are diagnostic hardening only; the cause of the earlier stall remains unproven.
+
+
+## 2026-11-16 01:47 UTC — Lifecycle exact-head validation completed
+
+- Rechecked PR #94 head `4c35146848f7c7c7bcc28e5f6728ffca8834b13f` through GitHub check-runs and job logs. Pocket AI Lab CI, Consumer prototype CI, Cursor collaboration plugin CI, and Governance sidecar CI all completed successfully. The focused autonomy test job reports 16 tests passed, 0 failed.
+- PR #94 remains open, draft, and mergeable; no merge was performed. Transactional cross-process persistence, governed host execution, and production East scheduling remain future integration gates.
+
+
+## 2026-11-16 02:37 UTC — Removed remaining unbounded simulator XCTest polling
+
+- Follow-up review of the PR #135 native XCTest sources found additional multiline `while ... { await Task.yield() }` loops that the earlier one-line transformation had not matched. The simulator suite therefore still contained unbounded actor handshakes despite the prior bounded-wait commit; this was the concrete coverage gap.
+- Replaced the remaining 9 loops in `NativeInferenceRuntimeTests.swift` and 1 in `NativeEvaluationRuntimeTests.swift` with the same 15-second async condition helper. The native evaluation test file now has its own file-scoped helper. Verified across all eight LlamaEngine XCTest files that no `Task.yield()` polling loops remain; the file-read `while let chunk` loop is ordinary bounded file streaming, not a test synchronization spin.
+- PR #135 exact head is now `2a738881b2d2ade93bf096d7fa3c74e553eecdb5`. Exact-head plugin CI has passed; Pocket AI Lab CI, Consumer CI, and sidecar CI were running; iOS LlamaEngine CI was pending at the last poll. No new-head iOS pass is claimed.
+- Previous run `43788021235` remained stale in the simulator XCTest step with no log artifact available. This confirms the runner did not advance to pinned-GGUF or macOS tests, but does not establish the original root cause. New bounded waits are intended to turn a missing fixture transition into a timed XCTest failure rather than indefinite polling.
+
+
+## 2026-11-16 — Native CI and PostgreSQL lifecycle review checkpoint
+
+- PR #135 exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5`: companion Pocket AI Lab, Consumer, Governance, and Cursor workflows all passed. iOS LlamaEngine run `43793269022` has completed pinned llama.cpp simulator/macOS artifact build and fail-closed typecheck; physical-device engine link is in progress. Simulator/app tests, pinned-GGUF smoke, and macOS XCTest have not yet run.
+- Reviewed PR #131 exact head `4dc767c1958af99383522d08bbca1c42cefe5818` and mainline validation PR #132 exact head `a3a44681c49b5cfaddf343807378c46cfc264d39`. The PostgreSQL adapter uses a namespaced snapshot, transaction + row lock, record-version compare-and-swap, size/schema validation, and explicit coordinator reload after conflict. The focused tests exercise stale writers, namespace separation, rollback, bounds, and reload using a serialized fake database; they do not prove compatibility with a live PostgreSQL driver/server. All four companion workflows on #132 exact head passed. No migration or production database was executed.
+- PRs #131/#132 remain drafts. Host-side TLS, least-privilege credentials, namespace authorization/RLS, encryption/key management, backups, migration execution, and production integration remain explicit deployment obligations. No APEX/East authorization, signed evidence, or receipt authority is added.
+- No merge performed. Existing ownership and trust boundaries preserved.
+
+
+## 2026-11-16 — Native device link and simulator selection passed
+
+- Refreshed PR #135 exact-head iOS workflow `43793269022`: pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device engine link, and simulator selection all completed successfully. The generated native app build is currently in progress; app XCTest, simulator XCTest, pinned-GGUF smoke, and macOS XCTest have not yet run.
+- PR #135 companion workflows remain green at exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5`.
+- PR #129 iOS workflow `43771100673` is now reported cancelled. Its earlier completed stages are not counted as a complete validation result; #135 remains the consolidated mainline native validation candidate.
+- No merge performed. No physical-device run, runtime attestation, pinned-GGUF smoke, or macOS XCTest pass claimed.
+
+
+## 2026-11-16 — Native app build passed; app XCTest running
+
+- Refreshed PR #135 exact head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5` and iOS LlamaEngine run `43793269022` (job `133056542073`). The pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device XCFramework link, iPhone simulator selection, and both generic simulator/device native app builds have completed successfully.
+- The `XCTest the native Pocket AI Lab app` step is currently in progress. The iOS simulator XCTest, pinned-GGUF download/inference smoke, macOS XCTest, and runner evidence summary have not started. Job-log retrieval currently returns GitHub `BlobNotFound`, so no assertion-level result is inferred.
+- All four companion workflows passed on the same exact PR #135 head. PR remains draft/open/unmerged. No physical iPhone execution, signed runtime attestation, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Autonomy persisted-state cancellation hardening committed
+
+- Continued the existing ChatGPT ownership claim on `codex/autonomous-task-lifecycle`; no other active agent claim conflicts with this scope.
+- Hardened `validateStoredTask` to reject impossible cancellation snapshots: cancelled tasks must contain cancelled work and cannot conceal failed steps; ready/running tasks cannot contain cancelled steps; cancelled steps cannot retain a result. Added regression tests for forged completed-to-cancelled state, ready-with-cancelled-step, cancelled-step result, and failure concealed by cancellation.
+- Exact PR #94 head is `533341f664618c62a256bc4483c6856b315d2de0`. Exact-head Governance sidecar CI (`43794127649`) and Cursor collaboration plugin CI (`43794127562`) passed. Pocket AI Lab CI push (`43794126392`) and PR (`43794127584`) runs and Consumer prototype CI (`43794127579`) remain in progress. No new-head full CI pass is claimed.
+- Existing APEX/Director, East authorization/evidence semantics, trust/RLS/schema, receipts, native runtime, and production execution boundaries were not changed. PR #94 remains draft/open/unmerged.
+
+
+## 2026-11-16 — Autonomy cancellation-state hardening passes exact-head CI
+
+- PR #94 exact head `533341f664618c62a256bc4483c6856b315d2de0` passed all five check runs: Pocket AI Lab CI push `43794126392`, Pocket AI Lab CI pull request `43794127584`, Consumer prototype CI `43794127579`, Governance sidecar CI `43794127649`, and Cursor collaboration plugin CI `43794127562`.
+- The focused `packages/intelligence/__tests__/autonomy.test.ts` suite passed 17/17 in both Pocket AI Lab CI runs. The full intelligence run reports 72 test files passed; workspace suite reports 28 test files passed. Governance sidecar reported 46 tests passed and offline simulation passed with `authorized=false`; Cursor plugin reported 5 tests passed. No failures were reported.
+- Updated the board status to `in-review`. PR #94 remains draft/open/mergeable and unmerged. This does not implement a production transactional store, cross-process scheduler, governed host execution, or East production integration.
+
+
+## 2026-11-16 — Native XCTest runner determinism hardening queued
+
+- PR #135 new exact head: `5cf2c215be5103eaff8f52cccd827f2114c1ade8`. Updated `.github/workflows/ios-llamaengine-ci.yml` to explicitly boot and wait for the selected iPhone simulator (6-minute bounded boot gate), disable parallel testing for app/simulator/macOS XCTest, and cap each XCTest step at 20 minutes. These changes are diagnostic/reliability hardening; they do not establish the cause of the prior stall.
+- Prior iOS run `43793269022` on head `2a738881b2d2ade93bf096d7fa3c74e553eecdb5` remains reported in progress at native app XCTest, with run `updated_at=02:38:05Z` and no retrievable job logs (`BlobNotFound`). Treat it as stale/stalled, not active progress. Its pinned llama.cpp build, fail-closed typecheck, device XCFramework link, simulator selection, and native app build passed; app XCTest did not conclude.
+- New exact-head iOS run `43794464434` is pending. Companion workflows on the new head are in progress. No new-head CI result is claimed. Simulator XCTest, pinned-GGUF inference smoke, macOS XCTest, physical iPhone generation, and runtime attestation remain unverified.
+- No production runtime, model trust, APEX/East authorization, signed Evidence, or receipt semantics changed. PR #135 remains draft/open/unmerged.
+
+
+## 2026-11-16 — Native validation companion checks green; iOS runner queued
+
+- PR #135 exact head `5cf2c215be5103eaff8f52cccd827f2114c1ade8`: all four companion workflow types passed. Pocket AI Lab CI pull-request run `43794464364` and push run `43794458512`, Consumer prototype `43794464402`, Governance sidecar `43794464615`, and Cursor collaboration plugin `43794464444` all completed successfully.
+- New iOS LlamaEngine run `43794464434` is still pending runner acquisition. Previous run `43793269022` has had its native app XCTest step cancelled after remaining stale; it did not complete app XCTest and never reached simulator package tests, pinned-GGUF smoke, or macOS XCTest. App build had passed on that prior head.
+- The new workflow hardening is therefore not yet validated by an iOS run. No physical-device run, runtime attestation, signed Evidence, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Autonomy terminal chronology guard passes exact-head CI
+
+- Added a persisted-state invariant to `validateStoredTask`: a terminal task timestamp cannot precede any successful step's completion timestamp. Added a regression case that forges a completed task's `completedAt` one millisecond before its final step's completion.
+- PR #94 exact head `bb6102e99af4f2567b91e876be7eeb65fce06096` passed all five exact-head workflows: Pocket AI Lab CI push `43794777257` and PR `43794773850`, Consumer prototype CI `43794777240`, Governance sidecar `43794777288`, and Cursor collaboration plugin `43794777199`.
+- Focused autonomy tests: 17/17 passed in both Pocket AI Lab runs. Full intelligence suite: 72 test files passed. Workspace suite: 28 test files, 318 passed / 2 skipped. No failures. PR remains draft/open/unmerged.
+- Production transactional persistence, cross-process scheduling, East production integration, governed host execution, and real multi-process/fault-injection acceptance remain open. No APEX authorization or signed receipt is produced by this lifecycle kernel.
+
+
+## 2026-11-16 — Lifecycle/PostgreSQL interface reconciliation queued
+
+- PR #131/#132 carry a second copy of `TaskLifecycleCoordinator` with two integration APIs missing from the current PR #94 head: `reload()` after a PostgreSQL `store_conflict`, and task-scoped `recoverExpiredLeases(taskId?)` used by `EastTaskLifecycleAdapter`. PR #94 now includes both methods while retaining its stricter cancellation and terminal timestamp validation.
+- Added tests for concurrent writer conflict → failed save leaves local state unchanged → `reload()` adopts remote state → safe subsequent write; and for task-scoped lease recovery leaving other tasks' expired leases untouched. Focused suite now contains 19 tests.
+- Added docs for conflict reconciliation and task-scoped recovery. Current PR #94 head `03b6247db1766d01015472525b8ccb93aeefd938`; exact-head CI is running (Pocket AI Lab push/PR, Consumer, Governance, Cursor). Previous head `bb6102e99af4f2567b91e876be7eeb65fce06096` passed all five workflows.
+- This is interface alignment only; PR #131/#132 still require careful diff reconciliation and review before any merge. No production PostgreSQL instance or migration has been executed.
+
+
+## 2026-11-16 — Lifecycle/PostgreSQL interface alignment passes exact-head CI
+
+- PR #94 exact head `03b6247db1766d01015472525b8ccb93aeefd938` passed all five workflows: Pocket AI Lab CI push `43795249282` and PR `43795253519`, Consumer prototype CI `43795253544`, Governance sidecar CI `43795253511`, and Cursor collaboration plugin CI `43795253509`.
+- Focused autonomy suite: 19/19 passed. Intelligence suite: 72 test files passed. Workspace suite: 28 test files, 318 passed / 2 skipped. Consumer job: 36 test files / 307 passed and 14 test files / 159 passed / 1 skipped; sidecar: 46 passed; Cursor plugin: 5 passed. No test failures.
+- Added `reload()` with full snapshot validation and global attempt-ID uniqueness checks for safe reconciliation after `store_conflict`; added optional task-scoped `recoverExpiredLeases(taskId?)` used by the East lifecycle adapter. Tests cover concurrent-writer conflict recovery and scoped lease recovery.
+- PR #94 remains draft/open/unmerged. Production PostgreSQL deployment, real database migration, cross-process scheduling/locking, East production execution, and governed host authorization remain open. No APEX approval or signed receipt is issued.
+
+
+## 2026-11-16 — Claim lifecycle/East aggregate reconciliation
+
+- Claimed the existing PR #103 branch `codex/east-lifecycle-resumption-mainline` for a bounded reconciliation of the lifecycle kernel with PR #94's hardened validator and the PostgreSQL/East adapter interfaces. Scope is limited to the coordinator, its focused autonomy tests, and lifecycle docs; the East adapter implementation and authorization/evidence contracts remain untouched.
+- Reason: PR #103 is the integration aggregate for PR #94 + #102; PR #131 is stacked on #103 and introduces PostgreSQL persistence, while PR #132 validates the PostgreSQL/East adapter stack against main. Their coordinator copies currently diverge. The goal is one consistent coordinator contract before merge review, not a merge or production readiness claim.
+
+
+## 2026-11-16 — East lifecycle resumption aggregate reconciled and CI green
+
+- PR #103 exact head `752b79b5d7a9e65c1a0e78b722e0574fafea7dc9` passed all five workflows: Pocket AI Lab push `43795650394` and PR `43795660411`, Consumer `43795660407`, Governance `43795660375`, Cursor `43795660394`.
+- The aggregate coordinator and focused autonomy tests now match PR #94's hardened implementation: 19/19 autonomy tests pass; 72 intelligence test files pass; 28 workspace files pass. Consumer and sidecar/plugin checks also pass. The East six-agent adapter and its idempotent resumption tests remain present; `authorized=false` and non-authorizing evidence semantics are preserved.
+- PR #103 remains draft/open/unmerged. PR #131 remains stacked on #103; its coordinator/test/docs are being aligned to the updated base so the persistence PR can narrow to PostgreSQL implementation. PR #132 is the separate mainline validation aggregate.
+
+
+## 2026-11-16 — PostgreSQL store branch aligned to hardened lifecycle contract
+
+- Updated PR #131 branch `codex/east-postgres-lifecycle-store` to use the exact hardened coordinator, 19-test autonomy suite, and lifecycle docs from PR #103/#94. This removes semantic divergence in `reload()`, task-scoped expired-lease recovery, cancellation validation, and terminal chronology when the base PR is integrated.
+- PR #131 exact head `50bfe77f28d6d2cdb79e6007dad35207d3df954b` passed Pocket AI Lab CI run `43795754538`: 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence test files, and 28 workspace test files passed. These PostgreSQL tests use a serialized fake database; no live PostgreSQL server or migration was exercised.
+- PR #131 remains draft/open/mergeable and is stacked on PR #103, whose updated head is `752b79b5d7a9e65c1a0e78b722e0574fafea7dc9`. The PR branch is 3 commits behind its base branch. Do not merge out of order; base integration/reconciliation is still required.
+- PR #132 mainline validation branch now carries the same hardened coordinator/tests and is running its exact-head companion workflows.
+
+
+## 2026-11-16 — PostgreSQL/East lifecycle mainline validation passes
+
+- PR #132 exact head `50e5fcd8b97a127857a2b12da117a96a36dc3fde` passed all five exact-head checks: Pocket AI Lab CI push `43795691884` and PR `43795900842`, Consumer `43795900705`, Governance `43795900804`, and Cursor `43795900742`.
+- Intelligence suite: 74 test files passed, including autonomy 19/19, PostgreSQL store 8/8, and East lifecycle adapter 3/3. Workspace suite: 28 test files passed. Consumer suite: 36 test files / 307 passed and 14 test files / 159 passed / 1 skipped. Governance sidecar: 46 passed; offline simulation reported `authorized=false`. Cursor plugin: 5 passed. No failures.
+- PR #132 remains draft/open/mergeable and validation-only. PostgreSQL adapter tests use a serialized fake DB; no live PostgreSQL server, production migration, RLS, credential, backup, or deployment validation occurred. East remains non-authorizing; APEX authority is unchanged.
+
+
+## 2026-11-16 — PostgreSQL persistence PR synchronized to East lifecycle base
+
+- Verified the three files changed on PR #103 since PR #131's previous base (coordinator, autonomy tests, lifecycle docs) were byte-identical in PR #131's tree. Created a two-parent merge commit `ee81760ecb4eaac0acf9f7f8bacba4c39c2d9e11` using the existing PR #131 tree and current PR #103 head as second parent; advanced the branch with a non-force expected-head ref update.
+- PR #131 now has 16 commits ahead / 0 behind its base, is mergeable, and its diff is narrowed to five files: PostgreSQL snapshot store, SQL migration, store tests, package exports, and East production-readiness docs. Coordinator/test/docs are inherited from the base rather than duplicated.
+- Previous content-identical tree head `50bfe77f28d6d2cdb79e6007dad35207d3df954b` passed Pocket AI Lab CI with 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence files, and 28 workspace files. New exact-head CI `43796136430` is running. No live PostgreSQL execution or migration is claimed.
+
+
+## 2026-11-16 — Synchronized PostgreSQL persistence branch exact-head CI passes
+
+- PR #131 exact head `ee81760ecb4eaac0acf9f7f8bacba4c39c2d9e11` passed Pocket AI Lab CI run `43796136430`. The new merge commit keeps the previously tested tree unchanged while recording PR #103 as the second parent; the branch is now 16 commits ahead / 0 behind its base and the PR diff is limited to five persistence-specific files.
+- Validation: 19 autonomy tests, 8 PostgreSQL store tests, 74 intelligence test files, 28 workspace test files; all passed. The PostgreSQL tests use a serialized fake database, not a live PostgreSQL server. No migration execution, RLS validation, credentials, backup, or production deployment occurred.
+- PR #131 remains draft/open/mergeable and stacked on PR #103. The correct integration order remains #103 before #131; no PR merged.
+
+
+## 2026-11-16 — Native app XCTest passes; package simulator XCTest running
+
+- PR #135 exact head `5cf2c215be5103eaff8f52cccd827f2114c1ade8`, iOS run `43794464434`: pinned llama.cpp simulator/macOS build, fail-closed typecheck, physical-device XCFramework link, simulator selection and explicit boot, native Pocket AI Lab app build, and native app XCTest have all completed successfully.
+- The LlamaEngine package iOS simulator XCTest is now in progress. Pinned-GGUF download/inference smoke, macOS XCTest, and runner evidence summary remain pending. Companion Pocket AI Lab, Consumer, Governance, and Cursor workflows passed on the same exact head.
+- The physical-device XCFramework link is a build/link check only. No physical iPhone inference, signed runtime attestation, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Corrected native memory admission semantics
+
+- Reviewed Apple's `os_proc_available_memory()` documentation: it returns current process memory limit minus current app footprint. The previous PR #122 formula subtracted all resident, pending, and unloading estimates from this value, which can double-count resident model memory.
+- Updated PR #122 to preserve the pool's full internal reservation budget while subtracting only non-resident transient reservations (pending loads and native unloads) from host headroom. Resident model footprint is already represented in a fresh OS snapshot. Added a regression that blocks a pending load against a stale snapshot, then advances the host snapshot after the model becomes resident and verifies the resident footprint is not charged twice. Existing unload tests continue to hold transient reservation until native unload returns. Replaced five unbounded actor-yield loops with bounded 15-second waits.
+- PR #122 current head `3c1b74774bdebf5a17a7ba538e3a4fc918d586aa`; exact-head Pocket AI Lab CI is running. PR #124 integration-validation branch was synchronized to the updated ModelPool/tests/docs at head `af9b0ea4227693cf43c9b0ba17946a9e9d7bc730`; its exact-head CI is running.
+- PR #135's current iOS run `43794464434` is intentionally left undisturbed as a baseline on the pre-correction code. After it concludes, reconcile the transient accounting formula and regression into PR #135 while preserving its extra coalesced-acquirer cancellation test and bounded wait helpers, then rerun native iOS validation.
+
+
+## 2026-11-16 — Native ModelPool unload-test hang isolated and fixture corrected
+
+- Recovered the old cancelled simulator run logs: `ModelPoolTests.testMemoryReservationRemainsHeldUntilNativeUnloadCompletes` was the last started case. Static inspection found the fixture blocked every native unload, while two tests performed a second cleanup unload without resuming its continuation. This could leave XCTest awaiting the cleanup unload indefinitely. Updated `BlockingUnloadPoolTestEngine` to block only its first unload; subsequent cleanup unloads return immediately. Applied to PR #122, #124, and #135 test branches.
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` now includes the fixture fix, the corrected transient memory accounting formula, a pending-load/current-resident regression, and bounded wait helpers. New iOS run `43797547712` is queued/running; companion checks are in progress. Previous run `43794464434` was cancelled when the branch advanced, not a test failure.
+- PR #124 exact head `8d07958f19e5adb1ec435b32e689abd560f1a877` carries the same ModelPool accounting and fixture fix. Its iOS run `43797509448` is running; Consumer, Governance, and Cursor companion checks passed. Prior iOS run `43797268402` was cancelled when the branch advanced before package simulator tests.
+- PR #122 exact head `ad10fac5ac16bc4aaf71eff4ff318dcb59a6dfb8` passed Pocket AI Lab CI. That workflow does not compile Swift; native validation is supplied by #124 and #135 iOS workflows. No physical-device memory/thermal measurement is claimed.
+
+
+## 2026-11-16 — Corrected native integration companion CI green
+
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` passed all four companion workflows: Pocket AI Lab CI `43797547793`, Consumer `43797547697`, Governance `43797547823`, Cursor `43797547693`.
+- iOS LlamaEngine run `43797547712` passed pinned llama.cpp build and fail-closed typecheck; physical-device XCFramework link is in progress. No simulator or GGUF result yet.
+- The new head contains corrected transient ModelPool accounting, a pending-load/current-resident regression, and a single-blocking-unload fixture to ensure test cleanup does not suspend indefinitely.
+
+
+## 2026-11-16 — PR #124 validation runner aligned with hardened iOS workflow
+
+- Copied the exact PR #135 iOS workflow hardening into PR #124: explicit iPhone simulator boot/bootstatus, bounded simulator boot, non-parallel XCTest, and per-suite timeouts. This prevents the validation-only ModelPool branch from using the older unbounded simulator workflow.
+- PR #124 new exact head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`; Pocket AI Lab CI is queued. Companion and iOS workflows have not yet reported on this head. Previous PR #124 iOS run `43797509448` was cancelled by the branch update before it reached simulator tests.
+
+
+## 2026-11-16 — PR #124 refreshed integration checks progressing
+
+- PR #124 exact head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`: Governance sidecar `43797809543` and Cursor plugin `43797809528` passed; Consumer `43797812018` and Pocket AI Lab CI `43797809552` are in progress.
+- iOS LlamaEngine run `43797809538` is building pinned llama.cpp after setup and cache restore. It uses the same explicit simulator boot and bounded XCTest workflow as PR #135. No simulator/package test result yet.
+
+
+## 2026-11-16 — PR #124 build-script interface mismatch repaired
+
+- Inspected failed iOS run `43797809538` on PR #124 head `cff413ed1a02d41cdaf8dd887b5ffbf494bf7d48`. The pinned llama.cpp macOS archives compiled and staged successfully, then the workflow stopped because it invoked `build-llama-cpp.sh verify-artifacts` while the PR #124 script did not implement that destination. The error was `unknown destination: verify-artifacts`; downstream typecheck, device link, simulator, app tests, and GGUF smoke were skipped.
+- Updated only `runtime/ios/scripts/build-llama-cpp.sh` on `codex/ios-model-pool-integration-validation`, synchronizing the already-reviewed artifact verification implementation from PR #135. New exact head: `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658` (commit `fix(ios): add pinned llama artifact verification command`).
+- PR #124 remains draft/open. New exact-head CI evidence has not appeared yet. No simulator XCTest, pinned-GGUF inference smoke, or physical-device execution is claimed. Recheck the new exact-head iOS and companion workflows before proceeding.
+
+
+## 2026-11-16 — PR #135 native simulator and GGUF gates passed
+
+- Rechecked PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f`, iOS run `43797547712`. In addition to the previously green pinned llama.cpp build, fail-closed typecheck, device XCFramework link, simulator boot, native app build, and native app XCTest, the LlamaEngine iOS simulator XCTest has now passed.
+- The pinned smoke GGUF download and checksum verification passed, and the macOS smoke test path was configured. The macOS XCTest step is currently in progress; the workflow is not complete and no final runner summary exists yet.
+- PR #124 exact head `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658` has all four companion workflows green. Its iOS run `43799416564` has restored the corrected script and is still building the pinned llama.cpp artifacts; downstream device/simulator/inference gates have not run yet.
+- No physical iPhone execution, device inference, runtime attestation, APEX approval, East authorization, or production readiness is claimed.
+
+
+## 2026-11-16 — Self-evaluation journal integrity claim corrected
+
+- Reviewed the self-evaluation journal implementation and found an overstatement in the documentation and source comment: a self-contained SHA-256 chain detects modified/reordered/interior-deleted events, but suffix truncation can leave a valid prefix and cannot be detected after restart without an independently protected checkpoint.
+- Updated PR #140 documentation and `NativeEvaluationJournal.swift` comment to state this limitation explicitly. No runtime behavior, Evidence trust, or authorization semantics changed. New exact head `58105c41adba5cab63361e6fdc710566764c7269`.
+- PR #140 is stacked on #115 and does not independently trigger the main-targeted iOS workflow. The corresponding functional implementation remains covered by PR #135's native iOS run `43797547712`, where all app and simulator XCTest plus pinned-GGUF checksum gates have passed; macOS XCTest remains in progress. No signed attestation or rollback-resistant journal is claimed.
+
+
+## 2026-11-16 — Native ModelPool and self-evaluation validation gates complete
+
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f`: all five workflows passed. iOS LlamaEngine run `43797547712` completed pinned llama.cpp build, fail-closed typecheck, physical-iOS-target XCFramework link, simulator boot, native app build/XCTest, LlamaEngine simulator XCTest, pinned GGUF download/checksum, macOS XCTest, and runner evidence recording.
+- PR #124 exact head `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658`: all five workflows passed. iOS LlamaEngine run `43799416564` completed artifact restore/build/verification, XCFramework assembly and physical-iOS-target link, fail-closed typecheck, simulator boot, native app build/XCTest, LlamaEngine simulator XCTest, pinned GGUF download/checksum, macOS XCTest, and runner evidence recording.
+- Updated `coordination/BOARD.md` to reflect exact-head completion and the completed macOS validation dependency for #140. PRs #124, #135, and #140 remain draft/open and unmerged. Hosted checks do not prove physical-iPhone inference, device memory/thermal/battery behavior, device attestation, or production readiness. `main` remains untouched.
+
+
+## 2026-11-16 — ProofHunt target authorization and migration defects repaired
+
+- Reviewed PR #139 (`codex/proofhunt-1.1-mainline-foundation`). Found that `operationalAuthorization.policyHash` covered the policy but not `targets`/`excludedTargets`, allowing an unsigned config change to widen the operational allowlist while retaining the same signed approval. Added `targetScopeHash` to the operational authorization record, recomputed it from canonical normalized target and exclusion sets, and reject any mismatch before a plan is emitted. The digest ordering is locale-independent. Added regression tests for target-scope expansion and order-independent canonicalization.
+- Repaired `packages/intelligence/security/proofhunt/migrations/001_proofhunt_scopeguard.sql`: removed the duplicated malformed tail, restored the `audit_events` previous/event hash columns and constraints, required a 64-character target-scope digest only on operational approval records, and changed the approved-target composite foreign key to bind the operational authorization record. Updated the architecture documentation to state that the operational signature covers the target-scope digest.
+- Latest PR #139 head `877f8f4c24f15fc8e2fedf821a2e626a5cec5636`. CI for earlier intermediate heads was observed running; no exact-head run for this latest commit had appeared at the time of this entry. The SQL migration has not been executed against PostgreSQL, so syntax/constraint correctness still requires a real database migration test. No scanner, network assessment, or exploit runtime was added. APEX/Director and East/e3 authority remain unchanged.
+- Updated the coordination board. No merge; `main` untouched.
+
+
+## 2026-11-16 — ProofHunt database authorization linkage hardened
+
+- Further review of the #139 migration identified that the database did not independently enforce the relationship between an operational approval and the program authorization it names. Added `UNIQUE (project_id, record_id, parent_program_authorization_id)` on authorization records and a composite foreign key from assessment policies to `(project_id, operational_authorization_id, program_authorization_id)`. This makes the operational approval's parent-program binding relationally enforceable, not only a TypeScript check.
+- Added static migration-contract tests for the composite parent binding, required `target_scope_hash`, forced project RLS, and append-only history triggers. These tests validate expected SQL structure only; they do not execute the migration or prove PostgreSQL behavior.
+- Commits on `codex/proofhunt-1.1-mainline-foundation`: `b755f9ebbac8e674c9b1aa827b91fe4ce11d8424` (composite FK), `fe1182f35331c24e9d24c3d118d6572e772cfa9d` (migration contract tests). Exact-head workflows are queued/running; previous head `877f8f4c24f15fc8e2fedf821a2e626a5cec5636` passed all five configured workflows.
+- PostgreSQL migration execution, role/grant validation, tenant-isolation integration tests, and live assessment execution remain unverified. No scanner runtime added. No merge; `main` untouched.
+
+
+## 2026-11-16 — ProofHunt migration-test packaging correction
+
+- The #139 exact-head workflow at `fe1182f35331c24e9d24c3d118d6572e772cfa9d` built and type-checked, but the intelligence test suite failed 2 newly added migration-contract tests (656 passed, 2 failed): the tests resolved the SQL file relative to compiled `dist`, where the source migration is not copied. The consumer archive smoke also failed because its packaged runtime omits source migrations and runs the same compiled tests.
+- Fixed the test to resolve the migration from repository-root `process.cwd()` and to skip only this source-migration contract suite when the migration file is absent from a runtime-only archive. In the full source repository, both SQL contract tests still run. Latest branch head `07293cfc81940bb88e5f823f3038f73af4095e86`; exact-head workflows are running. Do not mark green until results complete.
+- No SQL runtime execution has occurred. The migration contract tests are static source checks, not PostgreSQL integration. No merge; `main` untouched.
+
+
+## 2026-11-16 — ProofHunt revocation and database admission control
+
+- Added `proofhunt.authorization_revocations` as an append-only, project-RLS-protected table. Revocations are separate immutable events; authorization records are not updated in place. Added the table to both the forced-RLS and append-only trigger sets.
+- Added `proofhunt.require_active_assessment_authorizations()` and a `BEFORE INSERT` trigger on `assessment_jobs`. For `approved_plan` rows it requires the program record to remain verified and unexpired, the operational approval to remain approved/unexpired and parent-bound to the same program, neither record to have a revocation event, and the exact policy row to be inside its effective window. Missing project context fails closed through RLS. This is a persistence admission guard; future adapter boundaries still need their own stop/revocation rechecks.
+- Added static migration-contract assertions for revocation table, append-only behavior, and the database admission trigger. Updated architecture docs. Latest PR #139 head `989d1c465e72f89711a39955b61a7d10db0f77e2`; all five exact-head workflows are running. No live PostgreSQL execution yet; these static assertions do not prove migration syntax, RLS runtime semantics, or trigger behavior.
+- No scanner or target network execution added. No merge; `main` untouched.
+
+
+## 2026-11-16 — ProofHunt SQL admission integrity review
+
+- Reviewed the exact migration source beyond static CI. Found malformed dollar quoting in `proofhunt.require_active_assessment_authorizations()` (`AS $` / `$;`) that would prevent PostgreSQL from parsing the PL/pgSQL function. Corrected to matching `AS $$` / `$$;` and verified the committed raw file at `c71edab03bf41553a8a6f0216724331790fdf750`.
+- Found the assessment job FK bound its target ID but not the supplied `target_hostname`. Added a composite unique key and FK including hostname so a job cannot name a different host than its authorized target row.
+- Tightened the DB admission trigger to require `preapproved = TRUE`, the exact `check_type` in `allowed_checks`, and `stop_on_scope_violation = TRUE`; it also rejects exact excluded hosts and excluded subdomains when `include_subdomains` is set.
+- Added static migration assertions. Latest PR #139 head `0dc35f48c41d312a895db8168d1f8f10a2221a38`. Cursor workflow passed; Pocket AI Lab, Consumer, and Governance PR workflows were in progress at last check. Previous head `989d1c465e72f89711a39955b61a7d10db0f77e2` passed all five configured workflows.
+- Important: the SQL has been reviewed from the committed raw source but has not been executed against PostgreSQL. Static string assertions and ordinary CI do not establish migration parseability, RLS runtime isolation, trigger execution, concurrent revocation behavior, or DB-role hardening. A real PostgreSQL migration/integration job remains required. No scanner or network assessment execution added. No merge; `main` untouched.
+
+
+## 2026-11-16 — ProofHunt PostgreSQL 16 integration validation
+
+- Added `.github/workflows/proofhunt-postgres-ci.yml` and `packages/intelligence/security/proofhunt/tests/postgres-integration.sql`. The workflow applies the actual migration to an ephemeral PostgreSQL 16 service and runs database-level assertions.
+- Verified migration execution; forced-RLS tenant isolation; missing-project-context fail-closed admission; runtime role `NOBYPASSRLS`; no runtime INSERT privileges for authorization records, revocations, targets, exclusions, or policies; only assessment jobs/events are writable by the runtime role; valid plan admission; disallowed check rejection; target ID/hostname composite FK; subdomain exclusions; append-only update rejection; and revocation denial.
+- The first integration run passed before adding the explicit least-privilege role assertions. A follow-up run exposed a malformed dollar delimiter in the newly added test block; replaced that assertion with psql `\gset` / `\if` checks. The latest exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2` passed PostgreSQL integration run `43844250890`; log output explicitly reports `ProofHunt PostgreSQL integration checks passed`.
+- Also tightened the database admission trigger to require program authorization kind/environment consistency with the operational authorization and require lowercase, non-empty, no-trailing-dot target hostnames. Added static migration assertions and updated architecture docs to distinguish ephemeral CI evidence from production deployment and to document trusted-writer/signature-verification boundaries.
+- At last check on exact head `6415a60...`, PostgreSQL integration and Pocket AI Lab CI passed; Cursor passed; Consumer and Governance were still in progress. Continue checking exact-head statuses before declaring all gates green. No production database, cryptographic signature verification inside PostgreSQL, live scanner/target execution, or merge. `main` untouched.
+
+
+## 2026-11-16 — East PostgreSQL live integration validation reopened
+
+- PR #139 exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2` now has all five standard CI workflows plus PostgreSQL 16 integration passing. The database job applied the real migration and passed RLS, fail-closed context, least-privilege runtime role, approved plan, check allowlist, target binding, subdomain exclusion, append-only, and revocation assertions.
+- Reopened the existing ChatGPT-owned PR #132 validation claim (`codex/east-postgres-lifecycle-validation`) as `in-progress` to replace the remaining fake-database-only evidence with an ephemeral PostgreSQL integration job. Scope is limited to the East lifecycle migration and actual database semantics; no production credentials, RLS policy redesign, APEX grants, or changes to trust/evidence authority.
+
+
+## 2026-11-16 — East lifecycle PostgreSQL 16 integration evidence
+
+- Added `.github/workflows/east-postgres-ci.yml` and `packages/intelligence/autonomy/tests/postgres-integration.sql` on `codex/east-postgres-lifecycle-validation`.
+- The workflow applied the actual `001_task_lifecycle_snapshots.sql` migration to PostgreSQL 16 and passed real database checks for `SELECT ... FOR UPDATE`, initial and repeated namespace initialization, successful CAS update, stale-writer zero-row behavior, namespace isolation, transaction rollback, positive schema-version constraint, and JSON-array payload constraint. Job `43844783256` passed and logs report `East PostgreSQL lifecycle integration checks passed`.
+- Updated `docs/implementation/east-lifecycle-production-readiness.md` at head `e6badfaabe39518ff7cfb64a0adfcff2674a3d31` to distinguish real SQL/migration evidence from uncompleted driver-level integration and concurrent multi-process worker validation. Existing TypeScript adapter tests still use a serialized fake DB; no production DB or driver dependency added.
+- At the test head `958dc18216c4a545d48f82e649dae6f75553b450`, East PostgreSQL, Pocket AI Lab, Consumer, Governance, and Cursor workflows passed. The subsequent docs-only head `e6badfa...` has a Pocket AI Lab push run in progress. No production database, deployment, or merge.
+
+
+## 2026-11-16 — East lifecycle real-driver and concurrent PostgreSQL validation complete
+
+- Extended `east-postgres-ci.yml` to run `PostgresTaskLifecycleStore` itself against ephemeral PostgreSQL 16 using the `pg` (node-postgres) driver. Added `postgres-adapter-integration.mjs`: two stale store instances, conflict detection and reload, namespace isolation, two independent store instances racing with exactly one winner, and a database-triggered write failure proving transaction rollback preserves the prior snapshot.
+- Added `postgres-concurrency.sh`: writer A holds `SELECT ... FOR UPDATE`, writer B attempts the same expected version, blocks until A commits, then updates zero rows. Verified final state remains version 1 from writer A.
+- PostgreSQL workflow run `43845865782` passed the earlier SQL migration/locking/CAS/concurrency suite; run `43845855901` passed the actual TypeScript adapter through `pg`; exact implementation head `1b0e1bd664a42a3e5fd130fe38e2c01ce576f6d0` passed East PostgreSQL, Pocket AI Lab, Consumer, Governance, and Cursor workflows. Updated production-readiness docs at `60a9fa6e5fa99b72dc45c6a2d2c2590c0776f896`; its Pocket AI Lab CI run `43846054990` passed.
+- This is now real driver-level adapter and database-concurrency evidence in an ephemeral CI database. Remaining limitations: production deployment/credentials/TLS/RLS hardening, full East worker process restart/crash recovery, provider cancellation/drain, and physical-device lifecycle validation. PR #132 remains open/draft, unmerged.
+- PR #139 is also moved to `in-review`: exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2` passed all five standard workflows and the dedicated PostgreSQL 16 integration workflow. Both remain unmerged; `main` untouched.
+
+
+## 2026-11-16 — Validation board refresh
+
+- PR #132 latest docs head `60a9fa6e5fa99b72dc45c6a2d2c2590c0776f896`: all five standard workflows plus East PostgreSQL integration passed. The integration uses PostgreSQL 16 and node-postgres against the actual `PostgresTaskLifecycleStore`, including independent-store races, stale-writer conflict/reload, namespace isolation, and rollback. Remaining lifecycle limits are full East worker restart/crash/cancellation and production deployment.
+- PR #139 exact head `6415a60cbcf90f077584ed4294389aa00be1cbb2`: all five standard workflows plus PostgreSQL 16 integration passed. Both #132 and #139 are now marked `in-review`, not merged.
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` still has all five workflows, including iOS LlamaEngine CI, passed; moved its validation-only board claim to `in-review`. Physical iPhone inference/thermal/memory testing remains outstanding.
+
+
+## 2026-11-16 — Native iOS validation reconciliation and review handoff
+
+- Rechecked PR #124 exact head `31e7cfdfe047d1c172369da4aa1b9f30bc8c8658`: all five workflows completed successfully. iOS LlamaEngine run `43799416564` completed pinned llama.cpp artifact verification, XCFramework assembly and physical-iOS-target link, fail-closed typecheck, simulator boot, native app build/XCTest, LlamaEngine simulator XCTest, pinned GGUF download/checksum, macOS XCTest, and evidence recording.
+- Rechecked PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f`: all five workflows completed successfully. iOS LlamaEngine run `43797547712` completed the corresponding native app, simulator, pinned-GGUF, and macOS gates.
+- Compared PR #122 against the validated PR #124 aggregate: `ModelPool.swift` and `ModelPoolTests.swift` are byte-identical (matching blob SHAs `b3be3e0160339e80076fac6584a6cfbd0e1188c7` and `70419bf257e258cca82f1a2ff7ef91de0e17b73b`). This provides source/test equivalence evidence for #122's native memory-accounting change, while its own branch remains stacked on #86.
+- Updated `coordination/BOARD.md`: PR #122, #124, and #135 validation claims moved to `in-review`. No application code or trust boundary changed in this coordination update.
+- PR #140 remains in progress: its current head has no new exact-head workflow after the documentation correction; its functional implementation is covered by #135, but that does not substitute for a current-head check of #140. PR #115's recorded iOS run `43771097290` is cancelled.
+- No physical iPhone inference, memory/thermal/battery measurement, device attestation, production deployment, or merge is claimed. All reviewed PRs remain open/draft; `main` untouched.
+
+
+## 2026-11-16 — PR #140 exact-head check and cross-branch native review evidence
+
+- PR #140 exact head `58105c41adba5cab63361e6fdc710566764c7269` has a successful exact-head Pocket AI Lab push workflow `43799776929`.
+- Compared all nine files changed by #140 against the main-targeted #135 validation branch. Six implementation/test files are byte-identical. The three differing files contain only the explicit hash-chain suffix-truncation/privileged-rewrite caveat in the docs and journal comment, plus replacement of an unbounded XCTest actor-polling loop with a bounded wait helper.
+- PR #135 exact head `48c8d0601178cdedefcc748054c88adda9ad1e4f` passed its full native iOS workflow, including app XCTest, package simulator XCTest, pinned-GGUF smoke/checksum, and macOS XCTest. This is cross-PR validation evidence for the shared implementation; #140 itself has no independent iOS workflow because it is stacked on #115.
+- Updated the coordination board to move #140 to `in-review` with that qualification. PR #115's own iOS run remains cancelled; no claim is made that #115 independently passed its native iOS gate.
+- No application runtime code or trust semantics changed in this reconciliation. No physical iPhone inference, device attestation, production deployment, or merge is claimed; `main` untouched.
+
+
+## 2026-11-16 14:10 UTC — Native agent model-routing foundation opened
+
+- Added `NativeAgentModelRouter`, route/profile/request value types, focused XCTest, and architecture note. Routing requires every requested capability to match; it rejects duplicate model IDs and malformed profiles; selection is deterministic by explicit priority, lower declared memory estimate, then model ID.
+- The router only selects a local candidate. It does not load the model, grant capabilities or tool permissions, issue Evidence, attest readiness, change the current sequential single-lease coordinator, or bypass APEX/Director, East/e3, BridgeGate, or human approval. Exact model-pool lease acquisition and fail-closed handling remain mandatory for the future coordinator integration.
+- Development draft PR #144: `codex/native-agent-model-routing-foundation`, exact head `55697d6ccfc83761fdcf785ba6d8e41676e1d143`, stacked on #135. Its exact-head Pocket AI Lab push workflow `43882623208` passed.
+- Opened main-targeted validation-only draft PR #145 from clean main base `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`, exact head `c3a9bdb2a2673bf19c0c661dc937a9c4c37990a9`, containing the same three files to trigger the full native iOS workflow. At last check, iOS LlamaEngine run `43882896127`, Pocket AI Lab run `43882896082`, and Consumer run `43882896046` were in progress; Cursor run `43882896060` and Governance sidecar run `43882896270` passed.
+- Updated the board with both ownership claims and the validation dependency. No merge or mainline code change. No physical-device inference claim.
+
+
+## 2026-11-16 21:00 UTC — Native routed Agent Team persistence claimed
+
+- ChatGPT claims an additive integration slice on `codex/native-routed-agent-persistence`: connect native per-role routed coordinator outputs to the existing device-local task-history store; preserve append-only role sequence, interrupted recovery without automatic replay, and explicit user-visible history.
+- Scope: `ios/PocketAILab/LocalAgentTaskHistoryStore.swift`, `ios/PocketAILab/LocalChatView.swift`, `ios/PocketAILabTests/LocalAgentTaskHistoryStoreTests.swift`, and a focused architecture note only if required. First action is contract inspection; no implementation is presumed complete.
+- Dependency: PR #146's routed `NativeAgentCoordinator` API. Existing #146/#147 remain draft/unmerged; exact-head native iOS CI is still running. Work will remain isolated and will not alter coordinator/runtime files or governance boundaries.
+- No other AI agent is registered active. No application code, APEX/East trust, authorization, Evidence, or mainline change is included in this claim.
+
+
+## 2026-11-16 21:16 UTC — Routed Agent Team history linkage implemented
+
+- Added optional `conversationID`, `recipientAgentID`, `messageType`, and `parentMessageID` fields to `AgentTaskRoleResult`. The existing version-1 archive format remains compatible because all added fields are optional; no schema-version bump or destructive migration is required.
+- `AgentTaskHistoryJournal` now maps those fields from the exact `AgentMessageEnvelope` received through the coordinator's `onMessage` sink. The bounded store still enforces task status, monotonic role sequence, unique message IDs, byte limits, 30-day retention, and interrupted recovery without replay.
+- Added XCTest coverage for persistence of recipient/type/conversation/parent linkage and decoding of legacy v1 role records without the new fields. Source-level comparison shows exactly three files changed relative to the routing integration base.
+- Draft PR #148: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/148 (stacked on #146). Mainline validation PR #149: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/149. Both point at exact head `121487049d57f96730ae70f789a9495cf49bc70a`.
+- Exact-head workflows have not yet appeared in the commit workflow-run query. CI remains pending; no local Xcode execution or physical iPhone validation is claimed. No model/session identity is inferred from the wire envelope; persisted text/linkage remains untrusted proposal data.
+
+
+## 2026-11-16 16:45 UTC — Native routed Agent Team app integration claimed
+
+- ChatGPT claims the next additive iOS integration slice on `codex/ios-routed-agent-app-integration`, based on persistence head `121487049d57f96730ae70f789a9495cf49bc70a`.
+- First repair the exact-head iOS build regression in `AgentTaskRoleResult`: Swift's synthesized memberwise initializer omits optional stored properties initialized to `nil`, so the newly added linkage arguments currently fail compilation. Add an explicit initializer and backward-compatible decoding defaults, then retain the legacy v1 archive test.
+- Then connect operator-configured local catalog capability metadata to per-role `NativeAgentModelProfile` construction and the routed coordinator in `LocalChatView`; the app must not claim specialist routing unless the operator assigns matching labels. Missing routes fail before model load/generation. Preserve the existing single-model chat path, one-model ModelPool memory limit, sequential scheduler, cancellation drain, and transcript-untrusted semantics.
+- Scope overlaps `LocalChatView.swift` with the prior persistence PR only because that PR is already in-review; this claim adds the distinct UI routing integration and compile repair. No other AI agent is registered active. No APEX/East/BridgeGate/Evidence or tool-permission changes.
+- Validation target: new exact-head iOS CI must pass native app build/XCTest, simulator XCTest, pinned GGUF smoke/checksum, and macOS XCTest; no physical iPhone validation is implied.
+
+
+## 2026-11-16 16:50 UTC — Native routed Agent Team app integration submitted for review
+
+- Repaired the exact-head iOS compile failure from run `43891395934`: `AgentTaskRoleResult` now has an explicit initializer plus custom Codable encode/decode, with `decodeIfPresent` for optional linkage fields so legacy v1 records remain readable.
+- Added persistent, normalized operator-configured capability labels to the device-local model catalog and per-model label controls in the iOS UI. The UI states that labels only choose candidate routes; they do not establish model quality, permissions, or runtime attestation.
+- Wired the six Agent Team roles to `NativeAgentModelProfile` and the routed `NativeAgentCoordinator`. The app retains its one-resident-model pool limit and fails closed if a held chat lease conflicts with a role's selected model. The coordinator still preflights every route before loading/generation and roles remain sequential.
+- Added catalog normalization/persistence coverage, updated app tests to configure role labels, and added a missing-specialist-route test asserting no model load or generation.
+- Feature PR #150: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/150 (stacked on the persistence branch). Mainline validation PR #151: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/151. Exact head `1801d9baf5eff3013e1a7f3cff86c11adc0d1986`.
+- Exact-head workflow runs have not yet appeared in the commit workflow query. No local Xcode execution or physical iPhone validation is claimed. PRs remain draft; no merge or mainline code change.
+
+
+## 2026-11-16 16:54 UTC — Routed Agent Team CI checkpoint and test-source correction
+
+- Exact branch head advanced to `b902cd9b178331ec5786ededdf3e0af9c16f8969`. Corrected an accidental duplicate test-file append before requesting CI: `PocketAILabTests.swift` is restored from the branch base and now contains only the intended routed-profile test updates and fail-before-load regression test. Diff against the persistence base is five focused files; the app test file is +29/-1, not a wholesale replacement.
+- Exact-head workflows: Cursor `43911082931` passed; Pocket AI Lab `43911083255`, Consumer `43911083212`, and Governance `43911083067` are in progress; iOS LlamaEngine `43911083206` is queued. This is not a completed validation pass.
+- PR #150 and mainline validation PR #151 automatically track the updated branch head. Both remain draft; no review threads, merge, or physical-device result.
+
+
+## 2026-11-16 17:02 UTC — Routed model eviction safety follow-up
+
+- Found a functional gap: `ModelPool.release` leaves a model cached. With app configuration `maxLoadedModels: 1`, routing the next logical role to a different profile would fail despite the prior role having completed and released its lease.
+- Updated `NativeAgentCoordinator` to retry a routed acquisition after `modelLimitExceeded` or `insufficientMemory` by calling `runtime.unloadIdleModels()`. The pool skips entries with active leases or in-flight uses; the retry still fails closed if no capacity can safely be freed. This retains cache reuse when capacity permits and only evicts under admission pressure.
+- Added tests for two-role/two-model routing with a one-resident pool, plus a separate caller-held lease that must never be evicted. Existing two-resident test remains a cache-reuse check.
+- New exact head: `7fdb54bbedbba8caebdddba911de7c01a1a14b8e`. Feature PR #150 and validation PR #151 track this head. Latest CI: Cursor `43911705044` passed; Pocket AI Lab `43911705129`, Consumer `43911705085`, Governance `43911705012` in progress; iOS LlamaEngine `43911705025` queued. No merge, local Xcode run, or physical-device claim.
+
+
+## 2026-11-16 21:25 UTC — Routed Agent Team CI simulator startup failure
+
+- Exact head `7fdb54bbedbba8caebdddba911de7c01a1a14b8e`: Cursor, Pocket AI Lab, Consumer, and Governance workflows passed. iOS LlamaEngine run `43911705025` failed at simulator boot, not compilation or XCTest.
+- Job logs show the selected iPhone SE (3rd generation) remained in first-boot data migration (`com.apple.-0LaunchServicesMigrator`) and `xcrun simctl bootstatus ... -b` timed out after 300 seconds. The pinned llama.cpp simulator/macOS build, Swift typecheck, and generic physical-iOS-target link all passed; app build, app XCTest, simulator XCTest, GGUF smoke, and macOS XCTest were skipped after boot failure.
+- Claim extended to the CI workflow reliability slice in `.github/workflows/ios-llamaengine-ci.yml`: prefer an already-booted iPhone simulator and improve bounded boot timeout/diagnostics. No application runtime or governance semantics change. No physical iPhone validation claimed.
+
+
+## 2026-11-16 21:32 UTC — iOS simulator CI reliability patch
+
+- Added a CI-only fix on `codex/ios-routed-agent-app-integration`, commit `32e64d4fe34a554b86d1b16037924d4b8ea8509b`: simulator selection now prefers an already-booted iPhone, otherwise chooses the newest available iOS runtime/device; first-boot `bootstatus` allowance is increased from 300 to 600 seconds within a 12-minute step timeout; failures emit device/runtime diagnostics.
+- No app/runtime source, model-routing behavior, or governance boundary changed. Workflow source was re-fetched and inspected after update. Exact-head CI has not yet appeared in the workflow-run query; checks are pending. Previous iOS failure was a simulator first-boot LaunchServices migration timeout, not an app compile/test failure.
+- PR #150 and validation PR #151 track the feature branch. No merge, local Xcode run, or physical-device validation claimed.
+
+
+## 2026-11-16 21:40 UTC — Operator routing-label removal correction
+
+- Code review found that the native model catalog accepted operator label assignment but rejected an empty list, so the UI had no way to clear a mistaken capability assignment.
+- Updated `LocalModelCatalogStore.updateCapabilities` to allow an empty normalized label set while retaining the 16-label and 64-byte per-label bounds. Added a persistence assertion that clearing labels remains empty after reloading the catalog.
+- Commits: `ea1184b712b7a92450b578bcadf219267031bb7b` (implementation), `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5` (test). Exact-head CI pending. No route permission or trust semantics changed; an empty set simply cannot satisfy specialist routing requirements.
+
+
+## 2026-11-16 — ChatGPT
+
+- **Claim:** Consumer cloud-provider consent and server-side credential boundary.
+- **Branch:** `codex/consumer-cloud-provider-consent`, based on `main`.
+- **Scope:** `apps/web/`, focused tests, and consumer implementation docs only. Implement an opt-in, explicit per-request remote-inference path for the loopback consumer app; preserve local-first behavior, keep provider credentials server-side, disclose remote transmission in the UI, and fail closed when configuration or consent is missing.
+- **Exclusions:** No public/network deployment, no claim of authentication/session security, no APEX/East trust or authorization changes, and no native iOS runtime changes. Existing loopback-only bind and request guards remain mandatory.
+- **Validation plan:** Unit/integration tests for default-local behavior, remote configuration absence, missing consent, remote consent, credential non-disclosure, provider failures/timeouts, and regression coverage for loopback guards; run exact-head CI before review.
+- **Status:** `claimed`; no application files changed yet.
+
+
+## 2026-11-16 — ChatGPT implementation update
+
+- **Branch / PR:** `codex/consumer-cloud-provider-consent`, draft PR #152.
+- **Exact head:** `40a3756ce251f1355597a6de54b67734adf6fb58`.
+- **Implemented:** Generic OpenAI-compatible cloud chat adapter; host-only API key configuration; HTTPS requirement for non-loopback endpoints; redirect rejection; local-default routing; explicit per-message cloud consent; UI disclosure; health response exposes only configured/model metadata; fail-closed tests for missing consent, insecure/incomplete config, consented request, and secret non-disclosure.
+- **Scope boundary:** Agent Team and Director remain local-only. Existing loopback-only bind and request checks remain unchanged. No authentication, production hosting, or APEX/East authorization is claimed.
+- **Validation:** PR #152 triggered five companion workflows. At this update, Pocket AI Lab CI was in progress; web and intelligence jobs were queued; sidecar was running. No test suite is yet recorded as passed.
+
+
+## 2026-11-16 — ChatGPT validation update
+
+- **Branch / PR:** `codex/consumer-cloud-provider-consent`, draft PR #152.
+- **Exact head:** `2d15997ad4238c0a88ce2e42223c062c711f109f`.
+- **CI:** All five exact-head workflows passed: Pocket AI Lab CI push + PR, Consumer prototype CI, Governance sidecar CI, and Cursor collaboration plugin CI. Consumer web job passed JavaScript syntax checks, 40/40 web tests, adjacent suites 10/10 and 16/16, and TypeScript build. The four new cloud tests passed.
+- **Review state:** PR is open, draft, mergeable, and has zero inline review threads. Not merged.
+- **Implementation detail:** Cloud consent is consumed after one message so a checked box cannot silently authorize later messages. UI disclosure sits below the composer controls. Local remains default; Agent Team/Director remain local-only.
+- **Limitations:** This is a local loopback prototype slice only. Authentication, production secret lifecycle, encrypted persistence, telemetry, and public deployment remain open.
+
+
+## 2026-11-16 — ChatGPT native iOS validation blocker
+
+- **PRs:** #150 and mainline validation #151; branch `codex/ios-routed-agent-app-integration`.
+- **Exact head:** `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5`.
+- **Workflow:** iOS LlamaEngine CI run `43916898000`, job `133473547446`, failed at the native Pocket AI Lab app build while compiling `ios/PocketAILab/LocalChatView.swift`.
+- **Passed before failure:** pinned llama.cpp simulator/macOS build; fail-closed branch typecheck; physical-iOS-target link; simulator selection and boot.
+- **Skipped:** native app XCTest, simulator XCTest, pinned GGUF smoke, macOS XCTest.
+- **Diagnosis:** the downloaded job log shows the failed SwiftCompile target but no surfaced source diagnostic in the available output. Do not invent a compiler error; reproduce or improve diagnostic capture before applying a fix.
+- **Device acceptance:** iPhone Air, 256 GB is the sole physical target. Hosted simulator remains CI-only. No physical iPhone test is claimed.
+- **Status:** PR #150 remains open/draft; the integration claim is returned to `in-progress` until the native app build is repaired and exact-head CI passes.
+
+
+## 2026-11-16 — Native iOS encrypted memory claimed
+
+- **Branch:** `codex/ios-native-encrypted-memory`, based on `main` at `e8f4dadc22c9814d68f881fb5151c9aca5ab29b8`.
+- **Scope:** Add an iOS-native Keychain key provider and AES-GCM encrypted local memory vault, explicit CRUD/provenance UI, focused tests, and implementation documentation. Integrate a Memory tab without modifying `LocalChatView.swift` or the existing TypeScript memory path.
+- **Privacy contract:** No chat auto-save, no model-driven verification, all new records start `verified=false`, no plaintext fallback, no silent key regeneration or plaintext migration. Key loss/tampering must fail closed with recovery guidance.
+- **Dependencies:** iOS 16+, CryptoKit, Security/Keychain. XcodeGen auto-includes app/test source directories.
+- **Validation:** Exact-head iOS CI (app build, app XCTest, simulator XCTest, package tests); no physical iPhone Air acceptance claimed until installed-device test.
+
+
+## 2026-11-16 — Native agent catalog claimed
+
+- **Branch:** `codex/native-agent-catalog`, based on routed Agent Team app integration head `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5` (PR #150).
+- **Scope:** Create the native catalog for eight permanent roles and bounded dynamic specialist templates, including explicit capability labels, instructions, message types, unique ID validation, and focused tests/docs.
+- **Exclusions:** No LocalChatView or coordinator changes, no automatic specialist selection, no provider execution, no APEX/East or memory changes. The catalog will not claim agents are active until a separate app integration invokes them.
+- **Dependency:** PR #150 native app integration; its exact-head iOS CI is being retried after an app-build failure.
+
+
+## 2026-11-16 — Native memory and agent catalogue implementation checkpoint
+
+- **Native memory:** Draft PR #153 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/153. Current exact head `916bd00399e76548cf2ef2a6e7005d75ac20bcb0`. Adds Keychain-backed AES-GCM vault, explicit Memory tab CRUD, provenance, no auto-save, and fail-closed key/tamper behavior. Pocket AI Lab push CI queued; PR workflows pending observation.
+- **Native agent catalog:** Draft PR #154 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/154. Exact head `7a2236627cd1b6e8dacc9c059f6e6be37562e0b9`, stacked on #150. Adds eight core logical roles and eight specialist templates with bounded explicit instantiation; no automatic specialist activation or UI integration yet. Pocket AI Lab push CI in progress.
+- Both PRs are unmerged and remain implementation slices. The overall product still requires their integration, native iPhone Air validation, runtime evidence, memory retrieval consent, and East/APEX execution integration.
+
+
+## 2026-11-16 — Routed Agent Team app compile error diagnosed and repaired
+
+- **Failing run:** iOS LlamaEngine CI `43916898000`, retry attempt 2, job `133484406232`, exact head `e8cf5589f44a8dbd6bb19c1c5a8bce42fc786ba5`.
+- **Exact compiler diagnostic:** six calls in `ios/PocketAILab/LocalChatView.swift` placed `requiredCapabilities` before `instructions`; Swift requires initializer arguments in declaration order (`agentId`, `instructions`, `messageType`, `requiredCapabilities`).
+- **Fix:** reordered all six NativeAgentStep calls without changing role behavior or routing metadata. New feature head `ce19771be39210bef9e141990010065df200b6bf`.
+- **Validation:** fresh iOS workflow `43922697190` and the companion exact-head workflows are running. No pass is claimed yet.
+- **Stack extension:** added catalog validation aggregate PR #155 at `4c06b9422c5bddbba54da1f656ba9e0d7966d97c`, which includes PR #150's dependency stack plus PR #154's catalog files and triggers mainline iOS validation.
+
+
+## 2026-11-16 — Unified native product integration started
+
+- **Branch:** `codex/native-product-experience-integration`, based on PR #150 current head `ce19771be39210bef9e141990010065df200b6bf`.
+- **Purpose:** stop shipping isolated native slices. Integrate the eight-role catalogue and bounded specialist selection into the actual native Agent Team screen, integrate the encrypted memory tab into the complete native tab shell without dropping Workspace/Runtime, and add app-level acceptance tests.
+- **Dependencies:** #150 routed native app + persistence stack; catalogue work from #154; encrypted vault from #153. The integration branch will copy/reconcile those sources and validate them together rather than claim either standalone PR is product-complete.
+- **Exclusions:** no APEX/East, BridgeGate, Evidence, runtime proof, or authorization semantics changed. No merge; exact-head CI and physical iPhone Air acceptance remain required.
+
+
+## 2026-11-16 — Native memory security and validation refinements
+
+- Reordered directory-protection application before the atomic vault write so a directory-attribute failure cannot be reported after the new ciphertext has already been committed.
+- Clear temporary plaintext and copied key-data buffers on normal Swift scope exit where Foundation/CryptoKit permit. This is best-effort memory hygiene, not a guarantee of process-memory erasure.
+- Added assertions that missing-key failure leaves the original ciphertext byte-for-byte unchanged and that edits preserve entry identity/creation time while remaining unverified.
+- Current PR #153 head `17d8a10ff186a8c6cfeab00ab37b81a886f751de`. Latest push CI `43923217168` is queued. An earlier PR iOS workflow was cancelled after a newer commit; waiting for the new exact-head run. No native test pass is claimed yet.
+
+
+## 2026-11-16 — Whole-product East lifecycle integration started
+
+- **Branch:** `codex/whole-product-execution-integration`, based on unified native product candidate #156 at `09207c1c2a9ea94ff351eb7e6ed999a91a8a7d07`.
+- **Scope:** Reconcile the task lifecycle kernel, East six-agent adapter, and transactional PostgreSQL snapshot store from #103/#131 into the same mainline candidate; retain their focused tests and migration; add a cross-layer acceptance test where supported.
+- **Boundary:** A PostgreSQL lifecycle snapshot is workflow state, not an authorization receipt. No APEX grants, RLS policy, credentials, database deployment, or consequential provider execution is introduced.
+- **Validation:** Exact-head CI and fault/restart/transaction tests required. No production database or device acceptance claimed.
+
+
+## 2026-11-16 — Native memory UI and archive refinements
+
+- Memory screen now distinguishes an unavailable encrypted vault from a genuinely empty vault, provides a retry action after unlocking/restoring access, and disables new writes while an existing vault cannot be read.
+- Editing now persists the selected memory layer as well as content/source references; identity and creation timestamp remain stable and verification resets to false.
+- Added unique memory-ID validation, excluded the dedicated device-bound vault directory from backup, and moved key-byte clearing into a defer that covers Keychain duplicate/error exits.
+- Latest PR #153 head `f1dda415a1808d1e9fdead5812136339f2d1a1b6`. Exact-head CI: Pocket AI Lab push in progress; PR iOS workflow queued; Consumer/Governance/Cursor workflows in progress. Native build/XCTest results are pending.
+
+
+## 2026-11-16 — APEX signed evidence verification v2 started
+
+- **Branch:** `codex/apex-signed-evidence-verification-v2`, based on whole-product candidate #157 head `467c4ec010a1c98bcb012ff90bcc12c4b9fd6e84`.
+- **Scope:** Replace the placeholder trust module with a candidate-only Ed25519 verifier using immutable host-provisioned keys, exact attempt/model/runtime binding, freshness, and fail-closed nonce replay. Define a cross-runtime v2 canonical payload with domain separation and length-prefixed fields; add deterministic tests.
+- **Explicit non-goals:** No `authorized=true`, APEX receipt, policy grant, RLS/schema, database deployment, trusted-key provisioning/rotation service, or production replay-store implementation. Verified candidate evidence remains distinct from authorization.
+- **Reason:** Current East/APEX integration explicitly states that trust.ts is a placeholder, APEX RLS/schema are absent, and Swift SignedRun has a newline-delimited canonical form not bound to all fields. Do not wire candidate verification into action dispatch until those contracts and owner-controlled trust provisioning are independently reviewed.
+
+
+## 2026-11-16 — APEX signed evidence verification v2 implementation checkpoint
+
+- **PR:** #159 https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/159, draft.
+- **Branch:** `codex/apex-signed-evidence-verification-v2`; latest recorded head `2ed9d16944ddf88fa24953029c91f467e773ab88` after adding the product status-register entry.
+- **Implementation:** Replaced the placeholder trust source with an injected Ed25519 verifier using domain-separated length-prefixed v2 canonicalization, exact attempt binding, runtime allowlists, key validity/revocation, freshness, and fail-closed replay-store acceptance. Added deterministic tests.
+- **Boundary:** Success is `verified_candidate` only. No action authorization, receipt, RLS/schema, production key registry, durable replay store, or East dispatch wiring. Exact-head CI pending.
+
+
+## 2026-11-16 — Original archive restoration claimed
+
+- **Source:** User Library archive `east-unified.zip` (Nov 2 snapshot), with the original Director/APEX iOS bridge files, ExploitGym source archive, and Grok Workspace status/attachments.
+- **Repository gap:** current main contains only `Evidence.swift` under `packages/director/ios`; `BridgeGate.swift`, `RuntimeController.swift`, and `LlamaEngine.swift` are absent. `packages/exploitgym` and `packages/grok` are absent.
+- **Plan:** restore the bridge as a package backed by the current PocketLlamaEngine runtime, harden origin/port/action validation, avoid runtime-held Director signing keys, and return unsigned evidence candidates. Pin ExploitGym to the exact archived upstream commit as a submodule; document isolated host-only use. Preserve Grok Workspace as a workspace manifest/snapshot, not a fake live service.
+- **Boundaries:** no edits to the active APEX trust verifier PR (#159), RLS/schema, East integration PR #157, or native app UI. Do not blindly restore the original RuntimeController/ShellView implementation because it stores GGUF bytes in memory and accepts a signing key from the caller.
+
+
+## 2026-11-16 — Archived bridge and workspace restoration implementation
+
+- **Draft PR #160:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/160
+- **Exact head:** `b7f560c098bf8e172facaf682a80d831b50ae63e`.
+- **Restored:** hardened BridgeGate, LlamaEngine compatibility alias, actor-based RuntimeController backed by the shared PocketLlamaEngine runtime, unsigned evidence candidate, model-file hash/readiness/expiry/cancellation, ApexBridge package dependency in the native app, BridgeGate-based WebView navigation origin guard, ExploitGym submodule, Grok Workspace status snapshot and attachment manifest.
+- **Security hardening:** origin comparison includes effective port; remote HTTP and URL userinfo are rejected; unknown bridge fields fail closed; load/import/unload require host-owned authorization; RuntimeController does not accept a private key or copy GGUF bytes; model changes invalidate readiness; cancellation drains before lease release.
+- **ExploitGym pin:** upstream main commit `a8029e47135a29f1c1a6e79109bf86fba379b3f3` (2026-11-09). The archived ZIP does not contain its original Git commit metadata, so the selected pin is explicitly documented as a later upstream revision, not an exact archive match.
+- **CI:** Pocket AI Lab push run `43927028410` in progress; iOS PR workflow not yet surfaced. No test pass claimed yet.
+- **Deferred:** full Director web source archive reconciliation (169 files), WKScriptMessageHandler action dispatch, isolated ExploitGym worker adapter, Grok artifact persistence, and physical iPhone Air acceptance.
+
+
+## 2026-11-16 — Bridge restoration exact-head checkpoint
+
+- **PR #160:** open, draft, mergeable, not merged.
+- **Exact head:** `aa7252d46d8593b4076178dec2fdd6ce501ae488`.
+- **Exact-head PR workflows queued:** Pocket AI Lab `43927603726`, Consumer prototype `43927603940`, Governance sidecar `43927603754`, iOS LlamaEngine `43927603952`, Cursor collaboration `43927604119`. Pocket AI Lab push workflow `43927589882` also queued.
+- **Additional hardening:** RuntimeController now requires the host's expected catalog SHA-256, compares it to a streaming hash of the loaded artifact, invalidates readiness on file changes, serializes readiness probes, prevents new generation during unload, and waits for native cancellation drain. BridgeGate no longer accepts memory estimates from web messages; the host resolves memory/hash from its catalog.
+- **No validation result claimed yet.** iOS app build and XCTest are pending on exact head.
+
+
+## 2026-11-16 — Native iOS catalog test diagnosis and repair
+
+- **PRs:** #150 and #151, branch `codex/ios-routed-agent-app-integration`.
+- **Failed exact-head run:** iOS workflow `43922697190`, job `133493861248`.
+- **Progress:** native app build passed; 53/54 app XCTest cases passed. The sole failure was `LocalModelCatalogTests.testOperatorRoutingCapabilitiesPersistAndNormalize` on reload after clearing labels.
+- **Root cause:** `updateCapabilities` correctly persisted an empty list, but `isValid` still rejected entries whose capability list was empty. This contradicted the operator's ability to remove routing labels.
+- **Fix:** removed the non-empty capability requirement; maximum count and per-label validation remain. Commit `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`.
+- **Status:** exact-head push and companion CI reruns are queued; iOS PR workflow pending appearance. No new pass claimed yet.
+
+
+## 2026-11-16 — Routed coordinator simulator XCTest fixture failure identified
+
+- **PR:** #150 / #151, branch `codex/ios-routed-agent-app-integration`, exact head `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`.
+- **Run:** iOS workflow `43927798508`; llama.cpp build, typecheck, device-target link, simulator boot, native app build, and native app XCTest passed. The separate PocketLlamaEngine simulator XCTest failed 2 of 74 tests.
+- **Root cause:** `RecordingInferenceEngine.load(model:)` in `runtime/ios/Tests/LlamaEngineTests/NativeAgentCoordinatorTests.swift` returns `RuntimeSession(id: "session-\\\\(model.id)", ...)` with an escaped interpolation marker. This produces the same literal session ID for every model, causing a collision and an incorrect unload expectation. Production coordinator code is not implicated by this fixture defect.
+- **Next:** correct the mock to use actual Swift interpolation, rerun the exact branch iOS workflow, then re-evaluate the unified native product integration. No merge or physical-device acceptance claimed.
+
+
+## 2026-11-16 — Unified native product CI failure triage
+
+- **PR #156:** `codex/native-product-experience-integration`, exact head `09207c1c2a9ea94ff351eb7e6ed999a91a8a7d07`, iOS run `43923737970` failed during the native app build. The retrieved log shows four failed SwiftCompile build commands across app source batches but contains no actual compiler diagnostic, no `error:` line, and no explicit signal/OOM evidence. Treat root cause as unknown; do not attribute it to a particular Swift file yet.
+- **PR #150:** exact head `3ae3992c3d79c42da74fae0e1f61b0ccdd06d9ec`, iOS run `43927798508`: native app build and app XCTest passed. The later PocketLlamaEngine simulator XCTest failed 2/74 tests because `RecordingInferenceEngine` test fixture used escaped Swift interpolation in generated session IDs. Production coordinator code is not implicated by the observed failures.
+- **Actions:** corrected the test-fixture interpolation on branch `codex/ios-routed-agent-app-integration` (commit `20ea14d4a7b4625e1ff7dde300bfa7f037485498`). Next, reduce xcodebuild parallelism and preserve complete build diagnostics on PR #156, then rerun exact-head CI. No merge or physical-device acceptance claimed.
+
+
+## 2026-11-16 — Unified native app capability type error fixed across stacked branches
+
+- **Root cause:** iOS run `43925617238` for PR #157 reported `ios/PocketAILab/LocalChatView.swift:544:35: cannot convert value of type 'Set<String>' to expected argument type '[String]'`. The task initializer expects an array; the code collected a Set from role capabilities.
+- **Fix:** pass `requiredCapabilities.sorted()` to `AgentTaskRequest` so the type matches and capability order is deterministic.
+- **Applied to:** PR #157 branch `codex/whole-product-execution-integration` commit `1c1cce65ffa0553ac610dfb30cd13a6e3b5040e8`; PR #156 branch `codex/native-product-experience-integration` commit `fc3bbaa83ad32d922f8daadee1c373218da32b44`; PR #159 branch `codex/apex-signed-evidence-verification-v2` commit `9694af8cbade5391bd72cdf4d835c99d05f826e9`.
+- **Validation:** exact-head workflows are pending. PR #156's iOS workflow also received a bounded `-jobs 2` build/test setting and retained build logs to reduce peak compiler pressure and improve diagnostics; that workflow change is on the same branch.
+- **No merge, production deployment, authorization grant, or physical iPhone Air acceptance claimed.**
+
+
+## 2026-11-16 — Native bridge runtime integrity hardening
+
+- **PR #160:** branch `codex/restore-original-bridge-and-workspaces`, current head `34175a03bb880bcf342e8f6d330dbfff02608989`.
+- **Changes:** RuntimeController now hashes the model against the host catalog expectation before acquiring a lease and again after load; a mismatch/change fails closed. Duplicate session IDs cannot overwrite an existing session lease. Generation evidence timestamps are captured after successful completion.
+- **Tests:** renamed the hash-mismatch test to reflect preflight behavior and added duplicate-session regression coverage, including preservation of the original active lease.
+- **Validation:** Pocket AI Lab push CI `43935362346` in progress; iOS LlamaEngine CI `43935380183` pending. No native test pass claimed yet.
+- **Security boundary:** all records remain unsigned candidates; no APEX authorization, receipt, or signing key is introduced.
+
+
+## 2026-11-16 — Desktop archive compatibility with restored ExploitGym submodule
+
+- **PR #160** current head `77e23ad5ad1fdfdd532afd581e26bad18bb118b0`.
+- **Failure evidence:** Pocket AI Lab and Consumer workflows on previous head `34175a03bb880bcf342e8f6d330dbfff02608989` failed in desktop archive tests. `scripts/desktop/package-archive.mjs:44` attempted `readFile` on the `packages/exploitgym` submodule gitlink directory, raising `EISDIR`.
+- **Fix:** `collectFiles` now uses `lstat` and packages only regular non-symlink files; gitlink directories and symlinks are excluded from archive scanning/copying. Added archive smoke assertion that `packages/exploitgym` is not listed as a regular file.
+- **Validation:** latest Pocket AI Lab push run `43935672650` in progress; PR/iOS runs not yet surfaced. No pass claimed yet.
+
+
+## 2026-11-16 — Archive submodule regression test correction
+
+- **PR #160** current head `4fc057eb54a20cab2d765ea1b4829f59c23af610`.
+- **Previous run:** Pocket AI Lab push `43935672650` correctly identified the archive test path issue after the implementation fix: the new test called `collectFiles()` without its required repository-root argument. The production `buildArchive()` call supplies its default root and was not affected.
+- **Fix:** assert `packages/exploitgym` exclusion against the completed archive manifest instead of calling the internal collector directly. Exact-head push CI `43936002601` queued; PR/iOS workflows pending.
+
+
+## 2026-11-16 — Native bridge dispatch gap made explicit
+
+- **PR #160** current head `a3af97b0890e1c39ac7dce173f9cfbd48977c31b`.
+- Reviewed `WorkspaceView.swift` and confirmed the WebView currently applies same-origin top-level navigation policy only; no `WKScriptMessageHandler` is installed and no `BridgeGate.parse` dispatch path is wired into the app.
+- Updated bridge architecture documentation and PR description to state this plainly. Host-issued challenge management and native approval coordination for consequential model operations remain unimplemented; runtime-control messages must remain unavailable until these are connected.
+- Also corrected docs: model hashes/memory estimates are resolved by the host catalog, and the RuntimeController hashes before and after model load.
+- Exact-head CI after this documentation commit is pending. No claim of a live Web-to-native bridge or physical iPhone Air acceptance.
+
+
+## 2026-11-16 — Bridge package CI trigger coverage and archive test pass
+
+- **PR #160** current head `b5b89f66ae411bc2c990a84dc7e9503ba3a4b4bd`.
+- **Confirmed pass:** Pocket AI Lab push run `43936002601` completed successfully on code head `4fc057eb54a20cab2d765ea1b4829f59c23af610`; the desktop archive submodule regression test passed in that run.
+- **Workflow improvement:** added `docs/architecture/director-native-bridge.md` to the iOS LlamaEngine workflow path filters, alongside `packages/director/ios/**`, so bridge package/contract changes reliably trigger the native package and app validation.
+- **Current exact head:** latest commit changes only the iOS workflow trigger path; exact-head iOS run is pending. The previous iOS attempt was cancelled by later commits, so no final-head native test pass is claimed.
+
+
+## 2026-11-16 — PR #160 exact-head non-iOS CI checkpoint
+
+- **Head:** `b5b89f66ae411bc2c990a84dc7e9503ba3a4b4bd`.
+- **Passed:** Pocket AI Lab PR `43936311044`; Consumer `43936311095`; Governance `43936311118`; Cursor `43936311089`; Pocket AI Lab push `43936298279`.
+- **Pending:** iOS LlamaEngine PR workflow `43936311119`.
+- Desktop archive submodule regression test passed in the Pocket AI Lab checks. Native iOS package/app validation is not yet complete; physical iPhone Air acceptance remains outstanding.
+
+
+## 2026-11-16 — PR #160 exact-head Xcode package-resolution failure
+
+- **Branch/head:** `codex/restore-original-bridge-and-workspaces` at `f20cfa9c789931a70f76a0e2c4ba136e2442f185`.
+- **Exact-head non-iOS workflows:** Pocket AI Lab `43952378331`, Consumer `43952378242`, Governance `43952378195`, Cursor `43952378266` all completed successfully.
+- **iOS workflow:** `43952378234` failed at native app build before app XCTest, simulator XCTest, or pinned-GGUF smoke. The concrete Xcode error is `Missing package product 'ApexBridge'`; the resolved package graph lists the local package as `ios: (null)`. llama.cpp build, fail-closed typecheck, and generic iOS device-target link had passed. This is a package-reference/resolution failure, not a physical-device result.
+- **Scope clarification:** the bridge branch may update `ios/project.yml` and only the trusted-origin navigation policy in `ios/PocketAILab/WorkspaceView.swift`; it must not add WebKit action dispatch, change chat/agent UI, or bypass host approval. The full WKScriptMessageHandler/approval flow remains deferred.
+- **Repair attempt:** align the XcodeGen local package alias with the resolved local path identity and add an explicit Swift package manifest preflight. Exact-head CI will decide whether this diagnosis is correct; no pass is claimed yet.
+
+
+## 2026-11-16 — Fresh East runtime checkpoint validation submitted
+
+- **Draft PR #161:** https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/161
+- **Branch/head:** `codex/east-fresh-runtime-resumption-validation` at `2864451e585c216849a5328418d8eaa2fcb9646b`, stacked on PR #158 exact base `950b7ce2940d83182b6052dd83de3d3f115aa5b9`.
+- Replaced the previous adapter test's same-object `taskExists=false` simulation with a new `createEastPlatform` instance and a new `TaskLifecycleCoordinator`. The test verifies restoration of the complete East task and MessageBus thread from lifecycle checkpoints, and asserts no additional inference calls occur after restart.
+- Updated East readiness/lifecycle docs: checkpoint-based restart is supported at completed lifecycle-step boundaries when the injected store is durable; the in-memory East task map and MessageBus are rehydrated, not independently event-sourced. A provider-success/checkpoint-commit crash window remains; inference stays single-attempt and fail-closed.
+- **Validation:** exact-head CI is pending. The integration test uses the in-memory store interface; no live PostgreSQL deployment or RLS configuration is claimed.
+- No APEX authorization, signer, schema, or production runtime behavior changed.
+
+
+## 2026-11-16 — Native product integration simulator test failures triaged
+
+- **PR #156:** branch `codex/native-product-experience-integration`, exact head `af3a75963c389fa4749bfb093ba6e6a9c6172b45`; iOS workflow `43952083577` completed with native app build and app XCTest passing, then failed the separate PocketLlamaEngine simulator XCTest (81 tests, 3 skipped, 3 failures).
+- **Failure 1:** `InferenceSchedulerTests.testFIFOWaitersReceivePermitsInArrivalOrder` observed `[1, 3, 2]` because the test started the second and third Tasks without waiting for the second to enter the scheduler. The test's polling condition only waited until both were queued; it did not establish arrival order. Fix the fixture by waiting for exactly one waiter before starting the third, then waiting for exactly two.
+- **Failures 2–3:** `NativeAgentCoordinatorTests` routed-model tests failed with session ID `session-\\(model.id)`; the test engine used an escaped interpolation marker, causing a literal duplicate session ID and incorrect unload expectation. Correct the fixture to actual Swift interpolation. No production coordinator defect is indicated by these two failures.
+- **Scope:** test-only changes to `runtime/ios/Tests/LlamaEngineTests/NativeAgentCoordinatorTests.swift` and `InferenceSchedulerTests.swift`; no production scheduler/runtime behavior changes.
+- **Physical-device status:** the job used an iPhone Air simulator. This is not a physical iPhone Air test.
+
+
+## 2026-11-16 — Consolidated native/East integration test repair and PR reconciliation
+
+- **PR #156** branch `codex/native-product-experience-integration`, head `31bdc57b8812243279097899fecd2c938a96e78f`: fixed the routed-model test engine's escaped interpolation and made FIFO test waiter registration deterministic. No production runtime code changed. Non-iOS workflows passed; iOS run `43957027828` is in progress. Prior run `43952083577` had native app build/app XCTest pass and 3 failures in 81 PocketLlamaEngine simulator tests.
+- **PR #157/#158** share branch `codex/whole-product-execution-integration`, head `8ee13921ac648915c3447b65e14120f29f89d786`. The same two test-only repairs are included. PR #157 is the mainline validation PR; PR #158 is a stacked review PR based on the native product branch. The native base has advanced 6 commits beyond the PR #158 merge base, so #158 is behind/diverged and should not be treated as a clean integration head. PR #157 iOS run `43957233723` is in progress; the four non-iOS workflows passed.
+- **PR #159** whole-product candidate head `30f414012dbfbd43ad84f28b714d8b1450388750`: now includes the fresh East runtime restart test and corrected checkpoint/crash-window docs, plus the two iOS test fixture fixes. Cursor passed; iOS run `43957567346` queued and the other companion workflows pending/in progress. No exact-head iOS pass claimed.
+- **PR #160** bridge restoration head `085c97928a956fdf326acca9054a3c95a8515da4`: non-iOS workflows passed. iOS run `43956073003` is still building pinned llama.cpp. Previous exact-head run `43952378234` failed app build because Xcode could not find package product `ApexBridge`; current branch aligns the XcodeGen package alias to the resolved local path identity and adds a manifest preflight. Repair remains unverified.
+- **PR #161** was closed unmerged after its fresh-runtime test/docs were ported into PR #159, avoiding duplicate review/CI. Its branch remains as historical work only.
+- PR #156, #157, #159, and #160 descriptions were refreshed to current exact heads and honest CI state. No reviews, inline threads, or PR discussion comments were present on #156, #158, or #159 at this check; #160 also had none.
+- No merge, main change, repository setting change, deployment, signing, or physical iPhone test occurred.
+
+
+## 2026-11-16 21:43 UTC — Consolidated repository reconciliation and East lease-owner hardening
+
+### Direction, history, and coordination
+- Read the current `agent-coordination` tree, `coordination/LEADERSHIP.md`, `coordination/PROTOCOL.md`, the refreshed `coordination/BOARD.md`, and the latest `coordination/LOG.md` entries. The coordination tree contains only BOARD, LEADERSHIP, LOG, and PROTOCOL; no separate active-agent roster file exists.
+- Leadership/protocol designate ChatGPT as primary project lead/default engineering owner and require other AI agents to announce exact identity, authority, scope, branch, and exclusions before editing. No new active-agent announcement or conflicting claim was present in the current coordination records.
+- The accessible conversation sources in this run were the current automation instructions, the project context/recent-conversation summaries surfaced in this ChatGPT session, and the user-visible recent project exchanges. A full transcript-level search of every historical ChatGPT conversation was not available; no claim is made that all prior chats were reviewed.
+- The owner-authored comment on coordination PR #40 warns that `agent-coordination` is 80 commits ahead and 72 behind `main`; keep it as a docs-only working surface and do not merge it. No coordination/application merge was performed.
+
+### Repository and branch reconciliation
+- Repository remains public with `main` as default branch. Current search returned 63 open pull requests and 0 open issues. No visibility, repository setting, secret, or branch-protection change was made.
+- PR #159 remains the broad integrated native/East/APEX-verifier candidate. PR #156 is the native app candidate; #157 is the East lifecycle mainline-validation branch; #158 is a stacked review view sharing #157's head and is six commits behind/diverged from its current native base. PR #159 carries stricter East checkpoint decoding, MessageBus restoration validation, strict East checkpoint-shape checks, and a genuinely fresh East runtime/MessageBus restart test; it is the stronger integrated candidate, not a merge.
+- Earlier component/stacks remain open: #153/#154 are component PRs consumed by the native integration; #150/#151 and #144–#149 are earlier native routing/Agent Team stacks; #94/#103/#131/#132 are earlier lifecycle/PostgreSQL stacks; #115/#133/#135/#140 are earlier model-catalog/self-evaluation stacks. They remain unmerged and were not closed automatically.
+- PR #160 advanced from head `dd4e016a5b4e60952a1c0c2b0cf490f68e6a7f50` to `80ffefca651e733ad38c6b02fb905a65f34eecf3` via owner-authored documentation commit `docs(ios): document host-issued bridge challenge contract`. The new `BridgeChallengeStore` uses a host-owned actor, random one-use nonces, short expiry, and origin/request/session binding. It is not connected to a `WKScriptMessageHandler`; no WebKit action dispatch or host approval coordinator is present. PR #160 description and board were refreshed.
+- On `main`, `packages/director/src/lib/apex/trust.ts` is still exactly `PLACEHOLDER_TRUST_CONTENT_WILL_BE_REPLACED`; no APEX `rls.ts` or `schema.ts` file exists in the current tree. PR #48 documents that the complete owner-authored RLS Architecture Specification v3.12, including the eleven exact correction clauses and SQL body, has not been recovered. No SQL or authorization semantics were guessed.
+
+### Engineering completed this run
+- Created `codex/east-owner-bound-leases` from PR #159's exact head `30f414012dbfbd43ad84f28b714d8b1450388750` and opened draft follow-on PR #162: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/162.
+- Head `9be72ff1b817044ded402984b714d8b1450388750` adds a bounded worker identity to new step attempts and returns it in `StepClaim`. `completeStep` and `failStep` now require the same coordinator owner; a foreign or restarted worker cannot adopt a live lease. Legacy ownerless attempts remain loadable but fail closed until expiry/recovery. Persisted owner identities are validated.
+- Added tests for foreign completion/failure, restart-before-expiry rejection, ownerless legacy recovery, malformed owner rejection, and a two-coordinator PostgreSQL compare-and-swap claim race in which only one worker wins and the losing worker cannot complete the winner's lease. Updated lifecycle docs and readiness gate.
+- Exact-head push CI [#43961191072](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43961191072) passed: JavaScript syntax, TypeScript type-check/build, 76 intelligence test files / 670 tests, workspace 28 files / 320 passed / 2 skipped, and npm audit 0 vulnerabilities. The PostgreSQL race uses the deterministic fake transactional adapter, not a live PostgreSQL service or RLS policy. No PR-triggered run has appeared for the stacked feature-branch base.
+
+### Exact-head CI checkpoint
+- PR #156 head `31bdc57b8812243279097899fecd2c938a96e78f`: Pocket AI Lab, Consumer, Governance, and Cursor passed. iOS run [#43957027828](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957027828) has device link and simulator boot passed; native app build is still in progress.
+- PR #157/#158 head `8ee13921ac648915c3447b65e14120f29f89d786`: four companion workflows passed. iOS run [#43957233723](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957233723) has device link, simulator boot, and native app compilation passed; native app XCTest is in progress.
+- PR #159 head `30f414012dbfbd43ad84f28b714d8b1450388750`: four companion workflows passed. iOS run [#43957567346](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957567346) has device link, simulator boot, and native app compilation passed; native app XCTest is in progress. Simulator XCTest and pinned-GGUF smoke remain pending.
+- PR #160 head `80ffefca651e733ad38c6b02fb905a65f34eecf3`: Pocket AI Lab, Consumer, Governance, and Cursor passed. iOS run [#43960518284](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43960518284) attempt 1 was cancelled during the pinned llama.cpp build before manifest validation, native app build, or XCTest. Attempt 2 has been requested and was pending at the last check.
+- PR #162 exact-head push CI passed as recorded above. No physical iPhone Air build/install/acceptance test is established by any of these hosted macOS/simulator runs.
+
+### Prioritized remaining gaps and next phase
+1. **East production persistence:** live PostgreSQL integration, host-owned tenant identity and transaction-local RLS context, transaction-pooling validation, encryption/access controls, and a durable audit/outbox contract remain absent. Do not infer tenant isolation from namespace partitioning or fake-database tests.
+2. **East crash/cancellation semantics:** provider success followed by checkpoint-commit failure still needs a provider idempotency/result-retrieval contract or transactional outbox. Cancellation must propagate through East, provider, and native runtime drain before releasing a lease.
+3. **Native iOS acceptance:** exact-head app XCTest, simulator XCTest, and pinned-GGUF smoke are still pending on #156/#157/#159. Physical iPhone Air signing, install, memory/thermal/process-restart acceptance remain owner/device-dependent and unverified.
+4. **Bridge integration:** host-issued challenge storage is implemented as a primitive, but message-handler dispatch and host approval coordination are not connected. Do not enable runtime-control messages until that boundary is implemented and reviewed.
+5. **APEX trust/RLS:** the main trust file remains a placeholder, production key provisioning and durable replay protection are absent, and the complete owner-authored RLS v3.12 source remains a blocker. Keep APEX authorization fail-closed.
+6. **PR/branch hygiene:** 63 open PRs contain overlapping historical and stacked candidates. Preserve them for review; do not merge or close automatically. Use #159 as the current broad integration candidate and #162 as its worker-lease follow-on.
+- Next engineering phase: continue exact-head CI monitoring/failure repair for #156/#157/#159/#160; after #159's iOS gates pass, integrate #162's worker-owner fencing into the product candidate. Resume live PostgreSQL/RLS work only after the owner-authored v3.12 source is recovered; do not invent missing policy or SQL.
+
+
+## 2026-11-16 21:53 UTC — Bridge/runtime dependency reconciliation
+
+- **Fresh native validation:** PR #159 head `30f414012dbfbd43ad84f28b714d8b1450388750` completed every iOS LlamaEngine job stage successfully in [run #43957567346](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957567346): pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, simulator boot, native app build, app XCTest, simulator XCTest, pinned-GGUF download, and macOS XCTest. This is hosted macOS/simulator evidence, not physical iPhone acceptance.
+- **East integration validation:** PR #157 head `8ee13921ac648915c3447b65e14120f29f89d786` also completed all iOS job stages successfully in [run #43957233723](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957233723). PR #156 remains in progress at app compilation in run #43957027828.
+- **PR #160 failure diagnosis:** run [#43960518284](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43960518284) now fails at native app compilation. The concrete Swift errors are that `ModelPoolLease` and `NativeInferenceRuntime` are not in scope in `RuntimeController.swift`. The types are public in PR #156's `PocketLlamaEngine` package, but absent from PR #160's main-based runtime tree. The bridge architecture note itself states that the bridge must be stacked on `codex/native-product-experience-integration` (PR #156). PR #160 currently targets `main`; comparison to PR #156 is 72 commits ahead / 230 behind, so retargeting the old branch directly would carry a large divergent history and overlapping edits to `ios/project.yml`, `WorkspaceView.swift`, and the iOS workflow.
+- **Coordination/ownership:** no new external agent announcement or conflicting active claim was present. PR #160 has no reviews, inline threads, or discussion comments. Its original branch and PR are left unchanged. A new non-overlapping integration claim is recorded for `codex/bridge-native-runtime-integration`, based on PR #156's exact head; the next implementation will port the bridge-only changes and reconcile the three shared files rather than weakening RuntimeController to use a second/older engine.
+- **No merge, main write, PR approval/closure, settings change, deployment, signing, or physical iPhone test occurred.**
+
+
+## 2026-11-16 22:10 UTC — Exact-head integration gates and uncertainty-state follow-up
+
+- **PR #159 native integration:** exact-head iOS run [#43957567346](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957567346) completed successfully. The pinned-GGUF native-runtime evaluation test passed on hosted macOS; direct llama.cpp smoke reported `chars=33 metalUsable=true offloaded=31`. The suite finished 85 tests, 0 failures, 1 skipped. The earlier no-GGUF skip belongs to the first app-test phase; the later pinned-GGUF macOS phase passed. No physical iPhone Air test occurred.
+- **PR #157 East integration:** exact-head iOS run [#43957233723](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957233723) completed successfully; native app/simulator tests and pinned-GGUF runtime smoke passed on hosted macOS. This is CI evidence, not a live device/database deployment.
+- **PR #162 worker fencing:** exact-head push CI [#43961191072](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43961191072) passed. It includes 76 intelligence test files / 670 tests, 28 workspace test files / 320 passed / 2 skipped, typecheck/build, and npm audit. No PR-triggered check is visible because this is a stacked PR targeting a feature branch; no live PostgreSQL or RLS test exists.
+- **PR #163 verifier hardening:** exact head `cddb43103384711707c6474c1f99dab5e33c6dd3` has no combined status checks visible and no PR-triggered run surfaced. It remains a draft and is not CI-verified on this check.
+- **PR #156 base:** exact head `31bdc57b8812243279097899fecd2c938a96e78f` has iOS run [#43957027828](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957027828) concluded `failure`; the workflow log endpoint returned BlobNotFound and no artifacts were available, so the failing step/cause is unverified. Do not infer a code defect from the missing logs. PR #164 is independently exercising its bridge integration against that base.
+- **Bridge integration:** created draft PR [#164](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/164), branch `codex/bridge-native-runtime-integration`, based exactly on PR #156. It ports seven bridge package/test/doc files and reconciles `WorkspaceView.swift`, `ios/project.yml`, and the iOS workflow. The workflow is now configured for the stacked base and bridge package paths. iOS run [#43966758660](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43966758660) is in progress. No WebKit action dispatch, approval bypass, signer, receipt, or physical-device claim.
+- **PR #160:** left open and unchanged. Its iOS run [#43960518284](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43960518284) failed compiling `RuntimeController.swift` because its main-based dependency lacks `ModelPoolLease` and `NativeInferenceRuntime`. The branch is divergent from the actual PR #156 prerequisite, so it was not retargeted or force-pushed.
+- **New East gap closure claim:** PR #162's existing lease fencing is being extended with a backward-compatible machine-readable uncertain-outcome marker for expired single-attempt work. This prevents silent replay when a provider may have completed before checkpoint persistence. It does not provide provider idempotency/result retrieval; that remains a separate provider capability requirement.
+- **Conversation/history access:** current conversation summaries and recent project snippets were available; a Library coordination-history text file covering earlier Nov 2–8 decisions was also searched/read. No standalone owner-authored RLS v3.12 specification was found in Library search. Full historical ChatGPT transcripts were not accessible in this run. Existing evidence-boundary decisions remain: candidate-only is not trust; no signer, RLS, schema, or authorization behavior may be invented.
+- **No merge, main change, PR approval/closure, repository setting change, deployment, signing, or physical-device test occurred.**
+
+
+## 2026-11-16 UTC — Requirements traceability and current CI reconciliation
+
+- **Coordination claim:** ChatGPT claimed documentation-only coordination reconciliation on `agent-coordination` before updating coordination artifacts. No application code was changed.
+- **Traceability matrix:** Added `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md` with one stable row for each of the 316 unchecked requirements in the master checklist. Initial triage: 184 `unassessed`, 85 `implemented-unverified`, 37 `partial`, 10 `blocked`, 0 `verified`, and 0 `missing`. The additional `unassessed` status prevents unsupported implementation claims. Section-level PR references are leads only; all rows still require requirement-specific inspection. Original M01–M42 identifiers remain unrecovered and were not invented.
+- **PR #164:** Exact head `bc2f80cb8038755746e4fbb774e0149c2e7a47eb`; iOS run [#43966758660](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43966758660) failed in native app XCTest compilation. Native app build passed. Error: `ios/PocketAILabTests/PocketAILabTests.swift:425:63` calls `PrivateWorkspaceWebView.Coordinator()` without required `trustedURL: URL`; simulator XCTest and pinned model smoke were skipped. This is a test-fixture compile defect, not evidence of a production runtime failure. Fix belongs on the `codex/bridge-native-runtime-integration` feature branch, never on this coordination branch.
+- **PR #156:** Exact head `31bdc57b8812243279097899fecd2c938a96e78f`; iOS run [#43957027828](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43957027828) is concluded `failure`. The fetched latest job snapshot reports app build in progress and later tests pending, so it does not identify the failing step or cause. Four companion workflows passed. Do not infer the failure cause without the complete failing log/artifact.
+- **PR #162:** Current PR metadata head is `1db0345938ac029c3742a391c51ad7027d57e3bc`, while the board and PR body still cite older head `9be72ff1b817044ded402984b1612dfc21754690`. The previously recorded push CI #43961191072 applies to the older head, not automatically to the current head. No PR-triggered run was surfaced for current head; revalidate exact-head CI before claiming it passes.
+- **PR #163:** Current head `cddb43103384711707c6474c1f99dab5e33c6dd3`; no PR-triggered workflow run surfaced. It remains unverified on this check and its verifier result remains candidate-only, not APEX authorization.
+- **PR #160/#164 overlap:** PR #160 is still open, based on `codex/native-product-experience-integration` at `31bdc57b8812243279097899fecd2c938a96e78f`, with head `20c5588e6bc6f50629e4683efef1db448926979a`. PR #164 is the focused bridge runtime candidate. #160 also contains ExploitGym/Grok Workspace archive restoration, so it is not a pure duplicate; archive scope needs a deliberate follow-on/reconciliation decision. No PR was closed or retargeted.
+- **Coordination board:** Updated the #156/#164 snapshot with exact current evidence, clarified that #164 does not include ExploitGym/Grok Workspace restoration, and moved the traceability claim to `in-progress`. The existing board entry for #162 still needs its stale head and old CI claim reconciled in a subsequent board pass.
+- **Boundaries:** No PR merged/closed/approved, no branch force-pushed, no APEX trust/policy/authorization changed, no signing or deployment performed, and no physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 XCTest fixture correction and head reconciliation
+
+- **Implementation branch:** `codex/bridge-native-runtime-integration`; updated exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- **Code change:** Updated only `ios/PocketAILabTests/PocketAILabTests.swift` so `PrivateWorkspaceWebView.Coordinator` is initialized with `trustedURL: URL(string: "https://workspace.example")!`. The production coordinator initializer and trust behavior were not weakened or changed.
+- **CI:** New exact-head iOS run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502) started and was observed in progress at the time of this entry (job #133682098392; source checkout underway). No test pass is claimed until the run completes.
+- **PR description:** Updated PR #164 to identify the corrected exact head and the active CI run. It remains draft/open.
+- **East worker fencing:** PR #162 current head is `1db0345938ac029c3742a391c51ad7027d57e3bc`; the previously recorded successful push run #43961191072 belongs to older head `9be72ff1b817044ded402984b1612dfc21754690`. Current head has no surfaced PR run or combined status. The board now marks exact-head CI as unverified.
+- **Verifier hardening:** PR #163 current head `cddb43103384711707c6474c1f99dab5e33c6dd3` still has no surfaced PR run or combined status.
+- **Coordination:** Updated board snapshots and detailed claims for PR #162 and #164 so commit hashes and CI claims match the currently observed heads. The traceability matrix remains at 316 requirement rows; none is marked verified.
+- **No APEX trust/policy/authorization changes, no PR merge/closure/approval, no force-push, no deployment/signing, and no physical iPhone Air test occurred.**
+
+
+## 2026-11-16 UTC — Original 42-skill artifact provenance check
+
+- **Library search:** Found a saved `Mr. Robot Cybersecurity Academy` HTML artifact titled as a 42-skill curriculum. It contains 42 cybersecurity learning areas, practice plans, and dependencies, but no M01–M42 identifiers and no six-layer capability taxonomy.
+- **Disposition:** This artifact is not treated as the original Pocket AI Lab six-layer registry. It may be a separate learning/curriculum artifact; no mapping or renaming was performed. The authoritative M01–M42 source remains unrecovered.
+- **Traceability update:** Added this distinction to the blocker notes in `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md`. The 10 section-5 requirements remain blocked pending authoritative source recovery.
+- **CI checkpoint:** PR #164 exact-head run #43976612502 remains in progress at the physical-iOS link step after pinned llama.cpp build and Swift typecheck passed. No later gate result is yet available.
+
+
+## 2026-11-16 UTC — PR descriptions aligned with exact-head evidence
+
+- **PR #156:** Updated its validation section to state that iOS run #43957027828 concluded failure. The fetched job record is internally incomplete (app-build step still shown in progress; later tests pending), and the job-log endpoint returned BlobNotFound. The exact failing step/cause remains unknown; four companion workflows passed but do not constitute iOS acceptance.
+- **PR #162:** Updated the PR description to current head `1db0345938ac029c3742a391c51ad7027d57e3bc`. The passing push run #43961191072 is explicitly attributed to older head `9be72ff1b817044ded402984b1612dfc21754690`; current head has no surfaced workflow run/status and remains unverified.
+- **PR #164 CI checkpoint:** Exact-head run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502) has now passed pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, simulator selection, and is currently booting the iPhone Air simulator. Native app build, XCTest, simulator XCTest, and pinned-GGUF smoke remain pending. This is hosted CI; it is not physical-device acceptance.
+- **No merges, PR closures, APEX policy/trust changes, signing, deployment, or physical-device tests occurred.**
+
+
+## 2026-11-16 UTC — PR #164 rerun progress checkpoint
+
+- Exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`, run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502): pinned llama.cpp build, fail-closed Swift typecheck, generic iOS device link, and simulator selection passed. Simulator boot is in progress. Native app build, XCTest, simulator XCTest, and pinned-GGUF smoke remain pending.
+- Updated the coordination board and traceability matrix to show the old XCTest fixture failure separately from the active corrected-head run. No current-head pass is claimed.
+
+
+## 2026-11-16 UTC — PR #164 CI stall and bridge scope review
+
+- Re-fetched workflow run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for exact head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`. Run remains `in_progress`; run metadata `updated_at` remains `2026-11-16T23:08:33Z`. Simulator boot remains the active step, with bridge manifest validation, app build, XCTest, simulator XCTest, and pinned-GGUF smoke all pending. This appears stalled from the available API evidence; no conclusion or test pass is inferred.
+- Reviewed PR #164 bridge sources and tests. Confirmed the bridge is deliberately not yet connected to a `WKScriptMessageHandler`; challenge issuance/consumption is a host-side primitive only; `BridgeGate.parse` is schema/origin validation, not proof of challenge consumption or host approval. Consequential import/load/unload still require a host-supplied authorization decision. The PR documentation correctly states runtime-control messages remain unavailable until an approval coordinator and handler are implemented.
+- The current change is therefore a bridge foundation and navigation boundary, not a completed web-to-native control bridge. Do not describe it as end-to-end WebKit-to-runtime integration or treat a simulator boot as product acceptance.
+- No workflow cancellation/rerun was requested or performed. No source changes, PR approval/merge/closure, APEX policy changes, or physical-device tests occurred in this checkpoint.
+
+
+## 2026-11-16 UTC — PR #164 native app build gate advanced
+
+- Re-fetched exact-head workflow run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for PR #164 head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- Newly completed successfully: selected iPhone simulator boot and restored Director bridge package-manifest validation. The native Pocket AI Lab app generation/build step is now `in_progress`; native app XCTest, simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest remain pending. The workflow/job remains `in_progress`; no overall pass is claimed.
+- The job-log endpoint returned `BlobNotFound`, so no app-build diagnosis or compiler error can be established from logs at this checkpoint.
+- Exact-head checks for PR #162 (`1db0345938ac029c3742a391c51ad7027d57e3bc`) and PR #163 (`cddb43103384711707c6474c1f99dab5e33c6dd3`) were rechecked: no PR-triggered workflow runs and no combined commit statuses were returned for either head. Their validation remains unverified.
+- Updated `coordination/BOARD.md` commit `d04c5cdc374209c09c8bc37f8a23325306d797e8` to replace the stale simulator-boot status with the observed current gate state.
+- No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 native app XCTest started
+
+- Re-fetched exact-head run [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- Native app generation/build completed successfully. The next gate, native app XCTest, is now `in_progress`. Simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest remain pending. The workflow remains in progress; no test-suite pass is claimed.
+- The job-log endpoint continues to return `BlobNotFound`; no XCTest diagnosis is available from logs at this checkpoint.
+- Reviewed the current PR #164 bridge test source: origin/effective-port checks, remote-HTTP rejection, exact message schema, challenge nonce presence, consequential-action authorization, runtime hash/readiness/cancellation behavior, and unsigned-candidate semantics have focused test cases. The challenge store is still not connected to a WebKit message handler, and the PR explicitly does not enable Web-to-native action dispatch. These tests are candidate evidence only until the exact-head CI gates complete.
+- Updated `coordination/BOARD.md` commit `453bb53236bd16287df15a63afb667de71f3b6c5` to record app-build success and active native app XCTest.
+- No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 native app XCTest passed; simulator XCTest started
+
+- Re-fetched exact-head workflow [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392, for head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda`.
+- Native app generation/build and native app XCTest both completed with `success`. iOS simulator XCTest is now `in_progress`. Pinned-GGUF download/smoke and macOS XCTest remain pending; workflow overall remains in progress.
+- No model-generation smoke result or overall workflow success is claimed yet.
+- Updated `coordination/BOARD.md` commit `e01efc4ac4481403d742358a07d3ac1156652d21` and the PR #164 validation summary to reflect the native app XCTest pass and active simulator XCTest.
+- No source-code change, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust change, signing/deployment, or physical iPhone Air test occurred.
+
+
+## 2026-11-16 UTC — PR #164 simulator pass; macOS XCTest failure surfaced
+
+- Re-fetched exact PR #164 head `3ab09b4fdea1fabfacb42bdd41f1ccc743c11eda` and workflow [#43976612502](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43976612502), job #133682098392.
+- Newly confirmed successful: iOS simulator XCTest (step 15), pinned smoke GGUF download (step 16), and smoke-path setup (step 17). Earlier pinned llama.cpp build, Swift typecheck, generic iOS device link, simulator boot, bridge manifest validation, native app build, and native app XCTest also remain successful.
+- **macOS XCTest step 18 failed.** The runner-evidence step 19 completed successfully, but the job's “Complete job” step remains in progress and workflow metadata still reports `in_progress`. Therefore no overall workflow conclusion is recorded yet.
+- Attempted to retrieve the failing job log; GitHub's log endpoint returned `BlobNotFound`. The run published no artifacts. The failure's test name, assertion, and diagnostic are therefore unavailable; no root cause is inferred. Successful GGUF download is not evidence that model generation passed.
+- Inspected the exact-head CI workflow and build script. The macOS gate copies the iOS runtime package into `/tmp/pocket-host` and runs the same `PocketLlamaEngine` XCTest scheme against a macOS destination. This identifies the failing gate's execution path, not the underlying failure.
+- PR #164 remains draft/open. No source edits, CI rerun/cancellation, PR approval/merge/closure, APEX policy/trust changes, signing/deployment, or physical iPhone Air tests occurred.
+
+
+## 2026-11-16 UTC — PR #164 smoke-artifact handoff repair claimed
+
+- Exact-head run #43976612502 logs are now retrievable. The macOS failure is diagnosed: fetch-gguf encountered DNS resolution failure (URLError: [Errno 8] nodename nor servname provided, or not known); the workflow piped it to tee without set -o pipefail, so the step was reported successful. The script's earlier stdout line 'pin header matches b12233 5f490d7bfe78844e6390c869454c149fd7e003a8' was then selected as the only/last line and written into SmokePath.swift.
+- GGUF metadata and both inference smoke tests consequently failed because that string is not a readable file path. This is a CI artifact-handoff defect, not evidence of an inference-engine failure; actual model generation did not occur on macOS.
+- ChatGPT claims a narrow repair on existing branch codex/bridge-native-runtime-integration: .github/workflows/ios-llamaengine-ci.yml smoke-download step only. Add pipeline failure propagation and explicit validation that exactly one absolute existing GGUF path is passed to the smoke test. No changes to inference runtime, model parser, tests, pin values, or APEX trust boundaries.
+- This workflow file overlaps the earlier CI-cache PR #128 review area; current repair is confined to the later smoke-download handoff and will preserve cache logic verbatim. No other active in-progress owner claim on this exact smoke handoff was found.
+- Do not rerun/cancel the prior workflow; its evidence remains failed at the macOS smoke stage. Fresh exact-head CI is required after the workflow fix. No physical-device validation.
+
+
+## 2026-11-16 UTC — PR #164 CI smoke-path handoff repaired
+
+- Diagnosed prior exact-head macOS failure from recovered job logs: the fetch-gguf Python download failed with DNS resolution error. The workflow omitted `set -o pipefail` on the fetch-to-tee pipeline, so the shell step appeared successful. It then treated the script's stdout pin-verification banner as the model path and wrote it into the temporary SmokePath.swift; metadata and inference tests failed because it was not a readable file.
+- On branch `codex/bridge-native-runtime-integration`, changed only `.github/workflows/ios-llamaengine-ci.yml`. Added `set -o pipefail`; collect fetch output separately; accept exactly one existing absolute `.gguf` path; persist it with a newline; and recheck absolute suffix and file existence before invoking write-smoke-path.
+- Workflow file commit `f765562bcc16767548e4948ee5acb95a294f304c`; newline correction commit `6661bf655edef85e94fa1f363fcf54a33f20233c`. Current branch/PR #164 head is `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- No inference/runtime/model parser/test/pin or APEX/East trust code changed. No CI rerun/cancellation, merge/approval/closure, signing, or physical iPhone Air test. Fresh exact-head CI evidence is still required; prior run #43976612502 remains failed and cannot validate the fix.
+
+
+## 2026-11-16 UTC — PR #164 repaired-head validation started
+
+- GitHub Actions automatically started exact-head iOS workflow [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474) for `6661bf655edef85e94fa1f363fcf54a33f20233c` after the workflow-only smoke handoff repair.
+- Job #133697485358 is `in_progress`; setup, checkout, Xcode discovery, and CMake/Ninja install passed. Pinned build-cache restore is currently in progress; later gates are pending. No repaired smoke path or model generation has been validated yet.
+- Updated the board and PR #164 validation summary. No merge, approval, workflow cancellation, APEX trust change, or physical-device test.
+
+
+## 2026-11-16 UTC — PR #164 repaired-head build gates advanced
+
+- Rechecked exact-head run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job #133697485358, for head `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Newly confirmed success: pinned llama.cpp build for simulator and macOS, fail-closed Swift typecheck, generic iOS device linking, iPhone simulator selection, and simulator boot. Director bridge package-manifest validation is currently `in_progress`; native app build/XCTest, simulator XCTest, repaired GGUF download/path validation, and macOS inference smoke remain pending.
+- No model download, model generation, overall workflow pass, or physical-device acceptance is claimed. No source change or CI cancellation/rerun occurred in this checkpoint.
+- Updated the PR #164 board detail to distinguish current exact-head progress from the prior failed run. PR remains draft/open; PR #160 remains open for separate archive reconciliation.
+
+
+## 2026-11-16 UTC — PR #164 Director bridge manifest passed; app build started
+
+- Rechecked exact-head run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job #133697485358, for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Director bridge package-manifest validation (step 12) completed successfully. Native Pocket AI Lab app generation/build (step 13) is now `in_progress`.
+- Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS device link, simulator selection, and simulator boot remain successful. Native app XCTest, iOS simulator XCTest, repaired GGUF download/path checks, and macOS inference smoke are pending.
+- No repaired model download, model generation, overall workflow pass, or physical-device acceptance is claimed. No source change, workflow rerun/cancellation, PR merge/approval, or APEX trust change occurred.
+
+
+## 2026-11-16 UTC — PR #164 companion Intelligence CI passed; iOS build still pending
+
+- Queried exact current PR #164 head `6661bf655edef85e94fa1f363fcf54a33f20233c` and both workflow runs.
+- Companion Pocket AI Lab Intelligence CI [#43981072947](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981072947) completed with conclusion `success`; dependency setup/advisory steps, JavaScript syntax, type-check/build, and test steps all succeeded on the exact PR head.
+- iOS LlamaEngine CI [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474) remains `in_progress` at native app generation/build (step 13). All prior steps through Director bridge manifest validation (step 12) succeeded. Native app XCTest, simulator XCTest, repaired GGUF download/path validation, and macOS inference smoke have not started.
+- Re-polled iOS job #133697485358; no step transition since the prior checkpoint. Job log retrieval returns GitHub `BlobNotFound`, and no artifacts are published. Therefore the reason for the long-running app-build step cannot be established. No cancellation or rerun was issued.
+- PR #164 remains draft/open; PR #156 remains open/unmerged. No model download/generation, overall iOS workflow pass, physical iPhone Air test, signing, or deployment is claimed.
+- Updated BOARD and PR #164 validation summary with the companion CI success and the iOS job's unresolved state. No source code or APEX trust-boundary change.
+
+
+## 2026-11-16 UTC — PR #160 archive restoration conflict audit
+
+- Inspected PR #160 metadata, changed-file list, and patch while PR #164's native bridge build remains active.
+- PR #160 current head is `20c5588e6bc6f50629e4683efef1db448926979a`, base is the same native-runtime prerequisite `31bdc57b8812243279097899fecd2c938a96e78f`, and GitHub compare reports `diverged`, 73 commits ahead / 230 behind. PR #160 is open, draft, and marked not mergeable.
+- It duplicates PR #164's bridge package/runtime, WorkspaceView, XcodeGen, and iOS workflow paths. Its distinct archive slice is the ExploitGym submodule/gitlink, Grok status/attachment snapshots and manifest, and desktop archive scanner/package changes to exclude gitlinks and symlinks.
+- Decision: do not merge PR #160 wholesale and do not edit files overlapping the active #164 claim. Once #164's exact-head validation completes, isolate the archive-only changes, rebase/rebuild them on the accepted native-runtime base, and validate them in a separate scoped PR. ExploitGym remains host-side only; no benchmark workload was run.
+- Re-polled PR #164 iOS run #43981080474: still in progress at app build step 13, no later steps started; job-log endpoint still returns BlobNotFound. Companion Intelligence CI #43981072947 remains successful. No source changes, workflow cancellation/rerun, merge, approval, or trust-boundary change.
+
+
+## 2026-11-16 UTC — claimed isolated archive restoration slice
+
+- Claimed non-overlapping archive-only paths for ChatGPT on `codex/archive-restoration-isolated`: Grok Workspace historical snapshot/manifest/attachment documentation, desktop archive packaging and smoke tests, `.gitmodules`, and ExploitGym gitlink.
+- Explicit exclusions: PR #164's Director bridge, WorkspaceView, XcodeGen, and iOS workflow; APEX/East trust and authorization boundaries; no ExploitGym execution.
+- Source is PR #160 head `20c5588e6bc6f50629e4683efef1db448926979a`; it is divergent from its base (73 ahead/230 behind), so no wholesale cherry-pick. New branch will start from the exact PR #164 bridge head after current validation/reconciliation; only isolated archive paths will be rebuilt there.
+- Validation target: manifest and snapshot consistency, desktop archive packaging/smoke tests, gitlink/symlink exclusion, and review of provenance claims.
+
+
+## 2026-11-16 UTC — archive slice implementation checkpoint
+
+- Created `codex/archive-restoration-isolated` from PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`, without changing the active bridge branch.
+- Restored Grok historical status snapshot, workspace README, attachment provenance note, and workspace manifest. Snapshot explicitly states it is historical, not live runtime health.
+- Added `.gitmodules` and a Git tree gitlink for ExploitGym pinned to `a8029e47135a29f1c1a6e79109bf86fba379b3f3`. Verified GitHub tree reports mode `160000`, type `commit`, with that exact SHA.
+- Updated desktop archive collection to use `lstat`, include only regular files, and exclude symlinks and directory gitlinks; added a smoke assertion that the submodule path is not listed as an archive file.
+- Current branch head after initial commits: `a970fb6cc91668dba6519da6a7dfdabd104af53f`. No CI workflow was triggered by branch-only pushes. Tests have not yet run; no ExploitGym benchmark/container workload was run.
+- Expanded the claim only for the directly related ExploitGym isolation documentation and a focused unit test. No bridge/APEX/East trust or authorization files touched.
+
+
+## 2026-11-16 UTC — archive follow-on PR opened; CI test stage running
+
+- Opened draft PR #165 `feat(archive): isolate Grok workspace and ExploitGym restoration`: https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/165.
+- Exact head `b89d0bffd319ba940b17c50ee971fa1674dd541f`, base is PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`. PR #165 is open and GitHub currently reports mergeable; it remains draft and stacked pending #164.
+- PR CI run #43983284394, job #133704917188: setup, dependency install/advisory reporting, JavaScript syntax, and type-check/build passed. Test step 9 is in progress; no test conclusion yet.
+- New focused test builds a temporary Git index with a directory gitlink and symlink and asserts both are excluded from archive file collection. It has not yet been observed executing; CI is running the tests.
+- PR #164 iOS LlamaEngine run #43981080474 remains in progress at native app build step 13, unchanged; later XCTest/GGUF/inference gates remain pending. No job logs are available from that runner.
+- No merge/approval, no ExploitGym workload, no physical device validation, and no APEX/East trust change.
+
+
+## 2026-11-16 UTC — PR #165 exact-head CI passed
+
+- Rechecked PR #165 exact head `b89d0bffd319ba940b17c50ee971fa1674dd541f` and run [#43983284394](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43983284394).
+- Workflow completed with conclusion `success`: dependency install/advisory steps, JavaScript syntax, type-check/build, and the full test job all passed.
+- Desktop archive suite reports 17 tests, 17 passed, 0 failed, 0 skipped. New test `archive file collection excludes submodule gitlinks and symlinks` passed; archive extraction/build/test smoke also passed.
+- Other visible test output: EAGLE Python suite ran 10 tests with 4 skipped and no failures; custom-GGUF Python suite ran 7 tests and passed. The complete workflow test job succeeded.
+- This is hosted CI on exact PR #165 head, not Windows/macOS physical packaging validation, not ExploitGym workload execution, and not physical iPhone acceptance.
+- PR #165 remains draft/open and stacked on PR #164. PR #164 iOS run #43981080474 remains stuck at native app build step 13 with no later XCTest/GGUF/inference gates observed. No merges, approvals, or APEX/East trust changes.
+
+
+## 2026-11-16 23:59 UTC — PR #164 native app build gate passed
+
+- Re-polled exact PR #164 head `6661bf655edef85e94fa1f363fcf54a33f20233c`, run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job `133697485358`.
+- Newly completed successfully: pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS engine link, iPhone simulator selection/boot, Director bridge package manifest validation, and full XcodeGen native app build for both generic iOS Simulator and generic iOS destinations.
+- Native Pocket AI Lab app XCTest step 14 is currently in progress. iOS engine simulator XCTest, pinned GGUF download, macOS smoke XCTest, and runner evidence steps remain pending. Workflow run remains `in_progress`; no artifacts have been published. Job log retrieval returns GitHub `BlobNotFound`, so no test failure or success diagnosis is available yet.
+- This is hosted Intel macOS CI; generic iOS linking is not physical-device execution. No actual GGUF generation, physical iPhone Air test, or production signing is claimed.
+- No PR #164 source edits, cancellation, restart, merge, or approval. PR #165 remains draft and its exact-head CI has passed; it remains stacked on #164.
+- Traceability rule: do not mark any requirement verified solely from compile/link/build gates. Map requirement-specific XCTest and model-generation evidence only after those gates complete.
+
+
+## 2026-11-17 00:02 UTC — PR #164 XCTest runner status is inconclusive
+
+- Re-polled PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`, iOS run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), check-run `ios-llamaengine` started at `2026-11-16T23:39:05Z`.
+- Native app build step 13 completed successfully. Native app XCTest step 14 remains reported `in_progress` after more than 20 minutes, although workflow YAML sets `timeout-minutes: 20` on that step. The job/run status has not advanced and GitHub job-log retrieval returns `BlobNotFound`. Treat this as a stale/inconclusive runner/check-run state, not a test pass or confirmed test failure.
+- Subsequent iOS simulator XCTest, pinned GGUF download, macOS smoke XCTest, and runner evidence steps have not started. No model generation evidence exists for this exact PR #164 head.
+- The exact-SHA companion Intelligence CI passed; it is not a substitute for iOS LlamaEngine gates.
+- No cancellation or rerun was initiated. This is intentionally left untouched pending owner direction because a rerun/cancel changes the active validation attempt. No source, trust, or authorization changes.
+
+
+## 2026-11-16 UTC — native agent coordination gap audit committed
+
+- Inspected the master requirements handoff, the 316-row traceability matrix, the active coordination board/log, and native Agent Team/runtime source at PR #156's exact base head `31bdc57b8812243279097899fecd2c938a96e78f`.
+- Confirmed source-level capabilities: bounded sequential native role orchestration (maximum eight steps), optional per-role model routing, exact ModelPool lease lifecycle for routed generation, shared NativeInferenceRuntime scheduling, bounded prompts/outputs, typed linked messages, and local task-history persistence. The local history store marks a task interrupted after restart and does not auto-resume it.
+- Recorded key limitations: current native app composition uses one resident model and one concurrent request; the native coordinator is sequential rather than parallel; local task history is not the durable East/e3 workflow engine; model capability labels are not permissions; physical iPhone Air behavior remains unverified.
+- Rechecked PR #164 exact-head run #43981080474 for `6661bf655edef85e94fa1f363fcf54a33f20233c`: native app build passed, but app XCTest remains reported in_progress beyond its configured 20-minute timeout. Job-log retrieval returns BlobNotFound. Later simulator XCTest, pinned-GGUF download/path, macOS inference smoke, and runner evidence remain pending. Treat the run as stale/inconclusive, not a pass or diagnosed failure. Companion Intelligence CI #43981072947 passed.
+- Rechecked PR #165: exact-head CI #43983284394 passed, including desktop archive suite 17/17; PR remains draft/open and stacked on #164.
+- Recorded unresolved bridge gap: PR #164 does not install WKScriptMessageHandler/Web-to-native action dispatch, does not consume challenges through WebKit, and does not enable runtime-control actions; host-side approval coordination remains prerequisite.
+- Recorded further gaps: current-head CI for PR #162 is not established; live PostgreSQL/RLS remains unproven; authoritative original six-layer M01-M42 registry remains unavailable; physical iPhone Air install/inference/offline/resource/thermal/battery acceptance remains outstanding.
+- Added `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md`, refreshed the PR #164 status and audit link in `coordination/BOARD.md`, and preserved the existing 316-row inventory counts. No checklist item was marked verified; no application code, APEX/East trust policy, PR state, merge, cancellation, rerun, or physical-device state was changed.
+
+
+## 2026-11-16 UTC — PR #164 native app XCTest passed; simulator XCTest started
+
+- Re-polled exact-head iOS run #43981080474 for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- The native app build step and native Pocket AI Lab app XCTest step have both completed successfully.
+- The iOS engine simulator XCTest step is now `in_progress`; pinned GGUF download/path validation, macOS inference smoke, and runner evidence remain pending.
+- Overall iOS workflow remains `in_progress`. No overall pass, pinned-GGUF model generation, or physical iPhone Air acceptance is claimed.
+- Refreshed `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md` and `coordination/BOARD.md` to replace the previous stale-XCTest checkpoint with the newly observed step state. No source code, PR state, merge, cancellation, rerun, or trust-boundary change.
+
+
+## 2026-11-16 UTC — PR #164 simulator and pinned GGUF gates passed
+
+- Re-polled exact-head iOS run #43981080474 for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Newly completed successfully: iOS engine simulator XCTest, pinned smoke GGUF download, and macOS smoke-test GGUF path setup. Previously completed: native app build and app XCTest.
+- macOS XCTest is now `in_progress`; final runner evidence remains pending. Overall workflow is still `in_progress`; no end-to-end CI pass or physical iPhone Air acceptance is claimed.
+- Updated `coordination/AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md` and `coordination/BOARD.md` with the observed step transitions. No application source, PR state, trust policy, merge, cancellation, or rerun was changed.
+
+
+## 2026-11-17 00:10 UTC — PR #164 macOS XCTest is the remaining active gate
+
+- Re-polled exact-head iOS run [#43981080474](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43981080474), job `133697485358`, for `6661bf655edef85e94fa1f363fcf54a33f20233c`.
+- Confirmed successful completion of steps 1–17: pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS engine link, simulator selection/boot, Director bridge manifest validation, native app build, native app XCTest, iOS engine simulator XCTest, pinned GGUF download, and smoke-path setup. macOS XCTest step 18 is `in_progress`; runner evidence step 19 is pending; post-checkout cleanup is pending.
+- Workflow run remains `in_progress` with no conclusion. Job-log retrieval still returns GitHub `BlobNotFound`, so the macOS XCTest output/cause cannot be independently inspected. This is not an overall CI pass and does not prove physical iPhone Air acceptance.
+- Updated the coordination audit and board to replace the obsolete stale-XCTest/pending-simulator status with the latest observed step state. No application source, PR state, workflow cancellation/rerun, merge, approval, or APEX/East trust boundary changed.
+
+
+## 2026-11-17 UTC — bridge challenge enforcement boundary clarified
+
+- Inspected exact PR #164 source for `BridgeGate`, `BridgeChallengeStore`, `RuntimeController.generate`, and `WorkspaceView`.
+- Confirmed there is no `WKScriptMessageHandler` or JavaScript message dispatch in the native WebView. The web app's current `directorRuntime.ts` composes a server-side local Director runtime; it does not implement the iOS WebKit bridge protocol.
+- Important enforcement distinction: `BridgeChallengeStore.consume` correctly implements origin/request/session-bound one-use expiry checks as a standalone actor, but `RuntimeController.generate` only validates that `challengeNonce` is a well-formed token and copies it into an unsigned generation candidate. It does not consume or verify the challenge itself. Therefore the bridge host dispatcher must perform `consume` before calling the controller; direct controller invocation with a fabricated well-formed nonce is not challenge-authorized.
+- Required tests for the follow-on bridge integration: reject absent/foreign-origin/replayed/expired/wrong-request/wrong-session nonces; ensure a failed binding does not consume another request's challenge; ensure successful consumption precedes exactly one runtime generation; ensure no page-supplied boolean can authorize import/load/unload; verify handler is removed on teardown and only main-frame trusted-origin messages are accepted.
+- No application code changed. PR #164 remains a deliberately incomplete bridge foundation, not an enabled WebKit bridge. Coordination audit and board now record this narrower security boundary.
+
+
+## 2026-11-17 00:12 UTC — PR #164 macOS gate remains active; runner logs unavailable
+
+- Re-polled exact-head run #43981080474, job #133697485358. Steps 1–17 remain completed successfully/skipped; macOS XCTest step 18 remains `in_progress`; runner evidence and post-job checkout remain pending.
+- Retried job-log retrieval; GitHub returned `BlobNotFound`. The test output therefore remains unavailable, and no failure cause or success can be inferred.
+- Updated the gap audit and coordination board with this observation. No app code, PR state, workflow cancellation/rerun, merge, or trust boundary changed.
+- Separately reviewed PR #162 current head `1db0345938ac029c3742a391c51ad7027d57e3bc`: its PostgreSQL concurrency tests use a deterministic fake database adapter, and no PR-triggered workflow run surfaced for that exact commit. Existing board/audit status remains correct: exact-head CI and live ephemeral PostgreSQL integration are still required before acceptance.
+
+
+## 2026-11-17 UTC — PR #164 macOS XCTest and runner evidence passed
+
+- Re-polled exact-head run #43981080474 (`6661bf655edef85e94fa1f363fcf54a33f20233c`). macOS XCTest, `Record what this runner actually did`, and `Post Check out source` are now completed successfully.
+- GitHub still reports the job's `Complete job` step and overall workflow as `in_progress`, with no terminal conclusion. Do not mark PR #164's overall iOS workflow green until the run concludes.
+- The previous log-download `BlobNotFound` issue remains a diagnostic limitation, but the explicit XCTest step conclusion is now `success`.
+- Updated the audit, board, and log only. No source, PR state, workflow rerun/cancellation, merge, or trust-boundary change.
+
+
+## 2026-11-17 00:14 UTC — PR #164 exact-head hosted CI fully passed
+
+- GitHub check-runs API now reports `ios-llamaengine` completed with `success` for exact head `6661bf655edef85e94fa1f363fcf54a33f20233c`; workflow run #43981080474 reached terminal success at 00:14:27 UTC.
+- The iOS job passed pinned llama.cpp build, fail-closed typecheck, generic iOS link, simulator boot, Director package validation, native app build/XCTest, simulator XCTest, pinned GGUF download/path setup, macOS XCTest, runner evidence recording, and post-job checkout.
+- Both exact-head Intelligence checks #43981072947 and #43983044172 also passed. PR #164's currently surfaced hosted check set is green (3/3).
+- This closes the hosted CI gate for this exact commit only. No physical iPhone Air run, on-device model generation, or WebKit dispatch integration is demonstrated. The challenge-consumption/dispatcher gap remains open.
+- Refreshed the coordination audit, board, and log. No application source, PR state, merge, or trust-boundary change.
+
+
+## 2026-11-17 UTC — trusted WebKit dispatcher contract opened as PR #166
+
+- Re-read the exact PR #164 base sources: `WorkspaceView.swift`, `BridgeGate.swift`, `BridgeChallengeStore.swift`, `RuntimeController.swift`, `ios/project.yml`, and the ApexBridge package manifest.
+- Confirmed the WebView currently installs no script-message handler; the challenge store has a one-use origin/request/session/expiry primitive; `RuntimeController.generate` only validates nonce syntax and does not consume the challenge.
+- Created `codex/webkit-bridge-dispatcher-contract` from PR #164 exact head `6661bf655edef85e94fa1f363fcf54a33f20233c` and opened draft PR #166 at `0ae7dafff95065d5a17c6c3caac98897a0cae43b`.
+- Added `docs/architecture/trusted-webkit-dispatcher-contract.md` specifying WebKit frame-derived origin checks, challenge consumption before generation, host-owned approval for consequential actions, teardown invalidation, strict schemas, negative/replay tests, and merge/activation gates.
+- PR #166 is documentation-only. Its exact-head workflow query returned no workflow runs; no runtime tests or dispatcher implementation are claimed. PR remains open/draft and unmerged.
+- No application source, APEX trust policy, signer/receipt semantics, East authorization, PR merge state, or physical-device acceptance changed.
+
+
+## 2026-11-17 UTC — BridgeGate consequential-action fail-closed hardening opened as PR #167
+
+- Re-read PR #164 exact-head BridgeGate.swift and ApexBridgeTests.swift.
+- Identified that BridgeGate.parse accepted a caller-provided consequentialAuthorized Boolean and could return accepted for import/load/unload when true.
+- Created codex/bridgegate-host-approval-hardening from PR #164 exact head 6661bf655edef85e94fa1f363fcf54a33f20233c.
+- Removed the Boolean parameter. The parser now returns authorizationRequired unconditionally for importModel, loadModel, and unloadModel. Updated regression tests for all three.
+- Opened draft PR #167, exact head e9418da92d6ed06afedc946dff97841f30002c4d. Exact-head workflow query returned no PR-triggered runs. This is not yet CI-validated.
+- No WebKit handler, host approval coordinator, import/load/unload implementation, signing, receipt, APEX authorization, merge, or device acceptance was added.
+
+
+## 2026-11-17 UTC — PR #167 CI routing gap confirmed
+
+- Queried GitHub Actions check-runs for exact head e9418da92d6ed06afedc946dff97841f30002c4d.
+- Intelligence workflow run #43991447842 completed successfully. Its jobs were Node.js syntax, type-check/build, and tests; it is not native iOS validation.
+- Inspected .github/workflows/ios-llamaengine-ci.yml. Its pull_request target-branch filter lists main and codex/native-product-experience-integration, not PR #167's base codex/bridge-native-runtime-integration.
+- Consequently the iOS workflow did not run for PR #167. The Swift source and XCTest edits remain unverified by iOS CI. PR body updated to state this explicitly.
+- Next action: arrange an exact-head iOS validation path without weakening CI or misreporting the Intelligence check. Physical iPhone acceptance remains outstanding.
+
+
+## 2026-11-17 UTC — CI route repaired and hardening moved to PR #168
+
+- Added codex/bridge-native-runtime-integration to the iOS LlamaEngine workflow pull_request target-branch filter on PR #164's branch. Commit 482b364cb362b86224c3399ce16ce51a1c06c738.
+- This triggered refreshed PR #164 iOS run #43991837435; at checkpoint it was building pinned llama.cpp.
+- Rebased the BridgeGate fail-closed hardening onto that updated PR #164 head in branch codex/bridgegate-host-approval-hardening-ci.
+- Added BridgeChallengeStore.invalidateAll regression coverage, proving all outstanding challenges are revoked.
+- Opened replacement draft PR #168, exact head ab6f290702018023edaec800f59bfec422f24bc9. Its iOS LlamaEngine workflow run #43991941724 started; at checkpoint runner setup was in progress.
+- Closed PR #167 as superseded, explicitly without merge. PR #168 is the active review/validation path.
+- No WebKit dispatcher, host approval coordinator, model action dispatch, signing, receipts, APEX authorization, or physical-device acceptance was added.
+
+
+## 2026-11-17 — Bridge CI and dispatcher source recheck
+
+- Rechecked PR #168 exact-head run #43991941724: still building pinned llama.cpp; later Swift/app/simulator/GGUF gates have not started.
+- Rechecked PR #164 exact-head run #43991837435: pinned build, fail-closed typecheck, generic iOS link, and simulator selection passed; simulator boot remains in progress.
+- Inspected PR #168 patch: consequential model actions remain unconditionally blocked; tests cover import/load/unload denial and challenge invalidation.
+- Re-inspected WorkspaceView: only navigation delegate is installed; no WebKit message handler exists. RuntimeController does not consume challenge-store nonces. Dispatcher must enforce challenge binding and one-use consumption before generation.
+- No merge, no runtime action activation, no device acceptance claim.
+
+
+## 2026-11-17 — Follow-up CI poll
+
+- PR #168 exact-head run #43991941724 advanced through pinned llama.cpp build, fail-closed Swift typecheck, and generic iOS engine link; simulator boot is in progress. Companion Intelligence #43991924464 passed.
+- PR #164 exact-head run #43991837435 advanced through simulator boot, bridge package validation, and native app build; native app XCTest is in progress.
+- Refreshed PR #164 and #168 descriptions with current exact-head state. Remaining gates are explicitly pending; no overall pass or device acceptance claimed.
+
+
+
+## 2026-11-17 — Runtime challenge enforcement and CI stall recheck
+
+- Re-polled exact-head iOS jobs for PR #168 (#43991941724) and PR #164 (#43991837435). #168 remains in Director bridge package manifest validation; #164 remains in native app XCTest. Simulator XCTest, pinned GGUF/macOS checks, and final runner evidence are pending on both.
+- GitHub Actions run metadata has not advanced since initial job starts. Treat both as potentially stalled/inconclusive; no pass/failure conclusion and no rerun/cancellation initiated.
+- Re-read BridgeChallengeStore, RuntimeController, BridgeGate, WorkspaceView, and ios/project.yml at PR #168's exact head.
+- Confirmed BridgeChallengeStore implements binding/expiry/one-use checks, but RuntimeController.generate does not consume it; generate accepts a format-valid fabricated nonce and records it in an unsigned candidate.
+- Confirmed WorkspaceView has no WKScriptMessageHandler; XcodeGen already includes ApexBridge source and tests in the native app/test targets.
+- Recorded implementation order: mandatory host challenge consumption before generation; no bypassable public generation path; frame-derived main-frame WebKit dispatcher; teardown/session invalidation; consequential model actions remain blocked pending parameter-bound native approval.
+- No application code changed, no PR merged, no action enabled, and no physical iPhone Air acceptance claimed.
+
+
+## 2026-11-17 — PR #169 mandatory runtime challenge consumption
+
+- Created branch `codex/runtime-challenge-enforcement` from PR #168 exact head `ab6f290702018023edaec800f59bfec422f24bc9`.
+- Updated RuntimeController to require an injected host-owned BridgeChallengeStore and trusted workspace URL; generation now consumes the challenge bound to page origin, request UUID, and runtime session before inference starts.
+- Added `unauthorizedChallenge` and tests for fabricated nonce rejection and one-use replay rejection; existing test generations now use genuine challenges.
+- Opened draft PR #169, exact head `47a2a63bfb3eea8755746a67b052298ee3b8efb0`, correctly stacked on PR #168 branch `codex/bridgegate-host-approval-hardening-ci`.
+- Exact-head iOS LlamaEngine CI run #43995918805 started; first job poll shows runner setup / Show Xcode in progress and all later gates pending. No test pass claimed.
+- This closes direct controller generation without challenge-store consumption. WebKit frame-derived origin dispatch and challenge invalidation on navigation/session replacement/teardown remain unimplemented. Consequential model actions remain blocked.
+- No merge or physical iPhone Air acceptance.
+
+
+## 2026-11-17 — PR #169 native CI correction and runtime composition audit
+
+- Rechecked PR #169 first iOS run #43995918805 logs. Native app XCTest compilation failed because three tests unpacked five fixture values after the fixture added a sixth `BridgeChallengeStore` return value.
+- Corrected all three test destructurings in `ApexBridgeTests.swift`. Commit `c984e102c6e7c851252888a9599999780b523710`.
+- Intelligence CI #44017778362 passed for that test-fix commit.
+- Found the iOS workflow did not include PR #169's base branch in its `pull_request.branches` filter. Added `codex/bridgegate-host-approval-hardening-ci` to `.github/workflows/ios-llamaengine-ci.yml` and committed `c727342a1485846a94190cc3c2cd19729fb75e6f`.
+- This triggered iOS LlamaEngine run #44066457735 for PR #169. Latest poll: pinned llama.cpp artifact restore in progress; Swift/app/simulator/GGUF/macOS gates pending. No iOS pass claimed.
+- Audited app composition: LocalChatModel privately owns NativeInferenceRuntime and ModelPoolLease; WorkspaceView creates an independent WKWebView and has no shared runtime/session injection. A standalone WebKit handler would not currently reach the active local chat runtime. Recorded this as a prerequisite: introduce one app-scoped runtime/session owner shared by Local AI and Workspace before adding WebKit dispatch. Avoid creating a second competing runtime/lease owner.
+- Updated coordination gap audit section 14 with exact commits, run status, new shared-runtime gap, and implementation sequence.
+- No PR merged, no consequential model action enabled, and no physical iPhone Air acceptance claimed.
+
+## 2026-11-17 — PR #173 WebKit read-only dispatcher follow-on
+
+- Rechecked active bridge work and found PR #171 had independently begun app-scoped runtime composition. Closed my earlier draft PR #172 as superseded to avoid duplicating the same LocalChatModel/RootView ownership changes.
+- Created a clean follow-on branch `codex/webkit-readonly-dispatcher` from PR #171 exact head `be517ff613ff822fe649623ffe36ea0512b1dcab`; PR #173 is stacked on #171 and consumes its `LocalChatRuntimeDependency` / `NativeModelSessionService` rather than constructing another runtime.
+- Added a fixed-name `WKScriptMessageHandlerWithReply` in the `.page` content world. The dispatcher derives origin from `WKScriptMessage.frameInfo.securityOrigin`, rejects subframes, foreign origins, malformed/unknown schemas, and payloads over 40 KiB.
+- Enabled only read-only `getRuntimeStatus` and `listModels`, with status sourced from the shared ModelPool snapshot and model metadata sourced from the local catalog. Readiness, validation, generation, cancellation, import, load, and unload remain disabled/fail-closed.
+- Added handler removal and dispatcher invalidation on WebView teardown; changing the workspace request identity recreates the WebView so the trusted-origin-bound coordinator is not reused.
+- Added focused tests in a new test file, avoiding PR #171's runtime-composition test file. Added the app-composition base branch to the iOS workflow allowlist for stacked native CI.
+- PR #173 exact head `b716ef8f358dc4819e96bc5e1edeae3b8faaee7c`: iOS LlamaEngine run #44093929443 remains in progress at pinned llama.cpp build; Intelligence CI #44093922426 passed. No full native acceptance claimed.
+- Next bridge prerequisite: compose `RuntimeController` and `BridgeChallengeStore` with the same app-scoped runtime/session/lease. Do not enable generation until host challenge issue/consume occurs before inference and challenge invalidation is tested for navigation, teardown, and session replacement. Consequential model actions remain blocked pending a parameter-bound native approval coordinator.
+- No PR merged and no physical iPhone Air acceptance claimed.
+
+## 2026-11-17 — PR #174 challenge-gated WebKit generation follow-on
+
+- PR #173 was closed as superseded after the app-scoped runtime parent branch advanced. Rebuilt the WebKit dispatcher on a clean branch from PR #171's updated head `90b4e2b408fd98d418bff729c8e8d208fe13463f`; PR #174 is the active follow-on. No merge performed.
+- Corrected the PR #171 app-runtime test fixtures (missing runtime dependency and initializer argument order) and enabled the app-composition base branch in the iOS workflow allowlist. These are test/CI fixes, not a second runtime implementation.
+- Added a read-only active-lease inventory to `NativeModelSessionService`. Workspace's Director `RuntimeController` acquires its own consumer lease from the same app-scoped ModelPool only when Local AI already has a lease for the selected catalog descriptor. The controller's returned `RuntimeSession.id` must equal the Local AI lease's session ID; a model-ID-only match is not accepted.
+- Added strict `authorizeGeneration` schema to `BridgeGate`. The dispatcher issues a host-owned one-use challenge only after a real readiness probe succeeds. The challenge is bound to the actual `WKScriptMessage.frameInfo.securityOrigin`, request UUID, and shared runtime session; `RuntimeController.generate` consumes it before inference.
+- Enabled `checkReadiness`, `authorizeGeneration`, `generate`, and `cancelGeneration` only through the exact matching session. Generation returns an unsigned `RuntimeGenerationRecord` candidate with `authorized == false`; no signing key, receipt, APEX authorization, or attestation is created.
+- Added `RuntimeController.cancelAllGenerations()` and call it on trusted workspace navigation; challenges are invalidated on navigation and session replacement, and all controller work is drained on WebView teardown.
+- Hardened model integrity: readiness/generation re-hash the model artifact off the controller actor and compare it with the load-time SHA-256, so a same-size rewrite with restored timestamps cannot preserve readiness.
+- Added tests for host challenge request schema, exact shared-session matching, readiness, one-use challenge consumption/replay rejection, navigation invalidation, same-size artifact tampering, and cancel-all drain. The old iOS run on PR #173 failed XCTest compilation due the three app-runtime fixture issues; those fixture issues were corrected in PR #171 and the clean PR #174 stack.
+- Exact PR #174 head at this log update: `48a6fabea107cc587327bf1782caef14aeefdab7`. Intelligence CI passed; iOS LlamaEngine CI #44112233207 is in progress at pinned llama.cpp build. Earlier exact-head Pocket AI Lab CI #44111500667 passed on the prior `ac29e06` head; it does not validate the later hash-reverification changes.
+- Remaining: confirm exact-head native XCTest/simulator/macOS gates; integrate APEX authorization and signed evidence separately; keep import/load/unload denied until parameter-bound native approval; run physical iPhone Air acceptance. Hosted CI does not constitute device acceptance.
+
+## 2026-11-17 — PR #175 Workspace native chat client
+
+- Opened PR #175 (`codex/workspace-native-chat-client`) stacked on PR #174's native dispatcher. This is the frontend half of the bridge, not a competing native runtime.
+- Added `apps/web/nativeBridge.js` as an optional iOS WKWebView client. It sends UUID-correlated request envelopes, enforces per-action field allowlists, validates response correlation, and exposes status/catalog/readiness/challenge/generation/cancellation methods.
+- Each native chat turn now follows: native status → selected catalog model → matching active Local AI lease → real readiness probe → host-issued challenge → generation. The client verifies the returned runtime session ID and never labels output authorized.
+- Updated the web Chat composer to use native generation only when the WKWebView bridge is present. If the bridge is present but the iPhone model is not loaded or native generation fails, it displays the failure and does not silently fall back to the server. Normal Safari/desktop browser use retains the existing server-backed llama.cpp route.
+- Added the bridge script to the HTML shell and service-worker offline cache (cache version bumped). Static server serves it through the existing safe app-root route.
+- Added Node tests for unsupported actions/fields, challenge sequencing, missing local lease, session mismatch, prompt/options bounds, and static/offline asset loading.
+- PR #175 exact head `f23166867ed346024000f3423b2019c16a7f4f32`: Intelligence CI #44112487822 passed JavaScript syntax, TypeScript build, and the full web test suite. PR #174 native head `48a6fabea107cc587327bf1782caef14aeefdab7`: Intelligence CI passed; iOS LlamaEngine CI #44112233207 is still running at pinned llama.cpp build.
+- Agent Team UI remains on the existing server-backed task endpoint; the native bridge client currently wires ordinary chat only. No APEX signing, device attestation, consequential action approval, or physical iPhone Air acceptance is claimed. No PR merged.
+
+### PR #175 cancellation follow-on — 2026-11-17
+
+- Added an explicit Stop control to the native Chat path. The web client captures the exact session/request UUID after host challenge issuance and sends `cancelGeneration` for that pair when the user stops or starts a new conversation.
+- Native cancellation awaits `RuntimeController.cancelGeneration` and the engine's drain path before the dispatcher replies. If the WKWebView navigation/teardown path fires, the dispatcher invalidates outstanding challenges and cancels all active generation tasks.
+- Added Node coverage for aborting a live native chat request and asserting that the cancellation targets the exact same session/request IDs.
+- Latest PR #175 exact head: `4381df81ed0305a96cded87c78c9e446369c5893`. CI #44113067640 passed JavaScript syntax and TypeScript build and is currently running the full web test suite. Previous exact-head CI #44112487822 passed the pre-cancellation web suite.
+
+
+## 2026-11-17 — PR #174 native XCTest fixture failure isolated
+
+- Re-polled exact-head iOS LlamaEngine run #44112233207 for PR #174 head `48a6fabea107cc587327bf1782caef14aeefdab7`.
+- Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS framework link, iPhone Air simulator boot, Director bridge package validation, and native app build all passed. Native app XCTest compilation failed; simulator XCTest and pinned-GGUF/macOS smoke steps were skipped.
+- Retrieved the failed job log. The compiler reports: `Missing argument for parameter 'runtimeDependency' in call`.
+- Inspected `ios/PocketAILabTests/PocketAILabTests.swift` at the exact PR head. The failing fixture is the restored-model construction in `testLocalModelCatalogPersistsMultipleSameNamedImportsAndSelection`; its `LocalChatModel(engine:modelDirectory:modelCatalogStore:)` call does not inject the now-required app-scoped runtime dependency. The shared-runtime test helper and other explicit constructors already inject it.
+- This is a test-fixture compatibility defect, not evidence of a production app compile failure. Planned repair: create an isolated test `NativeRuntimeComposition` for the restored instance and pass its dependency; keep the test's assertion that catalog restoration does not fabricate a loaded session. Do not change runtime ownership or weaken the required dependency.
+- Updated the Phase B board claim with this exact blocker and retained ChatGPT as the sole owner of `codex/webkit-readonly-dispatcher-rebased`. PR #175 remains a separate web-client scope; no overlap or Agent Team native integration added.
+- No code change or rerun yet. After the fixture-only fix, require a fresh exact-head iOS run through native app XCTest, iOS simulator XCTest, pinned-GGUF macOS smoke, and final runner evidence. Physical iPhone Air acceptance remains separate. No merge performed.
+
+
+## 2026-11-17 — PR #174 test-fixture repair and native CI rerun
+
+- Fixed the exact XCTest compiler error in `ios/PocketAILabTests/PocketAILabTests.swift` on `codex/webkit-readonly-dispatcher-rebased`. The restored-model fixture now creates a dedicated test `NativeRuntimeComposition` and injects its dependency into `LocalChatModel`; the existing assertion that catalog restoration does not fabricate a loaded session remains unchanged.
+- Commit: `d69054846e1bc35e6b98234b7e8c8222bb2af59e`. The diff is limited to the single test file; no production runtime, ModelPool, lease, dispatcher, authorization, or model lifecycle code changed.
+- The commit triggered fresh exact-head iOS LlamaEngine CI run #44122327312. Initial poll: job #134176732008 is in progress at Show Xcode; all later gates are pending. No rerun success claimed.
+- Updated the Phase B board row to the repaired exact head and new run. Keep PR #174 and #175 as drafts; do not merge while native tests and smoke validation remain incomplete.
+
+
+## 2026-11-17 — PR #174 refreshed-challenge test correction
+
+- While the first repaired run #44122327312 was progressing, reviewed the challenge/navigation regression test in `ios/PocketAILabTests/WorkspaceBridgeDispatcherTests.swift`.
+- Found that after `navigationStarted()` invalidated the first challenge, the test correctly requested a fresh challenge and built `refreshedGenerationBody`, but accidentally submitted the original `generationBody` containing the invalidated nonce while expecting generation success. This would make the test fail for the correct security behavior.
+- Corrected the test to submit `refreshedGenerationBody`. Commit `4682f4a271e170081f96b91f7d997487e0a69ec9`; test-only change.
+- Fresh exact-head iOS run #44122576415 has been created and is queued (job #134177697892). Run #44122327312 targets the preceding commit and is not evidence for the current head.
+- No production code changed. Keep challenge invalidation and one-use replay rejection intact; do not weaken the test to accept the old nonce. Await exact-head CI before further native changes or merge.
+
+
+## 2026-11-17 — PR #174 exact-head CI progress checkpoint
+
+- Exact current head `4682f4a271e170081f96b91f7d997487e0a69ec9`, run #44122576415, job #134177697892.
+- Runner setup, Xcode discovery, dependency installation, pinned llama.cpp artifact restore, and pinned llama.cpp simulator/macOS build have passed. The fail-closed Swift typecheck step is currently in progress.
+- Device framework link, simulator selection/boot, Director bridge manifest, app build, native app XCTest, engine simulator XCTest, GGUF download/path validation, and macOS XCTest have not yet run.
+- The active job log endpoint currently returns BlobNotFound; this is an unavailable log artifact, not evidence of a test failure. Continue using job step summaries for status and do not infer a cause.
+- Board updated. PR #174 remains draft; no merge or physical-device acceptance.
+
+
+## 2026-11-17 — PR #174 native validation advanced
+
+- Re-polled exact-head run #44122576415, commit `4682f4a271e170081f96b91f7d997487e0a69ec9`.
+- Newly passed: fail-closed Swift typecheck, physical-device framework linking, iPhone simulator selection and boot, and restored Director bridge package manifest validation. Earlier pinned llama.cpp simulator/macOS build also remains passed.
+- Native app project generation/build is now in progress. Native app XCTest, simulator XCTest, pinned GGUF smoke setup, and macOS XCTest have not yet run.
+- Updated Phase B coordination board to reflect the completed gates and current build step. PR #174 remains draft; no merge, no physical iPhone Air acceptance, and no signed evidence/authorization claim.
+
+
+## 2026-11-17 — PR #174 replay test strengthened
+
+- During an independent review of the one-use challenge regression, found that the replay test changed both the WebKit envelope `id` and the bound `requestId`. That would reject because the challenge binding did not match, without independently proving that a successfully consumed challenge cannot be replayed with the same binding.
+- Corrected `ios/PocketAILabTests/WorkspaceBridgeDispatcherTests.swift` in commit `be30d18eacdb7c96b5cc3517465b76e1832c1d0f`: preserve the exact consumed `requestId`, `sessionId`, and `challengeNonce`, and change only the message envelope ID. A rejection now specifically exercises one-use challenge consumption.
+- Fresh exact-head iOS LlamaEngine run #44124427695 is pending for this commit. The preceding run #44122576415 is for the previous head and cannot be used as current-head evidence.
+- Updated PR #174 validation and coordination board. No production code changed; no merge.
+
+
+## 2026-11-17 — PR #174 exact-head rerun queued
+
+- Confirmed PR #174 head is `be30d18eacdb7c96b5cc3517465b76e1832c1d0f`, still open and draft, based on PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`.
+- Exact-head iOS LlamaEngine workflow #44124427695 exists for this commit but remains queued/pending with no job allocated at the latest poll. No test result is inferred.
+- Intelligence CI #44124408403 has passed dependency installation/advisory reporting, JavaScript syntax, and TypeScript build; its test step is still running.
+- Prior iOS run #44122576415 remains attached to previous head `4682f4a271e170081f96b91f7d997487e0a69ec9`; it is not current-head evidence.
+- Coordination board and PR validation describe this distinction. No merge, physical-device test, APEX authorization, Ed25519 signature, or signed evidence receipt.
+
+
+## 2026-11-17 — PR #174 actor-reentrancy hardening
+
+- Independent review found an actor-reentrancy window in `RuntimeController.generate`: it checked the active session, then awaited challenge consumption. A concurrent `disconnect()`/unload could release the controller's ModelPool lease before the suspended generation resumed.
+- Fixed in `8dcacb00218758863b25da856f3b59b169c940f9`: after challenge consumption, revalidate that the session is still present, not unloading, keyed by the exact RuntimeSession ID, retains the same unexpired readiness health-check, and has no duplicate request before starting inference. Generation now uses the latest active lease/state, not the pre-await snapshot.
+- Introduced narrow `BridgeChallengeConsuming: Sendable` protocol in `823e2280b7ac18e5c8891c00e3f637a1a626a2bf`; RuntimeController now depends on this consumption-only contract (`eb487a5aa1c24970c7588bb1537d560a1c9268ff`). Challenge issuance remains host-owned by BridgeChallengeStore.
+- Added deterministic regression in `baef6bd0f96ace42e33a0d32d957dd00bd35eece`: pause challenge consumption, disconnect and release the session, resume the challenge result, and assert generation fails with `unknownSession` and runtime remains unloaded.
+- Current exact-head iOS LlamaEngine run #44125054127 is in progress for `baef6bd0f96ace42e33a0d32d957dd00bd35eece`. Intelligence CI #44125037166 is also in progress. No current-head build/test result claimed yet.
+- Updated PR #174 validation and the Phase B ownership row. PR remains draft; no merge, no physical-device acceptance, no APEX authorization, no Ed25519 evidence signature.
+
+
+## 2026-11-17 — PR #174 cancellation race guard and regression
+
+- Added `Task.checkCancellation()` immediately after successful challenge consumption in `RuntimeController.generate`. A caller cancelled while suspended on the challenge actor must not launch inference after it resumes.
+- Added deterministic `testCancellationDuringChallengeConsumptionDoesNotStartInference` using the pausing challenge-consumer test double. The test also verifies the readiness report remains valid because inference never began.
+- Corrected the test expectation: readiness should remain valid after pre-inference cancellation; the controller is explicitly disconnected at test end.
+- Current PR head: `8b546de57dde29b722cbbcfaabafd7cb29454c0b`. Current-head Intelligence CI #44125334631 is running. iOS run #44125287074 targeted preceding head `85396e2db6c372bcd4f2b41f0af2f210f146a295` and was cancelled on branch advance; awaiting a current-head iOS run. No current-head native validation is claimed.
+- Updated PR #174 validation and coordination board. Draft remains open; no merge, physical-device acceptance, APEX authorization, or signed evidence.
+
+
+## 2026-11-17 — Current-head native CI restarted
+
+- Confirmed PR #174 current head `8b546de57dde29b722cbbcfaabafd7cb29454c0b`.
+- Exact-head iOS LlamaEngine run #44125349459 is now running for that commit. Runner setup, checkout, and Xcode discovery passed; CMake/Ninja installation is in progress. All subsequent native build, app XCTest, simulator XCTest, and GGUF/macOS smoke gates remain pending.
+- Intelligence CI #44125334631 is on the same current head; dependency install, advisory reporting, JavaScript syntax, and TypeScript build passed; tests are running.
+- Earlier run #44125287074 targeted the prior commit and was cancelled after the branch advanced. It is not counted as current-head evidence.
+- Updated the Phase B board with the current exact-head iOS run. PR remains draft and unmerged.
+
+
+## 2026-11-17 — Current-head CI progress
+
+- Exact-head Intelligence CI #44125334631 completed successfully for `8b546de57dde29b722cbbcfaabafd7cb29454c0b`: dependency/advisory steps, JavaScript syntax, TypeScript build, and full test step all passed.
+- Exact-head iOS LlamaEngine run #44125349459 is building pinned llama.cpp. Runner setup, checkout, Xcode discovery, CMake/Ninja installation, and pinned build-artifact restore passed; pinned simulator/macOS build is in progress.
+- Swift fail-closed typecheck, device framework link, simulator boot, Director package validation, app build/XCTest, simulator XCTest, GGUF download, and macOS XCTest remain pending.
+- Updated Phase B board. Current native validation is still incomplete; no physical iPhone Air acceptance and no merge.
+
+
+## 2026-11-17 — Re-hash model after challenge consumption
+
+- Found a remaining TOCTOU window: generation verified the GGUF before awaiting host challenge consumption, but the file could be modified while that actor call was suspended.
+- Fixed `RuntimeController.generate` in `49c738c0dd20f84d07d6d48af0f055e4a44a9d91`: after challenge acceptance, verify the exact session/readiness; re-hash the model file off actor; clear readiness if verification fails; honor cancellation; and revalidate session/readiness again after the detached hash await before inference.
+- Added deterministic `testModelFileMutationDuringChallengeConsumptionInvalidatesReadiness` in `005ac8ee131f8a036f13a7e01ca6caff40176353`. It mutates one byte while challenge consumption is paused, restores the original modification timestamp and preserves file size, then asserts `.modelFileChanged` and readiness invalidation.
+- Previous iOS run #44125349459 on `8b546de57dde29b722cbbcfaabafd7cb29454c0b` passed pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, device framework link, simulator boot, and Director package validation. Native app build was cancelled on branch advance; app XCTest, simulator XCTest, and GGUF smoke were skipped.
+- Current-head iOS run #44129072799 is queued for `005ac8ee131f8a036f13a7e01ca6caff40176353`; current-head Intelligence CI #44129054825 is running.
+- PR #174 remains draft and unmerged; physical iPhone Air acceptance remains outstanding.
+
+
+## 2026-11-17 — Current-head CI update for model-file race fix
+
+- Intelligence CI #44129054825 completed successfully on current PR #174 head `005ac8ee131f8a036f13a7e01ca6caff40176353`: dependency/advisory reporting, JavaScript syntax, TypeScript build, and tests all passed.
+- iOS LlamaEngine run #44129072799 is still pending with no runner job allocated; no current-head native compile/XCTest result yet.
+- Current head includes the post-challenge GGUF re-hash and deterministic same-size/restored-timestamp mutation regression.
+- Updated Phase B board. PR #174 remains draft and unmerged.
+
+
+## 2026-11-17 — Coordination overlap check
+
+- Compared PR #174 and PR #175 changed-file lists. No file paths overlap: PR #174 owns the native iOS WebKit dispatcher/runtime controller and native tests; PR #175 owns the web workspace client, bridge adapter, service worker, and web tests.
+- PR #171 remains the shared-runtime owner and is still open at head `90b4e2b408fd98d418bff729c8e8d208fe13463f`; PR #174 remains stacked on that exact base.
+- Current-head Intelligence CI #44129054825 passed. Current-head iOS run #44129072799 remains pending with no job allocated as of this check.
+
+
+## 2026-11-17 — TypeScript test-runner workstream claimed
+
+- Claimed isolated root test infrastructure work on `codex/typescript-test-runner`.
+- Scope is limited to `package.json` and a dedicated `.github/workflows/intelligence-tests.yml`; existing workflows, OWASP feature files, Orchestrator, APEX, East, native runtime, and memory are excluded.
+- Purpose: declare the already-referenced `tsx` runner, run the existing Gate 0.1 and OWASP regression scripts, and make TypeScript build/test evidence available for the OWASP integration branch.
+- No test results or application behavior changes are claimed at claim time.
+
+
+## 2026-11-17 — TypeScript test runner first CI diagnosis
+
+- Opened draft PR #179 from `codex/typescript-test-runner`, current feature head `c8dd8a6c1bbf846582a2831ffc3e8b907126a463`.
+- The initial workflow run #44131504364 on prior head `f85ea21fca35a97919b536c2bd3ea01d3b71920f` failed in `actions/setup-node` before dependency installation: npm caching requires a checked-in lockfile, and the repository has none.
+- Removed `cache: npm` from the dedicated workflow. This is a setup correction only; no build or test result is yet available for the corrected head.
+- PR #179 changes only `package.json` and `.github/workflows/intelligence-tests.yml`. Await exact-head CI; then use the runner to validate OWASP PR #178. No application runtime, Orchestrator, APEX, East, or native files changed.
+
+
+## 2026-11-17 — Focused intelligence validation and branch refresh
+
+- CI on test-runner head `c266c39658a4796fdc7add0e8750c0e1dcbd053b` passed `npm install`, `npm run build:intelligence` (`tsc -p tsconfig.intelligence.json`), and `npm test`; Gate 0.1 checks reported all passed.
+- The earlier broad root build exposed two pre-existing East compile errors in `src/east/index.ts`: `@elaraai/e3` has no named export `e3`, and the selected `BlockBuilder` type has no `$0`. East files were not changed. Added a focused intelligence tsconfig to avoid changing East ownership or behavior.
+- Refreshed the test-runner work onto latest `agent-coordination` head `19fe3296ad30a1a2e3d27787d70327b6b5f903ab`, creating `codex/typescript-test-runner-v2` and draft PR #180. Compare shows 3 commits ahead, 0 behind, with only package.json, tsconfig.intelligence.json, and the dedicated workflow changed.
+- Closed PR #179 as superseded; nothing was merged from it. Exact-head CI for PR #180 is pending. The passing CI evidence above is from the prior branch head, not the new PR #180 head.
+
+## 2026-11-17 — OWASP knowledge branch refresh
+
+- Recreated the OWASP knowledge integration on current `agent-coordination` head `dcfb1f01cb7591469bcb7af75a02ee68011d4dbf` as `codex/owasp-knowledge-integration-v4` to avoid carrying forward stale coordination-file snapshots from v3.
+- Reapplied the OWASP requirements document, source catalog, guidance records, context builder, exports, and two focused tests. Preserved the current base's `packages/intelligence/index.ts` content and appended only the OWASP exports; enabled `resolveJsonModule` in the current base tsconfig.
+- No Orchestrator, APEX, East, native runtime, memory, or MessageBus implementation changed. OWASP context remains reference-only/untrusted and is not yet wired into `Orchestrator.executeTask()`.
+- Validation remains pending on this new branch. The focused test workflow is proposed separately in PR #180 and is not yet present on `agent-coordination`; the passing PR #180 run is not evidence for these OWASP tests.
+
+
+## 2026-11-17 — Complete product vision and engineering handoff consolidated
+
+- Added `coordination/POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md` as the consolidated handoff for the owner's Pocket AI Lab vision and the current repository integration state.
+- Covers native iOS/offline-first/model-independent product goals; five operating modes; eight permanent agents and dynamic specialists; genuine bounded multi-agent deliberation; six-layer/42-module registry recovery; Director/APEX, East/e3, ExploitGym, Grok Workspace, BridgeGate, RuntimeController, LlamaEngine, and Evidence ownership; app-scoped runtime and WebKit challenge contract; durable workflow recovery; four memory classes; research/OWASP provenance; resource budgets; acceptance gates; priority roadmap; definition of done; and owner handoffs.
+- Updated `coordination/BOARD.md` with the handoff pointer and immediate integration gates. This is documentation-only synchronization.
+- Preserved `docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md` and the 316-row `docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md` as separate authorities. The last recorded inventory (184 unassessed, 85 implemented-unverified, 37 partial, 10 blocked, 0 verified, 0 missing) is not reclassified by this documentation change.
+- Current evidence cautions retained: PR #171 owns shared app-scoped runtime; PR #174 owns native challenge-gated WebKit dispatch; PR #175 owns web client integration; exact-head native CI must be re-polled; hosted checks are not physical iPhone Air acceptance. PR #181 OWASP context remains unconnected to `Orchestrator.executeTask()`; PR #180 exact-head workflow status must be checked. East live PostgreSQL/RLS evidence and original M01–M42 registry remain open.
+- No application code, tests, APEX authorization, signing, attestation, merge, or device acceptance was performed or claimed.
+- **Next action:** all contributors read the complete handoff and reconcile exact PR heads/CI and non-overlapping file ownership before taking another implementation slice.
+
+
+## 2026-11-17 — OWASP branch synchronized and superseded PR retired
+
+- Rebased the OWASP feature content without carrying forward coordination-file snapshots: `codex/owasp-knowledge-integration-v4` now has a single feature commit `d746413055f298d4720a42985bc5ed5b336741a1` directly on coordination base `1afd16017ab386dcff750b57c605c429921606eb`.
+- Compare confirms 1 commit ahead, 0 behind; the only changed paths are the OWASP requirements document, catalog/context/guidance modules, exports, JSON-module compiler setting, and two focused tests.
+- Updated the coordination board to point to active draft PR #181 and its exact head. Closed superseded PR #178 unmerged; no changes from it were merged.
+- PR #181 remains draft. Exact-head CI is still pending because the test-runner workflow in PR #180 is not on the base branch. PR #180 remains separate and unmerged; its earlier passing run is not evidence for PR #181.
+- No Orchestrator, APEX, East, native runtime, MemoryManager, or MessageBus behavior changed. OWASP content remains untrusted reference-only data and is not connected to task execution.
+
+
+## 2026-11-17 — OWASP and test-runner exact-head audit
+
+- Rechecked active PRs #181 and #180 against the live `agent-coordination` branch. PR #181 remains open/draft at exact head `2a3b5e94503b0c8258cec320abe2a3dfbf93bfff`, directly based on `ab6b2b49d7bd199c4b9b02042ba870ddc678ea22`; compare reports 1 ahead, 0 behind. No PR-triggered workflow run exists for this exact OWASP head.
+- PR #180 remains open/draft at exact head `558fb2b48e88c487e9f04ab4ba29609f49d8d66b`. Exact-head workflow #44132022621 completed successfully, but its branch is now 10 commits behind current coordination. The earlier pass is not treated as current-base validation; synchronize and rerun before depending on the workflow for PR #181.
+- Corrected the coordination board's stale PR #181 head and base, and changed PR #180 status to resync-required with its exact-head passing run and current behind-count recorded.
+- No application code, OWASP feature code, Orchestrator, APEX, East, native runtime, or test behavior changed. No merge or PR closure performed.
+
+
+## 2026-11-17 — OWASP/test-runner branch synchronization
+
+- Refreshed both isolated work branches onto coordination head `9da0a35a39320b4cb5a3093dd5f07e5d0c891d1b` using tree-level overlays that preserved only their explicitly owned paths.
+- OWASP PR #181 branch head is now `0750164a27238284332a8d274084603487514e40`; compare at synchronization time was 1 ahead, 0 behind, with exactly the same nine OWASP feature paths and no coordination-file snapshots.
+- Test-runner PR #180 branch head is now `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; compare at synchronization time was 1 ahead, 0 behind, with only the dedicated workflow, `package.json`, and `tsconfig.intelligence.json` changed. Exact-head workflow #44143460216 was created and is in progress; no result is claimed yet.
+- The coordination board was updated afterward in commit `e89153d0971363938d5aea098f0d8af0a1bb00d7` to record those exact feature heads and the in-progress validation state. That documentation-only board commit advances the base after the branch synchronization; no application files or ownership boundaries changed.
+- No merge, PR closure, Orchestrator integration, runtime change, or OWASP execution-context activation was performed.
+
+
+## 2026-11-17 — Reconciliation before next exact-head validation
+
+- Live recheck found the coordination branch had advanced to `4261b45672240a23b6cfcfae9a9f3314e94b757a` after the previous branch synchronization. Both PR #180 and #181 therefore became two commits behind; their feature-file scopes remained isolated (three test-runner paths and nine OWASP paths respectively).
+- PR #180's exact-head run #44143460216 is successful for its former head `7a16612e9ef87032732fbc6c9ad553ab8d1c5dd2`; it is not carried forward as proof for a newly synchronized head. PR #181 still has no exact-head run.
+- Updated the board to state the current resynchronization and validation requirement. Next, synchronize both feature branches after this board update so the base remains stable; do not make another base documentation change until after their exact-head runs are recorded elsewhere or the next audit.
+- No merges, application changes, or scope changes were made.
+
+
+## 2026-11-17 — Original six-layer framework recovered from conversation memory
+
+- Corrected the earlier handoff: the original six layer titles were present in the owner's November 1, 2026 ChatGPT discussion and have now been restored.
+- Canonical layers: Reconnaissance and Intelligence; Threat Modeling and Risk Assessment; Penetration Testing and Analysis; Infrastructure and Application Security; Detection and Response; Engineering and Continuous Improvement.
+- Restored governance: one central Director selects modules; Authorization Engine controls invocation; restricted skills remain unexecuted absent authorization; Critic/Validator are advisory only; local stand-in changes require explicit human approval; materially changed operations require new approval.
+- Restored tier labels: T0 Observe, T1 Assess, T2 Modify, T3 High-impact, T4 Prohibited. Individual module tier mappings are not inferred.
+- The memory search still did not return exact M01–M42 names/descriptions/assignments. It surfaced a historical reference to “Director and the 42 checks” at `src/lib/compliance/director.ts`; that path was not found at that location on the current coordination branch. Treat it as a historical retrieval lead, not an authoritative current file.
+- Updated the complete product handoff and master requirements checklist. No implementation or requirement verification status was changed.
+- Next retrieval target: original November 1 conversation content / historical `director.ts` implementation and tests to recover all 42 entries verbatim.
+
+
+## 2026-11-17 — Original M01–M42 capability inventory recovered
+
+- Recovered the original 42 module names and numbering from the October 29, 2026 ChatGPT conversation. Added the full M01–M42 inventory to the complete product handoff and master requirements checklist.
+- Preserved the earlier four conceptual integration groups: technical foundations; security analysis; operational capabilities; advanced integration.
+- Kept those four groups distinct from the six canonical layers recovered from the November 1 conversation. The exact M01–M42-to-six-layer mapping and complete verbatim descriptions for all 42 are not yet recovered; no per-module tier or permission assignments were invented.
+- The 42 entries are a capability registry, not a requirement for 42 permanent agents. Director selection and independent Authorization Engine control remain intact; Critic and Validator remain advisory.
+- Updated coordination board. Documentation-only change; no application code, tests, authorization policy, requirement verification status, merge, or physical-device acceptance changed.
+- Next source-recovery task: retrieve full original descriptions and November 1 layer/tier mapping, then add traceability from each module to its implementation and acceptance tests.
+
+
+## 2026-11-17 — M01–M42 completion and focused validation refresh
+
+- Re-read `docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md` on the current `agent-coordination` branch. The complete inventory is M01–M42; the final entries are M41 Cybersecurity Risk Management and M42 Secure Software Development Lifecycle (SSDLC). This closes the name/number inventory gap.
+- The original verbatim descriptions and original mapping of each module to the six canonical layers and T0–T4/permissions remain unrecovered. No mapping or permission assignment was inferred. The earlier four conceptual groups remain distinct from the six canonical layers.
+- Rechecked PR #180: current head `419e006ca0ad5ed40386b540ba4bc7e4b46681e4`, base `8025680f732a55b00b52e07e765c1d6d25bd200b`, 1 ahead / 0 behind, exactly three owned files. Exact-head workflow #44153786406 completed successfully. This validates the focused TypeScript runner only.
+- Rechecked PR #181: current head `9956428091446d9408b765b19c2881cec0edd7bd`, same base, 1 ahead / 0 behind, exactly nine OWASP feature files. No exact-head workflow run exists; PR #180's passing workflow does not validate #181. The OWASP context builder remains reference-only and is not connected to `Orchestrator.executeTask()`.
+- Updated coordination board, gap audit, and the single affected traceability row. No application code, APEX authorization, runtime behavior, PR state, merge state, or physical-device acceptance was changed.
+
+
+## 2026-11-17 — Feature branches resynchronized after coordination updates
+
+- After the coordination documentation commits, refreshed PR #180 and PR #181 to the current `agent-coordination` head `94e8242f3f13a9c78c402b17a3bb964935ae0722` using tree overlays that preserved only their owned feature paths.
+- PR #180 now points to `ccaefbd66704266c6c53f4abc78ed3042273a8fa`, compares 1 ahead / 0 behind, and contains exactly the three test-runner files. Exact-head workflow #44158613191 completed successfully.
+- PR #181 now points to `b29f7402bc7b23aa1356613d7b856cccf827538e`, compares 1 ahead / 0 behind, and contains exactly the nine OWASP feature files. No exact-head workflow run is present for this head; #180's passing run is not transferable evidence.
+- No PR merge, application behavior change, Orchestrator integration, or authorization change was performed.
+
+
+## 2026-11-17 — Resynchronization against latest coordination base
+
+- Current coordination base at synchronization: `ad6f936973ee1425e1532facf8016564476410f1`.
+- PR #180 refreshed to `e525e36d792e7ff4590f6093320bc69d8a6df288`, 1 ahead / 0 behind, exactly three owned test-runner paths. Exact-head workflow #44159182683 was in progress at the time of inspection; result not yet established.
+- PR #181 refreshed to `34cf8973267d50a30fa14382d6406733f4c21d94`, 1 ahead / 0 behind, exactly nine owned OWASP feature paths. No exact-head run exists.
+- Validation dependency identified: `.github/workflows/intelligence-tests.yml` is supplied by PR #180 and is not in the shared base. Therefore PR #181 cannot receive that workflow's pull_request run until the workflow becomes part of the base branch. No duplicate workflow was added to PR #181, and no ownership boundary was crossed.
+- Personal-context source retrieval was attempted for the original November 1 six-layer / M01–M42 source. It returned no original descriptions or exact module-to-layer/T0–T4 assignments; it confirms the November 1 conversation references the app files `src/components/compliance/console.tsx`, `src/lib/compliance/providers.ts`, `modes.ts`, `director.ts` (Director and 42 checks), and `orchestrator.ts`, but does not provide the missing registry content. No mappings were inferred.
+- No PR merged, no application code or authorization behavior changed, and no requirement was marked verified.
+
+
+## 2026-11-17 — Test-runner exact-head result and historical source check
+
+- PR #180 exact-head workflow #44159182683 completed with conclusion `success` on `e525e36d792e7ff4590f6093320bc69d8a6df288`. The focused TypeScript test-runner scope is validation-passed.
+- PR #181 remains validation-blocked: its branch has no exact-head workflow run, and the only relevant workflow is not in the shared base because it is supplied by PR #180. No duplicate workflow was added to #181.
+- Checked GitHub commit history for the four November 1 source leads (`src/lib/compliance/director.ts`, `modes.ts`, `orchestrator.ts`, and `src/components/compliance/console.tsx`); the current repository history API returned no commits for those paths. This does not establish that the original conversation source never existed; it means this repository history did not recover it.
+- No PR merge, app implementation, APEX authorization, runtime behavior, or physical device acceptance changed.
+
+## 2026-11-17 — October 29 source metadata recovered; later skills taxonomy distinguished
+
+- Targeted conversation search identified the exact October 29 assistant response at 2026-10-29T09:06:15Z, “Mr. Robot — Comprehensive Cybersecurity Skill Set”, and preceding user request at 09:03:41Z. Retrieval metadata confirms the response contains sections I–VII, M01–M42 verbatim descriptions, layer mappings, programming foundations, capability layers, and an overall capability profile. The actual body and mapping text were not returned, so no content was copied or reconstructed.
+- GitHub recursive tree inspection on codex/skill-lifecycle-rubric-binding recovered a later 44-entry, five-layer skill catalog and associated registry/lifecycle/evaluation code under packages/intelligence/skills/. It is not the original 42-entry, six-layer source. Exact paths and blob SHAs are recorded in coordination/HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md.
+- Corrected the recovery audit to distinguish metadata-confirmed source content from body text actually retrieved. October 29 mappings must be compared directly with the November 1 six-layer framework before adoption.
+- Updated the coordination board and source-recovery audit only. No application code, authorization policy, tests, merges, or requirement verification status changed.
+
+## 2026-11-17 — Live PR/CI reconciliation
+
+- Refreshed current PR heads and exact-head workflow state for the native bridge chain. PR #164 head `482b364cb362b86224c3399ce16ce51a1c06c738` has iOS run #43991837435 success; PR #168 head `ab6f290702018023edaec800f59bfec422f24bc9` has iOS run #43991941724 success; PR #169 head `3666c01a629219b22b9313cb770b6246f082217d` has iOS run #44092562693 success.
+- PR #171 current head `90b4e2b408fd98d418bff729c8e8d208fe13463f` had no PR-triggered run returned for that exact head. PR #174 current head `e3105b9985e44e687524dd08e32080705d9d4b0f` has iOS run #44161238097 pending. PR #175 web CI #44113067640 passed on its own head, but its base records the older PR #174 head `48a6fabea107cc587327bf1782caef14aeefdab7`; stack reconciliation is required.
+- PR #180 current head `fe25b0a43151f71c23ee8d673788a18187e019c8` has exact-head TypeScript run #44159541367 success. PR #181 current head `46894868049c124808a06e7d0a4d94b89ca82cd1` has no PR-triggered run surfaced; its catalog/context tests remain validation-blocked.
+- Reconfirmed that the October 29 M01–M42 source body has not been retrieved; only response metadata confirms descriptions and mappings exist. The later 44-entry/five-layer catalog is not the original taxonomy.
+- Updated the gap audit, board, and log only. No application code, authorization policy, merge state, or requirement verification status changed. Hosted CI is not physical iPhone Air acceptance.
+
+
+## 2026-11-17 — Workspace native-client cancellation repair
+
+- Reviewed PR #174 lifecycle race fixes and PR #175's native client integration. Confirmed PR #175 remained based on old dispatcher head `48a6fabea107cc587327bf1782caef14aeefdab7`, while the current PR #174 head advanced; the comparison showed a diverged stack.
+- Identified the AbortSignal race in `apps/web/nativeBridge.js`: the request callback could abort synchronously before the abort listener was installed.
+- Created replacement branch `codex/workspace-native-chat-client-rebased` from PR #174 head `beac6964aa4eda8d370b32ffa3ae565745b4e062`, carried forward the six web-client files, registered cancellation before generation dispatch, rechecked abort state, and added deterministic synchronous-abort coverage.
+- Opened draft PR #185 at head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`. No exact-head web workflow run had surfaced at the time of this log entry. PR #175 remains open/stale; do not merge it.
+- Updated coordination board and gap audit. No native runtime, APEX, signing, authorization, or physical-device acceptance changes.
+
+
+- Follow-up validation: PR #185 exact-head Pocket AI Lab CI #44162270273 completed successfully, including JS syntax, TypeScript build, and the full configured npm test command. PR #174 remained at base head `beac6964aa4eda8d370b32ffa3ae565745b4e062` with native iOS workflow #44161924371 still in progress. Web slice is green; full native-plus-web stack and physical iPhone acceptance remain open.
+
+
+## 2026-11-17 — Native Workspace bridge navigation cancellation review
+
+
+## Native Workspace bridge navigation cancellation review — 2026-11-17
+
+- Refreshed PR #174: current head `e159dee0c381ef61a2f311a53f44969988159cbe`, base PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`. The exact-head iOS run [#44163444351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44163444351) is pending; no result is claimed.
+- Source review confirmed the lifecycle-generation/navigation-cleanup barrier around dispatcher session resolution and challenge issuance. The new RuntimeController tests cover disconnect and caller cancellation while challenge consumption is suspended.
+- A remaining race is reported on PR #174: navigation does not disconnect the RuntimeController session. If a request has already consumed its challenge but is suspended in the post-consumption file hash before it registers in `ActiveSession.generations`, navigation's `cancelAllGenerations()` may see no registered generation and return; the request can then proceed to inference. The dispatcher's post-call epoch check only suppresses the reply. A deterministic dispatcher-to-controller navigation test and cancellation barrier are requested before enabling this path.
+- PR #185 remains open/draft at head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, but its base is still `beac6964aa4eda8d370b32ffa3ae565745b4e062`, now one commit behind PR #174. Rebase/reconcile it onto the eventual reviewed #174 head and rerun exact-head web CI; do not treat the stack as current or merge either PR.
+- No application code was changed in this coordination pass. No merge, APEX authorization, signed receipt, or physical iPhone Air acceptance is claimed.
+
+
+## 2026-11-17 — Native bridge cancellation epoch review
+
+
+## Native bridge cancellation epoch review — 2026-11-17 (latest refresh)
+
+- PR #174 current head is `18bcb49848c22f0c697a82ab0a4415ba92da03cf`, base PR #171 head `90b4e2b408fd98d418bff729c8e8d208fe13463f`. The prior exact-head run #44163444351 was cancelled after the branch advanced. Current exact-head iOS run [#44163980153](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44163980153) is in progress: pinned llama.cpp build, fail-closed Swift typecheck, and physical-device framework link passed; simulator boot is active; app build, app XCTest, simulator XCTest, and GGUF smoke steps remain pending.
+- Latest source now adds a RuntimeController generation lifecycle epoch. `cancelAllGenerations()` advances it synchronously before awaiting drain, and `generate()` checks the captured epoch after challenge consumption and again after the post-challenge model-file hash. The deterministic `testCancelAllInvalidatesGenerationSuspendedDuringChallengeConsumption` proves cancellation while challenge consumption is paused and asserts zero non-readiness inference calls.
+- Review follow-up on PR #174 requests one additional deterministic regression for the distinct second suspension window: allow challenge consumption to succeed, pause the post-challenge file hash, complete `cancelAllGenerations()`, resume the hash, and assert cancellation plus zero native inference calls. The implementation contains the post-hash epoch check, but this exact test was not present in the inspected test file.
+- PR #185 remains draft/open/unmerged at head `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, still based on old PR #174 head `beac6964aa4eda8d370b32ffa3ae565745b4e062`; current PR #174 is `18bcb49848c22f0c697a82ab0a4415ba92da03cf`. PR #185's recorded base remains the older #174 commit and must be rebased/reconciled onto the current reviewed #174 head, then exact-head web CI rerun before treating the stack as current. GitHub currently reports the PR's mergeability flag as true; that flag does not mean its stack is up to date or validated against the latest native commits.
+- PR #185's exact-head web run [#44162270273](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44162270273) remains green across dependency installation, JavaScript syntax, TypeScript build, and configured npm tests. This does not validate native integration.
+- No application code was changed in this coordination pass. No PR merged, no signed evidence/APEX authorization claimed, and no physical iPhone Air acceptance established.
+
+
+## 2026-11-17 — Native bridge workflow progress refresh
+
+- Rechecked PR #174 exact-head iOS run [#44163980153](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44163980153). Pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, physical-device framework link, simulator selection/boot, and Director bridge package-manifest validation have completed successfully. Native app generation/build is now in progress; app XCTest, simulator XCTest, pinned-GGUF smoke, and macOS XCTest have not yet completed. The workflow remains in progress; no overall pass is claimed.
+- Re-read `RuntimeController.swift` and `ApexBridgeTests.swift` at the current reviewed PR #174 ref. The lifecycle epoch is checked after challenge consumption and after the post-challenge file hash. The challenge-consumption suspension regression exists; the companion deterministic test pausing the post-challenge hash is still absent. The earlier review comment #6959390894 already requests this exact test; no duplicate comment was posted.
+- Rechecked PR #162 East worker-ownership follow-on: its previously passing workflow is on an older head, and no exact-head workflow run surfaced for `1db0345938ac029c3742a391c51ad7027d57e3bc`. It remains unverified at current head; no code changes or ownership-boundary changes were made.
+- PR #185 remains a web-only draft stacked on an older PR #174 commit. Its prior web CI result does not validate the updated native stack; rebase/reconcile and exact-head web validation remain required.
+- No application code changed, no PR merged, and no physical iPhone Air acceptance, signed evidence, or APEX authorization is claimed.
+
+
+## 2026-11-17 — Native app build cancellation correction
+
+- A later poll of iOS workflow #44163980153 superseded the earlier in-progress snapshot: the native app generation/build step completed with `cancelled`; app XCTest, simulator XCTest, pinned-GGUF download/smoke, and macOS XCTest were skipped. The run/job had not yet exposed a final conclusion when checked. The pinned llama.cpp build, fail-closed Swift typecheck, physical-device framework link, simulator boot, and Director package-manifest validation remain successful completed steps only.
+- Job-log retrieval returned `BlobNotFound`, so the cancellation cause is unknown and is not attributed to a branch update or infrastructure without evidence. This run is not a passing native build/test result. A fresh exact-head run is required after the branch/test changes are settled.
+
+
+## 2026-11-17 — Post-challenge hash cancellation regression verified in source
+
+PR #174 added commit `b6a9b68c4c6e3ffee2ec0a41c08518b2784b1a0c`, with `ThirdCallPausingFileHasher` and `testCancelAllInvalidatesGenerationSuspendedDuringPostChallengeFileHash`. The test pauses the third hash call (after readiness and pre-challenge verification), proves the challenge has already been consumed, runs `cancelAllGenerations()` while the native generation task is not registered, resumes the hash, expects cancellation, rejects nonce replay, asserts zero native inference calls, and verifies the model lease remains held. Source coverage gap is closed; exact-head test execution is still pending.
+
+Exact-head iOS workflow #44166303330 is currently in progress on this commit. The preceding run #44166043070 was cancelled. PR #185 compares as diverged from current PR #174 base (1 ahead / 7 behind); its six-file web client delta requires reconciliation and fresh web CI. No merge or device acceptance.
+
+
+## 2026-11-17 — Current reconciliation and East uncertainty coverage
+
+- Reconciled current PR/branch state rather than relying on earlier PR numbers or heads. Current PR #174 head is `ce07e17f917c283ef1b13b548ee554601ffc10fe`; it contains this run's `b6a9b68c4c6e3ffee2ec0a41c08518b2784b1a0c` post-challenge hash regression and a subsequent unannounced same-branch commit adding an overlapping navigation-cleanup barrier test. The later commit touched a different test file. No further edits were made on PR #174 after detecting the concurrent advance.
+- Latest PR #174 exact-head iOS run [#44167047921](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44167047921) remains in progress: pinned llama.cpp build, fail-closed Swift typecheck, and generic iOS device link passed; simulator boot is active; app build/XCTest, simulator XCTest, and pinned-GGUF smoke are pending. Run #44166303330 was cancelled after branch advancement. No exact-head pass is claimed.
+- PR #162 received test commit `be8f014ce90bce6266aae4ee64d76f353c7d08ff` proving expired single-attempt work is marked `uncertain=true`, persisted across restart, and never automatically reclaimed. No exact-head workflow runs or combined status are available for that commit. This is a test-only change.
+- Confirmed PR #132's real PostgreSQL 16 workflow [#43846062218](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43846062218) passed migration, CAS/row locking, namespace isolation, rollback, concurrent stale-writer, and actual TypeScript adapter checks. This does not cover PR #162's owner fencing or production RLS.
+- Confirmed PR #135 exact-head hosted iOS run [#43797547712](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/43797547712) passed native app build, app XCTest, simulator XCTest, pinned llama.cpp, and macOS GGUF smoke. PR #115's current iOS run #43771097290 was cancelled after app XCTest passed; simulator XCTest was cancelled and smoke steps skipped. PR #133 is stale against PR #115 and has no exact-head run.
+- Confirmed PR #157 and #159 hosted iOS runs #43957233723 and #43957567346 completed successfully, as did PR #164 run #43991837435. PR #157/#159 diverge 84 ahead / 27 behind. No physical-device acceptance is implied.
+- PR #171 remains non-mergeable with no exact-head workflow run surfaced. PR #175/#185 remain based on older PR #174 heads; #185 is the better web candidate but needs rebase and exact-head web CI.
+- Repo issue search returned no open issues. Repository metadata says public. Old read-only daily CI monitors are disabled; this consolidated engineering monitor is the only enabled Pocket AI Lab automation found. No repository settings or visibility were changed.
+- Prior-chat access was summary-level, not full verbatim transcripts. The repository handoff and source-recovery audit remain the authoritative accessible historical records; exact M01–M42 descriptions and per-module tier/permission assignments remain unrecovered.
+
+
+## 2026-11-17 — Follow-up verification after dispatcher navigation test
+
+- Rechecked PR #174 branch head: still `ce07e17f917c283ef1b13b548ee554601ffc10fe`; no newer commit was present. Inspected `WorkspaceBridgeDispatcher.swift` and its test at that exact SHA. The new overlapping-navigation test pauses two cleanup operations, lets the older finish first, asserts authorization remains blocked while the newer cleanup is pending, then verifies the newest cleanup restores the expected bridge state. This is source inspection, not a test pass.
+- Exact-head iOS run [#44167047921](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44167047921) remains `in_progress`. The pinned llama.cpp build, fail-closed Swift typecheck, and physical-iOS framework link are successful; simulator boot remains the active step. Native app build, app XCTest, simulator XCTest, and GGUF/macOS smoke steps remain pending. Job-log download returned GitHub `BlobNotFound`; no failure cause is inferred.
+- Recomputed PR #185 against current PR #174: still diverged, now 1 commit ahead / 8 behind. Its six-file web-only delta remains isolated; do not merge until rebased onto the current native head and exact-head web CI passes.
+- No merge, physical iPhone Air acceptance, signed evidence, runtime trust, or APEX authorization is claimed.
+
+
+## 2026-11-17 — East worker ownership: real PostgreSQL integration added
+
+- Reconciled current PR #162 branch before writing: `codex/east-owner-bound-leases` was at `be8f014ce90bce6266aae4ee64d76f353c7d08ff`; no intervening branch advance was present.
+- Added `packages/intelligence/autonomy/tests/postgres-worker-ownership-integration.mjs` and `.github/workflows/east-worker-ownership-postgres-ci.yml`. The test uses two independent coordinators and two PostgreSQL snapshot-store instances against a PostgreSQL 16 service. It races claims from one stored version and expects exactly one winner plus one `store_conflict`; reads the persisted active owner through a third coordinator; requires a foreign worker to receive `lease_owner_mismatch` for both completion and failure; verifies the persisted active lease remains unchanged; then verifies the actual owner completes and a fresh observer reads the committed result.
+- Exact branch commits: `97b5f398dc8fda0b874c60eb40a90c0e2541fd2b` (integration test added), `11b706e36d53d3e556bb84c9e6a04a4df382d332` (assert exact owner identity), and `165594b26598955f219529b12aa79ca2cec8a372` (PostgreSQL 16 workflow).
+- Exact-head PostgreSQL workflow [#44182281169](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281169) and general CI [#44182281206](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281206) were observed in progress. No pass is claimed until terminal success and job steps are inspected.
+- Posted implementation and scope details to PR #162. This validates persisted concurrency ownership only; worker IDs are not credentials, and it does not establish authentication, tenant isolation, production RLS, or APEX authorization.
+- PR #174 advanced to `8209c4784a1a715199dcb1ba5322241f5b24105a`. Commits `116f583a3d8107411daf0a0bdf223c6aeaa53e2a` and `8209c4784a1a715199dcb1ba5322241f5b24105a` correct the two previous XCTest preconditions without production code changes. Exact-head iOS run [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060) passed pinned llama.cpp build, fail-closed Swift typecheck, generic device framework link, simulator boot, bridge manifest validation, and native app build; native app XCTest was still in progress at the latest poll. Simulator XCTest and GGUF/macOS smoke remain pending.
+- No merge, main-branch change, production database operation, settings/secrets change, deployment, signed device build, or physical iPhone Air test occurred.
+
+
+## 2026-11-17 — Correct PostgreSQL service connection and refresh exact-head CI
+
+- The first East worker-ownership PostgreSQL run [#44182281169](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281169) failed at the migration step before running application tests. Retrieved job logs: PostgreSQL 16 service was healthy, but `psql` without an explicit connection target attempted the runner's local Unix socket. This was a workflow configuration error, not a lifecycle implementation/test failure.
+- Corrected the migration command to pass `"$DATABASE_URL"` explicitly. Commit: `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. Fresh exact-head PostgreSQL run [#44182446997](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182446997) and general intelligence CI [#44182446912](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182446912) are in progress; no pass is claimed yet.
+- PR #174 exact-head run [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060) advanced: pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS device framework link, simulator boot, Director bridge manifest validation, native app build, and native app XCTest completed successfully. iOS simulator XCTest is now in progress; pinned-GGUF/macOS smoke remains pending. This is hosted CI, not physical iPhone testing.
+- General CI for PR #174 exact head [#44180073768](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180073768) passed.
+- Coordination board updated at commit `0b8598f3a4f29c60c995fd70d1a19bdd19d30c35`; this log entry records the workflow failure diagnosis and corrected run. No production database, RLS, APEX authorization, signer, evidence, deployment, or main-branch change occurred.
+
+
+## 2026-11-17 — Native XCTest progress and East PostgreSQL workflow diagnosis
+
+- Refreshed PR #174 at head `8209c4784a1a715199dcb1ba5322241f5b24105a`. Exact-head iOS run [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060) passed pinned llama.cpp simulator/macOS build, fail-closed Swift typecheck, generic iOS device framework link, simulator boot, Director bridge package-manifest validation, native app build, and native app XCTest. iOS simulator XCTest is in progress; pinned-GGUF download, macOS smoke setup, and macOS XCTest are pending. No overall workflow success is claimed.
+- Attempted to retrieve the active PR #174 job logs; GitHub returned `BlobNotFound`. The job-step API still confirms simulator XCTest is the active step, so no failure cause is inferred.
+- Investigated PR #162 exact-head PostgreSQL workflow [#44182281169](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281169). The PostgreSQL 16 service container became healthy, but the migration step failed before the integration test ran: psql attempted the runner's local Unix socket `/var/run/postgresql/.s.PGSQL.5432`, which did not exist. The failing command log rendered as `psql --set ON_ERROR_STOP=1 --file ...`, with no effective host/database connection argument. Companion Intelligence CI [#44182281206](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182281206) passed syntax, type-check/build, and tests.
+- PR #162 advanced concurrently from workflow checkout SHA `165594b26598955f219529b12aa79ca2cec8a372` to current head `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The current workflow file has an explicit `psql "$DATABASE_URL"` argument, so the exact cause of the discrepancy between the committed file and the runner's logged command remains unresolved. No branch edits were made; inspect exact current commit/workflow and rerun before changing it.
+- PR #185 compares as diverged from current PR #174: 1 ahead / 13 behind, six-file web-only delta. It remains draft and requires rebase/reconciliation plus exact-head web CI.
+- No PR merge, application code change, deployment, production database/RLS operation, signed evidence, APEX authorization, or physical iPhone Air acceptance occurred.
+
+
+### Correction — East migration workflow root cause resolved from exact commit comparison
+
+- Compared the failing run's checked-out workflow at `165594b26598955f219529b12aa79ca2cec8a372` with the current PR #162 head `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The failing revision omitted `psql "$DATABASE_URL"` and therefore used the runner's local Unix socket. The current head's workflow explicitly passes `"$DATABASE_URL"`, addressing the observed connection-target defect.
+- No additional code edit was made by this coordination pass. Exact-head CI for `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3` has not yet surfaced; the real PostgreSQL integration test remains unverified until that run passes.
+
+
+## 2026-11-17 — East lifecycle event journal, exact-head native CI, and dependency audit reconciliation
+
+- Reconciled current repository state, active coordination board, PR heads, workflow runs, and ownership records. Leadership designates ChatGPT as primary coordinator/default engineering owner; no independently announced active agent was present in the accessible roster. The `agent-coordination` branch remains documentation-only.
+- PR #174 exact head `8209c4784a1a715199dcb1ba5322241f5b24105a` completed successfully in iOS LlamaEngine workflow [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060). Verified all steps: pinned llama.cpp simulator/macOS builds, fail-closed Swift typecheck, generic iOS device framework link, simulator boot, Director bridge manifest, native app build/XCTest, iOS simulator XCTest, pinned GGUF download/path setup, and macOS XCTest. This is hosted CI and simulator evidence only; no physical iPhone Air test, signed device installation, attestation, or APEX authorization is claimed. Posted terminal CI result to PR #174.
+- PR #162 remains open/draft at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. Exact-head PostgreSQL 16 worker-ownership integration [#44182446997](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182446997) and general intelligence CI [#44182446912](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44182446912) both passed. The PostgreSQL job executed real independent-coordinator CAS claim competition, persisted owner observation, foreign completion/failure rejection, and owner completion/restart persistence. This is concurrency fencing, not worker authentication, tenant RLS, or APEX authorization. Posted terminal result to PR #162.
+- Opened draft follow-on PR #187, branch `codex/east-durable-event-journal`, stacked on PR #162. Current head `2bc3585f3c4b781e5bbd38c0cdee51b8e25b2667`; PR [#187](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/187). The coordinator now records ordered `task.created`, step claim/completion/failure/cancellation, lease expiry, and terminal task events with monotonic per-task sequence, deterministic IDs, timestamps, and bounded worker/attempt metadata. Events share the versioned snapshot atomic commit boundary. Defensive copies prevent callers mutating the in-memory event journal. Limit is 2,048 events; when full, new transitions fail closed instead of pruning. Legacy snapshots without events load with an empty history; no old events are fabricated.
+- Added regression coverage for event ordering, defensive-copy isolation, and restart persistence; extended the real PostgreSQL 16 ownership integration to assert the event sequence and owner identity survive a fresh coordinator. Updated `docs/implementation/autonomous-task-lifecycle.md` and `docs/implementation/east-lifecycle-production-readiness.md`.
+- Exact implementation head `a98f290b35ae939cbbe62848790988b6b912e80c` passed general CI [#44183728890](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183728890) and PostgreSQL 16 integration [#44183728830](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183728830). A test-only deep-copy defect was exposed and corrected before this green head. Documentation follow-up current head `2bc3585f3c4b781e5bbd38c0cdee51b8e25b2667` also passed general CI [#44183848076](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183848076); its PostgreSQL workflow [#44183842291](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183842291) passed on documentation head `40e0d4d778ac1b0aaa0a32e9db1f49436d4cfba9`. PR #187 is draft and GitHub reports mergeable/clean; do not merge automatically. The journal is application-level append-only metadata in a snapshot, not a separate immutable SQL ledger, hash chain, signed Evidence, or authorization source. Production audit retention, tamper-evidence, redaction, and access controls remain open.
+- Inspected the East code and found it still uses one namespaced JSONB snapshot row with transactional row lock/CAS, not a separate SQL event table. The journal therefore preserves atomic state/event writes but does not close production audit immutability requirements. East provider cancellation propagation and production RLS/tenant context remain open.
+- Refreshed Workspace PR #185: still open/draft at `8c3dc8708cdfca354cecdc33d84b8d4cf430821f`, based on old dispatcher head `beac6964aa4eda8d370b32ffa3ae565745b4e062`; current PR #174 is `8209c4784a1a715199dcb1ba5322241f5b24105a`. Compare remains 1 ahead / 13 behind, six-file web-only delta. Commented that it needs reconciliation/rebase and exact-head web CI. No unsafe file overwrite or force update was attempted.
+- Dependency audit evidence from the PR #162 PostgreSQL CI installation log: five high-severity package findings in the chain `fdir`, `picomatch`, `tinyglobby`, `vite`, and direct devDependency `vitest`, associated with the Picomatch ReDoS advisory [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) (CVSS 7.5). The report's proposed Vitest fix is a major-version change. No dependency upgrades or `npm audit fix` were applied; validate the dependency graph and compatibility in a separate focused branch before changing it.
+- Accessible conversation sources for this run: current conversation and summary-level prior ChatGPT context, plus repository coordination/leadership/history, requirements traceability, PR/commit/workflow records, and source files. Full verbatim historical ChatGPT transcripts were not available. The six-layer/42-module framework remains canonical; the accessible repository records preserve the M01–M42 name inventory, but complete verbatim module descriptions and exact per-module tier/permission mappings remain unrecovered. The traceability matrix remains 316 rows: 184 unassessed, 85 implemented-unverified, 38 partial, 9 blocked, zero verified, zero missing; no row was marked verified in this run.
+- No merge, main-branch modification, repository setting/secret/visibility change, production database/RLS operation, deployment, destructive action, or physical-device test occurred.
+
+
+### Follow-up — lifecycle event resulting-state metadata and exact-head validation
+
+- Extended each lifecycle event with optional resulting step/task status so consumers can distinguish a retryable failure that returns a step to `pending` from a terminal failure, and can reconstruct cancellation/terminal transitions without inferring from event names alone. Validation rejects unsupported status values. Automatic step cancellations caused by task failure also record the resulting `cancelled` state.
+- Added unit assertions for claim/failure/completion/terminal resulting-state metadata and extended the PostgreSQL 16 integration to verify those fields survive a fresh coordinator read.
+- Exact current PR #187 head: `d00260e4a1c3d0f3e8902b756e67e5cfcaf36bc4`. General CI [#44184575521](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44184575521) passed; PostgreSQL 16 integration [#44184575560](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44184575560) passed. PR #187 remains draft/open/clean and stacked on PR #162. Posted exact-head evidence to PR #187.
+- This remains a bounded application-level journal embedded in the versioned snapshot. It is not a separate immutable SQL event table, hash chain, signed Evidence, worker authentication, RLS, or APEX authorization. No production DB or authorization settings changed.
+
+
+## 2026-11-17 — ChatGPT verification checkpoint
+
+- Verified PR #174 exact head `8209c4784a1a715199dcb1ba5322241f5b24105a` and workflow [#44180080060](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44180080060). The workflow and its sole iOS job completed with conclusion `success`; all 19 steps completed successfully, including native app build/XCTest, simulator XCTest, pinned-GGUF smoke setup, and macOS XCTest.
+- PR #174 remains open/unmerged. Hosted CI does not prove physical iPhone Air acceptance or trust/evidence/APEX semantics.
+- PR #185 is stale relative to current #174: current #174 head compared with #185 head reports `diverged`, 1 ahead / 13 behind, with six changed web files. Reconciliation is required; no blind file overwrite or merge was performed.
+- PR #162 remains open/unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`; the latest commit-workflow lookup surfaced no PR-triggered run for that exact SHA. The corrected DATABASE_URL workflow source alone is not a CI result.
+- No application files, runtime behavior, APEX policy, evidence semantics, deployment, or PR merge state were changed in this checkpoint.
+
+
+## 2026-11-17 — OWASP reference-data mutability review and hardening
+
+- Reviewed PR #181's exported catalog/guidance APIs and found nested runtime mutability despite reference-only trust labeling. Added a recursive deep-freeze helper and applied it to the imported source catalog and OWASP guidance definitions.
+- Added regression assertions for frozen catalog root, source collection, nested topic arrays, guidance collection, guidance objects, and nested guidance arrays.
+- Changes committed sequentially on `codex/owasp-knowledge-integration-v4`; latest exact head: `9cdf32e430e629384f4080385e594ad407bd78de`. Read-back confirmed code and tests.
+- No exact-head CI run is available: PR #181 is based on `agent-coordination`, while the focused TypeScript workflow is supplied separately by still-open PR #180 and is not in that base. Therefore no test/typecheck pass is claimed. Keep PR #181 validation-blocked until its exact head is tested through the established runner.
+- No Orchestrator wiring, APEX/East semantics, permissions, runtime behavior, or merge state changed.
+
+
+## 2026-11-17 — East provider cancellation propagation implemented and validated
+
+- Created focused branch `codex/east-provider-cancellation` stacked on PR #157's exact head `8ee13921ac648915c3447b65e14120f29f89d786`; opened draft PR [#188](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/188).
+- Added optional AbortSignal support to the Orchestrator inference-provider contract and `executeTask`; East `executeAgent` and `runDeliberation` now expose and forward the signal.
+- Preserved drain-before-release: the caller awaits the provider promise, then checks cancellation before publishing; finally releases the agent session and router lease only after provider settlement. A late result is discarded. The Orchestrator checks cancellation before writing the final unverified episodic memory.
+- Added `src/east/platform.test.ts` regression for abort during an unresolved provider call; asserts the call remains pending until provider settlement, then rejects with `cancelled`, with no MessageBus publication and no memory write.
+- Added `docs/implementation/east-provider-cancellation.md` to document cooperative cancellation and provider obligations.
+- Exact head `23a64ef3668da74c789dba33aeeb7d2684784631`; exact-head Pocket AI Lab CI [#44186203351](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44186203351) passed all steps, including syntax, TypeScript build, and test suite. Strengthened the regression to assert the model-router reservation remains held during the unresolved provider call and is released only after settlement.
+- Limitation: AbortSignal is cooperative. Providers that ignore it may continue until their promise settles; callers wait rather than prematurely release a live lease. This does not establish physical iPhone acceptance, production RLS, or APEX authorization. No merge.
+
+
+## 2026-11-17 — OWASP provenance/type audit and PR status correction
+
+- Refreshed PR #181 after concurrent branch advances. It is open/unmerged at `c69ced4535d331748eddfac2a105a863262094dc`, 5 commits ahead / 0 behind its coordination base, with the intended nine feature paths.
+- Verified every one of the eight catalog blob hashes against the corresponding file fetched from OWASP/CheatSheetSeries at immutable commit `7af0ef1b745f1a38ce905c00c5a592d5b3a515a9`; all eight matched. Source URLs are revision-pinned; attribution/license metadata records CC-BY-SA-4.0.
+- Found a type-contract defect: the catalog interface omitted `repository.revision` although tests read it, and omitted the JSON license metadata. Added both to `OwaspCatalog.repository` in `packages/intelligence/knowledge/index.ts`, commit `c69ced4535d331748eddfac2a105a863262094dc`; read-back verified the correction.
+- No PR-triggered workflow run exists for the updated #181 head. PR #180's focused TypeScript workflow passed on #180's separate head `fe25b0a43151f71c23ee8d673788a18187e019c8`; that is not #181 evidence. #181 remains validation-blocked pending exact-head tests.
+- Status correction: PR #162 is still open and unmerged at `4bc9afaa0debec72fff8dc539e9e37f0fe6721c3`. The populated `merge_commit_sha` property did not mean it was merged; `merged=false` and `merged_at=null`.
+- PR #174 exact-head iOS run #44180080060 is successful on all 19 steps; PR #174 remains open/unmerged. PR #185 remains open/unmerged and diverged from #174 (1 ahead / 13 behind), so its six-file Workspace web change still needs careful reconciliation and fresh web CI.
+- No merge, deployment, APEX policy change, evidence authority change, or physical-device acceptance occurred.
+
+
+## 2026-11-17 — Native Workspace cancellation/readiness follow-ons observed
+
+- PR #186 (`codex/workspace-native-chat-abort-race`) remains a separate native Workspace bridge fix; exact-head CI [#44183512449](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44183512449) passed on `0f44072cb8c58f3d9cef1f943e8fcab4dd0198a6`.
+- New draft PR #189 ([readiness-state fix](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/189)) stacks on #186 and requires exact controller-session readiness plus shared local lease before showing Workspace as ready. It is outside the East cancellation branch; no changes made. Its workflow was still in progress at the latest check.
+
+
+## 2026-11-17 — East cancellation adapter and durable lifecycle integration
+
+- PR [#188](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/188) remains draft/open/unmerged. Branch `codex/east-provider-cancellation`; latest recorded head `b0cb700b8dcf17b300f6d0fe0fad3bd3aca1cddf`; base `codex/whole-product-execution-integration` at `8ee13921ac648915c3447b65e14120f29f89d786`.
+- Added optional caller cancellation to `RemoteInferenceProvider`, distinguishing timeout from caller abort; llama.cpp HTTP body and SSE readers now reject when cancellation arrives after response headers, after cancelling/draining the reader.
+- `runEastTaskWithLifecycle` now accepts a caller signal, forwards it into East agent/deliberation execution, persists cancellation only after the East operation settles, prevents subsequent step claims, and preserves already-completed lifecycle state if a late abort arrives. Restart test verifies a cancelled inference attempt is not replayed.
+- `TaskLifecycleCoordinator.cancelTask` is explicitly documented as state-only; hosts must stop/drain active workers before calling it. The East lifecycle adapter is the integrated signal -> provider drain -> durable cancel path.
+- Exact-head CI [#44188004686](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44188004686) completed successfully: JavaScript syntax, TypeScript build, and the full configured test step passed.
+- Safety boundary: cooperative cancellation cannot prove remote inference host GPU work stopped; no APEX authorization, signed Evidence, tenant RLS, physical iPhone acceptance, or merge is claimed.
+
+
+- Follow-up exact head `ebb047c958034071044702ae9b12329e8aea98e3` adds a PostgreSQL-store coordinator-restart regression: a drained cancellation persists as terminal, remains terminal after a fresh coordinator loads the same namespace, rejects the stale attempt, and cannot be claimed again. The test uses the transactional fake DB adapter, not a live PostgreSQL service. Exact-head CI [#44188338518](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44188338518) passed: JavaScript syntax, TypeScript build, and the full configured test suite.
+
+
+## 2026-11-17 — Workspace web-client stack rebased onto current dispatcher
+
+- PR [#191](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/191) is the active six-file Workspace web-client follow-on. Branch `codex/workspace-native-chat-client-on-174` is based directly on PR #174's verified head `8209c4784a1a715199dcb1ba5322241f5b24105a`; compare reports 6 commits ahead / 0 behind and exactly six changed paths under `apps/web`.
+- The rebase preserves the native bridge readiness/session/challenge flow, no-silent-server-fallback behavior, offline-shell registration, and synchronous AbortSignal cancellation regression. Existing web files were hash-compared at the old PR #185 base and current #174 head before transplant; all four shared base files were identical.
+- PR [#185](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/185) was closed as superseded by #191; no code was merged from #185. Its stale stack had been 1 commit ahead / 13 behind current #174.
+- PR #191 is open/draft/unmerged and GitHub reports it mergeable. No exact-head workflow run or combined status was surfaced for head `0e2368f01440bc5b7b636c40e818e349701d4794`; web validation remains pending. Do not treat prior #185 or #175 CI as evidence for #191.
+- PR #174 remains open/draft/unmerged at `8209c4784a1a715199dcb1ba5322241f5b24105a`; exact-head iOS workflow #44180080060 was previously verified successful across all 19 steps. This is hosted CI, not physical iPhone Air acceptance.
+- No PR was merged; no runtime trust, signed evidence, APEX authorization, or physical-device acceptance is claimed.
+
+
+## 2026-11-17 — Workspace readiness overlap isolated
+
+- Follow-up review found active PR [#189](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/189) overlaps PR #191 in `apps/web/app.js`. Its readiness correction requires a matching native `controllerSessions` record with `canGenerate === true` and `sharedLocalLeaseActive === true`; #191 currently only checks runtime availability plus a Local AI model lease before displaying its ready state.
+- To avoid colliding with the active PR #189 owner, no readiness hunk was copied or edited in #191. Coordination comments were left on both PRs. Keep the UI-ready claim blocked until this exact controller-session/shared-lease gate is integrated and tested.
+- PR #189 and #191 both currently have no exact-head PR-triggered workflow run surfaced. PR #191's commit combined status is also empty. Do not claim web tests passed; exact-head web CI remains pending.
+
+
+## 2026-11-17 — Workspace client rebased again after dispatcher advanced
+
+- PR #174 advanced from `8209c4784a1a715199dcb1ba5322241f5b24105a` to `ad3c049c17b08b8f8dae5f5302692f0b87d798a4`. The one-commit movement changed only `WorkspaceBridgeDispatcher.swift`, `WorkspaceView.swift`, and `WorkspaceBridgeDispatcherTests.swift`; none of the six web-client files changed.
+- Created replacement PR [#193](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/193), based directly on the new #174 head. It is exactly six commits ahead / zero behind with six changed web files. PR #193 is open/draft/unmerged.
+- Closed intermediate PR #191 as superseded; PR #191 was not merged. PR #185 and #191 are both closed/unmerged; #193 is the sole current Workspace web-client follow-on.
+- PR #189 remains active and overlaps `apps/web/app.js` with the controller-session readiness gate. No overlapping code was copied; keep UI-ready state blocked until `controllerSessions`, `canGenerate === true`, and `sharedLocalLeaseActive === true` are integrated and tested.
+- No exact-head workflow run or combined status is surfaced yet for PR #193 head `b7217f5eaededefcd4516cf3d015b3ac505e790a`. Web CI remains pending; prior runs on other heads do not validate #193.
+
+## 2026-11-17 — PR #188 compiled e3 cancellation boundary
+
+- Inspected PR #188's compiled entrypoint. The East async platform declarations and implementation callbacks carry task/agent identifiers only; they do not receive or forward a host AbortSignal. The `EastTaskLifecycleAdapter` signal path remains usable by direct callers, but compiled e3 task cancellation is not integrated or verified.
+- Upstream e3 source review found `OrchestratorStartOptions.signal`, `DataflowOrchestrator.cancel(handle)`, local run-signal propagation, and `stopLaunched` awaiting launched task promises. The local task runner passes cancellation to process execution, where cancellation stops spawned process groups. This is execution-level cancellation, not a documented graceful signal into the Pocket AI Lab platform callback; remote runners may acknowledge cancellation before work has stopped, and remote HTTP abort does not prove remote GPU termination.
+- Added this distinction and upstream source links to `docs/implementation/east-provider-cancellation.md`; updated PR #188 description and comment. Latest head `afaa072ace2bcd3a0037236d875ec6ce072a9cc1`; open/draft/unmerged/mergeable. No exact-head workflow run surfaced for the documentation-only commits. Previous full configured CI #44188338518 passed on `ebb047c958034071044702ae9b12329e8aea98e3`.
+- Next: pin actual deployed e3 package/runtime version and runner topology, connect its cancel handle to a host-owned provider lifecycle that can signal and drain work, then add real compiled-task integration and restart/recovery tests. Do not invent an unsupported platform callback or alter APEX authorization/Evidence contracts.
+
+- PR #188 documentation audit final head: `5dfaf58e2865a6210301c84557c8fb3427e7262a`. Upstream e3 main's package manifest reports `@elaraai/e3` 1.0.108, which falls within Pocket AI Lab's declared `^1.0.98` range, but no lockfile/deployed inventory proves that this is the installed version. Exact-head CI remains unsurfaced; the last full suite passed on preceding code head `ebb047c958034071044702ae9b12329e8aea98e3` (run #44188338518).
+
+## 2026-11-17 — Stacked Workspace readiness and CI trigger review
+
+- Refreshed #189/#193 state. #189 readiness fix is based on #186's abort-race branch and requires exact model/session match plus `canGenerate` and `sharedLocalLeaseActive`; #193 is based on #174, six ahead/zero behind its current head, but GitHub reports mergeable=false and its app.js does not include the #189 gate. Preserve both PRs as drafts and reconcile the stack before combined validation.
+- Found why #188's documentation-only exact head has no workflow run in the inspected branch: `.github/workflows/consumer-prototype-ci.yml` only triggers pushes on `main` and `codex/consumer-prototype-foundation`, and pull requests targeting `main`. #188 targets a non-main stacked branch. PR #189 separately changes push triggers to include `codex/**`; that change is not present on #188's branch. Previous CI #44188338518 remains valid only for earlier code head `ebb047c958034071044702ae9b12329e8aea98e3`, not docs head `5dfaf58e2865a6210301c84557c8fb3427e7262a`.
+- No code changes or merges made in this review; no APEX/Evidence/RLS changes and no physical-device acceptance.
+
+
+## 2026-11-17 — e3 cancellation API completion-barrier verification and live PR refresh
+
+- Re-read upstream e3-core source directly: `DataflowOrchestrator.start(..., { signal })` accepts a caller-owned AbortSignal; `cancel(handle)` aborts and records the cancellation but does not itself await the in-flight task promises. The local execution loop awaits its launched task promises (including `Promise.allSettled` in the stop path), and its completion promise resolves from the finally path only after workspace/dataflow locks are released. The host must await the execution completion barrier (`wait(handle)`) after cancellation; `cancel(handle)` alone is not proof of provider drain or resource-release completion.
+- Upstream source inspected: `libs/e3/packages/e3-core/src/dataflow/orchestrator/interfaces.ts`, `LocalOrchestrator.ts`, `libs/e3/packages/e3-core/src/execution/local-orchestrator.ts`, and e3-core package manifest. Upstream main currently reports e3/e3-core 1.0.108. This is source evidence for upstream main only, not proof of the deployed version.
+- Pocket AI Lab's #188 branch package.json declares `@elaraai/e3: ^1.0.98`; it has no npm/pnpm/Yarn lockfile and does not directly declare `@elaraai/e3-core`. Its start script uses `e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev`. The exact host/runner that owns the execution handle is still not identified. The e3 API client surface inspected documents launch/execute/poll; no remote cancellation/provider-drain guarantee was established.
+- Posted the verified distinction and required host integration test to PR #188 (comment 6963121353). No production code or dependency was changed because the actual deployed host and exact installed e3 version are not yet established; adding an assumed callback or unverified core dependency would be unsafe.
+- Live PR refresh: #188 remains open/draft/unmerged/mergeable at `5dfaf58e2865a6210301c84557c8fb3427e7262a`; no exact-head PR-triggered workflow run or combined status is present. Previous full configured suite #44188338518 applies only to prior code head `ebb047c958034071044702ae9b12329e8aea98e3`. #174 is open/draft/unmerged/mergeable at `91faba137d2cbce30b2b4cb83bdb906201536934`; iOS run #44190555756 is in progress. #186 and #189 have no exact-head PR-triggered runs surfaced. #193 remains open/draft/unmerged/mergeable at `b7217f5eaededefcd4516cf3d015b3ac505e790a`, but compare against current #174 head now reports diverged: 6 ahead / 1 behind (merge base `ad3c049c17b08b8f8dae5f5302692f0b87d798a4`). #193 must be rebased/reconciled again before combined validation. No combined statuses are present for these exact heads.
+- Safety boundary unchanged: no merge, no APEX/Evidence/RLS/trust change, no authorization change, and no physical iPhone acceptance.
+
+
+## 2026-11-17 — Stock e3 local runner forced-termination boundary
+
+- Deeper upstream source audit of `LocalTaskRunner.ts` and `processExec.ts` materially changes the cancellation design. The local runner forwards the dataflow AbortSignal into `spawnAndCapture`; abort invokes `stopProcessGroup`. On POSIX this sends SIGKILL to the task process group. On Windows it ends the job launcher/job object, or uses `taskkill /T /F` when the optional launcher is absent. No graceful SIGTERM hook is provided by this stock stop path.
+- The documented 5-second post-exit window drains/closes stdout/stderr pipes only; it is not provider settlement. A process-signal listener in `src/east/platform.ts` would be an incorrect fix because the East Node process can be forcibly terminated before provider/session cleanup or durable lifecycle finally blocks execute.
+- `LocalOrchestrator.wait(handle)` remains the e3 completion barrier, but under the stock local runner it proves the task process has stopped and locks have been released; it does not prove an in-process provider gracefully drained or a remote GPU stopped.
+- Updated `docs/implementation/east-provider-cancellation.md` on #188 branch; commit `86cb1e6b75ec4971253b1877c55094030efda353`. Posted correction and revised implementation recommendation to PR #188 (comment 6963293136).
+- Revised design recommendation: inference under a separately supervised host-owned service outside the e3 task process group. The host owning the e3 run handle must correlate run/task/provider-generation IDs, issue authenticated cancellation to the inference service, await provider settlement and lease release, fence late results, then persist cancellation. A custom e3 TaskRunner/execution adapter is an alternative only if it supplies equivalent cooperative supervisor semantics. Process exit/client disconnect alone never proves remote inference termination.
+- Required acceptance distinguishes cancel requested, task process terminated, inference service cancellation received, provider generation settled or explicitly unconfirmed, lease released, durable attempt cancelled, and restart/recovery no-replay/no-publish. No APEX/Evidence/RLS/authorization contract changed; no PR merged; no physical-device acceptance.
+
+
+## 2026-11-17 — PR #188 refined runner-stop audit and live status
+
+- Continued upstream audit establishes the stock local cancellation mechanics: `LocalTaskRunner.execute` forwards the e3 AbortSignal into `spawnAndCapture`; abort calls `stopProcessGroup`; POSIX sends SIGKILL to the process group, while Windows ends the Job Object/launcher or falls back to `taskkill /T /F`. No graceful SIGTERM callback reaches the East platform process. The bounded 5-second drain is for stdout/stderr pipes, not provider settlement.
+- Rejected the tempting module-level process signal listener in `src/east/platform.ts`: it is not a supported bridge and cannot guarantee provider/session cleanup under forced termination.
+- Identified existing request-scoped patterns in `runtime/lab/server.ts` and `apps/web/server.mjs`: HTTP response close aborts a controller passed to `runLabSession` / llama.cpp generation. These are useful implementation precedents but do not provide durable e3 run correlation, authenticated cancel-by-generation, settlement query after disconnect, or recovery state.
+- Updated #188's implementation doc with the forced-stop finding and existing host-side patterns. Latest #188 head `bc1c3e652fb37a1e8301f1e6611ded32d83bf6ab`; PR open/draft/unmerged. GitHub's mergeable flag currently reports false, while explicit commit comparison against base #157 head `8ee13921ac648915c3447b65e14120f29f89d786` reports cleanly ahead 25 / behind 0; treat mergeability as unsettled and do not merge. No exact-head PR workflow run or combined status is surfaced for this head. Prior CI evidence still applies only to earlier code head `ebb047c958034071044702ae9b12329e8aea98e3`.
+- Preferred design remains a separately supervised host-owned inference service outside the e3 task process group, with authenticated idempotent cancellation, stable run/task/provider-generation correlation, provider settlement and lease-release acknowledgement, late-result fencing, and durable restart/recovery. A custom TaskRunner is an alternative only if it demonstrably provides those semantics.
+- No APEX/Evidence/RLS/trust/authorization change, no PR merge, no physical-device acceptance.
+
+## 2026-11-17 — STRIDE-GPT donor review handoff recorded
+
+- Completed a read-only source-level comparison of `mrwadams/stride-gpt` and Pocket AI Lab. The 11-item donor inventory is recorded in [STRIDE-GPT-DONOR-REGISTER.md](STRIDE-GPT-DONOR-REGISTER.md).
+- Added [STRIDE-GPT-ENGINEERING-HANDOFF-2026-11-17.md](STRIDE-GPT-ENGINEERING-HANDOFF-2026-11-17.md) with proposed prototype order, D-02/D-04 acceptance contracts, feature-branch guidance, and explicit non-claims.
+- Added [stride-gpt-donor-integration.md](../docs/architecture/stride-gpt-donor-integration.md) to record the architecture decision: adapt targeted patterns only; do not replace Pocket Orchestrator, Deliberation, East, Memory, ToolDirector, provider abstraction, or APEX/Evidence trust boundaries.
+- Registered this documentation-only handoff in the active coordination table. No application paths are claimed.
+- No donor code copied; no application code/tests changed; no tests or CI run; no implementation branch or PR created; no PR merged.
+- Next action: refresh the full live board/log and verify exact path ownership before claiming D-02 (source-reference verifier) on a dedicated `codex/*` feature branch. D-04 follows only after finding/evidence-reference interfaces are stable.
+- Validation limitation: this is a source-level compatibility and documentation handoff, not a complete repository/dependency audit or production-safety certification. Source quote verification remains untrusted analysis metadata and cannot create signed Evidence, attestation, APEX approval, East authorization, or trusted receipts.
+
+## 2026-11-17 — STRIDE-GPT D-02 source-reference verifier prototype
 
 - Refreshed the active coordination board and checked current claims before implementation. No existing claim owned `runtime/adapters/director/LocalProjectInspector.ts` or its test file.
 - Found that Pocket already has a bounded read-only `LocalProjectInspector`: it resolves the workspace root, rejects traversal and symlink escapes, restricts text extensions, and bounds per-file and aggregate reads. D-02 was therefore implemented as an additive method on this adapter, not as a second filesystem sandbox.
@@ -3149,3 +4830,8 @@ Publication reconciliation: preserved concurrent coordination update `83d4834` f
 - Draft [#243](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/243) is stacked on #242 and publishes tested tree `a65c733c0b4a1b21d50387bb633a09e13d9185ae` at head `86cf4022874e1faf8bb8a24f9e9a25f792b03788`.
 - Local TypeScript build and 147 Cloudflare tests passed, including four new SQLite tests for stale writers, reopening, rollback, invalid data and bounded bytes. No hosted storage or inference ran.
 - Next integration work needs authenticated admission, independent task/release/consent verification, Durable Object hosting and a verified MCP endpoint. The sample Worker does not contain this code.
+
+## 2026-11-21 14:46 UTC - Document analysis MCP host ready for review
+
+- Draft [#244](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/244) on #243 at `8d03fa5da6e4ddf5b981ea550ab1332ec42de96f`. A read-only MCP tool returns lifecycle status for an existing attempt from SQLite-backed Durable Object storage. Local and [GitHub CI](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44915523960) validated Wrangler bundling, authenticated MCP discovery and lookup, rejected requests and persistence after a local workerd restart. PR #243 CI passed as well. Account deployment, live plugin connection and model execution remain pending.
+- Restored the full log from the parent of bd599c5 and retained the 14:38 storage handoff. That update had unintentionally inserted truncated command output.
