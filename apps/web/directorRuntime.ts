@@ -55,6 +55,7 @@ export async function createLocalDirectorTaskRuntime(
     capabilities,
     toolDirector,
     provider,
-    maxSteps: 8
+    maxSteps: 8,
+    availableCommands: ["analyze-project", ...(research ? ["research" as const] : [])]
   });
 }

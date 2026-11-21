@@ -16,6 +16,8 @@ import { ToolDirector, type ToolBuilder, type ToolSandbox, type ToolApprovalVeri
 import { DirectorCommandRouter, type DirectorCommandProvider } from "../director/DirectorCommandRouter";
 import { DirectorCapabilities, type ResearchProvider, type ProjectInspector, type MemoryImprovementAdvisor, type MemoryChangeApproval, type DevicePermissionBroker, type DeviceBridge } from "../director/DirectorCapabilities";
 import { GovernanceUploadInput, GovernanceUploadResult, handleScanTelemetryUpload as reviewScanTelemetry } from "./governanceReview";
+import type { CodeGenerationRequest, CodeGenerationResult } from "./CodeGeneration";
+export type { CodeGenerationRequest, CodeGenerationResult } from "./CodeGeneration";
 
 export interface TaskRequest {
   id: string;
@@ -55,6 +57,8 @@ export interface InferenceResult {
 
 export interface InferenceProvider {
   generate(request: InferenceRequest): Promise<InferenceResult>;
+  /** Optional, explicitly selected source contract; ordinary deliberation never invokes it. */
+  generateCode?(request: CodeGenerationRequest): Promise<CodeGenerationResult>;
 }
 
 const STAGE_PLAN: Record<DeliberationStage, AgentId[]> = {

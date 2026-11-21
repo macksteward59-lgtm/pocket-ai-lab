@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "experiment": "workshop-utf8-code-repair-baseline-v1",
+  "profile": "workshop-utf8-repair-qwen-coder-7b-baseline-v1",
+  "profileSHA256": "34356ece0f89dc96b5b7ebe0a9a1c172c6f3752a99e21df0a77540a0de602cb1",
+  "fixtureSHA256": "00b849a53254d1a28612b4d0bac2b15c24317a7c18af18fb36c52a27fe44ab6d",
+  "priorTrialHead": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+  "priorTrialRun": 44892136884,
+  "priorTrialArtifact": 14702552071,
+  "priorTrialOutcome": "V5 generated executable code but scored 1/8 development and 1/20 held-out, below baseline 3/8 and 4/20. Director chose complete with one revision still available; acceptance false. Its finding truncation flag was incorrect. V4's larger artifacts lost typed Director feedback before the planner, while Engineer compiler feedback was present.",
+  "hypothesis": "A separately selected ordinary 7B coding model can provide a useful code-and-control baseline through the existing harness when host test summaries survive bounded history projection. Actual independent grading determines the result; model capability is not presumed.",
+  "changes": [
+    "Official Qwen2.5-Coder-7B-Instruct Q4_K_M, immutable single-file publisher artifact, for both Director and Engineer; prior DeepSeek pins and app default remain unchanged.",
+    "Explicit host-artifact-summary-v1 projects outcome identity, grade counts and three bounded findings before the existing runner snapshot, with validated original/included counts and truthful truncation. Existing redaction and untrusted-history labels remain.",
+    "Omit the R1-specific reasoningBudget option; the existing server uses the loaded ordinary instruct model's chat template.",
+    "Provider timeout 300000ms and acquisition timeout 900000ms; baseline workflow limits acquisition16min/live70min/job120min. These enlarge time ceilings only, not tokens, attempts or retries.",
+    "Record actual OS/CPU/memory/disk snapshots before inference, without claiming peak memory or iPhone fit."
+  ],
+  "unchanged": [
+    "existing inference abstraction, llama.cpp source pin, ToolDirector, artifact store and actual Docker executor",
+    "python-source-v2 schema-only prompts, source schema/parser and exact-byte preservation",
+    "Director SYSTEM/action protocol, initial objective and remaining-attempt callback",
+    "temperature0/seed42/context4096/maxTokens1024/threads2/GPU0",
+    "eight development and twenty held-out cases, literal answers and baseline source",
+    "two Engineer generations, three Director turns and zero provider repair retries",
+    "latest-candidate freeze before held-out evaluation, host grading, cleanup and model-integrity gates"
+  ],
+  "stoppingRule": "Run one predeclared baseline trial. Retain success, incorrect code, false completion, malformed output, early stop or failure unchanged. Do not tune prompts or expand tokens/attempts after observing results. A setup failure before inference may receive a separately recorded infrastructure correction; it is not a model quality score.",
+  "interpretation": "New model and feedback configuration, not v6 prompt tuning or a model-only causal comparison. Preserve all v1-v5 records. The known held-out fixture is withheld from model revision context but reused, not a fresh generalization benchmark. No handwritten source substitution, default promotion, weight training, internal-language speedup, broad reliability or native-device acceptance claim."
+}

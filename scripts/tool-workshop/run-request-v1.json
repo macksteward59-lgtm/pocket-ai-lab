@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "experiment": "workshop-utf8-code-repair-v1",
+  "profile": "workshop-utf8-repair-deepseek-v1",
+  "implementationHead": "b8987cf87431a3f1c13c65029bde6aa389c82051",
+  "implementationTree": "75451879274dd52d4d203a34602ab56f81e632ba",
+  "fixtureSHA256": "00b849a53254d1a28612b4d0bac2b15c24317a7c18af18fb36c52a27fe44ab6d",
+  "profileSHA256": "8e237da1b181a006acc28f70ab4b2214aaf9f5f69886e34446851541916b8c5c",
+  "pr": 241,
+  "validatedSandboxRun": 44877813168,
+  "validatedRepositoryCIRun": 44877813128,
+  "sandboxArtifactId": 14696373481,
+  "sandboxArtifactSHA256": "f85b1e11da3ca06553889ee0d7dae17ccf47dae22752023db2832cb1dea49363",
+  "trigger": "One explicit live-model attempt after the real-Docker controls passed.",
+  "interpretation": "Retain the model outcome, including failure or blocked/incomplete evidence. No fixture-source fallback, automatic retry, activation, production-source edits, or weight training."
+}

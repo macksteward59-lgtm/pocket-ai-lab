@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "experiment": "workshop-utf8-code-repair-v2",
+  "previousHead": "4560f791ee13c9774ede532364cee448b1fcbafb",
+  "previousRun": 44879587482,
+  "failedJob": 136771959605,
+  "failedStage": "Existing GitHub source-tag verification, before compilation or model inference",
+  "observedModelCalls": 0,
+  "reason": "Anonymous GitHub API lookup returned HTTP403 rate limit exceeded.",
+  "change": "Permit optional read-only GitHub authentication for the existing exact tag lookup and scoped annotated-tag peel. CI supplies it only to the server-build step.",
+  "unchanged": ["tag/commit/tarball/header verification", "v1 and v2 model profiles", "planner and Engineer prompts", "model artifact", "fixture", "budgets", "grading", "model and candidate execution environments"]
+}
