@@ -140,6 +140,11 @@ def review(args):
                     "review_status": "awaiting_source_review" if figures_match else "needs_correction",
                     "receipt": receipt,
                 }
+                if args.activity_record:
+                    # Share the review without session IDs, provider internals or duplicate payloads.
+                    report["receipt"] = {field: receipt[field] for field in
+                                         ("ok", "model", "provider", "final")}
+                    report["format"] = "pocket-ai-lab.ci-review.v1"
                 print(json.dumps(report, indent=2))
             finally:
                 server.terminate()
@@ -155,4 +160,6 @@ if __name__ == "__main__":
     parser.add_argument("--gguf", type=Path, required=True)
     parser.add_argument("--openclaw", default="openclaw")
     parser.add_argument("--llama-server", default="llama-server")
+    parser.add_argument("--activity-record", action="store_true",
+                        help="Export the compact owner-facing record for the Activity view")
     review(parser.parse_args())

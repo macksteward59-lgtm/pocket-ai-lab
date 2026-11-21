@@ -23,3 +23,19 @@ The script installs the locked OpenClaw package in a temporary directory, downlo
 ## Evidence and review
 
 The sole input, [pr-245.txt](pr-245.txt), is the PR #245 evidence note (Cloudflare UUID `fbeaf347-16ee-5111-923f-e5812e8938c6`, revision 1), saved verbatim with a trailing newline. A fresh run uses an empty workspace, a loopback-only model server, tool denial and an empty list of model fallbacks. It prints a JSON receipt containing the evidence digest, model digest, provider, model, reported usage and draft text. The request disables tool calling at the model transport and constrains the draft to three labeled lines. The model writes the summaries and selects one of the limits identified in the fixed evidence. The runner compares the reported job ID and local test counts against the evidence. A mismatch marks the draft **Needs correction**. The summary displays the source job and local counts alongside the draft so a reviewer can see the discrepancy. Matched figures still require a human or ChatGPT source review before saving. A transport failure produces no report.
+
+### Review the result in Pocket AI Lab
+
+In the consumer app, open **Activity** to compare the bundled PR #245 model draft with the repository evidence and its source job. The app prepares a handoff summary directly from the recorded job, local counts and evidence limits, including when the model omits them. Use **Prepare a memory note** to edit your assessment and **Save memory** to keep it on the local server. It can then be reopened in **Memory** after a restart. Imported drafts remain unverified. The file picker reads the selected file on the device.
+
+A new run can produce a compact file for that same view. The original full JSON output is also accepted. The compact export omits session IDs and internal provider metadata.
+
+```bash
+tools/openclaw-review/run-linux.sh --activity-record > review.json
+```
+
+### Native evaluation handoff
+
+Activity also opens a single JSON attempt exported from the native self-evaluation history in PR #248. Select the file and paste the event SHA-256 copied separately from that history. The browser checks the original Swift payload bytes on the device before showing the reported model, status and output. **Prepare an evaluation note** copies the summary and event digest to the existing Memory editor. The owner decides what to save. The record stays unverified in Memory.
+
+The cross-platform workflow builds the pinned Swift exporter on macOS, reopens its fixture journal, checks the export with the independent Python reader, then supplies the same bytes and digest to the Chromium and WebKit tests. Both browser runs check rejection of altered data and recover the saved notes after a server restart. The fixture has an explicitly unverified provider.

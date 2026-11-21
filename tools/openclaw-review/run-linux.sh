@@ -28,4 +28,4 @@ fetch_checked \
 
 python3 "$here/review.py" --gguf "$stage/model.gguf" \
   --openclaw "$stage/node_modules/.bin/openclaw" \
-  --llama-server "$stage/llama-b12608/llama-server"
+  --llama-server "$stage/llama-b12608/llama-server" "$@"

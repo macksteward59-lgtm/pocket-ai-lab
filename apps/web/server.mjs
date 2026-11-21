@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -245,6 +246,31 @@ export function createServer() {
           drain(req);
           return rejectLocal(res);
         }
+      }
+      if (url.pathname === "/api/activity/openclaw-245" && req.method === "GET") {
+        const pilot = path.resolve(root, "../../tools/openclaw-review");
+        const [source, saved] = await Promise.all([
+          readFile(path.join(pilot, "pr-245.txt")),
+          readFile(path.join(pilot, "pr-245.activity.json"), "utf8")
+        ]);
+        const evidence = source.toString("utf8").split("\nReview request:")[0];
+        const job = /^CI evidence: (https:\/\/github\.com\/macksteward59-lgtm\/pocket-ai-lab\/actions\/runs\/\d+\/job\/(\d+))$/m.exec(evidence);
+        const counts = /(\d+) provider, lifecycle and compatibility tests passed across (\d+) files/.exec(evidence);
+        const summary = evidence.split("\n").filter(line =>
+          line.startsWith("The local-worker") || line.startsWith("ChatGPT independently"));
+        const hosted = summary[0]?.split(". ", 1)[0];
+        const limits = /The tests do not establish [^\n]+/.exec(summary[1] || "");
+        if (!job || !counts || summary.length !== 2 || !hosted || !limits) {
+          throw new Error("Project review evidence is incomplete.");
+        }
+        const sourceSummary = hosted + ". Independent local validation passed " + counts[1] +
+          " tests in " + counts[2] + " files. " + limits[0];
+        return json(res, 200, {
+          sourceSummary,
+          job: job[1], jobId: job[2], localTests: Number(counts[1]), localFiles: Number(counts[2]),
+          evidence: summary.join("\n\n"), digest: createHash("sha256").update(source).digest("hex"),
+          bundled: JSON.parse(saved)
+        });
       }
       if (url.pathname === "/api/health" && req.method === "GET") {
         const cfg = llamaProviderConfig();
@@ -543,5 +569,6 @@ export function createServer() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const host = process.env.HOST || "127.0.0.1";
   assertLoopbackHost(host);
-  createServer().listen(port, host, () => console.log("Pocket AI Lab web app listening on http://" + host + ":" + port));
+  const server = createServer();
+  server.listen(port, host, () => console.log("Pocket AI Lab web app listening on http://" + host + ":" + server.address().port));
 }
