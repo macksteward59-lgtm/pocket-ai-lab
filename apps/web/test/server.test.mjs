@@ -290,6 +290,54 @@ test("memory API edits entries explicitly and persists the revised unverified re
   }
 });
 
+test("a memory content edit preserves the stored citations and their provenance", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-memory-source-refs-"));
+  try {
+    const { FileMemoryStore } = await import("../../../packages/intelligence/memory/FileMemoryStore.ts");
+    const { MemoryManager } = await import("../../../packages/intelligence/memory/MemoryManager.ts");
+    const store = await FileMemoryStore.open(directory);
+    const seed = new MemoryManager(store);
+    await seed.init();
+    const refs = ["Research notes, section 4", "https://example.org/evidence?a=one,two"];
+    const id = await seed.write({
+      layer: "episodic", content: "Initial finding",
+      provenance: { agentId: "reviewer", taskId: "reading-1", verified: false, sourceRefs: refs }
+    });
+    await seed.markVerified(id, true);
+    const [before] = seed.list();
+    await store.close();
+    await withServer(async url => {
+      const put = payload => fetch(url + "/api/memory/" + id, {
+        method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(payload)
+      });
+      const reply = await put({ content: "Edited finding" });
+      assert.equal(reply.status, 200);
+      const after = (await reply.json()).entry;
+      assert.deepEqual(after, { ...before, content: "Edited finding", provenance: { ...before.provenance, verified: false } });
+      const reopened = await FileMemoryStore.open(directory);
+      try {
+        assert.deepEqual(await reopened.load(), [after]);
+        for (const invalid of [{ sourceRefs: "bad" }, { sourceRefs: [null] },
+          { sourceRefs: [" "] }, { sourceRefs: ["x".repeat(501)] }, { sourceRefs: [], source: "ambiguous" }]) {
+          assert.equal((await put({ content: "Invalid edit", ...invalid })).status, 400);
+        }
+        assert.deepEqual(await reopened.load(), [after]);
+        const revised = ["New source, appendix A", refs[1]];
+        const replace = await put({ content: after.content, sourceRefs: revised });
+        assert.equal(replace.status, 200);
+        assert.deepEqual((await replace.json()).entry.provenance.sourceRefs, revised);
+        const clear = await put({ content: after.content, sourceRefs: [] });
+        assert.equal(clear.status, 200);
+        assert.deepEqual((await reopened.load())[0].provenance.sourceRefs, []);
+      } finally {
+        await reopened.close();
+      }
+    }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("memory API rejects blank and oversized content", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-invalid-"));
   try {

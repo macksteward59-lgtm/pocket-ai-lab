@@ -99,10 +99,11 @@ function renderMemories(entries){
   const meta=memoryElement("div","memory-entry-meta");
   meta.append(memoryElement("span","memory-provenance","Saved by "+(entry.provenance?.agentId||"unknown")));
   meta.append(memoryElement("span",entry.provenance?.verified?"memory-verified":"memory-unverified",entry.provenance?.verified?"Verified separately":"Unverified · not independently checked"));
-  if(Array.isArray(entry.provenance?.sourceRefs)&&entry.provenance.sourceRefs.length){
-   const source=memoryElement("p","memory-source","Source: "+entry.provenance.sourceRefs.join(", "));
-   card.append(header,content,meta,source);
-  }else card.append(header,content,meta);
+  card.append(header,content,meta);
+  const originalSources=entry.provenance?.sourceRefs||[];
+  for(const ref of originalSources){
+   card.append(memoryElement("p","memory-source","Source: "+ref));
+  }
   const actions=memoryElement("div","memory-entry-actions");
   const edit=memoryElement("button","secondary-button","Edit");
   edit.type="button";
@@ -115,12 +116,24 @@ function renderMemories(entries){
    contentInput.required=true;
    contentInput.value=entry.content||"";
    contentLabel.append(contentInput);
-   const sourceLabel=memoryElement("label","","Source reference (optional)");
-   const sourceInput=memoryElement("input");
-   sourceInput.type="text";
-   sourceInput.maxLength=500;
-   sourceInput.value=Array.isArray(entry.provenance?.sourceRefs)?entry.provenance.sourceRefs.join(", "):"";
-   sourceLabel.append(sourceInput);
+   const sources=memoryElement("div","memory-editor-sources");
+   const sourceFields=[];
+   function addSource(original=""){
+    const label=memoryElement("label","","Source "+(sourceFields.length+1)+" (optional)");
+    const field=memoryElement("textarea");
+    field.rows=1;
+    field.maxLength=500;
+    field.value=original;
+    sourceFields.push({field,original,initial:field.value});
+    label.append(field);
+    sources.append(label);
+    return field;
+   }
+   if(originalSources.length)originalSources.forEach(ref=>addSource(ref));
+   else addSource();
+   const add=memoryElement("button","secondary-button","Add source");
+   add.type="button";
+   add.addEventListener("click",()=>addSource().focus());
    const controls=memoryElement("div","memory-editor-actions");
    const save=memoryElement("button","primary-button","Save changes");
    save.type="submit";
@@ -128,18 +141,25 @@ function renderMemories(entries){
    cancel.type="button";
    cancel.addEventListener("click",loadMemories);
    controls.append(cancel,save);
-   editor.append(contentLabel,sourceLabel,controls);
+   editor.append(contentLabel,sources,add,controls);
    editor.addEventListener("submit",async event=>{
     event.preventDefault();
     const value=contentInput.value.trim();
     if(!value)return;
+    const patch={content:value};
+    if(sourceFields.some(({field,initial})=>field.value!==initial)){
+     patch.sourceRefs=sourceFields.flatMap(({field,initial,original})=>{
+      const ref=field.value===initial?original:field.value.trim();
+      return ref?[ref]:[];
+     });
+    }
     save.disabled=true;
     $( "memory-status" ).textContent="Updating memory…";
     try{
      const response=await fetch("/api/memory/"+encodeURIComponent(entry.id),{
       method:"PUT",
       headers:{"content-type":"application/json"},
-      body:JSON.stringify({content:value,source:sourceInput.value.trim()})
+      body:JSON.stringify(patch)
      });
      const data=await response.json().catch(()=>({}));
      if(!response.ok)throw new Error(data.error||"Memory could not be updated.");

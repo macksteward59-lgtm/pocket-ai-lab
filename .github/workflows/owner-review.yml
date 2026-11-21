@@ -3,7 +3,7 @@ on:
   push:
     branches: [codex/owner-review-integrated]
   pull_request:
-    branches: [main]
+    branches: [main, codex/owner-review-integrated]
     paths:
       - apps/web/**
       - tools/openclaw-review/**
