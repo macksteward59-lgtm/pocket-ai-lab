@@ -1,10 +1,11 @@
-import type { InferenceProvider, InferenceResult } from "../../../packages/intelligence/orchestrator/Orchestrator";
+import type { InferenceProvider } from "../../../packages/intelligence/orchestrator/Orchestrator";
 import type { ToolArtifact, ToolBuilder, ToolBuildSpec } from "../../../packages/intelligence/tooling/ToolDirector";
 
 export const INFERENCE_TOOL_FILENAME = "candidate.py";
 const MAX_GENERATIONS = 2;
 const MAX_SOURCE_BYTES = 16_384;
 const MAX_RECORDED_OUTPUT_BYTES = 65_536;
+export type InferenceToolSourceContract = "independent-analysis" | "python-source-v1";
 
 export interface InferenceToolBuilderOptions {
   provider: InferenceProvider;
@@ -13,6 +14,8 @@ export interface InferenceToolBuilderOptions {
   spec: ToolBuildSpec;
   maxGenerations?: number;
   maxSourceBytes?: number;
+  /** Explicit opt-in. Historical experiments keep their original independent-analysis path. */
+  sourceContract?: InferenceToolSourceContract;
   now?: () => number;
 }
 
@@ -24,8 +27,9 @@ export interface InferenceToolBuildAttempt {
   readonly completedAt: string | null;
   readonly durationMs: number | null;
   readonly status: "running" | "succeeded" | "failed";
-  /** Serialized InferenceResult, not the provider's original pre-parser tokens. */
+  /** Legacy: serialized InferenceResult. python-source-v1: exact backend message content (bounded). */
   readonly rawOutput: string | null;
+  readonly sourceContract?: "python-source-v1";
   readonly rawOutputTruncated: boolean;
   readonly sourceBytes: number | null;
   readonly error: string | null;
@@ -43,6 +47,7 @@ export class InferenceToolBuilder implements ToolBuilder {
   private readonly specJson: string;
   private readonly maxGenerations: number;
   private readonly maxSourceBytes: number;
+  private readonly sourceContract: InferenceToolSourceContract;
   private readonly now: () => number;
   private readonly attempts: InferenceToolBuildAttempt[] = [];
 
@@ -54,6 +59,13 @@ export class InferenceToolBuilder implements ToolBuilder {
       throw new Error("InferenceToolBuilder requires a bounded modelId");
     }
     this.provider = options.provider;
+    this.sourceContract = options.sourceContract ?? "independent-analysis";
+    if (!["independent-analysis", "python-source-v1"].includes(this.sourceContract)) {
+      throw new Error("Unsupported tool source contract");
+    }
+    if (this.sourceContract === "python-source-v1" && typeof this.provider.generateCode !== "function") {
+      throw new Error("python-source-v1 requires InferenceProvider.generateCode; no analysis fallback is available");
+    }
     this.modelId = options.modelId;
     this.spec = snapshotSpec(options.spec);
     if (this.spec.change !== "revise") throw new Error("Host repair specification must use change=revise");
@@ -88,7 +100,9 @@ export class InferenceToolBuilder implements ToolBuilder {
 
     const prompt = [
       "Produce a repaired Python module for this host-defined tool experiment.",
-      "Return the raw Python source in the independent payload's analysis string. Do not include Markdown fences, prose, a filename, or a test score.",
+      this.sourceContract === "python-source-v1"
+        ? 'Return the complete Python module in the code payload\'s source string: {"source":"Python source"}. Do not include Markdown fences, prose, a filename, or a test score.'
+        : "Return the raw Python source in the independent payload's analysis string. Do not include Markdown fences, prose, a filename, or a test score.",
       "The only output file is " + INFERENCE_TOOL_FILENAME + ". Keep the source within " + this.maxSourceBytes + " UTF-8 bytes.",
       "Implement the host specification exactly. Do not change its requirements or invent additional tools or permissions.",
       "Host-owned specification:",
@@ -117,6 +131,7 @@ export class InferenceToolBuilder implements ToolBuilder {
       completedAt: null,
       durationMs: null,
       status: "running",
+      ...(this.sourceContract === "python-source-v1" ? { sourceContract: this.sourceContract } : {}),
       rawOutput: null,
       rawOutputTruncated: false,
       sourceBytes: null,
@@ -130,6 +145,25 @@ export class InferenceToolBuilder implements ToolBuilder {
     let status: "succeeded" | "failed" = "failed";
     let errorMessage: string | null = null;
     try {
+      if (this.sourceContract === "python-source-v1") {
+        const result = await this.provider.generateCode!({
+          modelId: this.modelId, language: "python", prompt, maxSourceBytes: this.maxSourceBytes
+        });
+        const captured = typeof result?.rawOutput === "string" ? recordText(result.rawOutput) : recordOutput(result);
+        rawOutput = captured.content;
+        rawOutputTruncated = captured.truncated;
+        if (!isRecord(result) || typeof result.source !== "string" || typeof result.rawOutput !== "string" ||
+            Object.keys(result).some(key => key !== "source" && key !== "rawOutput")) {
+          throw new Error("Model must return a code-generation source string and raw output");
+        }
+        sourceBytes = Buffer.byteLength(result.source, "utf8");
+        if (Buffer.from(result.source, "utf8").toString("utf8") !== result.source) {
+          throw new Error("Candidate source must contain valid Unicode scalar values");
+        }
+        const source = validateSource(result.source, this.maxSourceBytes);
+        status = "succeeded";
+        return { files: { [INFERENCE_TOOL_FILENAME]: source } };
+      }
       const result = await this.provider.generate({
         agentId: "engineer",
         modelId: this.modelId,
@@ -153,6 +187,12 @@ export class InferenceToolBuilder implements ToolBuilder {
       status = "succeeded";
       return { files: { [INFERENCE_TOOL_FILENAME]: source } };
     } catch (error) {
+      if (rawOutput === null && this.sourceContract === "python-source-v1" &&
+          isRecord(error) && typeof error.rawOutput === "string") {
+        const captured = recordText(error.rawOutput);
+        rawOutput = captured.content;
+        rawOutputTruncated = captured.truncated;
+      }
       errorMessage = (error instanceof Error ? error.message : String(error)).slice(0, 2000);
       throw error;
     } finally {
@@ -213,10 +253,14 @@ function boundedInteger(value: number, name: string, maximum: number): number {
   return value;
 }
 
-function recordOutput(result: InferenceResult): { content: string; truncated: boolean } {
+function recordOutput(result: unknown): { content: string; truncated: boolean } {
   let content: string;
   try { content = JSON.stringify(result) ?? "undefined"; }
   catch { return { content: "[Unserializable InferenceResult]", truncated: false }; }
+  return recordText(content);
+}
+
+function recordText(content: string): { content: string; truncated: boolean } {
   const bytes = Buffer.from(content, "utf8");
   if (bytes.length <= MAX_RECORDED_OUTPUT_BYTES) return { content, truncated: false };
   let end = MAX_RECORDED_OUTPUT_BYTES;

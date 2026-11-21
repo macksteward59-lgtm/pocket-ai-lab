@@ -6,13 +6,14 @@
  *   - payload: structured stage object required by PR #1
  *   - text: raw backend text required by main's current InferenceResult
  * Extra fields are ignored by whichever orchestrator consumes the result.
- * The InferenceProvider interface is not modified here.
+ * The optional generateCode() method uses a distinct source contract;
+ * ordinary generate() keeps its original deliberation payload behavior.
  *
  * Model output is untrusted. evidenceRefs and verification flags are copied
  * only when the model supplied them. They are not APEX receipts or approvals.
  */
 
-import type { InferenceProvider, InferenceRequest } from "../../../packages/intelligence/orchestrator/Orchestrator";
+import type { CodeGenerationRequest, CodeGenerationResult, InferenceProvider, InferenceRequest } from "../../../packages/intelligence/orchestrator/Orchestrator";
 import type { LlamaCppBackend, LlamaCppCompletionParams, LlamaCppServerInfo } from "./backend";
 import { normalizeLlamaCppConfig, type LlamaCppProviderConfig, type LlamaCppProviderConfigInput } from "./config";
 import { classifyAbort, isAbortError, LlamaCppInferenceError } from "./errors";
@@ -25,6 +26,7 @@ import {
 import { parseLlamaCppOutput } from "./parseOutput";
 import { buildLlamaCppMessages, buildLlamaCppPrompt, isChatRequest, type LlamaCppChatMessage } from "./prompt";
 import type { LlamaCppInferenceResult } from "./result";
+import { generateLlamaCppCode } from "./codeGeneration";
 
 export type { LlamaCppInferenceResult } from "./result";
 
@@ -64,6 +66,11 @@ export class LlamaCppInferenceProvider implements InferenceProvider {
     options?: LlamaCppGenerateOptions
   ): Promise<LlamaCppInferenceResult> {
     return this.run(request, options, undefined);
+  }
+
+  /** Explicit candidate source contract. Uses the same backend but never retries or enters deliberation stages. */
+  async generateCode(request: CodeGenerationRequest, options?: LlamaCppGenerateOptions): Promise<CodeGenerationResult> {
+    return generateLlamaCppCode(request, this.config, this.backend, options?.signal);
   }
 
   /**

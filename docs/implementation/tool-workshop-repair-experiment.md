@@ -57,7 +57,7 @@ A v2 success would not pass v1's native function-calling gate or establish a
 general autonomous-repair success rate.
 
 The v1 profile bytes remain unchanged. profile.mjs verifies each independently
-frozen profile hash and only accepts an explicit v1, v2 or v3 selector. The default
+frozen profile hash and only accepts an explicit v1, v2, v3 or v4 selector. The default
 remains v1; there is no automatic profile switch after failure.
 
 ### Observed v2 dispatch and separate v3 output-budget diagnostic
@@ -80,6 +80,50 @@ ceiling, fixture, two-generation/three-turn budgets and held-out gate. It does n
 reinterpret reasoning as source or relax the response parser. Each profile and
 outcome remains separately identified. A timing difference would not establish
 a learned internal language or a general speedup.
+
+## Observed v3 and the separate v4 code contract
+
+[V3 workflow 44881077624](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44881077624)
+at source `d3294457e65e59a3d4d53510441f5a6b79474852` made five real model calls.
+Two Engineer outputs were retained, executed and returned as feedback. Both were
+700-character prose and failed with Python syntax errors: 0/8 development each,
+final 0/20 held-out versus baseline 4/20. The Director claimed complete despite
+quarantined failures. Host quality acceptance was false. All 64 containers were
+cleaned up and the model hash was unchanged. The raw record is preserved in the
+[coordination evidence](https://github.com/macksteward59-lgtm/pocket-ai-lab/tree/a00fc33c51fe21b829adc06c69ea69ddea8621c6/coordination/evidence/tool-workshop-repair-2026-11-21).
+
+The existing Engineer system asked for a short analysis in 2–5 sentences while
+the task requested raw Python. That inconsistency is a confound, not proof of
+the sole cause; a correct small function fits below the old 700-character cap.
+
+V4 explicitly selects `InferenceProvider.generateCode` and `python-source-v1`.
+The existing llama.cpp provider delegates to a consistent code-only contract:
+one JSON object with a `source` string, no analysis-stage instruction, fixed
+Python language and bounded source. It uses the same backend, model settings,
+timeout and one completion attempt. Providers without this optional capability
+are rejected; there is no fallback into ordinary analysis. Standard `generate`
+and its stage schemas/parsers retain their previous behavior.
+
+Source bytes are preserved exactly. Invalid JSON, extra/duplicate fields,
+function calls, Markdown fences, NUL, invalid Unicode or oversized source fail
+closed. Syntactic or semantic Python mistakes are left to actual sandbox
+execution and independent host grading, not rewritten by the host.
+
+V4 also opts into bounded compiler/process diagnostics for development results.
+The final stderr line and a bounded stderr tail are labeled untrusted candidate
+output, with explicit truncation and execution-status fields. Raw process bytes
+remain in evidence. Ordinary wrong-answer findings without process diagnostics
+retain their original form, including the initial Director objective. Held-out
+adapters do not enable diagnostics and still run only after the final candidate
+is frozen. A real Docker syntax-failure control verifies this feedback path even
+if the live model does not need a second revision.
+
+The fixture, model, Director protocol, sampling, context, 1,024-token limit,
+128-token thinking cap, two generations/three Director turns, selection and
+acceptance rules are unchanged from v3. This is a new configuration trial, not
+a rescore. The known held-out fixture is withheld from each model revision
+context; reusing it does not create a fresh generalization benchmark. No result
+from this single task establishes whole-harness reliability or language speedup.
 
 ## Recovered existing implementation
 
@@ -114,7 +158,7 @@ nonexistent.
 5. A model-selected develop-tool revision calls InferenceToolBuilder using the
    existing Engineer inference interface.
 6. The Engineer receives the previous candidate and development feedback,
-   returning one raw Python module in payload.analysis.
+   returning one raw Python module in payload.analysis for v1–v3 or in the dedicated source field for v4.
 7. ToolDirector records the version, invokes the sandbox and records actual
    findings. The next Director turn receives a compact outcome-first observation.
 8. The model may request at most two source generations in total, or stop. The
@@ -155,9 +199,10 @@ DeepSeek-R1-Distill-Qwen-1.5B Q4_K_M pin:
 - Context 4,096; maximum response 1,024 tokens; temperature zero; seed 42.
 - At most three Director turns and two Engineer generations.
 - No provider-level output repair retries or alternative model fallback.
-- The existing independent-stage analysis schema still limits source to 700
-  characters. The builder's larger byte ceiling does not expand that provider
-  schema.
+- Profiles v1–v3 retain the existing independent-stage analysis schema, which
+  limits source to 700 characters. V4 explicitly selects the dedicated code
+  contract with the existing 16,384-byte source cap; it does not change ordinary
+  analysis schemas or implicitly switch older profiles.
 
 This profile is a separate experiment. It does not alter the native eight-case
 DeepSeek qualification, its parser, its 1/8 outcome, or its evidence.
@@ -229,7 +274,8 @@ Source changes can improve an agent's tool without changing the model's weights.
 2. check-sandbox.mjs executes fixture-authored code in actual Docker. It checks
    failing baseline, corrected revision, durable reopen, host answer comparison,
    read-only/nonroot/network separation, environment exclusion, timeout and
-   output-limit handling. It is not model evidence.
+   output-limit handling. A separate intentionally invalid source checks actual
+   Python syntax-error feedback and quarantine. It is not model evidence.
 3. run-repair.mjs starts the pinned real model server and uses its responses for
    Director decisions and Engineer code. Its quality outcome is separate from
    the software/container checks.
@@ -239,6 +285,7 @@ ordinary pushes run contracts and actual sandbox checks. A workflow dispatch or
 an explicit [workshop-live-v1] commit marker runs v1 after those checks pass.
 An explicit [workshop-live-v2] marker selects the separate v2 trial.
 An explicit [workshop-live-v3] marker selects the v3 thinking-budget diagnostic.
+An explicit [workshop-live-v4] marker selects the consistent code-contract trial.
 
 ## Host entry points
 
@@ -258,6 +305,7 @@ a new private directory outside the source checkout. Then run:
 Set POCKET_WORKSHOP_PROFILE=v2 only for the separate structured-action trial;
 omit it or set v1 to retain the original native function-call profile.
 Set v3 only for the separate bounded-thinking profile.
+Set v4 only for the explicit source-generation and compiler-feedback contract.
 
 Missing capabilities stop the attempt. Local development in the current
 workspace has no Docker daemon and cannot claim actual candidate execution.

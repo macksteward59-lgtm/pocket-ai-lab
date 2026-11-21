@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { InferenceProvider, InferenceRequest, InferenceResult } from "../../../packages/intelligence/orchestrator/Orchestrator";
+import type { CodeGenerationRequest, CodeGenerationResult, InferenceProvider, InferenceRequest, InferenceResult } from "../../../packages/intelligence/orchestrator/Orchestrator";
 import type { ToolArtifact, ToolBuildSpec } from "../../../packages/intelligence/tooling/ToolDirector";
 import { INFERENCE_TOOL_FILENAME, InferenceToolBuilder } from "./InferenceToolBuilder";
+import { LlamaCppInferenceProvider } from "../llama-cpp/LlamaCppInferenceProvider";
 
 function repairSpec(): ToolBuildSpec {
   return {
@@ -160,5 +161,114 @@ describe("InferenceToolBuilder", () => {
     expect(() => new InferenceToolBuilder({ ...options, maxGenerations: 3 })).toThrow(/maxGenerations/);
     expect(() => new InferenceToolBuilder({ ...options, maxSourceBytes: 16_385 })).toThrow(/maxSourceBytes/);
     expect(() => new InferenceToolBuilder({ ...options, spec: { ...repairSpec(), change: "create" } })).toThrow(/change=revise/);
+  });
+});
+
+describe("InferenceToolBuilder explicit code contract (test providers)", () => {
+  it("opts into generateCode and preserves source and exact message content without analysis instructions", async () => {
+    let received: CodeGenerationRequest | undefined;
+    let legacyCalls = 0;
+    const source = "\n# " + "x".repeat(710) + "\npass\n";
+    const rawOutput = JSON.stringify({ source }, null, 2) + "\n";
+    const builder = new InferenceToolBuilder({
+      provider: {
+        async generate() { legacyCalls++; throw new Error("Unexpected legacy analysis request"); },
+        async generateCode(input) { received = input; return { source, rawOutput }; }
+      },
+      modelId: "fixture-model", spec: repairSpec(), sourceContract: "python-source-v1"
+    });
+    await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() }))
+      .resolves.toEqual({ files: { "candidate.py": source } });
+    expect(legacyCalls).toBe(0);
+    expect(received).toMatchObject({ modelId: "fixture-model", language: "python", maxSourceBytes: 16_384 });
+    expect(received!.prompt).toContain('code payload\'s source string: {"source":"Python source"}');
+    expect(received!.prompt).not.toContain("independent payload");
+    expect(builder.getAttempts()[0]).toMatchObject({ sourceContract: "python-source-v1", status: "succeeded",
+      rawOutput, rawOutputTruncated: false, sourceBytes: Buffer.byteLength(source, "utf8") });
+  });
+
+  it("keeps the legacy path even when the provider also supports code generation", async () => {
+    let codeCalls = 0;
+    let prompt = "";
+    const builder = new InferenceToolBuilder({
+      provider: {
+        async generate(input) { prompt = input.prompt; return { payload: { analysis: "pass\n" } }; },
+        async generateCode() { codeCalls++; throw new Error("Unexpected code request"); }
+      }, modelId: "fixture-model", spec: repairSpec()
+    });
+    await builder.build({ spec: repairSpec(), previous: previousCandidate() });
+    expect(prompt).toContain("Return the raw Python source in the independent payload's analysis string.");
+    expect(codeCalls).toBe(0);
+    expect(builder.getAttempts()[0]).not.toHaveProperty("sourceContract");
+  });
+
+  it("fails closed when explicit code generation is unsupported or the contract is unknown", () => {
+    const base = { provider: successfulProvider(), modelId: "fixture-model", spec: repairSpec() };
+    expect(() => new InferenceToolBuilder({ ...base, sourceContract: "python-source-v1" }))
+      .toThrow(/requires InferenceProvider.generateCode/);
+    expect(() => new InferenceToolBuilder({ ...base, sourceContract: "unknown" as never })).toThrow(/Unsupported/);
+  });
+
+  it("records rejected backend text and counts failed code generations without provider repair retries", async () => {
+    let calls = 0;
+    const rawOutput = '{"source":"pass","source":"do not silently overwrite"}';
+    const provider = new LlamaCppInferenceProvider({ repairAttempts: 3 }, {
+      async complete() { calls++; return { content: rawOutput }; }, async health() {}
+    });
+    const builder = new InferenceToolBuilder({ provider, modelId: "fixture-model", spec: repairSpec(), sourceContract: "python-source-v1" });
+    for (let i = 0; i < 2; i++) {
+      await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() })).rejects.toThrow(/one JSON object/);
+    }
+    await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() })).rejects.toThrow(/budget exhausted/);
+    expect(calls).toBe(2);
+    expect(builder.getAttempts()).toHaveLength(2);
+    expect(builder.getAttempts().every(attempt => attempt.rawOutput === rawOutput && attempt.status === "failed" &&
+      attempt.error?.includes("one JSON object") && attempt.completedAt !== null)).toBe(true);
+  });
+
+  it("reserves a code-generation attempt before awaiting the provider", async () => {
+    let resolve!: (result: CodeGenerationResult) => void;
+    const builder = new InferenceToolBuilder({
+      provider: {
+        async generate() { throw new Error("Unexpected legacy request"); },
+        generateCode() { return new Promise(done => { resolve = done; }); }
+      }, modelId: "fixture-model", spec: repairSpec(), sourceContract: "python-source-v1", maxGenerations: 1
+    });
+    const first = builder.build({ spec: repairSpec(), previous: previousCandidate() });
+    expect(builder.getAttempts()[0].status).toBe("running");
+    await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() })).rejects.toThrow(/budget exhausted/);
+    resolve({ source: "pass\n", rawOutput: '{"source":"pass\\n"}' });
+    await first;
+    expect(builder.getAttempts()[0].status).toBe("succeeded");
+  });
+
+  it.each([
+    [{ source: "", rawOutput: "{}" }, /non-empty/],
+    [{ source: "```python\npass\n```", rawOutput: "{}" }, /Markdown fences/],
+    [{ source: "pass\0", rawOutput: "{}" }, /NUL bytes/],
+    [{ source: "\ud800", rawOutput: "{}" }, /Unicode scalar/],
+    [{ source: "pass", rawOutput: "{}", score: 1 }, /code-generation source/],
+    [{ payload: { analysis: "pass" } }, /code-generation source/]
+  ])("rejects malformed code results without fallback (case %#)", async (result, expectedError) => {
+    const builder = new InferenceToolBuilder({
+      provider: {
+        async generate() { throw new Error("Unexpected fallback"); },
+        async generateCode() { return result as unknown as CodeGenerationResult; }
+      }, modelId: "fixture-model", spec: repairSpec(), sourceContract: "python-source-v1"
+    });
+    await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() })).rejects.toThrow(expectedError);
+    expect(builder.getAttempts()[0].status).toBe("failed");
+  });
+
+  it("enforces the builder's byte limit independently of the provider", async () => {
+    const source = "# " + "é".repeat(8) + "\n";
+    const builder = new InferenceToolBuilder({
+      provider: {
+        async generate() { throw new Error("Unexpected fallback"); },
+        async generateCode() { return { source, rawOutput: JSON.stringify({ source }) }; }
+      }, modelId: "fixture-model", spec: repairSpec(), sourceContract: "python-source-v1", maxSourceBytes: 16
+    });
+    await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() })).rejects.toThrow(/UTF-8 byte limit/);
+    expect(builder.getAttempts()[0]).toMatchObject({ status: "failed", sourceBytes: 19 });
   });
 });

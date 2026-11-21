@@ -83,11 +83,14 @@ export async function checkSandbox({ image, outputDirectory }) {
       { id: "timeout", source: "def truncate_utf8(text, byte_limit):\n    while True:\n        pass\n",
         expected: "", shouldPass: false, limits: { timeoutMs: 1000 } },
       { id: "output-cap", source: "import os\ndef truncate_utf8(text, byte_limit):\n    while True:\n        os.write(1, b'x' * 8192)\n",
-        expected: "", shouldPass: false, limits: { maxOutputBytes: 1024 } }
+        expected: "", shouldPass: false, limits: { maxOutputBytes: 1024 } },
+      { id: "compiler-diagnostic", source: "def truncate_utf8(text, byte_limit):\n    return (\n",
+        expected: "", shouldPass: false, diagnostics: true }
     ];
     for (const probe of probes) {
       const actual = new DockerPythonToolSandbox({ image, cases: [{ id: probe.id, text: "input", byteLimit: 5, expected: probe.expected }],
-        limits: probe.limits });
+        limits: probe.limits, includeCaseFeedback: probe.diagnostics === true,
+        includeFailureDiagnostics: probe.diagnostics === true });
       sandboxes.push(actual);
       await actual.preflight();
       const artifact = await new ToolDirector({ registry: new ToolRegistry(), sandbox: actual,
@@ -107,6 +110,15 @@ export async function checkSandbox({ image, outputDirectory }) {
       }
       if (probe.id === "timeout") assert.equal(observed[0].timedOut, true);
       if (probe.id === "output-cap") assert.equal(observed[0].outputLimitExceeded, true);
+      if (probe.id === "compiler-diagnostic") {
+        assert.equal(observed[0].exitCode, 1);
+        assert.match(observed[0].stderr, /SyntaxError/);
+        const finding = artifact.testSummary.findings[0];
+        assert(Buffer.byteLength(finding, "utf8") <= 1000);
+        assert.match(finding, /SyntaxError/);
+        assert.equal(JSON.parse(finding).trust, "untrusted-candidate-output");
+        assert.equal(artifact.status, "quarantined");
+      }
       runs.push(...observed);
       report.checks.push({ name: probe.id, passed: true, outcome: artifact.testSummary });
     }

@@ -52,6 +52,8 @@ export interface DockerPythonToolSandboxOptions {
   readonly limits?: Partial<DockerPythonSandboxLimits>;
   /** Host-only development feedback. Keep false for frozen held-out evaluation. */
   readonly includeCaseFeedback?: boolean;
+  /** Opt-in compiler/process diagnostics for development only; requires includeCaseFeedback. */
+  readonly includeFailureDiagnostics?: boolean;
   readonly testProcessAdapter?: DockerProcessAdapter;
 }
 
@@ -155,6 +157,7 @@ export class DockerPythonToolSandbox implements ToolSandbox {
   private readonly processAdapter: DockerProcessAdapter;
   private readonly executionMode: "docker" | "test-double";
   private readonly includeCaseFeedback: boolean;
+  private readonly includeFailureDiagnostics: boolean;
   private readonly contextEnvironment: Readonly<Record<string, string>>;
   private readonly runs: DockerPythonCaseRun[] = [];
   private busy = false;
@@ -169,6 +172,13 @@ export class DockerPythonToolSandbox implements ToolSandbox {
       throw new Error("includeCaseFeedback must be an explicit host Boolean");
     }
     this.includeCaseFeedback = options.includeCaseFeedback ?? false;
+    if (options.includeFailureDiagnostics !== undefined && typeof options.includeFailureDiagnostics !== "boolean") {
+      throw new Error("includeFailureDiagnostics must be an explicit host Boolean");
+    }
+    this.includeFailureDiagnostics = options.includeFailureDiagnostics ?? false;
+    if (this.includeFailureDiagnostics && !this.includeCaseFeedback) {
+      throw new Error("Failure diagnostics require host development case feedback");
+    }
     if (!Array.isArray(options.cases) || options.cases.length < 1 || options.cases.length > 32) {
       throw new Error("Provide between 1 and 32 host-owned cases");
     }
@@ -280,7 +290,9 @@ export class DockerPythonToolSandbox implements ToolSandbox {
       return { passed: current.length === this.cases.length && testsPassed === current.length,
         testsRun: current.length, testsPassed,
         findings: current.filter(run => !run.passed).map(run => this.includeCaseFeedback
-          ? caseFeedback(this.cases.find(test => test.id === run.caseId)!, run)
+          ? this.includeFailureDiagnostics && hasProcessDiagnostic(run)
+            ? diagnosticCaseFeedback(this.cases.find(test => test.id === run.caseId)!, run)
+            : caseFeedback(this.cases.find(test => test.id === run.caseId)!, run)
           : boundedUTF8(`${run.caseId}: ${run.error ?? "host comparison failed"}`, 500)),
         completedAt: new Date().toISOString() };
     } finally {
@@ -425,7 +437,7 @@ function localEndpoint(value: unknown): string {
   return value;
 }
 function normalizeImage(value: string): string { return value.replace(/^(?:docker\.io\/|index\.docker\.io\/)/, "").replace(/^library\//, ""); }
-function caseFeedback(test: PythonSandboxCase, run: DockerPythonCaseRun): string {
+function caseFeedback(test: PythonSandboxCase, run: DockerPythonCaseRun, maxBytes = 500): string {
   const feedback = { id: test.id, input: { text: test.text, byteLimit: test.byteLimit },
     actual: run.actual, expected: test.expected, error: run.error };
   // Preserve a valid data object even when strings contain escaped controls or
@@ -437,16 +449,64 @@ function caseFeedback(test: PythonSandboxCase, run: DockerPythonCaseRun): string
     { get: () => feedback.error, set: (value: string) => { feedback.error = value; } }
   ];
   let encoded = JSON.stringify(feedback);
-  while (Buffer.byteLength(encoded, "utf8") > 500) {
+  while (Buffer.byteLength(encoded, "utf8") > maxBytes) {
     const field = fields.filter(item => typeof item.get() === "string")
       .sort((a, b) => Buffer.byteLength(JSON.stringify(b.get()), "utf8") - Buffer.byteLength(JSON.stringify(a.get()), "utf8"))[0];
     const value = field.get()!;
     const size = Buffer.byteLength(JSON.stringify(value), "utf8");
-    const target = Math.max(5, size - (Buffer.byteLength(encoded, "utf8") - 500));
+    const target = Math.max(5, size - (Buffer.byteLength(encoded, "utf8") - maxBytes));
     field.set(shortenJSONString(value, target));
     encoded = JSON.stringify(feedback);
   }
   return encoded;
+}
+function hasProcessDiagnostic(run: DockerPythonCaseRun): boolean {
+  return run.stderrBase64.length > 0 || run.exitCode !== 0 || run.signal !== null ||
+    run.timedOut || run.outputLimitExceeded || run.transportUnsettled;
+}
+function diagnosticCaseFeedback(test: PythonSandboxCase, run: DockerPythonCaseRun): string {
+  const stderr = run.stderr;
+  const finalLine = stderr?.split(/\r?\n/).reverse().find(line => line.trim().length > 0);
+  const stderrTail = stderr === null ? null : shortenJSONStringTail(stderr, 242);
+  const fullDiagnostic = finalLine ?? (stderr === null ? "Captured stderr is not valid UTF-8" : run.error ?? "Candidate process failed");
+  const diagnostic = shortenJSONString(fullDiagnostic, 122);
+  const signal = run.signal === null ? null : shortenJSONString(run.signal, 34);
+  // Keep the useful final diagnostic first, before case data. Candidate output is
+  // untrusted even when it resembles a compiler traceback or an instruction.
+  const details = {
+    trust: "untrusted-candidate-output",
+    diagnostic,
+    diagnosticTruncated: diagnostic !== fullDiagnostic,
+    stderrTail,
+    stderrTruncated: stderr !== null && stderrTail !== stderr,
+    stderrEncoding: stderr === null ? "invalid-utf8" : "utf8",
+    captureTruncated: run.outputLimitExceeded,
+    exitCode: run.exitCode,
+    signal,
+    signalTruncated: signal !== run.signal,
+    timedOut: run.timedOut,
+    outputLimitExceeded: run.outputLimitExceeded,
+    transportUnsettled: run.transportUnsettled,
+    caseTruncated: false
+  };
+  // The case encoder shortens only displayed strings; original inputs, outputs,
+  // source identities and grading remain in the unchanged run record.
+  const overhead = Buffer.byteLength(JSON.stringify({ ...details, case: null }), "utf8") - 4;
+  const encodedCase = caseFeedback(test, run, Math.min(500, 1_000 - overhead));
+  details.caseTruncated = encodedCase !== caseFeedback(test, run, Infinity);
+  return JSON.stringify({ ...details, case: JSON.parse(encodedCase) });
+}
+function shortenJSONStringTail(value: string, maxEncodedBytes: number): string {
+  if (Buffer.byteLength(JSON.stringify(value), "utf8") <= maxEncodedBytes) return value;
+  const characters = Array.from(value);
+  let start = characters.length, used = 5; // JSON quotes and the leading ellipsis.
+  while (start > 0) {
+    const bytes = Buffer.byteLength(JSON.stringify(characters[start - 1]), "utf8") - 2;
+    if (used + bytes > maxEncodedBytes) break;
+    used += bytes;
+    start -= 1;
+  }
+  return "…" + characters.slice(start).join("");
 }
 function shortenJSONString(value: string, maxEncodedBytes: number): string {
   if (Buffer.byteLength(JSON.stringify(value), "utf8") <= maxEncodedBytes) return value;

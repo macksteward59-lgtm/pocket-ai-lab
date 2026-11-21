@@ -187,6 +187,15 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     report.profileSelection = selection;
     report.trialId = profile.id;
     report.capabilityManifest.directorProtocol = profile.directorProtocol ?? "native-function-call";
+    const codeGeneration = profile.sourceContract === "python-source-v1";
+    assert(profile.sourceContract === undefined || codeGeneration, "Unknown source-generation contract.");
+    assert.equal(profile.developmentFeedback,
+      codeGeneration ? "bounded-failure-diagnostics-v1" : undefined,
+      "The frozen source and development-feedback contracts must match.");
+    if (codeGeneration) {
+      report.capabilityManifest.sourceGeneration = "InferenceProvider.generateCode / engineer / python-source-v1";
+      report.capabilityManifest.developmentFeedback = profile.developmentFeedback;
+    }
     assert.equal(profile.maxRevisions, fixture.maxRevisions);
     assert.equal(profile.providerRepairAttempts, 0);
     const modelInfo = await stat(modelPath);
@@ -195,7 +204,8 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     assert.equal(await sha256File(modelPath), profile.modelSHA256, "Model hash differs from the pinned artifact.");
     report.model = { id: profile.modelId, bytes: modelInfo.size, sha256: profile.modelSHA256 };
 
-    sandboxes.development = new DockerPythonToolSandbox({ image, cases: fixture.development, includeCaseFeedback: true });
+    sandboxes.development = new DockerPythonToolSandbox({ image, cases: fixture.development,
+      includeCaseFeedback: true, includeFailureDiagnostics: codeGeneration });
     report.sandbox = await sandboxes.development.preflight();
     const assertSettled = () => assertContainersSettled(Object.values(sandboxes).flatMap(sandbox => sandbox.getRuns()));
     const development = {
@@ -231,7 +241,8 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
       maxTokens: profile.maxTokens, timeoutMs: profile.providerTimeoutMs, repairAttempts: 0 };
     const engineer = new LlamaCppInferenceProvider(config, recordingBackend(config, "engineer", report.providerCalls));
     builder = new InferenceToolBuilder({ provider: engineer, modelId: profile.modelId,
-      spec: revisionSpec, maxGenerations: fixture.maxRevisions, maxSourceBytes: profile.maxSourceBytes });
+      spec: revisionSpec, maxGenerations: fixture.maxRevisions, maxSourceBytes: profile.maxSourceBytes,
+      ...(codeGeneration ? { sourceContract: "python-source-v1" } : {}) });
     const director = new ToolDirector({ registry, store, builder, sandbox: development });
     const structuredActions = profile.directorProtocol === "structured-repair-actions-v1";
     const planner = structuredActions

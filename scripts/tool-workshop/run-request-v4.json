@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "experiment": "workshop-utf8-code-repair-v4",
+  "profile": "workshop-utf8-repair-deepseek-v4",
+  "profileSHA256": "7155902225d8eed9291ff082265430b3fdc87b1f02144427c611bd17be90e29c",
+  "fixtureSHA256": "00b849a53254d1a28612b4d0bac2b15c24317a7c18af18fb36c52a27fe44ab6d",
+  "priorTrialHead": "d3294457e65e59a3d4d53510441f5a6b79474852",
+  "priorTrialRun": 44881077624,
+  "priorTrialArtifact": 14698187586,
+  "priorTrialOutcome": "Two raw prose artifacts executed and failed parsing; each 0/8 development, final 0/20 held-out. Director claimed complete but host acceptance rejected it. Inherited analysis system instructions conflicted with code task.",
+  "hypothesis": "A consistent source-generation output contract allows this same model to return executable code; bounded compiler diagnostics allow an informed second revision if needed.",
+  "changes": [
+    "Optional InferenceProvider.generateCode with dedicated consistent JSON source contract, no stage prose prompt or 700-character analysis schema.",
+    "Opt-in untrusted bounded process/compiler diagnostics in development feedback; legacy comparison feedback and held-out gating unchanged."
+  ],
+  "unchanged": [
+    "model artifact and llama.cpp source pin",
+    "Director planner/action protocol and initial objective",
+    "temperature0/seed42/context4096/maxTokens1024/reasoningBudget128",
+    "eight development and twenty held-out cases/answers",
+    "two-generation/three-Director-turn budgets/no hidden provider retry",
+    "latest-candidate selection/host grading/cleanup and model-integrity gates"
+  ],
+  "interpretation": "Separate configuration experiment. Preserve all v1\u2013v3 outcomes. This reused held-out fixture is hidden from model revision context, not a fresh generalization benchmark. No handwritten source substitution, automatic profile switch, weight update or claimed internal-language speedup."
+}
