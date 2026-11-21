@@ -32,7 +32,8 @@
       const hash = /^[0-9a-f]{64}$/;
       if (packet?.format !== "pocket-ai-lab.evaluation-attempt.v1" ||
           !Number.isSafeInteger(packet.sequence) || packet.sequence < 1 ||
-          !uuid.test(packet.eventID) || typeof packet.payloadJSON !== "string" ||
+          typeof packet.eventID !== "string" || !uuid.test(packet.eventID) ||
+          typeof packet.previousHash !== "string" || typeof packet.payloadJSON !== "string" ||
           !(packet.sequence === 1 ? packet.previousHash === "GENESIS" : hash.test(packet.previousHash))) {
         throw new Error("This file does not contain a supported evaluation event.");
       }
