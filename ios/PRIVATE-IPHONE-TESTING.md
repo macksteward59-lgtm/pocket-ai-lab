@@ -65,3 +65,15 @@ Simulator success does not prove physical iPhone Metal execution. Physical-devic
 - This initial scaffold does not encrypt GGUF files at rest.
 - No Apple credentials, signing certificates, provisioning profiles, or model files belong in Git.
 - No App Store, TestFlight, public distribution, or production release configuration is included.
+
+### Export an evaluation for independent review
+
+In **Self-evaluation history**, expand an attempt and copy its **Event SHA-256**. **Export this attempt as JSON** opens the Files picker. Each export contains that attempt’s prompt, output, model identifiers and evaluation metadata. The owner chooses the destination.
+
+On a computer with this checkout, check the file against the digest you copied separately from the app.
+
+```bash
+python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$event_hash"
+```
+
+A match shows that the selected event’s hashed bytes match that digest. Hardware identity, an Apple signature, review of the result, and physical-device acceptance each require separate evidence. A running journal detects a removed tail. Across restarts, retain an independent digest to identify a previously seen event.

@@ -1,9 +1,16 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct NativeEvaluationHistoryView: View {
     let events: [NativeEvaluationJournalEvent]
     let selectedModelID: String?
     @Environment(\.dismiss) private var dismiss
+
+    @State private var exportDocument: NativeReviewDocument?
+    @State private var exportName = "pocket-evaluation"
+    @State private var choosingDestination = false
+    @State private var exportError = ""
+    @State private var showExportError = false
 
     private var attempts: [NativeEvaluationAttempt] {
         events.compactMap(\.payload.attempt)
@@ -55,6 +62,19 @@ struct NativeEvaluationHistoryView: View {
                                 } else {
                                     detail("Objective check", "Not automatically scored · independent review required")
                                 }
+                                detail("Event SHA-256", event.eventHash)
+                                Button("Export this attempt as JSON") {
+                                    do {
+                                        exportDocument = NativeReviewDocument(data: try NativeEvaluationJournal.exportAttempt(event))
+                                        exportName = "pocket-evaluation-" + String(event.sequence)
+                                        choosingDestination = true
+                                    } catch {
+                                        exportError = String(describing: error)
+                                        showExportError = true
+                                    }
+                                }
+                                Text("Includes the prompt, generated output and evaluation metadata for this attempt.")
+                                    .font(.caption).foregroundStyle(.secondary)
                             } label: {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("\(attempt.category.rawValue) · \(attempt.caseID)")
@@ -102,6 +122,17 @@ struct NativeEvaluationHistoryView: View {
             .padding(.top, 8)
             .navigationTitle("Self-evaluation history")
             .navigationBarTitleDisplayMode(.inline)
+            .fileExporter(isPresented: $choosingDestination, document: exportDocument, contentType: .json,
+                          defaultFilename: exportName) { result in
+                exportDocument = nil
+                if case .failure(let error) = result, (error as NSError).code != NSUserCancelledError {
+                    exportError = error.localizedDescription
+                    showExportError = true
+                }
+            }
+            .alert("Export unavailable", isPresented: $showExportError) {
+                Button("OK", role: .cancel) { }
+            } message: { Text(exportError) }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
@@ -117,5 +148,19 @@ struct NativeEvaluationHistoryView: View {
             Text(value).font(.callout).textSelection(.enabled)
         }
         .padding(.vertical, 3)
+    }
+}
+
+private struct NativeReviewDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+    let data: Data
+
+    init(data: Data) { self.data = data }
+    init(configuration: ReadConfiguration) throws {
+        guard let contents = configuration.file.regularFileContents else { throw CocoaError(.fileReadCorruptFile) }
+        data = contents
+    }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }

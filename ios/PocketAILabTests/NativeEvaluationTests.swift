@@ -57,6 +57,32 @@ final class NativeEvaluationTests: XCTestCase {
     }
 
 
+    func testHistoryDetectsRemovedTailAndExportKeepsTheSelectedAttempt() async throws {
+        let (journal, directory, modelURL, runtime, lease, _) = try await makeContext(responses: [["42"], ["42"]])
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let runner = try makeRunner(runtime: runtime, lease: lease, journal: journal, modelURL: modelURL)
+        _ = try await runner.run(evaluationCase())
+        let journalURL = directory.appendingPathComponent("history.ndjson")
+        let firstRecord = try Data(contentsOf: journalURL)
+        _ = try await runner.run(evaluationCase())
+        let history = try await journal.events()
+        let last = try XCTUnwrap(history.last)
+        XCTAssertEqual(last.sequence, 2)
+        let bytes = try NativeEvaluationJournal.exportAttempt(last)
+        let packet = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        XCTAssertEqual(packet["eventHash"] as? String, last.eventHash)
+        let payload = try XCTUnwrap(packet["payloadJSON"] as? String)
+        let decoded = try JSONDecoder().decode(NativeEvaluationJournalPayload.self, from: Data(payload.utf8))
+        XCTAssertEqual(decoded, last.payload)
+        XCTAssertEqual(decoded.attempt?.runtimeTrustVerified, false)
+
+        try firstRecord.write(to: journalURL, options: .atomic)
+        do {
+            _ = try await journal.events()
+            XCTFail("A live journal accepted a shortened valid prefix.")
+        } catch NativeEvaluationJournalError.corruptJournal { }
+    }
+
     func testStarterSuiteCoversEightCategoriesAndMarksOnlyObjectiveCasesForScoring() {
         XCTAssertEqual(NativeEvaluationSuite.cases.count, 8)
         XCTAssertEqual(Set(NativeEvaluationSuite.cases.map(\.category)), Set(NativeEvaluationCategory.allCases))
