@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "preparedAt": "2026-11-21T10:14:04Z",
+  "preparedAt": "2026-11-21T11:35:41.441Z",
   "repository": "macksteward59-lgtm/pocket-ai-lab",
   "pullRequest": 241,
   "branch": "codex/tool-workshop-repair-integration-20261121",
   "currentSource": {
-    "head": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
-    "tree": "a4a30278ea00a3c769e2ad0d913a1ee1cd8dbf67",
+    "head": "7e1cfcd2b4653f0fea70662d91964cf407be81f1",
+    "tree": "f7cdb83d6f8961e7ee5d273fde6986e62e2bc833",
     "dirty": false
   },
   "basePullRequest": 240,
@@ -87,6 +87,42 @@
         "diagnosticBytes": 734,
         "rawStderrBytes": 522,
         "limitation": "The isolation probe's dynamic port and exact generated source are not retained, so its source/artifact digest cannot be independently reconstructed from this bundle. Its observed isolation result and cleanup are recorded."
+      }
+    },
+    {
+      "name": "baseline-v1-sandbox",
+      "directory": "baseline-v1-sandbox",
+      "sourceHead": "7e1cfcd2b4653f0fea70662d91964cf407be81f1",
+      "sourceTree": "f7cdb83d6f8961e7ee5d273fde6986e62e2bc833",
+      "runId": 44898332601,
+      "jobId": 136828788550,
+      "artifactId": 14704654444,
+      "archiveSHA256": "5a7ab113c22eeeca802c2dc0004c5f03dace979eb3f5c3cc18198734046c5e61",
+      "reportSHA256": "23a0dc76545e736701b2d52a458036aba26b4ac5fd83db0bbb9a8aadfdecb6a8",
+      "accepted": true,
+      "containerCases": 21,
+      "sourceAuthor": "scripted fixture; no model generation",
+      "independentAudit": {
+        "passed": true,
+        "archiveVerified": true,
+        "reportSHA256": "23a0dc76545e736701b2d52a458036aba26b4ac5fd83db0bbb9a8aadfdecb6a8",
+        "actualContainers": 21,
+        "uniqueContainerIds": 21,
+        "cleanupVerified": true,
+        "recomputedSourceAndArtifactDigests": 20,
+        "inputAndExpectedHashesRecomputed": 21,
+        "rawOutputBytesRecomputed": 21,
+        "diagnosticBytes": 734,
+        "rawStderrBytes": 522,
+        "baseline": {
+          "testsPassed": 3,
+          "testsRun": 8
+        },
+        "scriptedRevision": {
+          "testsPassed": 8,
+          "testsRun": 8
+        },
+        "limitation": "The isolation probe's dynamic port and exact generated source are not retained, so its source/artifact digest cannot be independently reconstructed from this bundle. Its observed isolation result and cleanup are recorded. The sandbox report does not embed commit/tree; its source association uses the exact GitHub workflow/job/artifact provenance."
       }
     }
   ],
@@ -313,26 +349,180 @@
         "modelIntegrity": "Host report records the model file unchanged and matching its pin; the model bytes are not included in the artifact for an independent post-run rehash.",
         "findingPresentationLimitation": "Director received the failed 1/8 summary and first 3 of 7 findings. findingsTruncated was false because the experiment host had already sliced the array before the planner calculated its flag. The explicit failed score is intact."
       }
+    },
+    {
+      "profile": "baseline-v1",
+      "directory": "live-baseline-v1",
+      "sourceHead": "7e1cfcd2b4653f0fea70662d91964cf407be81f1",
+      "sourceTree": "f7cdb83d6f8961e7ee5d273fde6986e62e2bc833",
+      "runId": 44898332601,
+      "jobId": 136828937331,
+      "artifactId": 14704444748,
+      "archiveSHA256": "9945e46450ce5f84ba0b539958b4c82e56e48f025f49056d90bfe7eee80e2192",
+      "reportSHA256": "2b6793bc6a9bd146741223938d68e1ba934116172313956656e2f4af1b75ec81",
+      "profileSHA256": "34356ece0f89dc96b5b7ebe0a9a1c172c6f3752a99e21df0a77540a0de602cb1",
+      "model": {
+        "id": "qwen2.5-coder-7b-instruct-q4_k_m",
+        "bytes": 4683073536,
+        "sha256": "509287f78cb4d4cf6b3843734733b914b2c158e43e22a7f4bf5e963800894d3c"
+      },
+      "modelPublisher": {
+        "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+        "revision": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+        "license": "apache-2.0",
+        "upstreamConversionRevision": null
+      },
+      "directorCalls": 3,
+      "engineerCalls": 2,
+      "retainedRevisions": 2,
+      "distinctRevisedSources": 1,
+      "development": {
+        "baseline": 3,
+        "candidates": [
+          6,
+          6
+        ],
+        "cases": 8
+      },
+      "heldOut": {
+        "baseline": 4,
+        "candidate": 7,
+        "cases": 20
+      },
+      "containerCases": 64,
+      "accepted": false,
+      "controlPassed": false,
+      "qualityPassed": false,
+      "directorTerminal": "blocked",
+      "modelUnchanged": true,
+      "outcome": "Both 319-byte executable revisions were identical. Each passed 6/8 development cases; final 7/20 held-out versus baseline 4/20. Valid blocked decision after remaining attempts reached zero. This improves some scores but fails complete repair qualification.",
+      "remainingRevisionsObserved": [
+        2,
+        1,
+        0
+      ],
+      "zeroBudgetActionFilteringObservedInLiveRun": true,
+      "secondEngineerRevisionObserved": true,
+      "candidateSourceBytes": 319,
+      "candidateSourceSHA256": "209ecb52f53d0f45f9727f868b605e9ad4090ddbf03d9f162c7b6f77e97785e3",
+      "lastModelCallCompletedAt": "2026-11-21T11:30:14.816Z",
+      "finalSelectionFrozenAt": "2026-11-21T11:30:14.819Z",
+      "firstHeldOutStartedAt": "2026-11-21T11:30:14.929Z",
+      "providerCalls": [
+        {
+          "role": "director-structured",
+          "durationMs": 71639.691405,
+          "startedAt": "2026-11-21T11:23:56.056Z",
+          "completedAt": "2026-11-21T11:25:07.696Z"
+        },
+        {
+          "role": "engineer",
+          "durationMs": 85292.802504,
+          "startedAt": "2026-11-21T11:25:07.699Z",
+          "completedAt": "2026-11-21T11:26:32.992Z"
+        },
+        {
+          "role": "director-structured",
+          "durationMs": 94365.81581199999,
+          "startedAt": "2026-11-21T11:26:36.432Z",
+          "completedAt": "2026-11-21T11:28:10.798Z"
+        },
+        {
+          "role": "engineer",
+          "durationMs": 40544.489755999995,
+          "startedAt": "2026-11-21T11:28:10.800Z",
+          "completedAt": "2026-11-21T11:28:51.345Z"
+        },
+        {
+          "role": "director-structured",
+          "durationMs": 80059.89244300005,
+          "startedAt": "2026-11-21T11:28:54.757Z",
+          "completedAt": "2026-11-21T11:30:14.816Z"
+        }
+      ],
+      "totalProviderDurationMs": 371902.69192000007,
+      "experimentWallDurationMs": 413675,
+      "hostResources": {
+        "observedAt": "2026-11-21T11:23:43.386Z",
+        "platform": "linux",
+        "architecture": "x64",
+        "cpuCount": 4,
+        "availableParallelism": 4,
+        "cpuModels": [
+          "AMD EPYC 7763 64-Core Processor"
+        ],
+        "totalMemoryBytes": 16760340480,
+        "freeMemoryBytes": 15569412096,
+        "outputFilesystemAvailableBytes": "85993906176",
+        "interpretation": "Observed host snapshots, not peak model memory, throughput or physical-device acceptance."
+      },
+      "serverCleanup": {
+        "code": 0,
+        "signal": null,
+        "settled": true,
+        "logBytes": 5855,
+        "logLimitExceeded": false
+      },
+      "stoppingRule": "One predeclared baseline trial completed. No additional model trial, prompt tuning, token expansion, repair substitution or post-result retry was performed.",
+      "independentAudit": {
+        "passed": true,
+        "archiveAndExtractedFilesVerified": true,
+        "sourceProfileFixtureVerified": true,
+        "sourcePreservedExactly": true,
+        "candidateSourceBytes": 319,
+        "candidateSourceSHA256": "209ecb52f53d0f45f9727f868b605e9ad4090ddbf03d9f162c7b6f77e97785e3",
+        "canonicalArtifactDigestsRecomputed": 3,
+        "recomputedCaseSourceArtifactInputExpectedHashes": 64,
+        "decodedOutputBytesVerified": 64,
+        "uniqueContainers": 64,
+        "cleanupVerified": true,
+        "identicalRevisionSource": true,
+        "remainingRevisionsObserved": [
+          2,
+          1,
+          0
+        ],
+        "zeroBudgetActionAndSchemaFilteringObserved": true,
+        "secondEngineerReceivedPreviousSourceAndBothFindings": true,
+        "projectedDirectorFeedbackMatchesArtifacts": true,
+        "findingsTotal": 2,
+        "findingsIncluded": 2,
+        "findingsTruncated": false,
+        "findingsTextTruncated": false,
+        "largeArtifactAndTruncationCoverage": "The live candidate artifacts were 2359 serialized characters with two short findings. Oversized artifacts and seven-finding truncation are covered by declared contract doubles, not this live run.",
+        "noHeldOutIdentifiersInRequests": true,
+        "noModelCallAfterFreeze": true,
+        "modelIntegrity": "Host report records the model file unchanged and matching its pin; model bytes are not included in the artifact for an independent post-run rehash.",
+        "controlInterpretation": "The valid final action was blocked after the two-generation allowance reached zero. controlPassed is false because the existing acceptance gate requires completed; this was not a malformed command or false completion claim.",
+        "semanticFinding": "The generated code finds a byte offset in encoded_text but uses that offset in text[:i], which slices Unicode characters. Both attempts retain this same functional error; source was not executed during the audit."
+      }
     }
   ],
   "validation": {
     "generalCI": {
-      "runId": 44892136889,
-      "head": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+      "runId": 44898332609,
+      "head": "7e1cfcd2b4653f0fea70662d91964cf407be81f1",
       "conclusion": "success"
     },
     "workshopContracts": {
-      "runId": 44892136884,
-      "jobId": 136810076605,
+      "runId": 44898332601,
+      "jobId": 136828677562,
       "conclusion": "success"
     },
-    "focusedRuntimeTests": 262,
+    "pullRequestWorkshopChecks": {
+      "runId": 44898336049,
+      "head": "7e1cfcd2b4653f0fea70662d91964cf407be81f1",
+      "conclusion": "success",
+      "liveModel": "skipped; live execution is recorded by the push workflow"
+    },
+    "focusedRuntimeTests": 295,
     "existingSkippedRuntimeTests": 1,
-    "fixtureEvidenceProfileTests": 17,
+    "fixtureEvidenceProfileTests": 18,
+    "localPinAndAcquisitionTests": 42,
     "typeScript": "passed",
     "independentSourceReview": "no blockers",
     "physicalDeviceAcceptance": false,
-    "independentLiveEvidenceReview": "passed; failed model result confirmed"
+    "independentLiveEvidenceReview": "passed; functional failure and valid blocked termination confirmed"
   },
   "interpretation": {
     "productionActivation": false,
@@ -343,7 +533,8 @@
     "priorNativeQualificationChanged": false,
     "currentConfigurationQualified": false,
     "reusedHeldOutFixture": "Hidden from each model's revision context; reused across profiles, not a fresh generalization benchmark.",
-    "followUpBeforeAnotherBenchmark": "Correct the inherited findingsTruncated metadata, then define a separate baseline/model qualification plan. Do not continue small prompt iterations on this reused task."
+    "followUpBeforeAnotherBenchmark": "The feedback integrity correction and one frozen baseline trial are complete. Preserve this failed configuration. Define fresh multiple-task ordinary code/control qualification and model-role selection before autonomy, training or language-efficiency claims; do not continue prompt tuning on this reused task.",
+    "currentQualificationScope": "One ordinary code-and-control baseline on the known reused UTF-8 fixture; incomplete functional repair."
   },
   "archiveNote": "ZIP digests verified against GitHub artifact metadata. Extracted report/source bytes preserved; llama-server.log is renamed llama-server.txt without content edits. Temporary artifact download URLs are excluded.",
   "validationHistory": [
@@ -381,6 +572,59 @@
       "fixtureEvidenceProfileTests": 16,
       "typeScript": "passed",
       "physicalDeviceAcceptance": false
+    },
+    {
+      "sourceHead": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+      "generalCI": {
+        "runId": 44892136889,
+        "head": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+        "conclusion": "success"
+      },
+      "workshopContracts": {
+        "runId": 44892136884,
+        "jobId": 136810076605,
+        "conclusion": "success"
+      },
+      "focusedRuntimeTests": 262,
+      "existingSkippedRuntimeTests": 1,
+      "fixtureEvidenceProfileTests": 17,
+      "typeScript": "passed",
+      "independentSourceReview": "no blockers",
+      "physicalDeviceAcceptance": false,
+      "independentLiveEvidenceReview": "passed; failed model result confirmed"
+    }
+  ],
+  "interpretationHistory": [
+    {
+      "sourceHead": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+      "productionActivation": false,
+      "productionSelfEditing": false,
+      "weightTraining": false,
+      "wholeHarnessQualification": false,
+      "internalLanguageSpeedup": false,
+      "priorNativeQualificationChanged": false,
+      "currentConfigurationQualified": false,
+      "reusedHeldOutFixture": "Hidden from each model's revision context; reused across profiles, not a fresh generalization benchmark.",
+      "followUpBeforeAnotherBenchmark": "Correct the inherited findingsTruncated metadata, then define a separate baseline/model qualification plan. Do not continue small prompt iterations on this reused task."
+    }
+  ],
+  "modelScope": "Historical v1–v5 model. baseline-v1 carries its separately pinned model identity in its liveTrials entry.",
+  "currentModel": {
+    "id": "qwen2.5-coder-7b-instruct-q4_k_m",
+    "bytes": 4683073536,
+    "sha256": "509287f78cb4d4cf6b3843734733b914b2c158e43e22a7f4bf5e963800894d3c"
+  },
+  "observationFindings": [
+    {
+      "recordedAt": "2026-11-21T11:35:41.441Z",
+      "affectedProfiles": [
+        "v4",
+        "v5"
+      ],
+      "correctedOnlyIn": "baseline-v1",
+      "finding": "V4's oversized full artifact was converted to a generic runner preview before the legacy host wrapper read typed metadata, so later Director requests contained null status/identity/grade counts and empty findings. The Engineer still received compiler findings through its artifact-store path. V5 retained the failed score but its pre-sliced three-of-seven findings produced an incorrect false truncation flag.",
+      "evidence": "Preserved raw v4/v5 providerCalls; old scores and source records remain unchanged.",
+      "correction": "Explicit host-artifact-summary-v1 projects before the unchanged runner snapshot, validates counts/tool identity/truncation metadata and preserves untrusted labels. Omitted for v1–v5."
     }
   ]
 }

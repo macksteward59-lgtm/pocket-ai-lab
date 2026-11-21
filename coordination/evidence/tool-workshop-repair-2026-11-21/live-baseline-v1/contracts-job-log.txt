@@ -1,0 +1,313 @@
+﻿2026-11-21T11:16:46.1774246Z Current runner version: '2.338.2'
+2026-11-21T11:16:46.1798225Z ##[group]Runner Image Provisioner
+2026-11-21T11:16:46.1799041Z Hosted Compute Agent
+2026-11-21T11:16:46.1799605Z Version: 20261111.635
+2026-11-21T11:16:46.1800200Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-21T11:16:46.1800889Z Build Date: 2026-11-11T01:49:01Z
+2026-11-21T11:16:46.1801581Z Worker ID: {cecdbb34-82b9-4e66-89b4-972b0dedd8af}
+2026-11-21T11:16:46.1802282Z Region: us-east-1
+2026-11-21T11:16:46.1802862Z Cloud: AWS
+2026-11-21T11:16:46.1803374Z ##[endgroup]
+2026-11-21T11:16:46.1804980Z ##[group]Operating System
+2026-11-21T11:16:46.1805608Z Ubuntu
+2026-11-21T11:16:46.1806103Z 24.04.5
+2026-11-21T11:16:46.1806486Z LTS
+2026-11-21T11:16:46.1806851Z ##[endgroup]
+2026-11-21T11:16:46.1807232Z ##[group]Runner Image
+2026-11-21T11:16:46.1807661Z Image: ubuntu-24.04
+2026-11-21T11:16:46.1808102Z Version: 20261116.133.1
+2026-11-21T11:16:46.1809138Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.133/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-21T11:16:46.1810504Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.133
+2026-11-21T11:16:46.1811201Z ##[endgroup]
+2026-11-21T11:16:46.1812032Z ##[group]GITHUB_TOKEN Permissions
+2026-11-21T11:16:46.1813950Z Contents: read
+2026-11-21T11:16:46.1814352Z Metadata: read
+2026-11-21T11:16:46.1814958Z ##[endgroup]
+2026-11-21T11:16:46.1816538Z Secret source: Actions
+2026-11-21T11:16:46.1817234Z Cache mode: write
+2026-11-21T11:16:46.1817880Z Prepare workflow directory
+2026-11-21T11:16:46.2038559Z Prepare all required actions
+2026-11-21T11:16:46.2074044Z Getting action download info
+2026-11-21T11:16:46.3472151Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-21T11:16:48.0570113Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-21T11:16:48.2963041Z Complete job name: contracts
+2026-11-21T11:16:48.3663767Z ##[group]Run actions/checkout@v4
+2026-11-21T11:16:48.3665237Z with:
+2026-11-21T11:16:48.3665993Z   persist-credentials: false
+2026-11-21T11:16:48.3666958Z   repository: macksteward59-lgtm/pocket-ai-lab
+2026-11-21T11:16:48.3673239Z   token: ***
+2026-11-21T11:16:48.3673948Z   ssh-strict: true
+2026-11-21T11:16:48.3674961Z   ssh-user: git
+2026-11-21T11:16:48.3675709Z   clean: true
+2026-11-21T11:16:48.3676471Z   sparse-checkout-cone-mode: true
+2026-11-21T11:16:48.3677389Z   fetch-depth: 1
+2026-11-21T11:16:48.3678176Z   fetch-tags: false
+2026-11-21T11:16:48.3678952Z   show-progress: true
+2026-11-21T11:16:48.3679879Z   lfs: false
+2026-11-21T11:16:48.3680607Z   submodules: false
+2026-11-21T11:16:48.3681371Z   set-safe-directory: true
+2026-11-21T11:16:48.3682210Z   allow-unsafe-pr-checkout: false
+2026-11-21T11:16:48.3683306Z ##[endgroup]
+2026-11-21T11:16:50.6825360Z Syncing repository: macksteward59-lgtm/pocket-ai-lab
+2026-11-21T11:16:50.6826697Z ##[group]Getting Git version info
+2026-11-21T11:16:50.6827321Z Working directory is '/home/runner/work/pocket-ai-lab/pocket-ai-lab'
+2026-11-21T11:16:50.6827990Z [command]/usr/bin/git version
+2026-11-21T11:16:50.8532591Z git version 2.56.1
+2026-11-21T11:16:50.8546831Z ##[endgroup]
+2026-11-21T11:16:50.8557466Z Temporarily overriding HOME='/home/runner/work/_temp/3c88e0c1-fea0-432a-ad18-854a3fb34679' before making global git config changes
+2026-11-21T11:16:50.8558180Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-21T11:16:50.8560844Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/pocket-ai-lab/pocket-ai-lab
+2026-11-21T11:16:50.8936914Z Deleting the contents of '/home/runner/work/pocket-ai-lab/pocket-ai-lab'
+2026-11-21T11:16:50.8939303Z ##[group]Initializing the repository
+2026-11-21T11:16:50.8942182Z [command]/usr/bin/git init /home/runner/work/pocket-ai-lab/pocket-ai-lab
+2026-11-21T11:16:50.9349172Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-21T11:16:50.9349863Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-21T11:16:50.9350595Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-21T11:16:50.9351053Z hint: call:
+2026-11-21T11:16:50.9351311Z hint:
+2026-11-21T11:16:50.9351628Z hint: 	git config --global init.defaultBranch <name>
+2026-11-21T11:16:50.9351958Z hint:
+2026-11-21T11:16:50.9352272Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-21T11:16:50.9352759Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-21T11:16:50.9353212Z hint:
+2026-11-21T11:16:50.9353464Z hint: 	git branch -m <name>
+2026-11-21T11:16:50.9353737Z hint:
+2026-11-21T11:16:50.9354079Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-21T11:16:50.9361696Z Initialized empty Git repository in /home/runner/work/pocket-ai-lab/pocket-ai-lab/.git/
+2026-11-21T11:16:50.9369467Z [command]/usr/bin/git remote add origin https://github.com/macksteward59-lgtm/pocket-ai-lab
+2026-11-21T11:16:50.9423619Z ##[endgroup]
+2026-11-21T11:16:50.9424229Z ##[group]Disabling automatic garbage collection
+2026-11-21T11:16:50.9425837Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-21T11:16:50.9447902Z ##[endgroup]
+2026-11-21T11:16:50.9448499Z ##[group]Setting up auth
+2026-11-21T11:16:50.9451878Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-21T11:16:50.9478422Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-21T11:16:51.1721427Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-21T11:16:51.1745912Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-21T11:16:51.1892384Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-21T11:16:51.1915347Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-21T11:16:51.2060014Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-21T11:16:51.2087975Z ##[endgroup]
+2026-11-21T11:16:51.2088540Z ##[group]Fetching the repository
+2026-11-21T11:16:51.2100201Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7e1cfcd2b4653f0fea70662d91964cf407be81f1:refs/remotes/origin/codex/tool-workshop-repair-integration-20261121
+2026-11-21T11:16:51.6006145Z From https://github.com/macksteward59-lgtm/pocket-ai-lab
+2026-11-21T11:16:51.6006963Z  * [new ref]         7e1cfcd2b4653f0fea70662d91964cf407be81f1 -> origin/codex/tool-workshop-repair-integration-20261121
+2026-11-21T11:16:51.6010021Z ##[endgroup]
+2026-11-21T11:16:51.6010485Z ##[group]Determining the checkout info
+2026-11-21T11:16:51.6011635Z ##[endgroup]
+2026-11-21T11:16:51.6016488Z [command]/usr/bin/git sparse-checkout disable
+2026-11-21T11:16:51.6075847Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-21T11:16:51.6097361Z ##[group]Checking out the ref
+2026-11-21T11:16:51.6101058Z [command]/usr/bin/git checkout --progress --force -B codex/tool-workshop-repair-integration-20261121 refs/remotes/origin/codex/tool-workshop-repair-integration-20261121
+2026-11-21T11:16:51.6339915Z Switched to a new branch 'codex/tool-workshop-repair-integration-20261121'
+2026-11-21T11:16:51.6345659Z branch 'codex/tool-workshop-repair-integration-20261121' set up to track 'origin/codex/tool-workshop-repair-integration-20261121'.
+2026-11-21T11:16:51.6348867Z ##[endgroup]
+2026-11-21T11:16:51.6383524Z [command]/usr/bin/git log -1 --format=%H
+2026-11-21T11:16:51.6400980Z 7e1cfcd2b4653f0fea70662d91964cf407be81f1
+2026-11-21T11:16:51.6407282Z ##[group]Removing auth
+2026-11-21T11:16:51.6410173Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-21T11:16:51.6432050Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-21T11:16:51.6580654Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-21T11:16:51.6603063Z http.https://github.com/.extraheader
+2026-11-21T11:16:51.6606772Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-21T11:16:51.6627691Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-21T11:16:51.6769777Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-21T11:16:51.6790472Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-21T11:16:51.6929680Z ##[endgroup]
+2026-11-21T11:16:51.7119548Z ##[group]Run actions/setup-node@v4
+2026-11-21T11:16:51.7119797Z with:
+2026-11-21T11:16:51.7120090Z   node-version: 22
+2026-11-21T11:16:51.7120300Z   always-auth: false
+2026-11-21T11:16:51.7120540Z   check-latest: false
+2026-11-21T11:16:51.7122389Z   token: ***
+2026-11-21T11:16:51.7122587Z ##[endgroup]
+2026-11-21T11:16:51.9558370Z (node:2328) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-21T11:16:51.9559258Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-21T11:16:51.9560526Z Found in cache @ /opt/hostedtoolcache/node/22.23.5/x64
+2026-11-21T11:16:51.9561432Z ##[group]Environment details
+2026-11-21T11:16:56.9298271Z node: v22.23.5
+2026-11-21T11:16:56.9298640Z npm: 10.9.9
+2026-11-21T11:16:56.9299090Z yarn: 1.22.22
+2026-11-21T11:16:56.9299784Z ##[endgroup]
+2026-11-21T11:16:56.9401851Z ##[group]Run npm install --ignore-scripts --package-lock=false
+2026-11-21T11:16:56.9402292Z [36;1mnpm install --ignore-scripts --package-lock=false[0m
+2026-11-21T11:16:57.2032701Z shell: /usr/bin/bash -e {0}
+2026-11-21T11:16:57.2033023Z ##[endgroup]
+2026-11-21T11:17:05.3834582Z 
+2026-11-21T11:17:05.3840778Z added 49 packages, and audited 50 packages in 8s
+2026-11-21T11:17:05.3841165Z 
+2026-11-21T11:17:05.3841325Z 14 packages are looking for funding
+2026-11-21T11:17:05.3841634Z   run `npm fund` for details
+2026-11-21T11:17:05.3841796Z 
+2026-11-21T11:17:05.3841939Z found 0 vulnerabilities
+2026-11-21T11:17:05.4073763Z ##[group]Run node_modules/.bin/tsc --noEmit -p tsconfig.json
+2026-11-21T11:17:05.4074184Z [36;1mnode_modules/.bin/tsc --noEmit -p tsconfig.json[0m
+2026-11-21T11:17:05.4075288Z [36;1mnode_modules/.bin/vitest run runtime/adapters/director runtime/adapters/llama-cpp packages/intelligence/__tests__/director-task-runner.test.ts packages/intelligence/__tests__/director-runtime-composition.test.ts packages/intelligence/__tests__/tool-director.test.ts[0m
+2026-11-21T11:17:05.4076356Z [36;1mnode --test scripts/tool-workshop/fixture.test.mjs scripts/tool-workshop/evidence.test.mjs scripts/tool-workshop/profile.test.mjs[0m
+2026-11-21T11:17:05.4076887Z [36;1mnode --check scripts/tool-workshop/run-repair.mjs[0m
+2026-11-21T11:17:05.4077227Z [36;1mnode --check scripts/tool-workshop/check-sandbox.mjs[0m
+2026-11-21T11:17:05.4077575Z [36;1mbash -n scripts/tool-workshop/build-server.sh[0m
+2026-11-21T11:17:05.4104120Z shell: /usr/bin/bash -e {0}
+2026-11-21T11:17:05.4104420Z ##[endgroup]
+2026-11-21T11:17:08.8910063Z 
+2026-11-21T11:17:08.8911929Z [1m[30m[46m RUN [49m[39m[22m [36mv5.1.1 [39m[90m/home/runner/work/pocket-ai-lab/pocket-ai-lab[39m
+2026-11-21T11:17:08.8922730Z 
+2026-11-21T11:17:09.2210505Z  [32m✓[39m runtime/adapters/director/StructuredRepairPlanner.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-11-21T11:17:09.2702609Z  [32m✓[39m runtime/adapters/director/DockerPythonToolSandbox.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 103[2mms[22m[39m
+2026-11-21T11:17:09.4237128Z  [32m✓[39m runtime/adapters/director/InferenceToolBuilder.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-21T11:17:09.4679964Z  [32m✓[39m packages/intelligence/__tests__/director-task-runner.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-21T11:17:09.5413106Z  [32m✓[39m packages/intelligence/__tests__/tool-director.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-21T11:17:09.5925284Z  [32m✓[39m runtime/adapters/llama-cpp/LlamaCppInferenceProvider.test.ts [2m([22m[2m61 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 311[2mms[22m[39m
+2026-11-21T11:17:09.6656226Z  [32m✓[39m runtime/adapters/llama-cpp/codeGeneration.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+2026-11-21T11:17:09.6697347Z  [32m✓[39m runtime/adapters/director/RepairFeedback.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-11-21T11:17:09.7756941Z  [32m✓[39m runtime/adapters/llama-cpp/chat.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-11-21T11:17:09.8396886Z  [32m✓[39m runtime/adapters/llama-cpp/DirectorCommandProvider.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-21T11:17:09.8957720Z  [32m✓[39m runtime/adapters/director/FileToolArtifactStore.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+2026-11-21T11:17:09.9023054Z  [32m✓[39m runtime/adapters/director/LocalApprovalRegistry.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-21T11:17:09.9723612Z  [32m✓[39m packages/intelligence/__tests__/director-runtime-composition.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-21T11:17:10.0188740Z  [32m✓[39m runtime/adapters/director/LocalProjectInspector.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-21T11:17:10.0441293Z  [32m✓[39m runtime/adapters/llama-cpp/prompt.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+2026-11-21T11:17:10.0498038Z 
+2026-11-21T11:17:10.0501680Z [2m Test Files [22m [1m[32m15 passed[39m[22m[90m (15)[39m
+2026-11-21T11:17:10.0502453Z [2m      Tests [22m [1m[32m295 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (296)[39m
+2026-11-21T11:17:10.0503023Z [2m   Start at [22m 11:17:08
+2026-11-21T11:17:10.0506764Z [2m   Duration [22m 1.15s[2m (tests 37%, transform 35%, import 25%, worker 2%)[22m
+2026-11-21T11:17:10.0513799Z 
+2026-11-21T11:17:10.0514701Z [2m    Isolate [22m [33m15 workers spawned[39m[2m · ~88ms startup each (spawn + environment, per file)[22m
+2026-11-21T11:17:10.0515718Z [2m            [22m [2mat least ~351ms faster with [22m[33misolate: false[39m[2m — reuses workers across files instead of one per file[22m
+2026-11-21T11:17:10.0516084Z 
+2026-11-21T11:17:10.0973213Z TAP version 13
+2026-11-21T11:17:10.1396262Z # Subtest: counts real comparisons while preserving ordinary wrong answers and empty results
+2026-11-21T11:17:10.1415554Z ok 1 - counts real comparisons while preserving ordinary wrong answers and empty results
+2026-11-21T11:17:10.1416553Z   ---
+2026-11-21T11:17:10.1417027Z   duration_ms: 1.762473
+2026-11-21T11:17:10.1423634Z   type: 'test'
+2026-11-21T11:17:10.1424169Z   ...
+2026-11-21T11:17:10.1425313Z # Subtest: infrastructure failures cannot be converted into a lower baseline score
+2026-11-21T11:17:10.1426207Z ok 2 - infrastructure failures cannot be converted into a lower baseline score
+2026-11-21T11:17:10.1432170Z   ---
+2026-11-21T11:17:10.1432711Z   duration_ms: 1.285156
+2026-11-21T11:17:10.1433171Z   type: 'test'
+2026-11-21T11:17:10.1433566Z   ...
+2026-11-21T11:17:10.1434276Z # Subtest: matching counts cannot conceal missing, duplicate, or different-source cases
+2026-11-21T11:17:10.1435535Z ok 3 - matching counts cannot conceal missing, duplicate, or different-source cases
+2026-11-21T11:17:10.1436406Z   ---
+2026-11-21T11:17:10.1436809Z   duration_ms: 0.34214
+2026-11-21T11:17:10.1437233Z   type: 'test'
+2026-11-21T11:17:10.1437626Z   ...
+2026-11-21T11:17:10.1438357Z # Subtest: a success claim cannot hide an error and a failed comparison must have the ordinary error
+2026-11-21T11:17:10.1439208Z ok 4 - a success claim cannot hide an error and a failed comparison must have the ordinary error
+2026-11-21T11:17:10.1439828Z   ---
+2026-11-21T11:17:10.1440195Z   duration_ms: 0.305005
+2026-11-21T11:17:10.1440687Z   type: 'test'
+2026-11-21T11:17:10.1441487Z   ...
+2026-11-21T11:17:10.1442321Z # Subtest: uncertain creation or cleanup blocks continuation even with usable candidate output
+2026-11-21T11:17:10.1443222Z ok 5 - uncertain creation or cleanup blocks continuation even with usable candidate output
+2026-11-21T11:17:10.1443841Z   ---
+2026-11-21T11:17:10.1444279Z   duration_ms: 0.395953
+2026-11-21T11:17:10.1444859Z   type: 'test'
+2026-11-21T11:17:10.1445331Z   ...
+2026-11-21T11:17:10.1446012Z # Subtest: teardown validation allows an empty blocked preflight but never promotes test doubles
+2026-11-21T11:17:10.1446992Z ok 6 - teardown validation allows an empty blocked preflight but never promotes test doubles
+2026-11-21T11:17:10.1447711Z   ---
+2026-11-21T11:17:10.1448196Z   duration_ms: 0.353119
+2026-11-21T11:17:10.1448674Z   type: 'test'
+2026-11-21T11:17:10.1449114Z   ...
+2026-11-21T11:17:10.1449777Z # Subtest: comparison metadata must explicitly bind source, version, and a nonempty case count
+2026-11-21T11:17:10.1450794Z ok 7 - comparison metadata must explicitly bind source, version, and a nonempty case count
+2026-11-21T11:17:10.1451461Z   ---
+2026-11-21T11:17:10.1451859Z   duration_ms: 0.37003
+2026-11-21T11:17:10.1452324Z   type: 'test'
+2026-11-21T11:17:10.1452769Z   ...
+2026-11-21T11:17:10.1461670Z # Subtest: loads a pinned, deeply immutable fixture with distinct development and held-out cases
+2026-11-21T11:17:10.1462904Z ok 8 - loads a pinned, deeply immutable fixture with distinct development and held-out cases
+2026-11-21T11:17:10.1463703Z   ---
+2026-11-21T11:17:10.1464696Z   duration_ms: 5.035302
+2026-11-21T11:17:10.1465139Z   type: 'test'
+2026-11-21T11:17:10.1465416Z   ...
+2026-11-21T11:17:10.1466023Z # Subtest: the fixed cases distinguish character slicing and preserve non-grapheme code-point prefixes
+2026-11-21T11:17:10.1473013Z ok 9 - the fixed cases distinguish character slicing and preserve non-grapheme code-point prefixes
+2026-11-21T11:17:10.1475757Z   ---
+2026-11-21T11:17:10.1476402Z   duration_ms: 1.082298
+2026-11-21T11:17:10.1477080Z   type: 'test'
+2026-11-21T11:17:10.1477683Z   ...
+2026-11-21T11:17:10.1478874Z # Subtest: refuses changed answer keys, metadata, whitespace, and oversized replacement fixtures
+2026-11-21T11:17:10.1479949Z ok 10 - refuses changed answer keys, metadata, whitespace, and oversized replacement fixtures
+2026-11-21T11:17:10.1480792Z   ---
+2026-11-21T11:17:10.1481258Z   duration_ms: 6.914902
+2026-11-21T11:17:10.1481728Z   type: 'test'
+2026-11-21T11:17:10.1482148Z   ...
+2026-11-21T11:17:10.1482759Z # Subtest: host input validation admits bounded scalar strings without normalization
+2026-11-21T11:17:10.1483581Z ok 11 - host input validation admits bounded scalar strings without normalization
+2026-11-21T11:17:10.1484250Z   ---
+2026-11-21T11:17:10.1485332Z   duration_ms: 0.886419
+2026-11-21T11:17:10.1485831Z   type: 'test'
+2026-11-21T11:17:10.1486206Z   ...
+2026-11-21T11:17:10.1486899Z # Subtest: invalid types, field shapes, budgets, surrogates, and oversized input are protocol errors
+2026-11-21T11:17:10.1487929Z ok 12 - invalid types, field shapes, budgets, surrogates, and oversized input are protocol errors
+2026-11-21T11:17:10.1488661Z   ---
+2026-11-21T11:17:10.1489125Z   duration_ms: 0.762589
+2026-11-21T11:17:10.1489564Z   type: 'test'
+2026-11-21T11:17:10.1489993Z   ...
+2026-11-21T11:17:10.1490672Z # Subtest: selection rejects a baseline-only run, extra revisions, and caller-expanded budgets
+2026-11-21T11:17:10.1491573Z ok 13 - selection rejects a baseline-only run, extra revisions, and caller-expanded budgets
+2026-11-21T11:17:10.1492466Z   ---
+2026-11-21T11:17:10.1492851Z   duration_ms: 0.464468
+2026-11-21T11:17:10.1493351Z   type: 'test'
+2026-11-21T11:17:10.1493748Z   ...
+2026-11-21T11:17:10.1494396Z # Subtest: held-out execution requires the actual candidate hash to match its frozen selection
+2026-11-21T11:17:10.1495684Z ok 14 - held-out execution requires the actual candidate hash to match its frozen selection
+2026-11-21T11:17:10.1496245Z   ---
+2026-11-21T11:17:10.1496580Z   duration_ms: 0.67058
+2026-11-21T11:17:10.1496887Z   type: 'test'
+2026-11-21T11:17:10.1497164Z   ...
+2026-11-21T11:17:10.1501977Z # Subtest: v4 changes the code/feedback contract while preserving the frozen experiment controls
+2026-11-21T11:17:10.1502835Z ok 15 - v4 changes the code/feedback contract while preserving the frozen experiment controls
+2026-11-21T11:17:10.1506940Z   ---
+2026-11-21T11:17:10.1507435Z   duration_ms: 5.37617
+2026-11-21T11:17:10.1507853Z   type: 'test'
+2026-11-21T11:17:10.1508141Z   ...
+2026-11-21T11:17:10.1508697Z # Subtest: v5 changes only illustrative source prompts and remaining revision advertisement
+2026-11-21T11:17:10.1509544Z ok 16 - v5 changes only illustrative source prompts and remaining revision advertisement
+2026-11-21T11:17:10.1510118Z   ---
+2026-11-21T11:17:10.1510420Z   duration_ms: 2.122563
+2026-11-21T11:17:10.1510731Z   type: 'test'
+2026-11-21T11:17:10.1510997Z   ...
+2026-11-21T11:17:10.1511617Z # Subtest: baseline is an explicit model and feedback qualification with unchanged quality controls
+2026-11-21T11:17:10.1512471Z ok 17 - baseline is an explicit model and feedback qualification with unchanged quality controls
+2026-11-21T11:17:10.1513063Z   ---
+2026-11-21T11:17:10.1513354Z   duration_ms: 4.791781
+2026-11-21T11:17:10.1513656Z   type: 'test'
+2026-11-21T11:17:10.1513977Z   ...
+2026-11-21T11:17:10.1515344Z # Subtest: old profiles retain their hashed legacy contract and unknown selections never fall back
+2026-11-21T11:17:10.1516291Z ok 18 - old profiles retain their hashed legacy contract and unknown selections never fall back
+2026-11-21T11:17:10.1516839Z   ---
+2026-11-21T11:17:10.1517119Z   duration_ms: 1.479883
+2026-11-21T11:17:10.1517476Z   type: 'test'
+2026-11-21T11:17:10.1517776Z   ...
+2026-11-21T11:17:10.1555981Z 1..18
+2026-11-21T11:17:10.1556305Z # tests 18
+2026-11-21T11:17:10.1556580Z # suites 0
+2026-11-21T11:17:10.1556839Z # pass 18
+2026-11-21T11:17:10.1557076Z # fail 0
+2026-11-21T11:17:10.1557321Z # cancelled 0
+2026-11-21T11:17:10.1557551Z # skipped 0
+2026-11-21T11:17:10.1557783Z # todo 0
+2026-11-21T11:17:10.1558021Z # duration_ms 71.869177
+2026-11-21T11:17:10.2072846Z Post job cleanup.
+2026-11-21T11:17:10.2990077Z (node:2587) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-21T11:17:10.2991015Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-21T11:17:10.3156476Z Post job cleanup.
+2026-11-21T11:17:10.3801862Z [command]/usr/bin/git version
+2026-11-21T11:17:10.3832437Z git version 2.56.1
+2026-11-21T11:17:10.3855727Z Temporarily overriding HOME='/home/runner/work/_temp/27580734-7216-4464-84bd-d62a4194a51a' before making global git config changes
+2026-11-21T11:17:10.3856863Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-21T11:17:10.3860092Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/pocket-ai-lab/pocket-ai-lab
+2026-11-21T11:17:10.3887095Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-21T11:17:10.3910705Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-21T11:17:10.4072960Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-21T11:17:10.4095238Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-21T11:17:10.4251906Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-21T11:17:10.4273518Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-21T11:17:10.4566507Z Cleaning up orphan processes
+2026-11-21T11:17:10.4822680Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

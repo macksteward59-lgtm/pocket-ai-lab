@@ -9,7 +9,41 @@
 
 > This handoff consolidates the durable product decisions and technical requirements available from prior project discussions and the repository's current coordination records. The master checklist remains the detailed requirement baseline; the traceability matrix remains the requirement-level audit ledger. This document connects those records into one implementation-ready plan. If an original source artifact is unavailable, its contents are explicitly marked as needing recovery rather than reconstructed by guesswork.
 
-## 2026-11-21 continuation — executable code measured; repair remains unqualified
+## 2026-11-21 current checkpoint — feedback repaired; coding baseline measured
+
+[Draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241) remains stacked on #240 and unmerged. Source `7e1cfcd2b4653f0fea70662d91964cf407be81f1`, tree `f7cdb83d6f8961e7ee5d273fde6986e62e2bc833`, adds an explicit pre-snapshot artifact summary to the existing Director loop and one separately frozen ordinary coding baseline. No duplicate engine, plugin or executor was created.
+
+### Completed implementation and verified result
+
+The feedback audit found both a false truncation flag in v5 and loss of typed Director grade metadata for large v4 artifacts. The latter does not negate the compiler feedback actually delivered to the Engineer through the artifact store. The new `host-artifact-summary-v1` contract projects identity/status/counts and bounded findings before the normal runner snapshot, validates counts/tool binding and retains sanitization, freezing and untrusted-output labels. The old v1–v5 profiles and behavior remain intact.
+
+The official Qwen2.5-Coder-7B-Instruct Q4_K_M pin was verified against its immutable publisher artifact and license source. It is selected only by baseline-v1; app defaults and prior model pins remain unchanged. The run keeps the existing runtime, source contract, task, grader, sampling/context/token limits and two-generation/three-turn allowance. Changes to model, feedback, time ceilings and reasoning-budget omission are explicit.
+
+| Layer | Observed current-source result |
+|---|---|
+| Software | TypeScript, 295 focused runtime tests plus one existing skip, 18 fixture/evidence/profile tests, 42 pin/acquisition tests locally, independent review; [full repository CI 44898332609](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44898332609) passed. |
+| Actual sandbox controls | 21 cases: baseline 3/8, fixture-authored correction 8/8, compiler/negative/isolation controls, lineage and all cleanup passed. |
+| Actual baseline-v1 model trial | [Workflow 44898332601](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44898332601): five calls, two identical 319-byte Python revisions, each 6/8 development. Final 7/20 held-out versus baseline 4/20. Acceptance false. |
+| Director/feedback | revise → revise → blocked, balances 2 → 1 → 0. Accurate 6/8 feedback and both failures reached later calls. Revise was removed from available actions and schema at zero; no third Engineer call. |
+| Integrity | Exact source/output lineage and all 64 live case hashes/grades verified; all 64 containers removed, server exit 0, host model hash unchanged, no model call after freeze. |
+
+The code improves the initial candidate but confuses a UTF-8 byte offset with a Python character slice. The second Engineer had both actual failure findings and its previous source but repeated the same error. The final blocked action was valid and did not falsely claim completion. `controlPassed:false` reflects the existing gate's requirement for a completed result; `qualityPassed:false` and `accepted:false` still reject incomplete repair.
+
+### What this establishes, and what remains
+
+The baseline ran real model choice, source generation, isolated execution, correct feedback delivery, a second generation, budget-aware stopping and independently graded held-out evaluation. It does not establish reliable repair, broad coding ability, learned internal language, a model-only comparison or whole-product acceptance. The reused held-out fixture is hidden from revision context but is not a fresh generalization test.
+
+The live candidate artifacts were small with two findings; large-artifact and truncation branches remain explicit contract-test coverage. Compiler feedback was verified by actual fixture controls. Host snapshots show four CPUs and about 16.8 GB decimal RAM; the experiment took 413.675 seconds, including about 371.9 seconds of provider calls. These are single hosted CPU observations, not peak-memory measurements, phone feasibility or language-efficiency claims.
+
+The predeclared one-trial stopping rule was honored. No extra model run, prompt tuning, token expansion or handwritten model-output replacement followed. The next engineering gate is a separately frozen multiple-task ordinary code/control qualification and explicit model-role comparison. That provides a sound reference before adding learner/teacher training, autonomous experiment design or G.I.R.L. communication measurements. ALI #217, skill lifecycle #91/#92, multi-agent proof #227, a concrete ExploitGym adapter, native integration and physical iPhone acceptance remain the distinct integration work mapped below.
+
+Durable evidence: [current interpretation](evidence/tool-workshop-repair-2026-11-21/README.md), [full provenance](evidence/tool-workshop-repair-2026-11-21/provenance.json), [baseline-v1 raw report](evidence/tool-workshop-repair-2026-11-21/live-baseline-v1/report.json), [trial provenance](evidence/tool-workshop-repair-2026-11-21/live-baseline-v1/provenance.json), and [actual controls](evidence/tool-workshop-repair-2026-11-21/baseline-v1-sandbox/sandbox-report.json). All earlier raw records remain unchanged.
+
+Model bytes are not in the bundle for an independent post-run rehash. The control isolation probe's dynamic source cannot be fully reconstructed from its archive; its observed result/cleanup is preserved. Generated artifacts remain quarantined and unactivated. No production self-edit, weight training, cloud deployment, APEX/East change, physical-device acceptance or merge occurred.
+
+This checkpoint supersedes the previous feedback-fix/baseline next step, while preserving the historical observations and complete-product requirements below.
+
+## 2026-11-21 historical v4/v5 checkpoint — executable code measured; repair unqualified
 
 [Draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241), still stacked on #240, now has source head `6c01e953ceb6d6633a770a31980aaf19125d5c47`, tree `a4a30278ea00a3c769e2ad0d913a1ee1cd8dbf67`. This continuation implemented the dedicated source-generation contract identified by the v3 audit, connected actual compiler feedback, preserved all earlier raw trials, and ran separately frozen v4 and v5 diagnostics through the existing workshop. No duplicate engine or plugin was created.
 

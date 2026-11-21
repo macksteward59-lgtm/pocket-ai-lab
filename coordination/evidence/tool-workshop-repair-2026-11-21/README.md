@@ -1,21 +1,67 @@
 # Tool workshop repair: observed execution evidence
 
-Recorded 2026-11-21. Implementation: [draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241), current head `6c01e953ceb6d6633a770a31980aaf19125d5c47`, tree `a4a30278ea00a3c769e2ad0d913a1ee1cd8dbf67`, stacked on PR #240. This evidence records enabled candidate-code experiments through Pocket AI Lab's existing workshop. The current v5 model/prompt/task configuration remains unqualified; the complete product and autonomous self-repair are not accepted.
+Recorded 2026-11-21. Implementation: [draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241), current source `7e1cfcd2b4653f0fea70662d91964cf407be81f1`, tree `f7cdb83d6f8961e7ee5d273fde6986e62e2bc833`, stacked on PR #240. This evidence records enabled candidate-code experiments through the existing workshop. The latest baseline-v1 improved the faulty code but remains unqualified for complete repair; the full product and general autonomous self-repair are not accepted.
 
-## What actually happened
+## Current baseline-v1 result — partial improvement, repair not qualified
+
+[Workflow 44898332601](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44898332601) ran the separately frozen official Qwen2.5-Coder-7B-Instruct Q4_K_M configuration at source `7e1cfcd2b4653f0fea70662d91964cf407be81f1`, tree `f7cdb83d6f8961e7ee5d273fde6986e62e2bc833`.
+
+| Stage | Actual result |
+|---|---|
+| Faulty baseline | 3/8 development; 4/20 held-out |
+| First model revision, version 2 | 319-byte executable Python source; 6/8 development |
+| Second model revision, version 3 | The same exact 319-byte source; 6/8 development |
+| Frozen final candidate | 7/20 held-out; incomplete repair |
+| Director decisions | revise → revise → blocked; remaining revisions 2 → 1 → 0 |
+| Acceptance | `accepted:false`, `qualityPassed:false`, `controlPassed:false` |
+
+All five real provider calls completed successfully, each within 95 seconds. There was no setup, provider, compiler, timeout or container failure. The terminal `blocked` was valid: both allowed generations had been consumed and the code still failed. The existing `controlPassed` field requires a completed outcome; false here does not mean malformed control or false completion. This single configuration improved some scores but did not establish a working repair baseline.
+
+### Exact failure and feedback
+
+Both Engineer outputs, builder records, retained artifacts and final selection contain the same source, SHA-256 `209ecb52f53d0f45f9727f868b605e9ad4090ddbf03d9f162c7b6f77e97785e3`. Static inspection identifies the defect: the code locates a boundary by indexing UTF-8 bytes, then uses that byte offset in `text[:i]`, which slices Python characters. It returned `漢字A` for a four-byte budget (expected `漢`) and `éx` for a two-byte budget (expected `é`).
+
+The second Engineer received the exact previous source, failed 6/8 summary and both actual failure findings, but repeated the code unchanged. Versions 2 and 3 have the same canonical artifact digest because their specification and source match; version history and previousDigest linkage remain correct. There was one distinct revised solution, not two independent successes.
+
+The corrected Director observations retain actual tool/version/digest, quarantined status, 6/8 counts and both complete findings. Original/included counts are 2/2; both truncation flags are correctly false. No generated source bundle enters the Director outcomes, while the initial objective intentionally retains the faulty baseline source. At zero generations, both the available actions and schema exclude revise; the final model action is blocked, with no third Engineer call.
+
+This live run exercised normal projected feedback and the zero-budget action filter. The >6,000-character artifact, seven-to-three finding selection and long-finding clipping are declared contract-test coverage, not live coverage here: these candidate artifacts were only 2,359 serialized characters with two short findings. Compiler feedback was exercised by actual sandbox controls, not by the syntactically valid live candidates. The in-flight stale-budget guard remains declared-test coverage.
+
+### Observation correction and historical limits
+
+Review of the preserved v4 requests identified an additional defect beyond v5's wrong truncation flag. Large v4 artifacts were converted to a generic serialized preview by DirectorTaskRunner before the legacy wrapper read typed metadata. Later Director requests therefore contained null status/identity/grade counts and empty findings. The Engineer still received the compiler findings through its separate artifact-store path. This diagnosis does not alter any old source, request, score or result.
+
+Baseline-v1 explicitly selects `host-artifact-summary-v1`: project the actual artifact before the existing snapshot, retain identity and grade counts plus three bounded findings, and validate original/included counts and clipping metadata before inference. The runner still sanitizes, bounds and freezes history, and retains `untrusted-tool-output`. Provenance is not authorization or a replacement for host grading. Omission preserves v1–v5 behavior and exact frozen profile bytes.
+
+### Identity, runtime and audit
+
+The official model artifact is pinned to publisher revision `13fb94bfda8c8cf22497dc57b78f391a9acb426a`, 4,683,073,536 bytes, SHA-256 `509287f78cb4d4cf6b3843734733b914b2c158e43e22a7f4bf5e963800894d3c`, Apache-2.0. The pinned model card does not attest the conversion's upstream model revision. The separate license revision is not treated as conversion provenance.
+
+The same llama.cpp source pin, source prompts/parser, initial objective, fixture, grading, context 4,096, two CPU threads, zero GPU layers, temperature 0, seed 42, 1,024-token ceiling and two-generation/three-turn budget remain. The baseline explicitly changes model and feedback contract, omits the R1 reasoning-budget option, and declares 300-second provider / 900-second acquisition limits. It is a new configuration, not a model-only causal comparison, newest-model claim, or v6 prompt iteration. Existing default/pins and all earlier trials remain intact.
+
+The observed host was Linux/x64 with four available CPUs and 16,760,340,480 bytes total RAM. Provider calls totaled about 371.9 seconds; the experiment wall interval was 413.675 seconds. Prompt reuse and the single host/run prevent treating those timings as a general model speed comparison. OS snapshots do not measure peak model memory or establish iPhone fit.
+
+Independent audits recomputed all 64 case source/artifact/input/expected hashes, raw output bytes and grades. All 64 distinct containers exited 0 and were verified absent; server exit 0 settled with no log overflow. The host reported the model file unchanged. The GGUF is not bundled for an independent post-run rehash.
+
+Last model completion was **11:30:14.816 UTC**, candidate freeze **11:30:14.819 UTC**, and first held-out start **11:30:14.929 UTC**. No held-out identifiers appeared in model requests and no later model call occurred. The known held-out fixture was withheld during revision but reused; it is not fresh generalization evidence.
+
+The one predeclared trial is complete. No prompt change, token expansion, handwritten repair substitution or additional model trial followed the result. The next gate is a separately frozen multiple-task ordinary code/control qualification and model-role comparison before autonomous experimentation, learner/teacher training or G.I.R.L. efficiency claims.
+
+## Preserved trial history
 
 | Run | Real model / execution result | Accepted? |
 |---|---|---|
-| Fixture controls | Initial and v3 runs each had 20 real Docker executions; v4 and v5 each had 21, including an actual compiler-diagnostic case. Faulty source 3/8; scripted correction 8/8; isolation, wrong-output rejection, timeout, output limit, lineage/reopen and cleanup behaved as expected. | Executor controls passed. Corrections are fixture-authored, not model-generated. |
+| Fixture controls | Initial and v3 runs each had 20 real Docker executions; v4, v5 and baseline-v1 each had 21, including an actual compiler-diagnostic case. Faulty source 3/8; scripted correction 8/8; isolation, wrong-output rejection, timeout, output limit, lineage/reopen and cleanup behaved as expected. | Executor controls passed. Corrections are fixture-authored, not model-generated. |
 | [v1, 44878327905](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44878327905) | One Director call returned ordinary content without a native function call. No Engineer call, revision, or held-out execution. | No |
 | [v2, 44880061412](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44880061412) | Structured Director selected revise and dispatched the real Engineer. Engineer used the 1,024-token limit, but the HTTP backend received no usable final message content/toolCalls. No retained revision or held-out execution. | No |
 | [v3, 44881077624](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44881077624) | Three Director calls and two Engineer calls. Both exact Engineer responses were retained as versions 2 and 3, executed, graded and returned as development feedback. Both were prose, not Python. Each scored 0/8 development; final version scored 0/20 held-out versus baseline 4/20. | No: host quality gate rejected the Director's completion claim. |
 | [v4, 44890561764](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44890561764) | Three Director calls and two Engineer calls. Both exact source values were `Python source`, matching the illustrative prompt value. Each scored 0/8 development with SyntaxError; final 0/20 held-out. Actual compiler feedback reached the second Engineer. Third revise decision was rejected before another generation. | No: both control and quality failed. |
 | [v5, 44892136884](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44892136884) | Director revise → one Engineer generation → Director complete. Exact 334-byte executable source scored 1/8 development and 1/20 held-out, below baseline 3/8 and 4/20. Director stopped with one revision still available. | No: valid terminal protocol, failed repair and false completion judgment. |
+| [baseline-v1, 44898332601](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44898332601) | Three Director calls and two Engineer calls. Identical 319-byte revisions each scored 6/8 development; final 7/20 held-out versus baseline 4/20. Valid blocked after two attempts; actual compact feedback and zero-budget filtering observed. | No: partial improvement, incomplete functional repair. |
 
 The v3 loop exercised actual model choice, generation, persistence, execution, feedback, a second revision, final selection and independent held-out evaluation. It demonstrated the connection, not successful repair. Both generated candidates were quarantined. All 64 live v3 container cases settled and were removed; server shutdown settled and the model file hash remained unchanged.
 
-## Current v5 finding and limits
+## Historical v5 finding and limits
 
 V4 introduced an optional dedicated source-generation contract through the existing inference provider and bounded development-only compiler diagnostics. Its actual model responses remained invalid Python, but they were parsed from the dedicated source field, retained exactly, executed and returned as feedback. All 64 v4 containers were removed and the server settled; acceptance was false.
 
@@ -53,14 +99,15 @@ The host selected one UTF-8 prefix function with eight visible development cases
 
 The sandbox used a pinned Python image, no candidate network, read-only root, a non-root user, resource/time/output limits and fresh containers. Candidate mounts include source and the host runner, not repository source, answer keys, credentials or the Docker socket. The existing ToolDirector stores version lineage and quarantines failures. No candidate was activated or installed; no production Pocket source or model weights were changed.
 
-Model: `deepseek-r1-distill-qwen-1.5b-q4_k_m`, 1,117,320,800 bytes, SHA256 `1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f`. Pinned llama.cpp commit `5f490d7bfe78844e6390c869454c149fd7e003a8`; hosted Linux CPU, context 4,096, two threads, zero GPU layers, temperature 0, seed 42, total generation limit 1,024. This is the existing small quantized model used by the project, not a claim to test the newest or largest DeepSeek release.
+Historical v1–v5 model: `deepseek-r1-distill-qwen-1.5b-q4_k_m`, 1,117,320,800 bytes, SHA256 `1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f`. Pinned llama.cpp commit `5f490d7bfe78844e6390c869454c149fd7e003a8`; hosted Linux CPU, context 4,096, two threads, zero GPU layers, temperature 0, seed 42, total generation limit 1,024. This is the existing small quantized model used by the project, not a claim to test the newest or largest DeepSeek release.
 
 ## Validation and records
 
-[Full repository CI 44892136889](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44892136889) passed at current head `6c01e953ceb6d6633a770a31980aaf19125d5c47`. The same-head workshop contracts and 21 actual Docker controls passed. Local validation included TypeScript, **262 passing focused runtime tests plus one existing skip**, **17 fixture/evidence/profile tests**, syntax and diff checks. Independent source and evidence reviews found no integrity blocker. The live model job failed its quality gate. Earlier validation results remain in provenance history; passing software tests do not override failed model acceptance.
+[Full repository CI 44898332609](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44898332609) passed at current source `7e1cfcd2b4653f0fea70662d91964cf407be81f1`. The same-head workshop contracts and 21 actual Docker controls passed. Local validation included TypeScript, **295 passing focused runtime tests plus one existing skip**, **18 fixture/evidence/profile tests**, **42 existing pin/acquisition tests**, syntax/YAML/diff checks and frozen-profile/default preservation. Hosted contracts independently passed the 295 runtime and 18 fixture/evidence/profile tests. Independent source, feedback and evidence audits found no integrity blocker. The live job failed functional acceptance. Historical validation remains in provenance; software checks do not override a failed model result.
 
+- [live-baseline-v1/report.json](live-baseline-v1/report.json), [trial provenance](live-baseline-v1/provenance.json), and [baseline-v1-sandbox/sandbox-report.json](baseline-v1-sandbox/sandbox-report.json): current exact-source live result and 21 actual fixture controls.
 - [provenance.json](provenance.json): exact heads, trees, profiles, fixture/model identities, workflow/job/artifact IDs and verified archive/report hashes.
-- [v5-sandbox/sandbox-report.json](v5-sandbox/sandbox-report.json): current-head 21-case real execution controls.
+- [v5-sandbox/sandbox-report.json](v5-sandbox/sandbox-report.json): v5-head 21-case real execution controls.
 - [v4-sandbox/sandbox-report.json](v4-sandbox/sandbox-report.json): v4 21-case controls.
 - [final-sandbox/sandbox-report.json](final-sandbox/sandbox-report.json): preserved v3-head 20-case controls.
 - [sandbox/sandbox-report.json](sandbox/sandbox-report.json): initial implementation controls.
@@ -68,7 +115,7 @@ Model: `deepseek-r1-distill-qwen-1.5b-q4_k_m`, 1,117,320,800 bytes, SHA256 `1741
 - Each live directory preserves its model-server log and hosted job log. Source-artifact JSON is preserved alongside reports.
 - [provisioning-attempt-1.json](provisioning-attempt-1.json) and [provisioning-v2-attempt-1.json](provisioning-v2-attempt-1.json): setup failures before inference (unused upstream UI assets; anonymous GitHub API rate limit). Neither is a model result.
 
-For each v4/v5 sandbox control audit, 20 source/artifact digests were independently recomputed. The isolation probe's exact source includes an unretained dynamic port, so its recorded digest cannot be independently reconstructed from the bundle; its observed result and cleanup are preserved.
+For each v4/v5/baseline-v1 sandbox control audit, 20 source/artifact digests were independently recomputed. The isolation probe's exact source includes an unretained dynamic port, so its recorded digest cannot be independently reconstructed from the bundle; its observed result and cleanup are preserved.
 
 Archive digests were checked before extraction; raw report/source bytes are retained. Server log filenames change from `.log` to `.txt` for repository handling, with no content edits. No temporary signed download URLs are published.
 
