@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createServer as createHttpServer } from "node:http";
+import { createServer as createHttpServer, request as requestHttp } from "node:http";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -284,6 +284,66 @@ test("memory API edits entries explicitly and persists the revised unverified re
         body: JSON.stringify({ content: "x".repeat(12001) })
       });
       assert.equal(oversized.status, 413);
+    }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("memory API rejects UTF-8 byte overflow before any write", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-byte-limit-"));
+  try {
+    await withServer(async url => {
+      // A character-count limit would accept this request and save "should not persist".
+      const raw = JSON.stringify({ content: "should not persist", padding: "🍵".repeat(20000) });
+      assert.ok(raw.length < 64 * 1024);
+      assert.ok(Buffer.byteLength(raw, "utf8") > 64 * 1024);
+      const rejected = await fetch(url + "/api/memory", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: raw
+      });
+      assert.equal(rejected.status, 413);
+      assert.equal((await rejected.json()).error, "Request too large");
+      const remaining = await (await fetch(url + "/api/memory")).json();
+      assert.deepEqual(remaining.entries, []);
+    }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("memory API decodes split multibyte UTF-8 as original bytes", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-ai-memory-split-utf8-"));
+  try {
+    await withServer(async url => {
+      const content = "Provenance: café, 茶, 🍵";
+      const bytes = Buffer.from(JSON.stringify({ content, source: "local test" }));
+      const split = bytes.indexOf(Buffer.from("🍵")) + 1;
+      assert.ok(split > 1 && split < bytes.length);
+      const result = await new Promise((resolve, reject) => {
+        const req = requestHttp(url + "/api/memory", {
+          method: "POST",
+          headers: { "content-type": "application/json" }
+        }, res => {
+          const chunks = [];
+          res.on("data", data => chunks.push(data));
+          res.once("error", reject);
+          res.once("end", () => resolve({
+            status: res.statusCode,
+            body: JSON.parse(Buffer.concat(chunks).toString("utf8"))
+          }));
+        });
+        req.once("error", reject);
+        req.write(bytes.subarray(0, split));
+        req.end(bytes.subarray(split));
+      });
+      assert.equal(result.status, 201);
+      assert.equal(result.body.entry.content, content);
+      const persisted = await (await fetch(url + "/api/memory")).json();
+      assert.equal(persisted.entries.length, 1);
+      assert.equal(persisted.entries[0].content, content);
+      assert.equal(persisted.entries[0].provenance.verified, false);
     }, { HOST: "127.0.0.1", POCKET_MEMORY_DIR: directory });
   } finally {
     await rm(directory, { recursive: true, force: true });
