@@ -1,0 +1,199 @@
+name: DeepSeek Local Qualification
+
+on:
+  pull_request:
+    branches:
+      - main
+      - codex/recipient-format-calibration-20261120
+    paths:
+      - scripts/local-gguf/**
+      - scripts/model-qualification/**
+      - runtime/ios/Tests/LlamaEngineTests/DeepSeekQualification*.swift
+      - .github/workflows/deepseek-local-qualification-ci.yml
+      - docs/implementation/deepseek-local-qualification.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deepseek-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test bounded model acquisition and existing local GGUF contracts
+        run: node --test scripts/local-gguf/lib.test.mjs scripts/local-gguf/download.test.mjs
+      - name: Test independent qualification auditing
+        run: |
+          python3 - <<'PY'
+          import unittest
+          suite=unittest.defaultTestLoader.discover('scripts/model-qualification',pattern='test_*.py')
+          count=suite.countTestCases()
+          assert count == 16, 'Required audit coverage was not discovered'
+          result=unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun==count and not result.skipped and result.wasSuccessful()
+          PY
+
+  native-candidate:
+    needs: contracts
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    env:
+      POCKET_GGUF_ID: deepseek-r1-distill-qwen-1.5b-q4_k_m
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare native build tools
+        id: build-tools
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          swift --version
+          uname -m
+          brew install cmake ninja
+          tool_versions="$(brew list --versions cmake ninja)"
+          echo "build_tools_hash=$(printf '%s\n%s\n' "$(xcodebuild -version)" "$tool_versions" | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+      - name: Restore existing pinned native dependencies
+        id: llama-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: pocket-llama-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-tools.outputs.build_tools_hash }}-${{ hashFiles('runtime/ios/pin/llama-cpp.json', 'runtime/ios/scripts/build-llama-cpp.sh') }}
+      - name: Verify or build pinned dependencies
+        id: native-build
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && bash runtime/ios/scripts/build-llama-cpp.sh verify && bash runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
+            echo "Verified existing pinned native archives."
+          else
+            bash runtime/ios/scripts/build-llama-cpp.sh simulator
+            rm -rf runtime/ios/build/cmake-simulator
+            bash runtime/ios/scripts/build-llama-cpp.sh ios-device
+            rm -rf runtime/ios/build/cmake-ios-device
+            bash runtime/ios/scripts/build-llama-cpp.sh macos
+            rm -rf runtime/ios/build/cmake-macos
+          fi
+          bash runtime/ios/scripts/build-llama-cpp.sh verify-artifacts
+          bash runtime/ios/scripts/build-llama-cpp.sh xcframework
+      - name: Save verified native dependencies
+        if: always() && steps.llama-cache.outputs.cache-hit != 'true' && steps.native-build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: ${{ steps.llama-cache.outputs.cache-primary-key }}
+      - name: Download and independently inspect exact candidate bytes
+        id: prepare
+        timeout-minutes: 18
+        run: |
+          set -euo pipefail
+          mkdir -p runtime/ios/build
+          node scripts/local-gguf/fetch-smoke-gguf.mjs > runtime/ios/build/deepseek-download.json
+          model="$(node -p 'JSON.parse(require("node:fs").readFileSync("runtime/ios/build/deepseek-download.json","utf8")).path')"
+          python3 scripts/model-qualification/qualification.py prepare --model "$model" --output runtime/ios/build/deepseek-qualification
+          cp runtime/ios/build/deepseek-download.json runtime/ios/build/deepseek-qualification/download.json
+          echo "model=$model" >> "$GITHUB_OUTPUT"
+      - name: Observe candidate vocabulary and exact native input bytes
+        id: tokenizer
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          bash scripts/model-qualification/run-tokenizer-probe.sh \
+            "${{ steps.prepare.outputs.model }}" scripts/model-qualification/deepseek-r1-distill-qwen-1.5b-v1.json \
+            runtime/ios/build/deepseek-qualification \
+            > runtime/ios/build/deepseek-qualification/tokenizer.jsonl \
+            2> runtime/ios/build/deepseek-qualification/tokenizer-stderr.log
+          python3 scripts/model-qualification/qualification.py tokenizer \
+            --input runtime/ios/build/deepseek-qualification/tokenizer.jsonl \
+            --output runtime/ios/build/deepseek-qualification/tokenization-verified.json
+      - name: Build isolated candidate and fixture tests
+        id: build
+        timeout-minutes: 12
+        run: |
+          set -euo pipefail
+          rsync -a --exclude '.build' runtime/ios/ /tmp/pocket-deepseek-host/
+          cd /tmp/pocket-deepseek-host
+          xcodebuild build-for-testing -scheme PocketLlamaEngine \
+            -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath /tmp/pocket-derived-deepseek \
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO \
+            | tee "$GITHUB_WORKSPACE/runtime/ios/build/deepseek-qualification/build.log"
+          python3 "$GITHUB_WORKSPACE/scripts/model-qualification/configure-test-plan.py" \
+            /tmp/pocket-derived-deepseek "${{ steps.prepare.outputs.model }}" \
+            "$GITHUB_WORKSPACE/scripts/model-qualification/deepseek-r1-distill-qwen-1.5b-v1.json"
+      - name: Execute native qualification contract tests
+        id: fixtures
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          xcodebuild test-without-building -xctestrun "${{ steps.build.outputs.xctestrun }}" \
+            -destination "platform=macOS,arch=$(uname -m)" -parallel-testing-enabled NO \
+            "-only-testing:${{ steps.build.outputs.target }}/DeepSeekQualificationContractTests" CODE_SIGNING_ALLOWED=NO \
+            | tee runtime/ios/build/deepseek-qualification/contract-xctest.log
+          python3 scripts/model-qualification/configure-test-plan.py verify-fixtures \
+            runtime/ios/build/deepseek-qualification/contract-xctest.log
+      - name: Execute eight precommitted candidate trials
+        id: experiment
+        timeout-minutes: 18
+        run: |
+          set -euo pipefail
+          xcodebuild test-without-building -xctestrun "${{ steps.build.outputs.xctestrun }}" \
+            -destination "platform=macOS,arch=$(uname -m)" -parallel-testing-enabled NO \
+            "-only-testing:${{ steps.build.outputs.target }}/DeepSeekQualificationTests/testPinnedDeepSeekQualification" CODE_SIGNING_ALLOWED=NO \
+            | tee runtime/ios/build/deepseek-qualification/native-xctest.log
+      - name: Independently audit all observed results and cleanup
+        id: integrity
+        if: always() && steps.tokenizer.outcome == 'success'
+        run: |
+          python3 scripts/model-qualification/qualification.py verify \
+            --input runtime/ios/build/deepseek-qualification/native-xctest.log \
+            --tokenizer runtime/ios/build/deepseek-qualification/tokenization-verified.json \
+            --output runtime/ios/build/deepseek-qualification/audit.json
+      - name: Enforce the separate eight-of-eight development quality gate
+        id: quality
+        if: always() && steps.integrity.outcome == 'success'
+        run: python3 scripts/model-qualification/qualification.py gate --input runtime/ios/build/deepseek-qualification/audit.json
+      - name: Record exact source and evidence provenance
+        if: always()
+        env:
+          SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          TOKENIZER_OUTCOME: ${{ steps.tokenizer.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          FIXTURES_OUTCOME: ${{ steps.fixtures.outcome }}
+          EXPERIMENT_OUTCOME: ${{ steps.experiment.outcome }}
+          INTEGRITY_OUTCOME: ${{ steps.integrity.outcome }}
+          QUALITY_OUTCOME: ${{ steps.quality.outcome }}
+        run: python3 scripts/model-qualification/provenance.py runtime/ios/build/deepseek-qualification
+      - name: Preserve all observed evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepseek-local-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime/ios/build/deepseek-qualification/
+          if-no-files-found: warn
+          retention-days: 14

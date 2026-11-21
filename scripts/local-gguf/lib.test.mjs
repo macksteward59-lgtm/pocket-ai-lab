@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -48,20 +48,53 @@ test("a pin that leaves Hugging Face or drops the revision is rejected", () => {
   assert.throws(() => assertPin(pin), /revision/);
 });
 
-test("checksum verification detects a changed file", async () => {
+test("checksum verification detects a changed file and respects byte/abort bounds", async t => {
   const directory = await mkdtemp(path.join(tmpdir(), "gguf-pin-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
   const file = path.join(directory, "sample.bin");
   await writeFile(file, "smoke");
   const first = await sha256File(file);
   assert.match(first, /^[a-f0-9]{64}$/);
   await writeFile(file, "smokf");
   assert.notEqual(await sha256File(file), first);
+  await assert.rejects(sha256File(file, { maxBytes: 4 }), /exceeds the pinned size/);
+  await assert.rejects(sha256File(file, { signal: AbortSignal.abort() }), /abort/i);
+});
+
+test("pin URL must bind the exact repo, revision and filename without credentials or suffixes", async () => {
+  const pin = await loadPin();
+  const invalidSources = [
+    pin.sourceUrl.replace(pin.repo, "different/repo"),
+    pin.sourceUrl.replace("/resolve/", "/blob/"),
+    pin.sourceUrl + "?download=true",
+    pin.sourceUrl + "#fragment",
+    pin.sourceUrl.replace("https://", "http://"),
+    pin.sourceUrl.replace("https://", "https://user:password@"),
+    pin.sourceUrl.replace("huggingface.co/", "huggingface.co:8443/")
+  ];
+  for (const sourceUrl of invalidSources) assert.throws(() => assertPin({ ...pin, sourceUrl }));
+  for (const repo of ["../model", "owner/../model", "owner/model/extra", "owner/model?query"]) {
+    assert.throws(() => assertPin({ ...pin, repo }), /repo/);
+  }
+  for (const filename of ["../model.gguf", "model.gguf?query", "model.gguf#fragment", "model%2f.gguf"]) {
+    assert.throws(() => assertPin({ ...pin, filename }), /filename/);
+  }
+  assert.throws(() => assertPin({ ...pin, bytes: Number.MAX_SAFE_INTEGER + 1 }), /safe integer/);
+});
+
+test("only the reviewed Apache-2.0 and MIT license identifiers are admitted", async () => {
+  const pin = await loadPin();
+  for (const license of ["apache-2.0", "mit"]) assert.equal(assertPin({ ...pin, license }).license, license);
+  for (const license of ["unknown", "MIT", "cc-by-nc-4.0"]) {
+    assert.throws(() => assertPin({ ...pin, license }), /license changed; review/);
+  }
 });
 
 test("Hugging Face content delivery redirects stay on Hugging Face hosts", () => {
   assert.equal(allowedDownloadHost("huggingface.co"), true);
   assert.equal(allowedDownloadHost("cdn-lfs.huggingface.co"), true);
   assert.equal(allowedDownloadHost("us.aws.cdn.hf.co"), true);
+  assert.equal(allowedDownloadHost("cas-bridge.xethub.hf.co"), true);
   assert.equal(allowedDownloadHost("example.com"), false);
   assert.equal(allowedDownloadHost("hf.co.example.com"), false);
 });
