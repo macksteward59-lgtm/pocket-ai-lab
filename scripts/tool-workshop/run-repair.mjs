@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -13,6 +13,7 @@ import { MemoryManager } from "../../packages/intelligence/memory/MemoryManager.
 import { createDirectorTaskRuntime } from "../../packages/intelligence/director/createDirectorTaskRuntime.ts";
 import { FileToolArtifactStore } from "../../runtime/adapters/director/FileToolArtifactStore.ts";
 import { InferenceToolBuilder } from "../../runtime/adapters/director/InferenceToolBuilder.ts";
+import { StructuredRepairPlanner } from "../../runtime/adapters/director/StructuredRepairPlanner.ts";
 import { DockerPythonToolSandbox } from "../../runtime/adapters/director/DockerPythonToolSandbox.ts";
 import { LlamaCppInferenceProvider } from "../../runtime/adapters/llama-cpp/LlamaCppInferenceProvider.ts";
 import { LlamaCppDirectorCommandProvider } from "../../runtime/adapters/llama-cpp/DirectorCommandProvider.ts";
@@ -21,10 +22,10 @@ import { normalizeLlamaCppConfig } from "../../runtime/adapters/llama-cpp/config
 import { sha256File } from "../local-gguf/lib.mjs";
 import { loadFrozenFixture, assertCandidateSelection, assertHeldOutGate } from "./fixture.mjs";
 import { assertComparableRuns, assertContainersSettled } from "./evidence.mjs";
+import { loadFrozenProfile } from "./profile.mjs";
 
 const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const profilePath = path.join(root, "scripts/tool-workshop/model-profile-v1.json");
 const sha256 = value => createHash("sha256").update(value).digest("hex");
 const errorRecord = error => ({ name: error?.name ?? "Error", message: String(error?.message ?? error).slice(0, 8000) });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -171,13 +172,16 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
   const sandboxes = {};
   let success = false;
   try {
-    const profileBytes = await readFile(profilePath);
-    const profile = JSON.parse(profileBytes);
+    const { profile, profileBytes, selection } = await loadFrozenProfile();
+    report.experiment = "workshop-utf8-code-repair-" + selection;
     const { fixture, digest } = await loadFrozenFixture();
     report.source = await sourceIdentity();
     report.fixture = { sha256: digest, developmentCases: fixture.development.length,
       heldOutCases: fixture.heldOut.length, maxRevisions: fixture.maxRevisions };
     report.profile = { ...profile, sha256: sha256(profileBytes) };
+    report.profileSelection = selection;
+    report.trialId = profile.id;
+    report.capabilityManifest.directorProtocol = profile.directorProtocol ?? "native-function-call";
     assert.equal(profile.maxRevisions, fixture.maxRevisions);
     assert.equal(profile.providerRepairAttempts, 0);
     const modelInfo = await stat(modelPath);
@@ -224,7 +228,11 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     builder = new InferenceToolBuilder({ provider: engineer, modelId: profile.modelId,
       spec: revisionSpec, maxGenerations: fixture.maxRevisions, maxSourceBytes: profile.maxSourceBytes });
     const director = new ToolDirector({ registry, store, builder, sandbox: development });
-    const planner = new LlamaCppDirectorCommandProvider(config, recordingBackend(config, "director", report.providerCalls));
+    const structuredActions = profile.directorProtocol === "structured-repair-actions-v1";
+    const planner = structuredActions
+      ? new StructuredRepairPlanner({ spec: revisionSpec, config,
+          backend: recordingBackend(config, "director-structured", report.providerCalls) })
+      : new LlamaCppDirectorCommandProvider(config, recordingBackend(config, "director", report.providerCalls));
     const feedbackPlanner = {
       async propose(input) {
         assertSettled();
@@ -253,8 +261,13 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     const objective = [
       "Repair this single registered experimental tool through its existing workshop.",
       "The initial candidate already exists as version 1 and failed actual development tests.",
-      "To request a revision, call director_command with exactly this command:",
-      JSON.stringify({ kind: "develop-tool", spec: revisionSpec }),
+      ...(structuredActions ? [
+        "Choose one action using the supplied JSON action protocol: revise, complete, or blocked.",
+        "revise asks the host Engineer to repair the fixed UTF-8 prefix tool. It must return the longest unchanged prefix that fits a byte budget without splitting a code point. The Engineer already has the full immutable specification; do not return tool arguments."
+      ] : [
+        "To request a revision, call director_command with exactly this command:",
+        JSON.stringify({ kind: "develop-tool", spec: revisionSpec })
+      ]),
       "The host Engineer generates the source; the host executes and grades it.",
       "You may request at most two revisions. Use complete once the returned artifact is ready.",
       "If a revision fails, inspect its test findings and decide whether to revise again or stop.",

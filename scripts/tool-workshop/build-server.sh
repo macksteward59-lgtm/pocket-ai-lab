@@ -5,13 +5,15 @@ cd "$workshop_root"
 # Reuse the existing reviewed tag/commit/tarball/header verification.
 bash runtime/ios/scripts/build-llama-cpp.sh verify
 workshop_tag="$(python3 -c 'import json;print(json.load(open("runtime/ios/pin/llama-cpp.json"))["tag"])')"
-python3 - <<'PY'
-import json
-pin=json.load(open("runtime/ios/pin/llama-cpp.json"))
-profile=json.load(open("scripts/tool-workshop/model-profile-v1.json"))
-if pin["commit"] != profile["llamaCommit"]:
-    raise SystemExit("Workshop runtime differs from the existing pinned llama.cpp revision.")
-PY
+node --input-type=module <<'JS'
+import { readFile } from "node:fs/promises";
+import { loadFrozenProfile } from "./scripts/tool-workshop/profile.mjs";
+const pin = JSON.parse(await readFile("runtime/ios/pin/llama-cpp.json", "utf8"));
+const { profile } = await loadFrozenProfile();
+if (pin.commit !== profile.llamaCommit) {
+  throw new Error("Workshop runtime differs from the existing pinned llama.cpp revision.");
+}
+JS
 workshop_source="$workshop_root/runtime/ios/build/src/llama.cpp-$workshop_tag"
 workshop_build="$workshop_root/runtime/ios/build/workshop-server"
 # Do not identify the extracted upstream source using the enclosing Pocket repo.

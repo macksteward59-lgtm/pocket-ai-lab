@@ -19,6 +19,47 @@ outcomes. Generated candidates are never activated or installed. The ordinary
 web composition remains read-only and now advertises only the adapters it
 actually supplies: project analysis, plus research when configured.
 
+## Observed v1 result and separate v2 diagnostic
+
+At source head `0083f561f94b6835265cba062cf263421725836e`,
+[workflow 44878327905](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44878327905)
+verified and loaded the pinned real DeepSeek model. The faulty baseline executed
+all eight development cases and passed three. The model made one Director
+generation but returned ordinary content without the required native function
+call. The adapter rejected it. There were zero Engineer calls, no revised
+candidate and no held-out execution. Acceptance was false. Model integrity and
+server/container cleanup passed. This measures a failure at the command
+interface, before code-generation quality could be tested.
+
+The separate fixture-source Docker controls passed: 20 actual container cases,
+3/8 baseline and 8/8 scripted revision, durable artifact lineage/reopen, isolation,
+wrong-output rejection, timeout, output cap and verified cleanup. Those controls
+do not count as model-generated repair.
+
+The initial provisioning attempt in workflow 44877989061 failed before model
+acquisition/inference because optional upstream web UI assets did not match the
+pinned server. The API host now disables optional UI provisioning. The failure
+is retained separately from model results.
+
+Profile v2 is an explicitly separate interface diagnostic. It adds
+StructuredRepairPlanner, which asks the model for a strict JSON object containing
+an action (revise, complete or blocked) and a short reason. The host binds revise
+to its immutable repair specification and dispatches the existing develop-tool
+command. It never supplies a replacement source implementation or a model answer.
+Source generation still uses the real Engineer provider, and actual execution
+and grading still use the same workshop and host sandbox.
+
+V2 keeps the model artifact, context/sampling settings, Engineer interface,
+fixture, two-generation budget and held-out rules unchanged. It changes the
+Director prompt/protocol and removes the need to reproduce the complete host
+specification in a function call. Its outputs and calls are recorded separately.
+A v2 success would not pass v1's native function-calling gate or establish a
+general autonomous-repair success rate.
+
+The v1 profile bytes remain unchanged. profile.mjs verifies each independently
+frozen profile hash and only accepts an explicit v1 or v2 selector. The default
+remains v1; there is no automatic profile switch after failure.
+
 ## Recovered existing implementation
 
 The November 21 cross-conversation and branch audit identified:
@@ -174,8 +215,8 @@ Source changes can improve an agent's tool without changing the model's weights.
 
 The workflow pins Ubuntu 24.04 and has read-only repository permissions. Its
 ordinary pushes run contracts and actual sandbox checks. A workflow dispatch or
-an explicit [workshop-live-v1] commit marker runs the separately bounded live
-experiment after those checks pass.
+an explicit [workshop-live-v1] commit marker runs v1 after those checks pass.
+An explicit [workshop-live-v2] marker selects the separate v2 trial.
 
 ## Host entry points
 
@@ -191,6 +232,9 @@ POCKET_WORKSHOP_SERVER to the built llama-server, and POCKET_WORKSHOP_OUTPUT to
 a new private directory outside the source checkout. Then run:
 
     node --import tsx scripts/tool-workshop/run-repair.mjs
+
+Set POCKET_WORKSHOP_PROFILE=v2 only for the separate structured-action trial;
+omit it or set v1 to retain the original native function-call profile.
 
 Missing capabilities stop the attempt. Local development in the current
 workspace has no Docker daemon and cannot claim actual candidate execution.

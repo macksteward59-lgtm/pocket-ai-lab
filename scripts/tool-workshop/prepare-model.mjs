@@ -3,10 +3,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { downloadPinnedModel } from "../local-gguf/download.mjs";
+import { loadFrozenProfile } from "./profile.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 if (process.argv.length !== 3) throw new Error("Usage: node scripts/tool-workshop/prepare-model.mjs OUTPUT_FILE");
-const profile = JSON.parse(await readFile(path.join(root, "scripts/tool-workshop/model-profile-v1.json"), "utf8"));
+const { profile } = await loadFrozenProfile();
 const pins = JSON.parse(await readFile(path.join(root, "scripts/local-gguf/pins.json"), "utf8"));
 const pin = pins.models.find(item => item.id === profile.modelId);
 assert(pin, "Frozen workshop model must exist in the approved local pin catalog.");
