@@ -866,3 +866,5 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 | Owner | Area | Branch | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | ChatGPT | Local OpenClaw setup for a single CI evidence review in `tools/openclaw-review/` and on-demand validation in `.github/workflows/openclaw-review.yml` | `codex/openclaw-ci-review-pilot` | in-review | [Draft PR #246](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/246) runs the fixed PR #245 review on a local model. ChatGPT checks drafts and owns repository writes. |
+
+| ChatGPT | Deliver the fixed OpenClaw CI review to Activity and let the owner save a source-linked assessment in existing local Memory. Covers the consumer web app and the report export only. | `codex/owner-review-artifact` | in-progress | Based on the tested OpenClaw pilot in #246. Verify real receipt import, local persistence after restart, and the private Cloudflare handoff. |
