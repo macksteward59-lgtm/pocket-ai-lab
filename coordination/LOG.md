@@ -4877,3 +4877,5 @@ During repeat runs the small model sometimes mixed up hosted and local checks, o
 On this head the Consumer prototype and Pocket AI Lab CI workflows fail on an import of `EastTaskLifecycleAdapter` from an existing autonomy test. The same import and missing module are present on the base `fb59f76e`.
 
 The final Linux installer was also tested end to end from an empty install directory. It downloaded the pinned packages and model, ran a 2,121-token review, displayed the verified local counts next to the flagged draft, and exited successfully. The [GitHub Actions run for this commit](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44936635400) has its own status and run summary.
+
+GitHub completed [OpenClaw review job 136944577703](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44936635400/job/136944577703) successfully at `c38bfc0a3da058416b9a884a3acbc2f8ec3f193c`. Both the isolated review and the draft/usage summary steps passed. The workflow's success verifies execution and delivery; draft acceptance requires a separate source check.
