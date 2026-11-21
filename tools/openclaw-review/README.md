@@ -44,3 +44,5 @@ The cross-platform workflow builds the Swift exporter from the same checkout on 
 ### Cloudflare handoff
 
 The combined checkout includes the private note Worker under `workers/document-analysis/`. CI uses temporary credentials and a local Durable Object. It takes the actual notes recovered from both browsers, compares them, saves the agreed text over MCP, repeats the save with the original revision and reads it back after restarting the Worker. The connected Pocket AI Lab Handoff app can relay project decisions to the live preview separately. Saving notes is independent of model and build triggers.
+
+After the Worker restart check passes, the integrated workflow publishes the text and SHA-256 of its synthetic CI handoff in the job log under `POCKET_CI_REVIEW_HANDOFF`. The project coordinator can compare it with the source and relay those exact bytes through the private ChatGPT connection using a revision-checked save. The job has read-only repository access and receives no Cloudflare credentials.

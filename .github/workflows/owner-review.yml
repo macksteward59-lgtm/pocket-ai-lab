@@ -95,3 +95,18 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
           npm test
+      - name: Publish the fixture handoff for the private ChatGPT relay
+        env:
+          POCKET_CI_REVIEW_DIR: ${{ runner.temp }}/pocket-reviewed-notes
+        shell: python
+        run: |
+          import hashlib, json, os
+          from pathlib import Path
+          directory = Path(os.environ["POCKET_CI_REVIEW_DIR"])
+          data = (directory / "chromium.txt").read_bytes()
+          if not 0 < len(data) <= 4000 or data != (directory / "webkit.txt").read_bytes():
+              raise ValueError("Browser handoffs differ or exceed the Worker note limit")
+          print("POCKET_CI_REVIEW_HANDOFF " + json.dumps({
+              "sha256": hashlib.sha256(data).hexdigest(),
+              "text": data.decode("utf-8")
+          }, ensure_ascii=True))
