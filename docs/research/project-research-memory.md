@@ -32,3 +32,7 @@ The [GitHub Actions run](https://github.com/macksteward59-lgtm/pocket-ai-lab/act
 ## Engineering decision
 
 Keep direct lookup by source ID available to the owner and reviewer. Use the saved passages when checking a proposed answer; this model has yet to qualify as the sole reviewer for sourced answers. The next model comparison should use previously unseen questions and sources with citations and missing-evidence cases frozen before scoring. Device qualification still requires a physical-device run. Hosted inference still requires an attributable Workers AI response. The two provider checks can use the same read-only source question and remain separately attributable.
+
+### Experimental models and reusable source code
+
+The [November 21 donor review](experimental-model-donors-20261121.md) includes release pins and licenses, a 24-claim groundedness pilot, an eight-record IBM text-format round trip, a keyword retrieval baseline, and three publisher YouTube videos. Use this record alongside the original evidence register when a later chat asks which specialized model or upstream component has actually been tested.

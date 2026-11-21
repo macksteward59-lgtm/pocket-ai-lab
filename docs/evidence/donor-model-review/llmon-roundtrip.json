@@ -1,0 +1,62 @@
+{
+  "commit": "0b0d7bd8b77f32c52050a037c3d3608788ba506d",
+  "method": "Unmodified llmon.lang.json.llmon_converters.LLMONConverters, defaults for encoding, converting_to_json=True on decoding. Compared JSON objects, including all string values.",
+  "records": [
+    {
+      "id": "APPLE-DEVICE",
+      "equal": true,
+      "jsonBytes": 565,
+      "llmonBytes": 760,
+      "llmonSHA256": "a3a9da89d381ce6b323ca494055ce4ed9a0d83493110d4ab2320cf144a2a33c0"
+    },
+    {
+      "id": "APPLE-TEAM",
+      "equal": true,
+      "jsonBytes": 513,
+      "llmonBytes": 708,
+      "llmonSHA256": "fa046db12dfde503ea84706471b5f23491cbf74c3d106c4018e338af2f4aca48"
+    },
+    {
+      "id": "CF-BIND",
+      "equal": true,
+      "jsonBytes": 488,
+      "llmonBytes": 683,
+      "llmonSHA256": "d68d937623e502b8d0b1c614cb97b2e79a7ea5aeade723dd93a3d66a112b4db3"
+    },
+    {
+      "id": "CF-QUOTA",
+      "equal": true,
+      "jsonBytes": 496,
+      "llmonBytes": 691,
+      "llmonSHA256": "eaadcef5efa9a6e4f26b6adf21fe30040a6ba3dd66c1830965cfcfdd945b938c"
+    },
+    {
+      "id": "W3C-PROV",
+      "equal": true,
+      "jsonBytes": 425,
+      "llmonBytes": 620,
+      "llmonSHA256": "2c7de22e0dc0df76da3661df13e5d840856302a6d32dcfb89ae229e661aeab6a"
+    },
+    {
+      "id": "W3C-QUOTE",
+      "equal": true,
+      "jsonBytes": 438,
+      "llmonBytes": 633,
+      "llmonSHA256": "eba478436a620b06ec070c47b5e3a2ed380336c84d06dd9397c1b2f9d92817bd"
+    },
+    {
+      "id": "ACL-CITE",
+      "equal": true,
+      "jsonBytes": 463,
+      "llmonBytes": 658,
+      "llmonSHA256": "6220cc753c608524f6bb0cfb0753816e48a8d4eeb4ae89fa6d253e250e1c3fce"
+    },
+    {
+      "id": "ACL-ABSTAIN",
+      "equal": true,
+      "jsonBytes": 577,
+      "llmonBytes": 772,
+      "llmonSHA256": "caab35b993ea4f1b3baefafef11f9d4ee53666f7fe3f9a69f250be84d3880301"
+    }
+  ]
+}
