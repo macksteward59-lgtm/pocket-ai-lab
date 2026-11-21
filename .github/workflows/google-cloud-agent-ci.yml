@@ -6,17 +6,21 @@ on:
       - main
       - codex/google-cloud-agent-foundation-20261120
     paths:
+      - packages/intelligence/cloud/shared/**
       - packages/intelligence/cloud/google-cloud/**
       - packages/intelligence/serverless/cloud-analysis/**
       - packages/intelligence/autonomy/**
+      - scripts/cloud/shared/**
       - scripts/google-cloud/**
       - .github/workflows/google-cloud-agent-ci.yml
   pull_request:
     # Stacked PRs must receive their own exact-source validation as well.
     paths:
+      - packages/intelligence/cloud/shared/**
       - packages/intelligence/cloud/google-cloud/**
       - packages/intelligence/serverless/cloud-analysis/**
       - packages/intelligence/autonomy/**
+      - scripts/cloud/shared/**
       - scripts/google-cloud/**
       - .github/workflows/google-cloud-agent-ci.yml
 

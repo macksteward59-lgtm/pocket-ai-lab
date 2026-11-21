@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "name": "Xxcyberx xxghostxX"
+  },
+  "description": "Prepare selected-text Cloudflare previews for Pocket AI Lab and retain the manual Google Vertex workflow.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "capabilities": [
+          "Interactive"
+        ],
+        "category": "Productivity",
+        "defaultPrompt": "Preview a Google Cloud offload for an existing Pocket AI Lab task.",
+        "developerName": "Xxcyberx xxghostxX",
+        "displayName": "Pocket AI Lab Cloud Agent",
+        "longDescription": "Prepare reviewed Pocket AI Lab cloud requests. Cloudflare uses the repository's offline preview and provider foundation; the existing manual Vertex runner remains available. Hosted Cloudflare execution and deployment are pending.",
+        "shortDescription": "Prepare governed cloud work"
+      }
+    }
+  },
+  "name": "pocket-ai-lab-google-cloud",
+  "repository": "https://github.com/macksteward59-lgtm/pocket-ai-lab",
+  "version": "0.3.0"
+}
