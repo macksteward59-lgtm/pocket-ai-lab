@@ -98,6 +98,7 @@ for (const engine of [chromium, webkit]) {
       await page.locator("#review-to-memory").click();
       const note = page.locator("#memory-content");
       assert.match(await note.inputValue(), /PR #245 CI evidence/);
+      assert.match(await note.inputValue(), /Independent local validation passed 359 tests in 11 files/);
       assert.ok((await note.inputValue()).includes(input.evidence_sha256));
       const assessment = "Assessment: The local run passed 359 tests in 11 files.";
       await note.fill((await note.inputValue()) + "\n\n" + assessment);

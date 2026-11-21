@@ -26,7 +26,7 @@ The sole input, [pr-245.txt](pr-245.txt), is the PR #245 evidence note (Cloudfla
 
 ### Review the result in Pocket AI Lab
 
-In the consumer app, open **Activity** to compare the bundled PR #245 model draft with the repository evidence and its source job. Use **Prepare a memory note** to edit your assessment and **Save memory** to keep it on the local server. It can then be reopened in **Memory** after a restart. Imported drafts remain unverified. The file picker reads the selected file on the device.
+In the consumer app, open **Activity** to compare the bundled PR #245 model draft with the repository evidence and its source job. The app prepares a handoff summary directly from the recorded job, local counts and evidence limits, including when the model omits them. Use **Prepare a memory note** to edit your assessment and **Save memory** to keep it on the local server. It can then be reopened in **Memory** after a restart. Imported drafts remain unverified. The file picker reads the selected file on the device.
 
 A new run can produce a compact file for that same view. The original full JSON output is also accepted. The compact export omits session IDs and internal provider metadata.
 
