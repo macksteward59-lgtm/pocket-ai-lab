@@ -18,6 +18,19 @@ test("v4 changes the code/feedback contract while preserving the frozen experime
   assert.equal(current.independentAnalysisSchemaMaxCharacters, undefined);
 });
 
+test("v5 changes only illustrative source prompts and remaining revision advertisement", async () => {
+  const [{ profile: previous }, { profile: current }] = await Promise.all([
+    loadFrozenProfile("v4"), loadFrozenProfile("v5")
+  ]);
+  const changed = new Set(["id", "interpretation", "sourceContract", "revisionAvailability"]);
+  const controls = profile => Object.fromEntries(Object.entries(profile).filter(([key]) => !changed.has(key)));
+  assert.deepEqual(controls(current), controls(previous));
+  assert.equal(previous.sourceContract, "python-source-v1");
+  assert.equal(previous.revisionAvailability, undefined);
+  assert.equal(current.sourceContract, "python-source-v2");
+  assert.equal(current.revisionAvailability, "remaining-builder-attempts-v1");
+});
+
 test("old profiles retain their hashed legacy contract and unknown selections never fall back", async () => {
   for (const name of ["v1", "v2", "v3"]) {
     const { profile } = await loadFrozenProfile(name);
@@ -25,7 +38,7 @@ test("old profiles retain their hashed legacy contract and unknown selections ne
     assert.equal(profile.sourceContract, undefined);
     assert.equal(profile.developmentFeedback, undefined);
   }
-  for (const name of ["", "latest", "v5", "../model-profile-v4"]) {
+  for (const name of ["", "latest", "v6", "../model-profile-v4"]) {
     await assert.rejects(loadFrozenProfile(name), /must be exactly/);
   }
 });

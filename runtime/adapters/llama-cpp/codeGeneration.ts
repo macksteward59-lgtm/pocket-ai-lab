@@ -25,13 +25,15 @@ export async function generateLlamaCppCode(
 ): Promise<CodeGenerationResult> {
   assertRequest(request);
   // Caller mutation while inference is pending must not change the selected contract or byte cap.
-  const { modelId, prompt, maxSourceBytes } = request;
+  const { modelId, prompt, maxSourceBytes, promptStyle } = request;
   if (callerSignal?.aborted) throw new LlamaCppInferenceError("cancelled", "Inference cancelled");
   const timeoutSignal = AbortSignal.timeout(config.timeoutMs);
   const signal = callerSignal ? AbortSignal.any([timeoutSignal, callerSignal]) : timeoutSignal;
   const system = [
     "You are the Engineer generating a complete Python module for a host-defined candidate-code experiment.",
-    'Return exactly one JSON object with only the field "source": {"source":"complete Python source"}.',
+    promptStyle === "schema-only"
+      ? 'Return exactly one JSON object with a single string field named "source". Its value must be the complete Python module.'
+      : 'Return exactly one JSON object with only the field "source": {"source":"complete Python source"}.',
     "The source value must contain executable Python, without Markdown fences, prose, a filename, or test scores.",
     "Implement the host specification exactly. Do not describe a plan or claim that code was tested.",
     "Preserve source whitespace and return the entire module within " + maxSourceBytes + " UTF-8 bytes.",
@@ -93,9 +95,10 @@ export async function generateLlamaCppCode(
 
 function assertRequest(request: CodeGenerationRequest): void {
   if (!request || typeof request !== "object" || Array.isArray(request) ||
-      Object.keys(request).some(key => !["modelId", "language", "prompt", "maxSourceBytes"].includes(key)) ||
+      Object.keys(request).some(key => !["modelId", "language", "prompt", "maxSourceBytes", "promptStyle"].includes(key)) ||
       typeof request.modelId !== "string" || !request.modelId.trim() || request.modelId.length > 256 ||
       request.language !== "python" || typeof request.prompt !== "string" || !request.prompt.trim() ||
+      (request.promptStyle !== undefined && request.promptStyle !== "schema-only") ||
       Buffer.byteLength(request.prompt, "utf8") > MAX_PROMPT_BYTES ||
       !Number.isSafeInteger(request.maxSourceBytes) || request.maxSourceBytes < 1 || request.maxSourceBytes > MAX_SOURCE_BYTES) {
     throw new LlamaCppInferenceError("invalid_request", "A bounded Python code-generation request is required");

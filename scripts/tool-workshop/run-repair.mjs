@@ -187,14 +187,23 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     report.profileSelection = selection;
     report.trialId = profile.id;
     report.capabilityManifest.directorProtocol = profile.directorProtocol ?? "native-function-call";
-    const codeGeneration = profile.sourceContract === "python-source-v1";
+    const codeGeneration = ["python-source-v1", "python-source-v2"].includes(profile.sourceContract);
     assert(profile.sourceContract === undefined || codeGeneration, "Unknown source-generation contract.");
+    const remainingRevisionAdvertisement = profile.revisionAvailability === "remaining-builder-attempts-v1";
+    assert(profile.revisionAvailability === undefined || remainingRevisionAdvertisement,
+      "Unknown revision-availability contract.");
+    assert.equal(remainingRevisionAdvertisement, profile.sourceContract === "python-source-v2",
+      "The frozen v5 code and revision-availability contracts must match.");
     assert.equal(profile.developmentFeedback,
       codeGeneration ? "bounded-failure-diagnostics-v1" : undefined,
       "The frozen source and development-feedback contracts must match.");
     if (codeGeneration) {
-      report.capabilityManifest.sourceGeneration = "InferenceProvider.generateCode / engineer / python-source-v1";
+      report.capabilityManifest.sourceGeneration = "InferenceProvider.generateCode / engineer / " + profile.sourceContract;
       report.capabilityManifest.developmentFeedback = profile.developmentFeedback;
+    }
+    if (remainingRevisionAdvertisement) {
+      report.capabilityManifest.codePromptStyle = "schema-only";
+      report.capabilityManifest.revisionAvailability = profile.revisionAvailability;
     }
     assert.equal(profile.maxRevisions, fixture.maxRevisions);
     assert.equal(profile.providerRepairAttempts, 0);
@@ -242,12 +251,15 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     const engineer = new LlamaCppInferenceProvider(config, recordingBackend(config, "engineer", report.providerCalls));
     builder = new InferenceToolBuilder({ provider: engineer, modelId: profile.modelId,
       spec: revisionSpec, maxGenerations: fixture.maxRevisions, maxSourceBytes: profile.maxSourceBytes,
-      ...(codeGeneration ? { sourceContract: "python-source-v1" } : {}) });
+      ...(codeGeneration ? { sourceContract: profile.sourceContract } : {}) });
     const director = new ToolDirector({ registry, store, builder, sandbox: development });
     const structuredActions = profile.directorProtocol === "structured-repair-actions-v1";
     const planner = structuredActions
       ? new StructuredRepairPlanner({ spec: revisionSpec, config,
-          backend: recordingBackend(config, "director-structured", report.providerCalls) })
+          backend: recordingBackend(config, "director-structured", report.providerCalls),
+          ...(remainingRevisionAdvertisement ? {
+            getRemainingRevisions: () => fixture.maxRevisions - builder.getAttempts().length
+          } : {}) })
       : new LlamaCppDirectorCommandProvider(config, recordingBackend(config, "director", report.providerCalls));
     const feedbackPlanner = {
       async propose(input) {

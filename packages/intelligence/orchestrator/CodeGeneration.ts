@@ -4,6 +4,8 @@ export interface CodeGenerationRequest {
   readonly language: "python";
   readonly prompt: string;
   readonly maxSourceBytes: number;
+  /** Explicit prompt refinement; omission preserves the original source-contract instructions. */
+  readonly promptStyle?: "schema-only";
 }
 
 export interface CodeGenerationResult {

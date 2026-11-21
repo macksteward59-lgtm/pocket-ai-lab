@@ -89,11 +89,11 @@ jobs:
 
   live-model:
     needs: sandbox
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[workshop-live-v1]') || contains(github.event.head_commit.message, '[workshop-live-v2]') || contains(github.event.head_commit.message, '[workshop-live-v3]') || contains(github.event.head_commit.message, '[workshop-live-v4]')))
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[workshop-live-v1]') || contains(github.event.head_commit.message, '[workshop-live-v2]') || contains(github.event.head_commit.message, '[workshop-live-v3]') || contains(github.event.head_commit.message, '[workshop-live-v4]') || contains(github.event.head_commit.message, '[workshop-live-v5]')))
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      POCKET_WORKSHOP_PROFILE: ${{ contains(github.event.head_commit.message, '[workshop-live-v4]') && 'v4' || contains(github.event.head_commit.message, '[workshop-live-v3]') && 'v3' || contains(github.event.head_commit.message, '[workshop-live-v2]') && 'v2' || 'v1' }}
+      POCKET_WORKSHOP_PROFILE: ${{ contains(github.event.head_commit.message, '[workshop-live-v5]') && 'v5' || contains(github.event.head_commit.message, '[workshop-live-v4]') && 'v4' || contains(github.event.head_commit.message, '[workshop-live-v3]') && 'v3' || contains(github.event.head_commit.message, '[workshop-live-v2]') && 'v2' || 'v1' }}
     steps:
       - uses: actions/checkout@v4
         with:

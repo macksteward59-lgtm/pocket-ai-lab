@@ -57,7 +57,7 @@ A v2 success would not pass v1's native function-calling gate or establish a
 general autonomous-repair success rate.
 
 The v1 profile bytes remain unchanged. profile.mjs verifies each independently
-frozen profile hash and only accepts an explicit v1, v2, v3 or v4 selector. The default
+frozen profile hash and only accepts an explicit v1, v2, v3, v4 or v5 selector. The default
 remains v1; there is no automatic profile switch after failure.
 
 ### Observed v2 dispatch and separate v3 output-budget diagnostic
@@ -125,6 +125,43 @@ a rescore. The known held-out fixture is withheld from each model revision
 context; reusing it does not create a fresh generalization benchmark. No result
 from this single task establishes whole-harness reliability or language speedup.
 
+## Observed v4 and the final v5 interface diagnostic
+
+[V4 workflow 44890561764](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44890561764)
+at source `aae5efc89d51ce4d52ccab1d2b37e4a3059c034b` made five real model calls.
+Both Engineer outputs contained exactly `Python source`, the illustrative value
+shown in the builder prompt. Both artifacts were preserved unchanged and failed
+all eight development cases with Python syntax errors. The second Engineer
+request included all eight actual compiler findings. The Director requested a
+third revision; the existing two-generation limit rejected it before another
+Engineer call. After final candidate selection, held-out quality was 0/20 versus
+baseline 4/20. Both control and quality acceptance were false. All 64 containers were cleaned up,
+the server settled and the model hash was unchanged. The raw evidence is in
+[the preserved v4 record](https://github.com/macksteward59-lgtm/pocket-ai-lab/tree/b38ca9cb3e86b7bdc36b8236d306fbf76d92d866/coordination/evidence/tool-workshop-repair-2026-11-21/live-v4).
+
+V4's software checks and its 21 actual Docker control cases passed, including a
+real syntax-error diagnostic. Passing those checks establishes the adapter and
+feedback paths, not successful model repair.
+
+V5 declares two changes. Explicit `python-source-v2` selects schema-only code
+prompts without illustrative source values; it keeps the same source schema,
+parser, source-byte preservation and compiler feedback. The optional
+`getRemainingRevisions` callback reads the actual builder attempt count. The
+Director request includes that remaining count and removes `revise` from both
+available actions and its output schema at zero. Failed build attempts also
+consume this allowance. Model-authored history cannot replenish it. Existing
+host limits remain independent, and complete/blocked stopping actions do not
+override the host's quality grading.
+
+V1-v4 prompt behavior and frozen profile bytes remain unchanged. V5 retains the
+same model/runtime pins, task, initial objective, sampling, context and token
+settings, two Engineer generations and three Director turns. It supplies no
+handwritten implementation or answer example. Because both prompt formatting
+and capability advertisement change, a result cannot establish either one as
+the sole cause. This is the final small interface diagnostic in this
+continuation; failure leaves this configuration unqualified and ends these
+small prompt iterations on the reused task.
+
 ## Recovered existing implementation
 
 The November 21 cross-conversation and branch audit identified:
@@ -158,7 +195,7 @@ nonexistent.
 5. A model-selected develop-tool revision calls InferenceToolBuilder using the
    existing Engineer inference interface.
 6. The Engineer receives the previous candidate and development feedback,
-   returning one raw Python module in payload.analysis for v1–v3 or in the dedicated source field for v4.
+   returning one raw Python module in payload.analysis for v1–v3 or in the dedicated source field for v4–v5.
 7. ToolDirector records the version, invokes the sandbox and records actual
    findings. The next Director turn receives a compact outcome-first observation.
 8. The model may request at most two source generations in total, or stop. The
@@ -200,7 +237,7 @@ DeepSeek-R1-Distill-Qwen-1.5B Q4_K_M pin:
 - At most three Director turns and two Engineer generations.
 - No provider-level output repair retries or alternative model fallback.
 - Profiles v1–v3 retain the existing independent-stage analysis schema, which
-  limits source to 700 characters. V4 explicitly selects the dedicated code
+  limits source to 700 characters. V4–v5 explicitly select the dedicated code
   contract with the existing 16,384-byte source cap; it does not change ordinary
   analysis schemas or implicitly switch older profiles.
 
@@ -286,6 +323,7 @@ an explicit [workshop-live-v1] commit marker runs v1 after those checks pass.
 An explicit [workshop-live-v2] marker selects the separate v2 trial.
 An explicit [workshop-live-v3] marker selects the v3 thinking-budget diagnostic.
 An explicit [workshop-live-v4] marker selects the consistent code-contract trial.
+An explicit [workshop-live-v5] marker selects the schema-only prompt and remaining-budget trial.
 
 ## Host entry points
 
@@ -306,6 +344,7 @@ Set POCKET_WORKSHOP_PROFILE=v2 only for the separate structured-action trial;
 omit it or set v1 to retain the original native function-call profile.
 Set v3 only for the separate bounded-thinking profile.
 Set v4 only for the explicit source-generation and compiler-feedback contract.
+Set v5 only for the explicit schema-only prompts and remaining-revision advertisement.
 
 Missing capabilities stop the attempt. Local development in the current
 workspace has no Docker daemon and cannot claim actual candidate execution.

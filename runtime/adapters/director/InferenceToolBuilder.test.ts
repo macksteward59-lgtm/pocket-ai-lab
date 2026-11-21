@@ -206,7 +206,34 @@ describe("InferenceToolBuilder explicit code contract (test providers)", () => {
     const base = { provider: successfulProvider(), modelId: "fixture-model", spec: repairSpec() };
     expect(() => new InferenceToolBuilder({ ...base, sourceContract: "python-source-v1" }))
       .toThrow(/requires InferenceProvider.generateCode/);
+    expect(() => new InferenceToolBuilder({ ...base, sourceContract: "python-source-v2" }))
+      .toThrow(/requires InferenceProvider.generateCode/);
     expect(() => new InferenceToolBuilder({ ...base, sourceContract: "unknown" as never })).toThrow(/Unsupported/);
+  });
+
+  it("explicitly removes the v4 illustrative source value without rewriting model output or changing other task data", async () => {
+    const requests: CodeGenerationRequest[] = [];
+    const source = "Python source"; // Invalid Python is still retained for the real sandbox to reject.
+    const rawOutput = JSON.stringify({ source });
+    for (const sourceContract of ["python-source-v1", "python-source-v2"] as const) {
+      const builder = new InferenceToolBuilder({
+        provider: {
+          async generate() { throw new Error("Unexpected analysis fallback"); },
+          async generateCode(input) { requests.push(input); return { source, rawOutput }; }
+        }, modelId: "fixture-model", spec: repairSpec(), sourceContract
+      });
+      await expect(builder.build({ spec: repairSpec(), previous: previousCandidate() }))
+        .resolves.toEqual({ files: { "candidate.py": source } });
+      expect(builder.getAttempts()[0]).toMatchObject({ sourceContract, rawOutput, sourceBytes: 13 });
+    }
+    expect(requests).toHaveLength(2);
+    expect(requests[0]).not.toHaveProperty("promptStyle");
+    expect(requests[0].prompt).toContain('source string: {"source":"Python source"}.');
+    expect(requests[1]).toEqual({
+      ...requests[0], promptStyle: "schema-only",
+      prompt: requests[0].prompt.replace('source string: {"source":"Python source"}.', "source string.")
+    });
+    expect(requests[1].prompt).not.toContain('"source":"Python source"');
   });
 
   it("records rejected backend text and counts failed code generations without provider repair retries", async () => {

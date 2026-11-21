@@ -5,7 +5,7 @@ export const INFERENCE_TOOL_FILENAME = "candidate.py";
 const MAX_GENERATIONS = 2;
 const MAX_SOURCE_BYTES = 16_384;
 const MAX_RECORDED_OUTPUT_BYTES = 65_536;
-export type InferenceToolSourceContract = "independent-analysis" | "python-source-v1";
+export type InferenceToolSourceContract = "independent-analysis" | "python-source-v1" | "python-source-v2";
 
 export interface InferenceToolBuilderOptions {
   provider: InferenceProvider;
@@ -27,9 +27,9 @@ export interface InferenceToolBuildAttempt {
   readonly completedAt: string | null;
   readonly durationMs: number | null;
   readonly status: "running" | "succeeded" | "failed";
-  /** Legacy: serialized InferenceResult. python-source-v1: exact backend message content (bounded). */
+  /** Legacy: serialized InferenceResult. Python source contracts: exact backend message content (bounded). */
   readonly rawOutput: string | null;
-  readonly sourceContract?: "python-source-v1";
+  readonly sourceContract?: "python-source-v1" | "python-source-v2";
   readonly rawOutputTruncated: boolean;
   readonly sourceBytes: number | null;
   readonly error: string | null;
@@ -60,11 +60,11 @@ export class InferenceToolBuilder implements ToolBuilder {
     }
     this.provider = options.provider;
     this.sourceContract = options.sourceContract ?? "independent-analysis";
-    if (!["independent-analysis", "python-source-v1"].includes(this.sourceContract)) {
+    if (!["independent-analysis", "python-source-v1", "python-source-v2"].includes(this.sourceContract)) {
       throw new Error("Unsupported tool source contract");
     }
-    if (this.sourceContract === "python-source-v1" && typeof this.provider.generateCode !== "function") {
-      throw new Error("python-source-v1 requires InferenceProvider.generateCode; no analysis fallback is available");
+    if (this.sourceContract !== "independent-analysis" && typeof this.provider.generateCode !== "function") {
+      throw new Error(this.sourceContract + " requires InferenceProvider.generateCode; no analysis fallback is available");
     }
     this.modelId = options.modelId;
     this.spec = snapshotSpec(options.spec);
@@ -100,9 +100,11 @@ export class InferenceToolBuilder implements ToolBuilder {
 
     const prompt = [
       "Produce a repaired Python module for this host-defined tool experiment.",
-      this.sourceContract === "python-source-v1"
-        ? 'Return the complete Python module in the code payload\'s source string: {"source":"Python source"}. Do not include Markdown fences, prose, a filename, or a test score.'
-        : "Return the raw Python source in the independent payload's analysis string. Do not include Markdown fences, prose, a filename, or a test score.",
+      this.sourceContract === "python-source-v2"
+        ? "Return the complete Python module in the code payload's source string. Do not include Markdown fences, prose, a filename, or a test score."
+        : this.sourceContract === "python-source-v1"
+          ? 'Return the complete Python module in the code payload\'s source string: {"source":"Python source"}. Do not include Markdown fences, prose, a filename, or a test score.'
+          : "Return the raw Python source in the independent payload's analysis string. Do not include Markdown fences, prose, a filename, or a test score.",
       "The only output file is " + INFERENCE_TOOL_FILENAME + ". Keep the source within " + this.maxSourceBytes + " UTF-8 bytes.",
       "Implement the host specification exactly. Do not change its requirements or invent additional tools or permissions.",
       "Host-owned specification:",
@@ -131,7 +133,7 @@ export class InferenceToolBuilder implements ToolBuilder {
       completedAt: null,
       durationMs: null,
       status: "running",
-      ...(this.sourceContract === "python-source-v1" ? { sourceContract: this.sourceContract } : {}),
+      ...(this.sourceContract !== "independent-analysis" ? { sourceContract: this.sourceContract } : {}),
       rawOutput: null,
       rawOutputTruncated: false,
       sourceBytes: null,
@@ -145,9 +147,10 @@ export class InferenceToolBuilder implements ToolBuilder {
     let status: "succeeded" | "failed" = "failed";
     let errorMessage: string | null = null;
     try {
-      if (this.sourceContract === "python-source-v1") {
+      if (this.sourceContract !== "independent-analysis") {
         const result = await this.provider.generateCode!({
-          modelId: this.modelId, language: "python", prompt, maxSourceBytes: this.maxSourceBytes
+          modelId: this.modelId, language: "python", prompt, maxSourceBytes: this.maxSourceBytes,
+          ...(this.sourceContract === "python-source-v2" ? { promptStyle: "schema-only" as const } : {})
         });
         const captured = typeof result?.rawOutput === "string" ? recordText(result.rawOutput) : recordOutput(result);
         rawOutput = captured.content;
@@ -187,7 +190,7 @@ export class InferenceToolBuilder implements ToolBuilder {
       status = "succeeded";
       return { files: { [INFERENCE_TOOL_FILENAME]: source } };
     } catch (error) {
-      if (rawOutput === null && this.sourceContract === "python-source-v1" &&
+      if (rawOutput === null && this.sourceContract !== "independent-analysis" &&
           isRecord(error) && typeof error.rawOutput === "string") {
         const captured = recordText(error.rawOutput);
         rawOutput = captured.content;

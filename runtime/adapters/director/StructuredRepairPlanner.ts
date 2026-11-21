@@ -11,6 +11,8 @@ export interface StructuredRepairPlannerOptions {
   spec: ToolBuildSpec;
   config: LlamaCppProviderConfigInput;
   backend?: LlamaCppBackend;
+  /** Optional host-owned balance of actual generation attempts, including failures. */
+  getRemainingRevisions?: () => number;
 }
 
 type Action = "revise" | "complete" | "blocked";
@@ -45,6 +47,7 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
   readonly config: LlamaCppProviderConfig;
   private readonly backend: LlamaCppBackend;
   private readonly spec: ToolBuildSpec;
+  private readonly getRemainingRevisions?: () => number;
 
   constructor(options: StructuredRepairPlannerOptions) {
     if (!options?.config) throw new LlamaCppInferenceError("invalid_config", "Repair planner config is required");
@@ -61,6 +64,10 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
     if (typeof this.backend.complete !== "function") {
       throw new LlamaCppInferenceError("invalid_config", "Repair planner backend must implement complete");
     }
+    if (options.getRemainingRevisions !== undefined && typeof options.getRemainingRevisions !== "function") {
+      throw new LlamaCppInferenceError("invalid_config", "Remaining revisions must be supplied by a host callback");
+    }
+    this.getRemainingRevisions = options.getRemainingRevisions;
   }
 
   async propose(input: Parameters<DirectorTaskProvider["propose"]>[0]): Promise<unknown> {
@@ -75,11 +82,17 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
         new Set(commands).size !== commands.length || !commands.includes("develop-tool")) {
       throw new LlamaCppInferenceError("invalid_request", "Repair planner requires available develop-tool and a canonical command subset");
     }
+    const remainingRevisions = this.readRevisionBalance();
     const actions = (Object.keys(COMMAND_FOR_ACTION) as Action[])
-      .filter(action => commands.includes(COMMAND_FOR_ACTION[action]));
+      .filter(action => commands.includes(COMMAND_FOR_ACTION[action]) &&
+        (action !== "revise" || remainingRevisions !== 0));
+    if (actions.length === 0) {
+      throw new LlamaCppInferenceError("invalid_request", "No available repair action remains within the host budget");
+    }
     const request = {
       outcomes: boundedOutcomes(input.history),
       remainingSteps: input.remainingSteps,
+      ...(remainingRevisions === undefined ? {} : { remainingRevisions }),
       availableActions: actions,
       fixedTool: { id: this.spec.id, name: this.spec.name },
       task: { id: input.taskId, trust: "untrusted-task-data", objective: input.objective.slice(0, MAX_OBJECTIVE_CHARACTERS),
@@ -120,9 +133,27 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
     if (!actions.includes(decision.action)) {
       throw new LlamaCppInferenceError("malformed_response", "Repair planner selected an unavailable action");
     }
-    if (decision.action === "revise") return { kind: "develop-tool", spec: copySpec(this.spec) };
+    if (decision.action === "revise") {
+      if (remainingRevisions !== undefined && this.readRevisionBalance() === 0) {
+        throw new LlamaCppInferenceError("invalid_request", "Host revision budget was exhausted while planning");
+      }
+      return { kind: "develop-tool", spec: copySpec(this.spec) };
+    }
     if (decision.action === "complete") return { kind: "complete", summary: decision.reason };
     return { kind: "blocked", reason: decision.reason };
+  }
+
+  private readRevisionBalance(): number | undefined {
+    if (!this.getRemainingRevisions) return undefined;
+    let remaining: number;
+    try { remaining = this.getRemainingRevisions(); }
+    catch (error) {
+      throw new LlamaCppInferenceError("invalid_request", "Host revision balance is unavailable", { cause: error });
+    }
+    if (!Number.isSafeInteger(remaining) || remaining < 0 || remaining > 2) {
+      throw new LlamaCppInferenceError("invalid_request", "Host remaining revisions must be an integer from 0 through 2");
+    }
+    return remaining;
   }
 }
 

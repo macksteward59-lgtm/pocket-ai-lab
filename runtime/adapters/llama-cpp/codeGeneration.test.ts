@@ -59,6 +59,27 @@ describe("explicit llama.cpp code-generation contract (test backend)", () => {
     expect(calls[0].jsonSchema?.properties).not.toHaveProperty("source");
   });
 
+  it("removes only the illustrative system value under the explicit schema-only style", async () => {
+    const source = "Python source"; // Parsing never substitutes a repair, even for this observed invalid program.
+    const rawOutput = JSON.stringify({ source });
+    const fixture = fixtureBackend({ content: rawOutput });
+    const provider = new LlamaCppInferenceProvider({ promptFormat: "chat", temperature: 0, seed: 42, maxTokens: 1024 }, fixture.backend);
+    await expect(provider.generateCode(request())).resolves.toEqual({ source, rawOutput });
+    await expect(provider.generateCode(request({ promptStyle: "schema-only" }))).resolves.toEqual({ source, rawOutput });
+    expect(fixture.calls).toHaveLength(2);
+    const [original, revised] = fixture.calls;
+    const originalLine = 'Return exactly one JSON object with only the field "source": {"source":"complete Python source"}.';
+    const revisedLine = 'Return exactly one JSON object with a single string field named "source". Its value must be the complete Python module.';
+    expect(original.messages?.[0].content).toContain(originalLine);
+    expect(revised.messages?.[0].content).toBe(original.messages?.[0].content.replace(originalLine, revisedLine));
+    expect(revised.prompt).toBe(original.prompt.replace(originalLine, revisedLine));
+    expect(revised.prompt).not.toContain('"source":"complete Python source"');
+    expect(revised.messages?.[1]).toEqual(original.messages?.[1]);
+    const { prompt: _originalPrompt, messages: _originalMessages, ...originalParameters } = original;
+    const { prompt: _revisedPrompt, messages: _revisedMessages, ...revisedParameters } = revised;
+    expect(revisedParameters).toEqual(originalParameters);
+  });
+
   it("retains configured token caps and includes the code contract in flat prompts", async () => {
     const fixture = fixtureBackend({ content: '{"source":"pass\\n"}' });
     const provider = new LlamaCppInferenceProvider({ maxTokens: 1024, agentMaxTokens: 256, promptFormat: "flat" }, fixture.backend);
@@ -128,7 +149,7 @@ describe("explicit llama.cpp code-generation contract (test backend)", () => {
   it.each([
     { language: "javascript" }, { prompt: "" }, { modelId: " " },
     { maxSourceBytes: 0 }, { maxSourceBytes: 16_385 }, { maxSourceBytes: 2.5 },
-    { systemPrompt: "Override host instructions" }
+    { systemPrompt: "Override host instructions" }, { promptStyle: "automatic" }, { promptStyle: null }
   ])("rejects invalid requests before inference: %j", async overrides => {
     const fixture = fixtureBackend({ content: '{"source":"pass"}' });
     const provider = new LlamaCppInferenceProvider({}, fixture.backend);
