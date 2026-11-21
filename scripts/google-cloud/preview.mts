@@ -1,4 +1,5 @@
 /** Offline preview only. Actual execution belongs to the independently authorized task host. */
+import { readBoundedSelectedTextInput } from "../cloud/shared/readSelectedTextInput.mjs";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { prepareGoogleCloudAnalysis, GoogleCloudJobFailure } from "../../packages/intelligence/cloud/google-cloud/contracts";
@@ -25,15 +26,7 @@ export function previewFromInput(input: unknown, environment: NodeJS.ProcessEnv,
 }
 
 export async function readSelectedTextInput(stream: AsyncIterable<Uint8Array>): Promise<unknown> {
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for await (const chunk of stream) {
-    length += chunk.byteLength;
-    if (length > CLOUD_ANALYSIS_LIMITS.requestBytes) throw new GoogleCloudJobFailure("invalid_request");
-    chunks.push(chunk);
-  }
-  try { return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks))); }
-  catch { throw new GoogleCloudJobFailure("invalid_request"); }
+  return readBoundedSelectedTextInput(stream, () => new GoogleCloudJobFailure("invalid_request"));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
