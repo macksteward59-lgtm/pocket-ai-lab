@@ -193,13 +193,17 @@ function rejectContentType(res) {
 }
 
 async function body(req) {
-  let raw = "";
+  const chunks = [];
+  let received = 0;
   for await (const chunk of req) {
-    raw += chunk;
-    if (raw.length > maxBody) throw Object.assign(new Error("Request too large"), { status: 413 });
+    received += chunk.byteLength;
+    if (received > maxBody) throw Object.assign(new Error("Request too large"), { status: 413 });
+    chunks.push(chunk);
   }
+  // Buffer the bounded raw bytes before decoding: string length undercounts UTF-8
+  // and decoding each network chunk separately can corrupt split code points.
   try {
-    return JSON.parse(raw);
+    return JSON.parse(Buffer.concat(chunks, received).toString("utf8"));
   } catch {
     throw Object.assign(new Error("Invalid JSON"), { status: 400 });
   }
