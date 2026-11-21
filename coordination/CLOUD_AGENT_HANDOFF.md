@@ -16,6 +16,6 @@ Pocket AI Lab project handoff. ChatGPT coordinates repository development from t
 
 ## Delivery
 
-ChatGPT recorded this brief on GitHub. Delivery of the brief to the live note editor is pending. The integration test verified creation, reading, a competing update, exact retries, the read-only credential boundary, and persistence across a Worker runtime restart.
+ChatGPT recorded this brief on GitHub. A new chat inside the Pocket AI Lab project independently retrieved the UUID from the GitHub handoff and reported the pending delivery. The private Cloud Agent plugin is at version 0.6.0. The existing daily project automation now checks this handoff and reports which destinations it reached. Delivery of the brief to the live note editor is pending. The integration test verified creation, reading, a competing update, exact retries, the read-only credential boundary, and persistence across a Worker runtime restart.
 
 When updating this handoff, read the latest branch and Cloudflare note, retain unresolved decisions, and record the observed note revision. Include the verified change in the active conversation and append its evidence to the coordination log. Future readers should distinguish the author of each note from the service that stored it.
