@@ -1,0 +1,1 @@
+<｜User｜>A supplied record says: locker code = K7. Extract the locker code from that record. After reasoning, return only one JSON object with the sole key "answer" and a string value.<｜Assistant｜><think>

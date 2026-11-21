@@ -1,0 +1,142 @@
+{"sha256": "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f", "bytes": 1117320800}
+DeepSeek qualification verify-model completed.
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: using embedded metal library
+ggml_metal_library_compile_all: compiled 'fa_aux' library in 8.259 sec
+ggml_metal_library_compile_all: compiled 'fa_f16' library in 5.411 sec
+ggml_metal_library_compile_all: compiled 'fa_f32' library in 3.416 sec
+ggml_metal_library_compile_all: compiled 'fa_q4_0' library in 6.097 sec
+ggml_metal_library_compile_all: compiled 'fa_q4_1' library in 3.653 sec
+ggml_metal_library_compile_all: compiled 'fa_q5_0' library in 8.629 sec
+ggml_metal_library_compile_all: compiled 'fa_q5_1' library in 7.783 sec
+ggml_metal_library_compile_all: compiled 'fa_q8_0' library in 11.688 sec
+ggml_metal_library_compile_all: compiled 'fa_tensor' library in 8.659 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_f16' library in 16.035 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_f32' library in 12.975 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q4_0' library in 19.456 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q4_1' library in 22.581 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q5_0' library in 28.306 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q5_1' library in 25.348 sec
+ggml_metal_library_compile_all: compiled 'fa_vec_q8_0' library in 34.495 sec
+ggml_metal_library_compile_all: compiled 'mul_mv' library in 36.746 sec
+ggml_metal_library_compile_all: compiled 'mul_mv_mma' library in 28.467 sec
+ggml_metal_library_compile_all: compiled 'mul_mm' library in 31.763 sec
+ggml_metal_library_compile_all: compiled 'quantize' library in 37.695 sec
+ggml_metal_library_compile_all: compiled 'softmax' library in 36.787 sec
+ggml_metal_library_compile_all: compiled 'norm' library in 31.876 sec
+ggml_metal_library_compile_all: compiled 'unary' library in 36.967 sec
+ggml_metal_library_compile_all: compiled 'binbcast' library in 31.985 sec
+ggml_metal_library_compile_all: compiled 'reduce' library in 32.007 sec
+ggml_metal_library_compile_all: compiled 'tri' library in 37.707 sec
+ggml_metal_library_compile_all: compiled 'ssm' library in 32.108 sec
+ggml_metal_library_compile_all: compiled 'wkv' library in 32.149 sec
+ggml_metal_library_compile_all: compiled 'gated_delta_net' library in 37.771 sec
+ggml_metal_library_compile_all: compiled 'solve_tri' library in 37.801 sec
+ggml_metal_library_compile_all: compiled 'rope' library in 32.253 sec
+ggml_metal_library_compile_all: compiled 'conv' library in 32.419 sec
+ggml_metal_library_compile_all: compiled 'upscale' library in 37.849 sec
+ggml_metal_library_compile_all: compiled 'argsort' library in 38.014 sec
+ggml_metal_library_compile_all: compiled 'pool' library in 32.412 sec
+ggml_metal_library_compile_all: compiled 'misc' library in 38.240 sec
+ggml_metal_library_compile_all: loaded 36 libraries from embedded data in 38.356 sec (max single = 38.240 sec)
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (Apple Paravirtual device)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon2 (3002)
+ggml_metal_device_init: simdgroup reduction   = false
+ggml_metal_device_init: simdgroup matrix mul. = false
+ggml_metal_device_init: has unified memory    = false
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  1073.74 MB
+llama_model_loader: loaded meta data with 30 key-value pairs and 339 tensors from /Users/runner/work/pocket-ai-lab/pocket-ai-lab/models/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = qwen2
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = DeepSeek R1 Distill Qwen 1.5B
+llama_model_loader: - kv   3:                           general.basename str              = DeepSeek-R1-Distill-Qwen
+llama_model_loader: - kv   4:                         general.size_label str              = 1.5B
+llama_model_loader: - kv   5:                          qwen2.block_count u32              = 28
+llama_model_loader: - kv   6:                       qwen2.context_length u32              = 131072
+llama_model_loader: - kv   7:                     qwen2.embedding_length u32              = 1536
+llama_model_loader: - kv   8:                  qwen2.feed_forward_length u32              = 8960
+llama_model_loader: - kv   9:                 qwen2.attention.head_count u32              = 12
+llama_model_loader: - kv  10:              qwen2.attention.head_count_kv u32              = 2
+llama_model_loader: - kv  11:                       qwen2.rope.freq_base f32              = 10000.000000
+llama_model_loader: - kv  12:     qwen2.attention.layer_norm_rms_epsilon f32              = 0.000001
+llama_model_loader: - kv  13:                       tokenizer.ggml.model str              = gpt2
+llama_model_loader: - kv  14:                         tokenizer.ggml.pre str              = deepseek-r1-qwen
+llama_model_loader: - kv  15:                      tokenizer.ggml.tokens arr[str,151936]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+llama_model_loader: - kv  16:                  tokenizer.ggml.token_type arr[i32,151936]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  17:                      tokenizer.ggml.merges arr[str,151387]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+llama_model_loader: - kv  18:                tokenizer.ggml.bos_token_id u32              = 151646
+llama_model_loader: - kv  19:                tokenizer.ggml.eos_token_id u32              = 151643
+llama_model_loader: - kv  20:            tokenizer.ggml.padding_token_id u32              = 151643
+llama_model_loader: - kv  21:               tokenizer.ggml.add_bos_token bool             = true
+llama_model_loader: - kv  22:               tokenizer.ggml.add_eos_token bool             = false
+llama_model_loader: - kv  23:                    tokenizer.chat_template str              = {% if not add_generation_prompt is de...
+llama_model_loader: - kv  24:               general.quantization_version u32              = 2
+llama_model_loader: - kv  25:                          general.file_type u32              = 15
+llama_model_loader: - kv  26:                      quantize.imatrix.file str              = /models_out/DeepSeek-R1-Distill-Qwen-...
+llama_model_loader: - kv  27:                   quantize.imatrix.dataset str              = /training_dir/calibration_datav3.txt
+llama_model_loader: - kv  28:             quantize.imatrix.entries_count i32              = 196
+llama_model_loader: - kv  29:              quantize.imatrix.chunks_count i32              = 128
+llama_model_loader: - type  f32:  141 tensors
+llama_model_loader: - type q4_K:  169 tensors
+llama_model_loader: - type q6_K:   29 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 1.04 GiB (5.00 BPW) 
+llama_prepare_model_devices: using device MTL0 (Apple Paravirtual device) (unknown id) - 1024 MiB free
+init_tokenizer: initializing tokenizer for type 2
+load: 0 unused tokens
+load: control token: 151659 '<|fim_prefix|>' is not marked as EOG
+load: control token: 151655 '<|image_pad|>' is not marked as EOG
+load: control token: 151652 '<|vision_start|>' is not marked as EOG
+load: control token: 151651 '<|quad_end|>' is not marked as EOG
+load: control token: 151647 '<|EOT|>' is not marked as EOG
+load: control token: 151645 '<｜Assistant｜>' is not marked as EOG
+load: control token: 151644 '<｜User｜>' is not marked as EOG
+load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+load: control token: 151653 '<|vision_end|>' is not marked as EOG
+load: control token: 151660 '<|fim_middle|>' is not marked as EOG
+load: control token: 151650 '<|quad_start|>' is not marked as EOG
+load: control token: 151661 '<|fim_suffix|>' is not marked as EOG
+load: control token: 151646 '<｜begin▁of▁sentence｜>' is not marked as EOG
+load: control token: 151654 '<|vision_pad|>' is not marked as EOG
+load: control token: 151656 '<|video_pad|>' is not marked as EOG
+load: printing all EOG tokens:
+load:   - 128247 ('</s>')
+load:   - 151643 ('<｜end▁of▁sentence｜>')
+load:   - 151662 ('<|fim_pad|>')
+load:   - 151663 ('<|repo_name|>')
+load:   - 151664 ('<|file_sep|>')
+load: special tokens cache size = 23
+load: token to piece cache size = 0.9310 MB
+print_info: arch                  = qwen2
+print_info: vocab_only            = 1
+print_info: no_alloc              = 0
+print_info: vocab type            = BPE
+print_info: n_vocab               = 151936
+print_info: n_merges              = 151387
+print_info: BOS token             = 151646 '<｜begin▁of▁sentence｜>'
+print_info: EOS token             = 151643 '<｜end▁of▁sentence｜>'
+print_info: EOT token             = 151643 '<｜end▁of▁sentence｜>'
+print_info: PAD token             = 151643 '<｜end▁of▁sentence｜>'
+print_info: LF token              = 198 'Ċ'
+print_info: FIM PRE token         = 151659 '<|fim_prefix|>'
+print_info: FIM SUF token         = 151661 '<|fim_suffix|>'
+print_info: FIM MID token         = 151660 '<|fim_middle|>'
+print_info: FIM PAD token         = 151662 '<|fim_pad|>'
+print_info: FIM REP token         = 151663 '<|repo_name|>'
+print_info: FIM SEP token         = 151664 '<|file_sep|>'
+print_info: EOG token             = 128247 '</s>'
+print_info: EOG token             = 151643 '<｜end▁of▁sentence｜>'
+print_info: EOG token             = 151662 '<|fim_pad|>'
+print_info: EOG token             = 151663 '<|repo_name|>'
+print_info: EOG token             = 151664 '<|file_sep|>'
+print_info: max token length      = 256
+llama_model_load: vocab only - skipping tensors
+{"sha256": "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f", "bytes": 1117320800}
+DeepSeek qualification verify-model completed.

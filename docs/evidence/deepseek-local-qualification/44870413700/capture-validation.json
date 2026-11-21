@@ -1,0 +1,56 @@
+{
+  "allStoredRepresentationsRoundTrip": true,
+  "apexReceipt": false,
+  "artifactId": 14694505003,
+  "artifactRawRecordsMatchCompleteNativeJobLog": true,
+  "artifactSourceAndCheckoutIdentitiesMatch": true,
+  "artifactZipBytes": 54188,
+  "artifactZipSHA256": "c0a83ede14828d4e78ba3f659a9a93c45652a9fc7b75593997e8c507b533bbd5",
+  "authorized": false,
+  "completedCount": 8,
+  "correctCount": 1,
+  "fullDecodedJobLogs": [
+    {
+      "bytes": 32900,
+      "name": "contracts-job.log",
+      "sha256": "2b5d00d29f8b1a288633115ff9c03a45850f23256af4e06003f8b5d68176cdd7"
+    },
+    {
+      "bytes": 799890,
+      "name": "native-job.log",
+      "sha256": "98a661c5ffcc549d4e235d3d3e36a3880b5a5a93f9abdccd654a113dde42c68b"
+    },
+    {
+      "bytes": 81530,
+      "name": "general-ci-job.log",
+      "sha256": "a5bb50d588db55f27d63103cb675b76761bcb7f1471c1914412197306ce57cd8"
+    }
+  ],
+  "githubArtifactDigestMatches": true,
+  "hardwareAcceptance": false,
+  "inferencePerformedByThisReview": false,
+  "limits": "Independent replay of frozen offline tokenizer/measurement verifiers only; original failed quality gate retained. Hosted CPU development evidence does not establish physical-device acceptance or general model quality.",
+  "measurementIntegrityPass": true,
+  "modelDownloadedByThisReview": false,
+  "modelPromotion": false,
+  "nativeFixtureGatePassed": true,
+  "originalProvenanceFileHashesVerified": 21,
+  "promptMemberCount": 8,
+  "qualityPass": false,
+  "rawRecordCount": 10,
+  "recomputedAuditMatchesArtifactBytes": true,
+  "recomputedTokenizerAcceptanceMatchesArtifactBytes": true,
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "reviewedAtUTC": "2026-11-21T05:39:36.944585+00:00",
+  "runAttempt": 1,
+  "runId": 44870413700,
+  "schemaVersion": 1,
+  "sourceHead": "e5cf16b9b3af96ab0fe4832105538abd5d22c551",
+  "sourceTree": "6b6904d921fdaa084a4be74f7909f3932e9a4262",
+  "startRecords": 1,
+  "summaryRecords": 1,
+  "temporarySignedTransferURLsInPublishedEvidence": false,
+  "trialRecords": 8,
+  "validFinalCount": 1,
+  "zipMemberCount": 22
+}
