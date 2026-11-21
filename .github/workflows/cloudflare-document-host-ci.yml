@@ -1,0 +1,30 @@
+name: Cloudflare document status host
+on:
+  pull_request:
+    paths:
+      - 'workers/document-analysis/**'
+      - 'packages/intelligence/cloud/**'
+      - 'packages/intelligence/autonomy/**'
+      - 'packages/intelligence/serverless/cloud-analysis/**'
+      - '.github/workflows/cloudflare-document-host-ci.yml'
+permissions:
+  contents: read
+jobs:
+  local-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: workers/document-analysis
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm test
