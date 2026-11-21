@@ -21,6 +21,16 @@ export { DelegationGate, type DelegationVoucher, type VoucherVerifier, type Dele
 export { SecurityDivision, type ApprovalVerifier, type SecurityTeam } from "./security/SecurityDivision";
 export { SkillRegistry, type Skill, type SkillLayer } from "./skills/SkillRegistry";
 export { createDefaultSkillRegistry, SKILL_CATALOG } from "./skills/catalog";
+export {
+  createSkillArtifact, verifySkillArtifactIntegrity, createSkillEvaluation,
+  verifySkillEvaluationIntegrity, skillAssignmentDigest, authorizeSkillPromotion,
+  transitionSkillLifecycle,
+  type SkillLifecycleStatus, type SkillArtifact, type SkillArtifactInput,
+  type SkillExercise, type SkillExerciseEnvironment, type SkillSourceReference,
+  type SkillSourceReviewState, type SkillAssessment, type SkillEvaluation,
+  type SkillEvaluationInput, type SkillExerciseResult, type SkillApproval,
+  type SkillPromotionAuthorization, type SkillPromotionVerifiers, type SkillPromotionResult
+} from "./skills/SkillLifecycle";
 export { DYNAMIC_SPECIALIST_CATALOG, type DynamicSpecialistId } from "./agents/specialists/dynamicCatalog";
 export { ToolRegistry, TOOL_CATALOG, type ToolDescriptor, type ToolMode } from "./security/tools";
 export { DirectorCommandRouter, parseDirectorCommand, DIRECTOR_COMMAND_KINDS, type DirectorCommand, type DirectorCommandContext, type DirectorCommandProvider } from "./director/DirectorCommandRouter";
