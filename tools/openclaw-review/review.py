@@ -25,7 +25,7 @@ def model_config(port, key):
             "apiKey": key, "agentRuntime": {"id": "openclaw"},
             "models": [{"id": MODEL, "name": MODEL, "contextWindow": 32768, "maxTokens": 384}],
         }}},
-        "agents": {"defaults": {"contextInjection": "never", "model": {
+        "agents": {"defaults": {"contextInjection": "never", "params": {"temperature": 0}, "model": {
             "primary": f"pocket-local/{MODEL}", "fallbacks": [],
         }}},
         "tools": {"profile": "minimal", "deny": ["*"]},
@@ -78,16 +78,16 @@ def review(args):
                "NO_PROXY": "127.0.0.1,localhost", "TERM": "dumb"}
         cmd = [llama, "--model", str(args.gguf.resolve()), "--alias", MODEL, "--host",
                "127.0.0.1", "--port", str(port), "--ctx-size", "32768", "--parallel", "1",
-               "--threads", "4", "--no-ui", "--api-key-file", str(key_file)]
+               "--threads", "4", "--seed", "245", "--temp", "0", "--no-ui", "--api-key-file", str(key_file)]
         with (root / "server.log").open("w") as log:
             server = subprocess.Popen(cmd, env=env, stdout=log, stderr=log)
             try:
                 wait_for_model(server, port, key)
-                prompt = ("Read the following evidence and return exactly three short lines. "
-                          "On line one give the hosted GitHub job ID and its successful steps. "
-                          "On line two give the number of independently run local tests, number of "
-                          "test files, and separate Worker integration test result. On line three "
-                          "give one thing those tests did not prove.\n\n" + EVIDENCE.read_text())
+                prompt = (EVIDENCE.read_text() + "\nWrite the review directly in plain English. "
+                          "The record above contains everything needed. Answer in three lines. "
+                          "Hosted CI: give the numeric job ID and steps that passed. "
+                          "Local checks: give the test count, file count, and Worker test result. "
+                          "Still unverified: name one claim the evidence does not establish.")
                 result = subprocess.run([openclaw, "agent", "exec", "--config", str(config),
                     "--model", f"pocket-local/{MODEL}", "--cwd", str(workspace), "--message-file",
                     "-", "--code-mode", "direct", "--thinking", "off", "--timeout", "300", "--json"],

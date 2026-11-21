@@ -6,7 +6,7 @@ OpenClaw reads the saved CI evidence for Pocket AI Lab PR #245 and drafts a shor
 
 ## Run from an iPhone
 
-Open the pilot pull request in Safari and select its **OpenClaw PR 245 review** check. Its run summary shows the draft, model and token usage. The workflow runs once when the setup pull request opens. A repository writer can rerun that job from Actions. After the workflow lands on the default branch, **Actions → OpenClaw PR 245 review → Run workflow** starts a new run. Changes to shared notes do not dispatch jobs.
+Open the pilot pull request in Safari and select its **OpenClaw PR 245 review** check. Its run summary shows the draft, model and token usage. The workflow validates the setup pull request when it opens and when its branch is updated. A repository writer can rerun that job from Actions. After the workflow lands on the default branch, **Actions → OpenClaw PR 245 review → Run workflow** starts a new run. Changes to shared notes do not dispatch jobs.
 
 The job requires this public repository and a standard Ubuntu GitHub runner. Model inference runs on the CPU of that runner. The job uses a read-only checkout and does not require Cloudflare or model-provider secrets.
 
