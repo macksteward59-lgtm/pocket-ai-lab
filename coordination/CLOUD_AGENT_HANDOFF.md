@@ -70,3 +70,9 @@ The engineering note is confirmed at revision **2**. The [native validation run]
 ## Project research memory
 
 [Research memory and experiment results](../docs/research/project-research-memory.md) · [Versioned source register](../docs/research/project-sources.json). The private research note is `6f6b446a-c306-5610-9fab-fa8c5777b881`, revision 2. The engineering note links to it at revision 4. A later chat can read the eight findings and original URLs through the existing Handoff app. The November 21 source-backed Qwen run answered and cited two of six supported questions and abstained on all six withheld questions. All twelve records repeated byte for byte on a second host. These observations concern short supplied documentation passages on Linux.
+
+## Foundation for experiments
+
+The owner wants experimental models and donor components to serve one dependable iPhone workflow. Judge the foundation through one owner-visible task: establish its identity and allowed scope, preserve its input and sources, identify the provider that actually ran, recover the acknowledged result after interruption, and let an independent reviewer check the artifact. Retain the earlier result and its limitations when comparing a new candidate. Keep this path accessible through the ordinary app controls.
+
+A concrete recovery check lives in [draft #253](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/253). The original Memory API dropped both references on a content-only edit; the previous browser editor joined multiple citations into one field. The revised path preserves separate source values, ID and creation time and resets verification after an edit. This protection applies to existing records whose source arrays still contain separate values. A flattened historical string cannot be reliably split just by looking for commas. Physical-device acceptance still requires a real run on the iPhone Air.
