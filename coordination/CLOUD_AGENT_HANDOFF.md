@@ -49,3 +49,5 @@ On November 21, ChatGPT saved the competitive research scope and read it back ve
 Cloudflare revision **4** adds the first staged test-summary assignment. Its input is the [completed PR #245 workflow](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206). The brief was read back from Cloudflare. The staged model review is pending.
 
 When updating this handoff, read the latest branch and Cloudflare note, retain unresolved decisions, and record the observed note revision. Include the verified change in the active conversation and append its evidence to the coordination log. Future readers should distinguish the author of each note from the service that stored it.
+
+The staged CI review input for PR #245 is available in Pocket AI Lab Handoff under note UUID `fbeaf347-16ee-5111-923f-e5812e8938c6`, revision 1. It identifies the GitHub job, its assertions, and ChatGPT's independent test results. A separate Workers AI response is pending. Read this note by UUID when resuming the review.
