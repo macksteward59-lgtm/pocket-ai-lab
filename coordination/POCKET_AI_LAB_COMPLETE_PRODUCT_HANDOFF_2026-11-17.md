@@ -9,6 +9,40 @@
 
 > This handoff consolidates the durable product decisions and technical requirements available from prior project discussions and the repository's current coordination records. The master checklist remains the detailed requirement baseline; the traceability matrix remains the requirement-level audit ledger. This document connects those records into one implementation-ready plan. If an original source artifact is unavailable, its contents are explicitly marked as needing recovery rather than reconstructed by guesswork.
 
+## 2026-11-21 execution update — existing workshop connected and measured
+
+The owner's recollection of code execution, revision and self-improvement support was substantially correct: merged [workshop #46](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/46) and Director work #53–57 already supplied the lifecycle and bounded control loop. The missing part in the inspected host was the concrete source builder and executor. [Draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241), stacked on #240, now supplies those connections instead of duplicating the engine. Current source head is `d3294457e65e59a3d4d53510441f5a6b79474852`, tree `ac840eabe97fad684ad447e4fa98746d1bec8fa2`.
+
+### Connected capability and actual result
+
+- The existing Director can select revision of one fixed experimental tool; the existing Engineer inference provider generates its candidate source.
+- The existing ToolDirector and FileToolArtifactStore persist versions and quarantine failures. A new DockerPythonToolSandbox executes actual candidate artifacts in bounded, isolated containers and returns independently graded development results.
+- Configured command availability is enforced before dispatch. The ordinary web composition advertises only its connected capabilities; this experiment does not silently give the web app an executor.
+- A frozen UTF-8 repair task permits eight development cases, at most two model generations and three Director turns, then twenty held-out cases after final source selection. Actual requests, responses, source lineage, outputs, timing, cleanup and model identity are retained.
+
+| Evidence | Observed outcome | Meaning |
+|---|---|---|
+| Real Docker fixture controls at the current head | Twenty executions: faulty source 3/8, scripted corrected source 8/8, isolation, wrong-output rejection, timeout, output cap, artifact reopen/lineage and cleanup all met expectations. | Executor/lifecycle controls passed. The scripted correction is not model repair evidence. |
+| v1 native function-call trial | One real Director request; no function call, no Engineer invocation, no revised artifact or held-out evaluation. | Command interface failed before repair. |
+| v2 structured-action trial | Director selected revise and invoked Engineer. Engineer generated 1,024 tokens but returned no usable final content/toolCalls. No revised artifact or held-out evaluation. | Dispatch worked; source-generation response contract failed. The raw HTTP body was not retained, so a reasoning-channel explanation remains a hypothesis. |
+| v3 separate reasoning-budget diagnostic | Five real calls: revise, Engineer, revise, Engineer, complete. Two exact generated artifacts were retained, executed, failed and fed back. Both were prose and failed Python parsing: 0/8 development each, final 0/20 held-out versus baseline 4/20. All 64 containers settled and were removed. | Execution/feedback/lineage and post-selection evaluation ran. Successful repair was **not** established. Director falsely claimed complete; host quality acceptance remained false. |
+
+The v3 report's `controlPassed: true` denotes a completed bounded control protocol, not correct model judgment. The operative quality and acceptance fields are false. No model call occurred after final selection or after held-out execution began; no held-out IDs appeared in requests. The model hash remained unchanged. Two earlier provisioning failures (unused server UI assets and anonymous GitHub API rate limiting) occurred before inference and remain separate records.
+
+### Concrete issue exposed by the connected run
+
+The inherited Engineer system instruction asks for an approach in **2–5 sentences**, while the experiment asks for **raw Python source** in the same `analysis` field. Its existing schema also caps that field at **700 characters**, tighter than the builder byte cap. Both generated strings reached 700 characters and contained prose. This instruction/output-contract mismatch is a confound, not a proven sole explanation for model failure; a correct implementation of the small task can fit below that limit. The run cannot fairly establish that DeepSeek lacks the underlying coding ability.
+
+The next scoped engineering step is a dedicated source-generation contract through the existing inference engine, without changing the independent-analysis interface for other callers, followed by a separately frozen trial. Preserve compiler feedback and the independent acceptance gate. Do not repair source by hand and attribute it to the model, rescore v1–v3, or allow a model completion claim to promote a failed artifact.
+
+### Review, evidence and remaining product scope
+
+[Full repository CI 44881077615](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44881077615), current-head workshop contracts and current-head actual Docker controls passed. Local checks included TypeScript, 110 focused runtime tests, 14 fixture/evidence tests and the initial 36 web tests. Independent evidence review recomputed source/artifact/input/output/expected-answer hashes, exact generated-source lineage, case grades, selection timing and container cleanup.
+
+Durable records: [execution evidence and interpretation](evidence/tool-workshop-repair-2026-11-21/README.md), [provenance](evidence/tool-workshop-repair-2026-11-21/provenance.json), and [raw v3 report](evidence/tool-workshop-repair-2026-11-21/live-v3/report.json). Earlier raw runs and setup failures are preserved in the same directory.
+
+PR #241 remains draft, unmerged and candidate-only. It does not install a generated tool, edit production Pocket source autonomously, train weights, change APEX/East, deploy a cloud service, establish a G.I.R.L. speedup or satisfy physical iPhone acceptance. ALI #217, skill lifecycle #91/#92, multi-agent proof #227, a concrete ExploitGym adapter and native integration remain separate work described below. The earlier frozen native/text 1/8 result is unchanged and is not the score of the whole harness. This update supersedes the older statement that no concrete workshop builder/executor exists on the #240 continuation; it does not supersede the original complete-product requirements.
+
 ## 2026-11-21 correction — existing learning harness and cross-branch reconciliation
 
 The owner recalled that the harness already supplied tools for teaching, learning, analysis, understanding and communication, and requested a cross-check of the intelligence work, previous ChatGPT conversations and the coordination branches. That correction is supported by the repository. The previous conversation called for learning/training/improvement as a tool inside the existing harness and for one unified Pocket AI Lab. The recent DeepSeek qualification exercised a narrower path. It must not be reported as an evaluation of the complete learning/tool/agent system.

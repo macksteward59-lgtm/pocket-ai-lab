@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "preparedAt": "2026-11-21T07:48:19Z",
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "pullRequest": 241,
+  "branch": "codex/tool-workshop-repair-integration-20261121",
+  "currentSource": {
+    "head": "d3294457e65e59a3d4d53510441f5a6b79474852",
+    "tree": "ac840eabe97fad684ad447e4fa98746d1bec8fa2",
+    "dirty": false
+  },
+  "basePullRequest": 240,
+  "baseHead": "e5cf16b9b3af96ab0fe4832105538abd5d22c551",
+  "fixture": {
+    "sha256": "00b849a53254d1a28612b4d0bac2b15c24317a7c18af18fb36c52a27fe44ab6d",
+    "developmentCases": 8,
+    "heldOutCases": 20,
+    "maxRevisions": 2
+  },
+  "model": {
+    "id": "deepseek-r1-distill-qwen-1.5b-q4_k_m",
+    "bytes": 1117320800,
+    "sha256": "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f"
+  },
+  "llamaCommit": "5f490d7bfe78844e6390c869454c149fd7e003a8",
+  "controls": [
+    {
+      "name": "initial-sandbox",
+      "directory": "sandbox",
+      "sourceHead": "b8987cf87431a3f1c13c65029bde6aa389c82051",
+      "sourceTree": "75451879274dd52d4d203a34602ab56f81e632ba",
+      "runId": 44877813168,
+      "artifactId": 14696373481,
+      "archiveSHA256": "f85b1e11da3ca06553889ee0d7dae17ccf47dae22752023db2832cb1dea49363",
+      "reportSHA256": "00251595f8e4df441551e80c374a9e2dc956722549c3343f0d9c100cf4d20ecf",
+      "accepted": true,
+      "containerCases": 20,
+      "sourceAuthor": "scripted fixture; no model generation"
+    },
+    {
+      "name": "final-sandbox",
+      "directory": "final-sandbox",
+      "sourceHead": "d3294457e65e59a3d4d53510441f5a6b79474852",
+      "sourceTree": "ac840eabe97fad684ad447e4fa98746d1bec8fa2",
+      "runId": 44881077624,
+      "jobId": 136776396102,
+      "artifactId": 14697359901,
+      "archiveSHA256": "d321ebc72604b83e80923bf298813d267206b13b26e69ea7cf196aa58cdd1339",
+      "reportSHA256": "da64660477faac3b0808f82d28e031ff875c5ab5d2bf548e6fc8dde46e315b12",
+      "accepted": true,
+      "containerCases": 20,
+      "sourceAuthor": "scripted fixture; no model generation"
+    }
+  ],
+  "setupFailures": [
+    {
+      "record": "provisioning-attempt-1.json",
+      "log": "provisioning-attempt-1.txt",
+      "profile": "v1",
+      "sourceHead": "1b81519c5eeb9b465fc0feae1d934dd03c28f38b",
+      "runId": 44877989061,
+      "jobId": 136767096493,
+      "inferenceCalls": 0,
+      "cause": "Optional upstream server UI assets failed verification before model acquisition/inference."
+    },
+    {
+      "record": "provisioning-v2-attempt-1.json",
+      "log": "provisioning-v2-attempt-1.txt",
+      "profile": "v2",
+      "sourceHead": "4560f791ee13c9774ede532364cee448b1fcbafb",
+      "runId": 44879587482,
+      "jobId": 136771959605,
+      "inferenceCalls": 0,
+      "cause": "Anonymous GitHub tag verification returned HTTP403 rate limit exceeded before model acquisition/inference."
+    }
+  ],
+  "liveTrials": [
+    {
+      "profile": "v1",
+      "directory": "live-v1",
+      "sourceHead": "0083f561f94b6835265cba062cf263421725836e",
+      "sourceTree": "7e6e0c1f6a2c4ba16fdc7318d5bc0c1fa249d9b0",
+      "runId": 44878327905,
+      "jobId": 136768119883,
+      "artifactId": 14696614189,
+      "archiveSHA256": "1f577e0f1f8abaea889a574a7f3a1b53b52fcbe1aeb4cd5c214530399287b972",
+      "reportSHA256": "bdccdcec6354e32700652ad35dcea6b791e90d96189678db184e24ecbc57dd3e",
+      "profileSHA256": "8e237da1b181a006acc28f70ab4b2214aaf9f5f69886e34446851541916b8c5c",
+      "directorCalls": 1,
+      "engineerCalls": 0,
+      "retainedRevisions": 0,
+      "heldOut": null,
+      "accepted": false,
+      "outcome": "Director returned ordinary content without the required native function call."
+    },
+    {
+      "profile": "v2",
+      "directory": "live-v2",
+      "sourceHead": "8777e4f2fe5e311be78dc04c98155c0168b36511",
+      "sourceTree": "7ce1767dd03de29467b42e470be78b1656a138eb",
+      "runId": 44880061412,
+      "jobId": 136773406728,
+      "artifactId": 14697329849,
+      "archiveSHA256": "e945232027907ba9be50c43e8da9a8d13573acdcea307d245235320b2ad0fdeb",
+      "reportSHA256": "22225dcaada42a0eac35fc9ab43592c9e95d5b5f250f42fbe8ac564ac5fc4639",
+      "profileSHA256": "fb69b249af98c49ad1c1a05725ba1e7aa6a2e3649a89b405ff5e9c6b14e4f0f8",
+      "directorCalls": 1,
+      "engineerCalls": 1,
+      "retainedRevisions": 0,
+      "heldOut": null,
+      "accepted": false,
+      "outcome": "Director selected revise and invoked Engineer; Engineer used 1,024 generated tokens but returned no usable final content/toolCalls. Raw HTTP body was not retained; reasoning-channel exhaustion is a hypothesis."
+    },
+    {
+      "profile": "v3",
+      "directory": "live-v3",
+      "sourceHead": "d3294457e65e59a3d4d53510441f5a6b79474852",
+      "sourceTree": "ac840eabe97fad684ad447e4fa98746d1bec8fa2",
+      "runId": 44881077624,
+      "jobId": 136776512611,
+      "artifactId": 14698187586,
+      "archiveSHA256": "8cd04be3fc6a86e26e73d4d889c94c8548798e8f789f3b67fc6622679fb759be",
+      "reportSHA256": "3f6d5ca986599c401dbcada2dd8aa583aadc106e2b38223cf4eb3c7a034c6be2",
+      "profileSHA256": "f8173fd949c7c8f9adab9ee26eb38a17d23d699af02f65aacb528a293b2450ce",
+      "directorCalls": 3,
+      "engineerCalls": 2,
+      "retainedRevisions": 2,
+      "development": {
+        "baseline": {
+          "passed": 3,
+          "total": 8
+        },
+        "version2": {
+          "passed": 0,
+          "total": 8
+        },
+        "version3": {
+          "passed": 0,
+          "total": 8
+        }
+      },
+      "heldOut": {
+        "baseline": {
+          "passed": 4,
+          "total": 20
+        },
+        "finalCandidate": {
+          "passed": 0,
+          "total": 20
+        },
+        "fedBackToModel": false
+      },
+      "containerCases": 64,
+      "accepted": false,
+      "controlPassed": true,
+      "qualityPassed": false,
+      "modelUnchanged": true,
+      "outcome": "Two raw prose responses were retained as candidate source and failed Python parsing. Director claimed complete despite quarantined failures; host acceptance rejected it.",
+      "contractConfound": "Engineer system asks for an approach in 2–5 sentences while task asks for raw Python. Existing independent analysis schema maxLength 700 is tighter than builder bytecap; both responses are 700 characters."
+    }
+  ],
+  "validation": {
+    "generalCI": {
+      "runId": 44881077615,
+      "head": "d3294457e65e59a3d4d53510441f5a6b79474852",
+      "conclusion": "success"
+    },
+    "workshopContracts": {
+      "runId": 44881077624,
+      "jobId": 136776270499,
+      "conclusion": "success"
+    },
+    "focusedRuntimeTests": 110,
+    "fixtureEvidenceTests": 14,
+    "initialWebTests": 36,
+    "physicalDeviceAcceptance": false
+  },
+  "interpretation": {
+    "productionActivation": false,
+    "productionSelfEditing": false,
+    "weightTraining": false,
+    "wholeHarnessQualification": false,
+    "internalLanguageSpeedup": false,
+    "priorNativeQualificationChanged": false
+  },
+  "archiveNote": "ZIP digests verified against GitHub artifact metadata. Extracted report/source bytes preserved; llama-server.log is renamed llama-server.txt without content edits. Temporary artifact download URLs are excluded."
+}
