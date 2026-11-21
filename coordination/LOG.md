@@ -4859,3 +4859,7 @@ The owner clarified the offensive red-team purpose of the bug bounty division. T
 ## 2026-11-21 - APEX and ExploitGym in the full Pocket AI Lab ecosystem
 
 The owner clarified the ambition to replace a fragmented research workflow and to create a provisional artifact before the system fully understands the problem. The [complete product handoff](./POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md) now relates that goal to the recovered companion, agent, learning, native, cloud, temporal, and research decisions. The [shared project brief](./CLOUD_AGENT_HANDOFF.md) mirrors Cloudflare revision 3, which ChatGPT saved and read back. Physical-iPhone product acceptance, comparative research performance, and the exact unrecovered source mappings are still open.
+
+## 2026-11-21 - Cloudflare staging assignment prepared
+
+ChatGPT verified [PR #245](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/245) at `66cedc4bec7c402dd30f13e2478d4dba8dc7aa07` and its successful [CI run](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206). The [shared handoff](./CLOUD_AGENT_HANDOFF.md) now identifies the exact evidence, expected review, and job ownership for one manual staging trial. Cloudflare read-back confirmed revision 4. The trial awaits execution.

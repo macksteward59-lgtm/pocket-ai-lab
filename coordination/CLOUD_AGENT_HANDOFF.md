@@ -16,6 +16,8 @@ The learning system should remember events, facts, relationships, and useful pro
 
 ChatGPT and GitHub coordinate development. Cloudflare stores this shared brief. The app's MessageBus carries runtime messages. The first complete proof is one real, authorized task on a physical iPhone Air with attributable model work, an independently checked artifact, and recovery after interruption. The handoff works today. Whole-product acceptance and competitive performance still require evidence.
 
+First Cloudflare collaboration task, prepared for staging. Review the completed CI evidence for GitHub PR #245 at 66cedc4bec7c402dd30f13e2478d4dba8dc7aa07, workflow run 44925093206. Use the test-summary operation to draft what passed, what it proves, and what remains untested. ChatGPT checks the draft against GitHub and records the accepted result once per reviewed commit. Start with one manual staging run using separate state. The live notes service remains the project record in Cloudflare. For earlier decisions, ChatGPT retrieves the relevant available sources and adds a dated summary to the handoff.
+
 ## Full ecosystem and sources
 
 The [complete product handoff](./POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md#2026-11-21--how-the-ecosystem-should-work-for-its-owner) maps this brief to the companion, agent team, APEX/East, ExploitGym, native and cloud compute, learning and memory, temporal reasoning, experimental communication, research scope, release gates, and open source-recovery questions. It includes an example of how a provisional artifact becomes a reviewed result. The November 21 project chat clarified that the owner should be able to give the objective without directing the steps.
@@ -43,5 +45,7 @@ A fresh Work chat inside Pocket AI Lab attached the owner-private [Pocket AI Lab
 To resume, open a Work chat in this project, select **Pocket AI Lab Handoff** from the `@` menu, and ask it to read the shared project note. To record a decision, read the latest revision, save the revised text, then read it back and record the returned revision here. The existing daily workflow records which destinations it reached.
 
 On November 21, ChatGPT saved the competitive research scope and read it back verbatim from Cloudflare at revision **2**. The subsequent ecosystem reconciliation was saved and read back at revision **3**.
+
+Cloudflare revision **4** adds the first staged test-summary assignment. Its input is the [completed PR #245 workflow](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206). The brief was read back from Cloudflare. The staged model review is pending.
 
 When updating this handoff, read the latest branch and Cloudflare note, retain unresolved decisions, and record the observed note revision. Include the verified change in the active conversation and append its evidence to the coordination log. Future readers should distinguish the author of each note from the service that stored it.
