@@ -9,9 +9,10 @@ import { Miniflare } from "miniflare";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-test("private status MCP reads committed lifecycle data after a workerd restart", async t => {
+test("MCP protects lifecycle status and persists revision-checked handoff notes across restarts", async t => {
   const directory = await mkdtemp(join(tmpdir(), "pocket-cloud-status-"));
   const key = randomBytes(32).toString("hex");
+  const editorKey = randomBytes(32).toString("hex");
   const attemptID = randomUUID();
   const url = new URL("https://fixture.invalid/mcp");
   let runtime;
@@ -37,21 +38,29 @@ test("private status MCP reads committed lifecycle data after a workerd restart"
   runtime = open(production);
   assert.equal((await runtime.dispatchFetch(url)).status, 503);
   await runtime.dispose();
-  runtime = open(production, { MCP_READ_KEY: key });
+  runtime = open(production, { MCP_READ_KEY: key, MCP_NOTE_WRITE_KEY: editorKey });
   assert.equal((await runtime.dispatchFetch(url)).status, 401);
   assert.equal((await runtime.dispatchFetch(url, { headers: { Authorization: "Bearer wrong" } })).status, 401);
   const headers = { Authorization: "Bearer " + key, "Content-Type": "application/json" };
   assert.equal((await runtime.dispatchFetch(url, { headers: { ...headers, Origin: "https://elsewhere.invalid" } })).status, 403);
   assert.equal((await runtime.dispatchFetch(url, { method: "POST", headers, body: "x".repeat(17000) })).status, 413);
 
-  const client = new Client({ name: "integration-test", version: "1.0.0" });
-  const transport = new StreamableHTTPClientTransport(url, {
-    requestInit: { headers }, fetch: (input, init) => runtime.dispatchFetch(input.toString(), init)
-  });
+  async function connect(secret) {
+    const client = new Client({ name: "integration-test", version: "1.0.0" });
+    await client.connect(new StreamableHTTPClientTransport(url, {
+      requestInit: { headers: { Authorization: "Bearer " + secret } },
+      fetch: (input, init) => runtime.dispatchFetch(input.toString(), init)
+    }));
+    return client;
+  }
+  const client = await connect(key);
   try {
-    await client.connect(transport);
     const { tools } = await client.listTools();
     assert.deepEqual(tools.map(tool => tool.name), ["document_analysis_status"]);
+    const denied = await client.callTool({
+      name: "document_handoff_save", arguments: { attemptID, expectedRevision: 0, text: "unauthorized" }
+    });
+    assert.equal(denied.isError, true);
     const lookup = id => client.callTool({ name: tools[0].name, arguments: { attemptID: id } });
     const found = await lookup(attemptID.toUpperCase());
     assert.deepEqual(found.structuredContent, {
@@ -64,4 +73,40 @@ test("private status MCP reads committed lifecycle data after a workerd restart"
   } finally {
     await client.close();
   }
+
+  const noteID = randomUUID();
+  let editor = await connect(editorKey);
+  const call = (name, args) => editor.callTool({ name, arguments: { attemptID: noteID, ...args } });
+  const read = () => call("document_handoff_read", {});
+  const save = (expectedRevision, text) => call("document_handoff_save", { expectedRevision, text });
+  let saved;
+  try {
+    assert.deepEqual((await editor.listTools()).tools.map(t => t.name).sort(),
+      ["document_analysis_status", "document_handoff_read", "document_handoff_save"]);
+    assert.equal((await read()).structuredContent.revision, 0);
+    const note = "Ready for review.";
+    assert.equal((await save(0, note)).structuredContent.revision, 1);
+    assert.equal((await save(0, note)).structuredContent.revision, 1);
+    const race = await Promise.all([save(1, "First edit"), save(1, "Second edit")]);
+    const [ok] = race.filter(result => !result.isError);
+    const [conflict] = race.filter(result => result.isError);
+    assert.equal(ok.structuredContent.revision, 2);
+    assert.deepEqual(conflict.structuredContent, { error: "revision_conflict", currentRevision: 2 });
+    saved = ok.structuredContent;
+    assert.deepEqual((await read()).structuredContent, saved);
+    assert.equal((await save(2, "😀".repeat(1001))).isError, true);
+    assert.equal((await save(2, "   ")).isError, true);
+    assert.deepEqual((await call("document_analysis_status", {})).structuredContent, { found: false });
+    assert.deepEqual((await call("document_handoff_read", { attemptID: noteID.toUpperCase() })).structuredContent, saved);
+  } finally { await editor.close(); }
+  await runtime.dispose();
+  runtime = open(production, { MCP_READ_KEY: key, MCP_NOTE_WRITE_KEY: editorKey });
+  editor = await connect(editorKey);
+  try { assert.deepEqual((await read()).structuredContent, saved); }
+  finally { await editor.close(); }
+  await runtime.dispose();
+  runtime = open(production, { MCP_READ_KEY: key, MCP_NOTE_WRITE_KEY: key });
+  const sameKey = await connect(key);
+  try { assert.deepEqual((await sameKey.listTools()).tools.map(t => t.name), ["document_analysis_status"]); }
+  finally { await sameKey.close(); }
 });
