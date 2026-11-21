@@ -4867,3 +4867,13 @@ ChatGPT verified [PR #245](https://github.com/macksteward59-lgtm/pocket-ai-lab/p
 ## 2026-11-21 18:08 UTC - Staged CI review input verified on Cloudflare
 
 ChatGPT prepared the input for the first model review of [PR #245](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/245) at `66cedc4bec7c402dd30f13e2478d4dba8dc7aa07`. The [local-worker CI job](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206/job/136909320451) passed. In a clean checkout of that commit the project TypeScript build passed, 359 compatibility/provider/lifecycle tests across 11 files passed, and the Worker dry-run build and its Miniflare integration test passed. The [cloud handoff](./CLOUD_AGENT_HANDOFF.md) links the evidence packet by UUID. ChatGPT saved and read back identical text at revision 1 on the separate review note. Account plan, remaining Workers AI allowance, and live model output still need independent verification. Recording this input does not dispatch inference.
+
+## 2026-11-21 — OpenClaw development pilot
+
+ChatGPT set up [draft PR #246](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/246) on `codex/openclaw-ci-review-pilot` at `c38bfc0a3da058416b9a884a3acbc2f8ec3f193c`. OpenClaw 2026.11.6 used a CPU-hosted Qwen2.5 1.5B Instruct model through llama.cpp to review [PR #245's CI job](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206/job/136909320451). ChatGPT checked the draft and read back the saved Cloudflare result at revision 1. Revision 5 of the main project handoff points to it.
+
+During repeat runs the small model sometimes mixed up hosted and local checks, omitted counts, or emitted a tool request as text. The final runner constrains the output format, disables tool calling in the model request and shows source facts beside the draft. A separate local run of the final setup used 2,128 tokens and marked a draft missing the local counts as needing correction. New drafts need source review before anyone publishes a result. The workflow reads project evidence and does not deploy a service or write to the repository.
+
+On this head the Consumer prototype and Pocket AI Lab CI workflows fail on an import of `EastTaskLifecycleAdapter` from an existing autonomy test. The same import and missing module are present on the base `fb59f76e`.
+
+The final Linux installer was also tested end to end from an empty install directory. It downloaded the pinned packages and model, ran a 2,121-token review, displayed the verified local counts next to the flagged draft, and exited successfully. The [GitHub Actions run for this commit](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44936635400) has its own status and run summary.
