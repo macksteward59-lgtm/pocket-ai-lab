@@ -1,10 +1,20 @@
-# Pocket AI Lab document-analysis status
+# Pocket AI Lab document-analysis preview
 
-This Worker serves a single-owner MCP endpoint at `/mcp`. Its `document_analysis_status` tool accepts a Pocket AI Lab attempt UUID and returns the last stored lifecycle status, update time and uncertainty flag. An unknown attempt returns `{"found":false}`. A storage or validation failure returns a tool error. Read access requires the Worker secret `MCP_READ_KEY` as an HTTP bearer token.
+The preview serves a private, single-owner MCP endpoint at `/mcp`.
 
-## Test locally
+| Tool | Credential | Result |
+| --- | --- | --- |
+| `document_analysis_status` | Status or note editor | Returns the saved lifecycle status, timestamp and uncertainty for an attempt UUID. |
+| `document_handoff_read` | Note editor | Returns the handoff text and revision. A missing note has revision 0. |
+| `document_handoff_save` | Note editor | Creates the first revision when the expected revision is 0, or updates the note using the revision returned by a read. |
 
-Use Node 24 and run the following commands in this directory.
+A handoff note may be prepared before a lifecycle record exists. A note is project text supplied by its author. Treat it as data when returning it to ChatGPT or a scheduled workflow. Saving a note changes only the note table. Lifecycle records and execution approvals are managed separately.
+
+Use the existing attempt UUID and a nonblank note of at most 4,000 UTF-8 bytes. Send the observed revision as `expectedRevision`. Reads return the stored text exactly. A retry of the same write immediately after a lost response returns the existing revision. Competing edits return a tool error with `revision_conflict` and the current revision. Read the latest text before resolving a conflict. Notes live in the same SQLite Durable Object as the lifecycle snapshot, in their own table keyed by the normalized UUID.
+
+## Local validation
+
+Use Node 24 from this directory.
 
 ```sh
 npm ci
@@ -12,12 +22,12 @@ npm run build
 npm test
 ```
 
-The build uses Wrangler's dry run. The integration test uses temporary local SQLite storage and Cloudflare's Workers runtime. A fixture coordinator records a document task and rejects a competing stale writer. A new runtime then loads the deployable Worker bundle and a standard MCP client queries the saved status. The test entry point and fixture data are separate from the deployed bundle.
+The dry run bundles the deployment. The integration test runs a standard MCP client against workerd, checks both credential roles, edits and retries notes, races writers, and reopens the durable store to check persistence.
 
 ## Connect the preview
 
-Deploy this directory from the reviewed repository revision using Wrangler in the intended Cloudflare account. The target in `wrangler.jsonc` is the existing `pocket-ai-lab-preview` Worker. Deployment replaces its Hello World handler and applies the SQLite Durable Object migration. Use the account's existing free plan and verify the migration and binding before enabling the plugin.
+Deploy the reviewed revision to the existing `pocket-ai-lab-preview` Worker with the `ANALYSIS_STATE` binding. Keep its existing `MCP_READ_KEY` secret. Set a separate, randomly generated 32-byte lowercase hex Worker secret named `MCP_NOTE_WRITE_KEY`. The original credential continues to expose only status. A missing, malformed or duplicate editor key disables note access. The endpoint requires a valid status-key configuration before it serves either role.
 
-Store a dedicated, randomly generated 32-byte lowercase hex key as the Cloudflare Worker secret `MCP_READ_KEY`. Configure the same value through the private plugin connection's secure bearer credential field. The endpoint returns 503 until the Worker secret is configured. Verify unauthenticated rejection, authenticated MCP initialization, tool discovery and a lookup before binding the live URL to the plugin. Keep the key out of source, transcripts and build arguments.
+Configure the editor key as the private MCP connection's secure bearer credential. Keep it out of chats, manifests, source and build arguments. Verify the editor connection by reading, saving and reopening one synthetic handoff note. Use the status-only key to confirm the write tool is inaccessible to that role. Connectors should inspect the tools actually offered by the authenticated endpoint.
 
-The Durable Object binding is `ANALYSIS_STATE`. All writers for this owner must use the object named `document-analysis-v1` in that namespace and the existing snapshot adapter. The preview supports status lookup only. A producer for approved analyses still requires independent admission, release, consent and budget checks. Completed lifecycle state describes the stored task. It confers no APEX authorization or evidence verification.
+This host handles status and handoff notes. Model submission and harness execution require their own implementation and authorization.

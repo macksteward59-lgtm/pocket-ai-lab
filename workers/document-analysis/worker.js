@@ -6,9 +6,45 @@ import { z } from "zod";
 import { TaskLifecycleCoordinator, TaskLifecycleError } from "../../packages/intelligence/autonomy/TaskLifecycleCoordinator.ts";
 import { DurableTaskLifecycleStore } from "../../packages/intelligence/cloud/cloudflare/DurableTaskLifecycleStore.ts";
 import { cloudflareLifecycleTaskID } from "../../packages/intelligence/cloud/cloudflare/CloudflareAnalysisWorker.ts";
-import { canonicalAttemptID, readBoundedJSON } from "../../packages/intelligence/serverless/cloud-analysis/validation.ts";
+import { canonicalAttemptID, isBoundedText, readBoundedJSON } from "../../packages/intelligence/serverless/cloud-analysis/validation.ts";
 
 export class DocumentAnalysisState extends DurableObject {
+  getNote(attemptID) {
+    const id = canonicalAttemptID(attemptID);
+    if (!id) throw new Error("Invalid attempt ID");
+    const sql = this.ctx.storage.sql;
+    sql.exec(`CREATE TABLE IF NOT EXISTS document_handoff_notes (
+      attempt_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, text TEXT NOT NULL
+    )`);
+    const [row] = sql.exec(
+      "SELECT revision, text FROM document_handoff_notes WHERE attempt_id = ?", id
+    ).toArray();
+    return row ? { found: true, attemptID: id, ...row } : { found: false, attemptID: id, revision: 0 };
+  }
+
+  saveNote(attemptID, expectedRevision, text) {
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || !isBoundedText(text, 4000)) {
+      throw new Error("Invalid handoff note");
+    }
+    return this.ctx.storage.transactionSync(() => {
+      const current = this.getNote(attemptID);
+      if (current.found && current.text === text &&
+          (current.revision === expectedRevision || current.revision === expectedRevision + 1)) {
+        return current;
+      }
+      if (current.revision !== expectedRevision) {
+        return { error: "revision_conflict", currentRevision: current.revision };
+      }
+      const revision = current.revision + 1;
+      this.ctx.storage.sql.exec(
+        `INSERT INTO document_handoff_notes (attempt_id, revision, text) VALUES (?, ?, ?)
+         ON CONFLICT(attempt_id) DO UPDATE SET revision = excluded.revision, text = excluded.text`,
+        current.attemptID, revision, text
+      );
+      return { found: true, attemptID: current.attemptID, revision, text };
+    });
+  }
+
   async status(attemptID) {
     if (!canonicalAttemptID(attemptID)) throw new Error("Invalid attempt ID");
     const coordinator = new TaskLifecycleCoordinator({
@@ -37,21 +73,46 @@ function response(status, message, headers = {}) {
   return new Response(message, { status, headers: { "Cache-Control": "no-store", ...headers } });
 }
 
-function createServer(env) {
-  const server = new McpServer({ name: "pocket-document-analysis", version: "0.1.0" });
+const attemptSchema = z.string().refine(value => !!canonicalAttemptID(value), "Expected an attempt UUID");
+const readHints = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+
+async function storageResult(operation) {
+  try {
+    const value = await operation();
+    return {
+      ...(value.error ? { isError: true } : {}),
+      content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value
+    };
+  } catch {
+    return { isError: true, content: [{ type: "text", text: "Document-analysis storage is unavailable." }] };
+  }
+}
+
+function createServer(env, canEditNotes) {
+  const server = new McpServer({ name: "pocket-document-analysis", version: "0.2.0" });
+  const state = () => env.ANALYSIS_STATE.getByName("document-analysis-v1");
   server.registerTool("document_analysis_status", {
     description: "Read the last saved lifecycle status of a Pocket AI Lab document-analysis attempt.",
-    inputSchema: { attemptID: z.string().refine(value => !!canonicalAttemptID(value), "Expected an attempt UUID") },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
-  }, async ({ attemptID }) => {
-    try {
-      const state = env.ANALYSIS_STATE.getByName("document-analysis-v1");
-      const status = await state.status(canonicalAttemptID(attemptID));
-      return { content: [{ type: "text", text: JSON.stringify(status) }], structuredContent: status };
-    } catch {
-      return { isError: true, content: [{ type: "text", text: "Document-analysis storage is unavailable." }] };
-    }
-  });
+    inputSchema: { attemptID: attemptSchema }, annotations: readHints
+  }, ({ attemptID }) => storageResult(() => state().status(canonicalAttemptID(attemptID))));
+
+  if (canEditNotes) {
+    server.registerTool("document_handoff_read", {
+      description: "Read the project handoff note and revision for an attempt UUID. Missing notes have revision 0.",
+      inputSchema: { attemptID: attemptSchema }, annotations: readHints
+    }, ({ attemptID }) => storageResult(() => state().getNote(attemptID)));
+
+    server.registerTool("document_handoff_save", {
+      description: "Create or replace the handoff note for an attempt UUID. Send the revision you read, or 0 to create. A note can exist before a lifecycle record.",
+      inputSchema: {
+        attemptID: attemptSchema,
+        expectedRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+        text: z.string().refine(value => isBoundedText(value, 4000), "Expected nonblank text of at most 4000 UTF-8 bytes")
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }
+    }, ({ attemptID, expectedRevision, text }) =>
+      storageResult(() => state().saveNote(attemptID, expectedRevision, text)));
+  }
   return server;
 }
 
@@ -61,14 +122,17 @@ export default {
     if (url.pathname !== "/mcp") return response(404, "Unknown route");
     const origin = request.headers.get("Origin");
     if (origin !== null && origin !== url.origin) return response(403, "Origin denied");
-    // One dedicated random 32-byte hex key for this private, single-owner host.
-    if (typeof env.MCP_READ_KEY !== "string" || env.MCP_READ_KEY.length !== 64 ||
-        !/^[a-f0-9]+$/.test(env.MCP_READ_KEY)) return response(503, "Read access is unconfigured");
-    const supplied = request.headers.get("Authorization") ?? "";
-    const expected = "Bearer " + env.MCP_READ_KEY;
+    const validKey = key => typeof key === "string" && key.length === 64 && /^[a-f0-9]+$/.test(key);
+    if (!validKey(env.MCP_READ_KEY)) return response(503, "Read access is unconfigured");
     const encoder = new TextEncoder();
-    const bytes = encoder.encode(supplied);
-    if (bytes.length !== expected.length || !timingSafeEqual(bytes, encoder.encode(expected))) {
+    const supplied = encoder.encode(request.headers.get("Authorization") ?? "");
+    const matches = key => {
+      const expected = encoder.encode("Bearer " + key);
+      return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+    };
+    const canEditNotes = validKey(env.MCP_NOTE_WRITE_KEY) && env.MCP_NOTE_WRITE_KEY !== env.MCP_READ_KEY &&
+      matches(env.MCP_NOTE_WRITE_KEY);
+    if (!matches(env.MCP_READ_KEY) && !canEditNotes) {
       return response(401, "Authentication required", { "WWW-Authenticate": 'Bearer realm="document-analysis"' });
     }
     if (request.method !== "POST") return response(405, "Use POST", { Allow: "POST" });
@@ -81,7 +145,7 @@ export default {
     } catch (error) {
       return response(error.code === "payload_too_large" ? 413 : 400, "Invalid MCP request");
     }
-    const server = createServer(env);
+    const server = createServer(env, canEditNotes);
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined, enableJsonResponse: true
     });
