@@ -1,0 +1,8 @@
+[
+  {"id":"personal-team","question":"When does a Personal Team provisioning profile expire after issuance?","options":["Seven days","Thirty days"],"answer":"A","support":"APPLE-TEAM","other":"APPLE-DEVICE","replacement":"ACL-CITE","slot":1},
+  {"id":"cloud-budget","question":"What does Cloudflare use as the unit of the Workers AI daily free allocation?","options":["HTTP requests","Neurons"],"answer":"B","support":"CF-QUOTA","other":"CF-BIND","replacement":"W3C-PROV","slot":2},
+  {"id":"cloud-call","question":"What two inputs does the Worker AI model invocation method take?","options":["Model identifier and input object","Model archive and branch name"],"answer":"A","support":"CF-BIND","other":"CF-QUOTA","replacement":"APPLE-TEAM","slot":2},
+  {"id":"quote-context","question":"How can a text quote selector disambiguate identical passages?","options":["By sorting document titles","By including nearby text before and after"],"answer":"B","support":"W3C-QUOTE","other":"W3C-PROV","replacement":"ACL-ABSTAIN","slot":1},
+  {"id":"answer-quality","question":"What three dimensions does the ALCE evaluation measure?","options":["Fluency, correctness and citation quality","Latency, price and readability"],"answer":"A","support":"ACL-CITE","other":"ACL-ABSTAIN","replacement":"W3C-QUOTE","slot":1},
+  {"id":"source-revisions","question":"Which two relationships does the provenance source distinguish?","options":["Most-recent and least-recent access","Primary evidence and an earlier revision"],"answer":"B","support":"W3C-PROV","other":"W3C-QUOTE","replacement":"APPLE-DEVICE","slot":2}
+]

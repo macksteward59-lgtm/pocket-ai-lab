@@ -1,0 +1,30 @@
+name: Source-backed answers and abstention
+on:
+  push:
+    branches: [codex/source-backed-recall]
+    paths:
+      - tools/source-recall/**
+      - tools/recipient-choice/run.sh
+      - .github/workflows/source-recall.yml
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Read the frozen research excerpts
+        run: bash tools/recipient-choice/run.sh "$RUNNER_TEMP/source-study" source-review
+      - name: Publish measurements
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/source-study/summary.md"; then
+            cat "$RUNNER_TEMP/source-study/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Archive raw responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-backed-recall
+          path: ${{ runner.temp }}/source-study
