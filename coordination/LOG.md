@@ -4847,3 +4847,7 @@ A new chat inside Pocket AI Lab recovered the handoff UUID from GitHub and repor
 ## 2026-11-21 - Live Cloudflare handoff revision 1
 
 The owner authenticated the one-time deployment of [PR #245](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/245) at `66cedc4bec7c402dd30f13e2478d4dba8dc7aa07` to the existing preview. Worker version `4ef460aa-d55c-49b3-a025-d978b63800e0` saved the [shared project handoff](./CLOUD_AGENT_HANDOFF.md) at revision 1. An authenticated client read back the exact text. Live synthetic checks verified edits, an idempotent retry, a stale-revision conflict and role restrictions. Wrangler signed out. The project-notes chat received the receipt and reported that neither native Cloudflare note tool was exposed in that chat. Cross-chat GitHub handoff remains available.
+
+## 2026-11-21 - Native ChatGPT project handoff verified
+
+A fresh Pocket AI Lab Work chat used the owner-private [Pocket AI Lab Handoff](https://chatgpt.com/plugins/plugin_asdk_app_sites_ae9fb2a80eac81918eae62f16f7cc1df) app to read the project note, submit an identical save against revision 1, and read it back. All three operations returned revision 1 and matching text for the [shared handoff](./CLOUD_AGENT_HANDOFF.md). The app uses the existing preview Worker. The chat integration passed after correcting its redirect handling in source revision `68342f6ccdfe72bc3cfa775d514fae23c8b6abf4`.
