@@ -53,23 +53,31 @@ verify_sources() {
   local src_dir="$SRC/llama.cpp-${tag}"
 
   python3 - "$tag" "$commit" <<'PY'
-import json, sys, urllib.request
+import json, os, re, sys, urllib.request
 tag, commit = sys.argv[1], sys.argv[2]
 url = f"https://api.github.com/repos/ggml-org/llama.cpp/git/ref/tags/{tag}"
-request = urllib.request.Request(url, headers={
+headers = {
     "User-Agent": "pocket-ai-lab-ios-llama",
     "Accept": "application/vnd.github+json",
-})
+}
+# CI may supply a read-only token for this API lookup. Do not print it or
+# forward it to the tarball/raw-header hosts used by later verification.
+token = os.environ.get("GITHUB_TOKEN")
+if token:
+    headers["Authorization"] = f"Bearer {token}"
+request = urllib.request.Request(url, headers=headers)
 with urllib.request.urlopen(request, timeout=60) as response:
     payload = json.load(response)
 obj = payload["object"]
 sha = obj["sha"]
 kind = obj["type"]
 if kind == "tag":
-    peel = urllib.request.Request(obj["url"], headers={
-        "User-Agent": "pocket-ai-lab-ios-llama",
-        "Accept": "application/vnd.github+json",
-    })
+    if not isinstance(sha, str) or not re.fullmatch(r"[a-f0-9]{40}", sha):
+        raise SystemExit("annotated tag returned an invalid object identifier")
+    # Keep the authenticated destination fixed even if response data contains
+    # another URL. Only the validated object identifier is taken from the API.
+    peel_url = f"https://api.github.com/repos/ggml-org/llama.cpp/git/tags/{sha}"
+    peel = urllib.request.Request(peel_url, headers=headers)
     with urllib.request.urlopen(peel, timeout=60) as response:
         tag_obj = json.load(response)
     sha = tag_obj["object"]["sha"]

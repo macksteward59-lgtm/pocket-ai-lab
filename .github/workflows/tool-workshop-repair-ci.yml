@@ -104,6 +104,8 @@ jobs:
         run: docker pull "$WORKSHOP_IMAGE"
       - name: Build server from the existing verified llama.cpp pin
         timeout-minutes: 20
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/tool-workshop/build-server.sh
       - name: Acquire and hash the existing DeepSeek artifact
         timeout-minutes: 6
