@@ -3,6 +3,7 @@ import type { ToolBuildSpec } from "../../../packages/intelligence/tooling/ToolD
 import type { DirectorTaskHistoryEntry } from "../../../packages/intelligence/director/DirectorTaskRunner";
 import type { LlamaCppBackend, LlamaCppCompletionParams, LlamaCppCompletionResult } from "../llama-cpp/backend";
 import { StructuredRepairPlanner } from "./StructuredRepairPlanner";
+import { projectRepairFeedback, REPAIR_FEEDBACK_CONTRACT } from "./RepairFeedback";
 
 function spec(): ToolBuildSpec {
   return { id: "utf8-repair", name: "UTF8 repair", purpose: "Isolated candidate repair",
@@ -177,6 +178,58 @@ describe("StructuredRepairPlanner — declared backend doubles, not live model e
     expect(calls[0].prompt).toBe(JSON.stringify(expected));
     expect(calls[0].messages?.[1].content).toBe(JSON.stringify(expected));
     expect(calls[0].jsonSchema?.properties).toMatchObject({ action: { enum: ["revise", "complete", "blocked"] } });
+  });
+
+  it("selects complete projected feedback explicitly while preserving legacy formatting and system instructions", async () => {
+    const result = projectRepairFeedback({ command: { kind: "develop-tool", spec: spec() }, result: {
+      toolId: spec().id, version: 2, digest: "a".repeat(64), spec: spec(), status: "quarantined",
+      files: { "candidate.py": "PERSISTED-SOURCE" },
+      testSummary: { passed: false, testsRun: 8, testsPassed: 1,
+        findings: Array.from({ length: 7 }, (_, index) => "Failure " + index) }
+    } });
+    const history: DirectorTaskHistoryEntry[] = [{ step: 1, commandKind: "develop-tool", trust: "untrusted-tool-output", result }];
+    const calls: LlamaCppCompletionParams[] = [];
+    for (const feedbackContract of [undefined, REPAIR_FEEDBACK_CONTRACT] as const) {
+      const instance = new StructuredRepairPlanner({ spec: spec(), config, feedbackContract,
+        backend: backend('{"action":"blocked","reason":"Observed failures."}', params => calls.push(params)) });
+      await instance.propose(input(history));
+    }
+    const legacyOutcome = { status: "quarantined", testSummary: { passed: false, testsRun: 8, testsPassed: 1,
+      findings: ["Failure 0", "Failure 1", "Failure 2"], findingsTruncated: false },
+      step: 1, commandKind: "develop-tool", trust: "untrusted-tool-output", toolId: spec().id, version: 2 };
+    expect(calls[0].prompt).toBe(JSON.stringify({ outcomes: [legacyOutcome], remainingSteps: 3,
+      availableActions: ["revise", "complete", "blocked"], fixedTool: { id: spec().id, name: spec().name },
+      task: { id: "repair-task", trust: "untrusted-task-data", objective: "Repair the host fixture.", objectiveTruncated: false } }));
+    expect(JSON.parse(calls[1].prompt).outcomes[0]).toEqual({ ...legacyOutcome,
+      testSummary: result.testSummary, digest: result.digest, feedbackContract: REPAIR_FEEDBACK_CONTRACT });
+    expect(calls[1].messages?.[0]).toEqual(calls[0].messages?.[0]);
+    const { prompt: _oldPrompt, messages: _oldMessages, ...oldParameters } = calls[0];
+    const { prompt: _newPrompt, messages: _newMessages, ...newParameters } = calls[1];
+    expect(newParameters).toEqual(oldParameters);
+  });
+
+  it("rejects missing, inconsistent, or foreign projected feedback before inference", async () => {
+    const good = projectRepairFeedback({ command: { kind: "develop-tool", spec: spec() }, result: {
+      toolId: spec().id, version: 2, digest: "a".repeat(64), spec: spec(), status: "quarantined",
+      testSummary: { passed: false, testsRun: 8, testsPassed: 1, findings: Array(7).fill("Observed failure") }
+    } });
+    const { findingsTotal: _count, ...missingCount } = good.testSummary;
+    let calls = 0;
+    const instance = new StructuredRepairPlanner({ spec: spec(), config, feedbackContract: REPAIR_FEEDBACK_CONTRACT,
+      backend: backend('{"action":"complete","reason":"Cannot hide malformed feedback."}', () => { calls += 1; }) });
+    for (const result of [
+      { truncated: true, preview: "Oversized original artifact" },
+      { ...good, testSummary: missingCount },
+      { ...good, testSummary: { ...good.testSummary, findingsTruncated: false } },
+      { ...good, testSummary: { ...good.testSummary, findingsIncluded: 2 } },
+      { ...good, toolId: "another-tool" }
+    ]) {
+      await expect(instance.propose(input([{ step: 1, commandKind: "develop-tool", trust: "untrusted-tool-output", result }])))
+        .rejects.toMatchObject({ code: "invalid_request" });
+    }
+    expect(calls).toBe(0);
+    expect(() => new StructuredRepairPlanner({ spec: spec(), config, feedbackContract: "automatic" as never }))
+      .toThrow(/Unsupported workshop feedback/);
   });
 
   it("keeps bounded outcomes first and excludes source bundles from planning context", async () => {

@@ -6,6 +6,7 @@ import type { LlamaCppBackend } from "../llama-cpp/backend";
 import { normalizeLlamaCppConfig, type LlamaCppProviderConfig, type LlamaCppProviderConfigInput } from "../llama-cpp/config";
 import { classifyAbort, isAbortError, LlamaCppInferenceError } from "../llama-cpp/errors";
 import { HttpLlamaCppBackend } from "../llama-cpp/httpBackend";
+import { parseRepairFeedback, REPAIR_FEEDBACK_CONTRACT } from "./RepairFeedback";
 
 export interface StructuredRepairPlannerOptions {
   spec: ToolBuildSpec;
@@ -13,6 +14,8 @@ export interface StructuredRepairPlannerOptions {
   backend?: LlamaCppBackend;
   /** Optional host-owned balance of actual generation attempts, including failures. */
   getRemainingRevisions?: () => number;
+  /** Explicit host projection contract; omission preserves the historical feedback format. */
+  feedbackContract?: typeof REPAIR_FEEDBACK_CONTRACT;
 }
 
 type Action = "revise" | "complete" | "blocked";
@@ -48,6 +51,7 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
   private readonly backend: LlamaCppBackend;
   private readonly spec: ToolBuildSpec;
   private readonly getRemainingRevisions?: () => number;
+  private readonly feedbackContract?: typeof REPAIR_FEEDBACK_CONTRACT;
 
   constructor(options: StructuredRepairPlannerOptions) {
     if (!options?.config) throw new LlamaCppInferenceError("invalid_config", "Repair planner config is required");
@@ -68,6 +72,10 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
       throw new LlamaCppInferenceError("invalid_config", "Remaining revisions must be supplied by a host callback");
     }
     this.getRemainingRevisions = options.getRemainingRevisions;
+    if (options.feedbackContract !== undefined && options.feedbackContract !== REPAIR_FEEDBACK_CONTRACT) {
+      throw new LlamaCppInferenceError("invalid_config", "Unsupported workshop feedback contract");
+    }
+    this.feedbackContract = options.feedbackContract;
   }
 
   async propose(input: Parameters<DirectorTaskProvider["propose"]>[0]): Promise<unknown> {
@@ -90,7 +98,8 @@ export class StructuredRepairPlanner implements DirectorTaskProvider {
       throw new LlamaCppInferenceError("invalid_request", "No available repair action remains within the host budget");
     }
     const request = {
-      outcomes: boundedOutcomes(input.history),
+      outcomes: this.feedbackContract === REPAIR_FEEDBACK_CONTRACT
+        ? projectedOutcomes(input.history, this.spec.id) : boundedOutcomes(input.history),
       remainingSteps: input.remainingSteps,
       ...(remainingRevisions === undefined ? {} : { remainingRevisions }),
       availableActions: actions,
@@ -194,6 +203,30 @@ function boundedOutcomes(history: readonly DirectorTaskHistoryEntry[]): unknown[
       trust: "untrusted-tool-output",
       toolId: typeof result.toolId === "string" ? result.toolId.slice(0, 128) : null,
       version: Number.isSafeInteger(result.version) ? result.version : null
+    };
+  });
+}
+
+function projectedOutcomes(history: readonly DirectorTaskHistoryEntry[], toolId: string): unknown[] {
+  return history.slice(-2).map(entry => {
+    if (!entry || !Number.isSafeInteger(entry.step) || entry.step < 1 ||
+        entry.commandKind !== "develop-tool" || entry.trust !== "untrusted-tool-output") {
+      throw new LlamaCppInferenceError("invalid_request", "Invalid projected repair history entry");
+    }
+    const result = parseRepairFeedback(entry.result);
+    if (result.toolId !== toolId) {
+      throw new LlamaCppInferenceError("invalid_request", "Projected repair feedback belongs to another tool");
+    }
+    return {
+      status: result.status,
+      testSummary: result.testSummary,
+      step: entry.step,
+      commandKind: entry.commandKind,
+      trust: "untrusted-tool-output",
+      toolId: result.toolId,
+      version: result.version,
+      digest: result.digest,
+      feedbackContract: result.feedbackContract
     };
   });
 }

@@ -13,5 +13,7 @@ const pin = pins.models.find(item => item.id === profile.modelId);
 assert(pin, "Frozen workshop model must exist in the approved local pin catalog.");
 assert.equal(pin.sha256, profile.modelSHA256);
 assert.equal(pin.bytes, profile.modelBytes);
-const result = await downloadPinnedModel(pin, { destination: process.argv[2], timeoutMs: 300000 });
+const result = await downloadPinnedModel(pin, {
+  destination: process.argv[2], timeoutMs: profile.acquisitionTimeoutMs ?? 300000
+});
 console.log(JSON.stringify({ path: result.path, sha256: result.sha256, verified: result.verified }));

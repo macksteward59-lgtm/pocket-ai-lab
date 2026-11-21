@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, statfs, writeFile } from "node:fs/promises";
+import { arch, availableParallelism, cpus, freemem, platform, totalmem } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -14,6 +15,7 @@ import { createDirectorTaskRuntime } from "../../packages/intelligence/director/
 import { FileToolArtifactStore } from "../../runtime/adapters/director/FileToolArtifactStore.ts";
 import { InferenceToolBuilder } from "../../runtime/adapters/director/InferenceToolBuilder.ts";
 import { StructuredRepairPlanner } from "../../runtime/adapters/director/StructuredRepairPlanner.ts";
+import { projectRepairFeedback } from "../../runtime/adapters/director/RepairFeedback.ts";
 import { DockerPythonToolSandbox } from "../../runtime/adapters/director/DockerPythonToolSandbox.ts";
 import { LlamaCppInferenceProvider } from "../../runtime/adapters/llama-cpp/LlamaCppInferenceProvider.ts";
 import { LlamaCppDirectorCommandProvider } from "../../runtime/adapters/llama-cpp/DirectorCommandProvider.ts";
@@ -36,6 +38,19 @@ async function sourceIdentity() {
     dirty: Boolean(await run(["status", "--porcelain", "--untracked-files=all"])) };
   if (identity.dirty) throw new Error("Commit tracked experiment source before a live-model run.");
   return identity;
+}
+
+async function hostResourceSnapshot(directory) {
+  const filesystem = await statfs(directory, { bigint: true });
+  const processors = cpus();
+  return {
+    observedAt: new Date().toISOString(), platform: platform(), architecture: arch(),
+    cpuCount: processors.length, availableParallelism: availableParallelism(),
+    cpuModels: [...new Set(processors.map(cpu => cpu.model))],
+    totalMemoryBytes: totalmem(), freeMemoryBytes: freemem(),
+    outputFilesystemAvailableBytes: (filesystem.bavail * filesystem.bsize).toString(),
+    interpretation: "Observed host snapshots, not peak model memory, throughput or physical-device acceptance."
+  };
 }
 
 function recordingBackend(config, label, records) {
@@ -187,6 +202,16 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
     report.profileSelection = selection;
     report.trialId = profile.id;
     report.capabilityManifest.directorProtocol = profile.directorProtocol ?? "native-function-call";
+    const projectedFeedback = profile.feedbackContract === "host-artifact-summary-v1";
+    assert(profile.feedbackContract === undefined || projectedFeedback, "Unknown Director feedback contract.");
+    assert.equal(projectedFeedback, selection === "baseline-v1",
+      "Only the explicit baseline selects the corrected pre-snapshot feedback contract.");
+    assert.equal(profile.hostResourceRecord, projectedFeedback ? "node-os-statfs-v1" : undefined,
+      "The frozen baseline must record actual host resources.");
+    if (projectedFeedback) {
+      report.capabilityManifest.directorFeedback = profile.feedbackContract;
+      report.hostResources = await hostResourceSnapshot(destination);
+    }
     const codeGeneration = ["python-source-v1", "python-source-v2"].includes(profile.sourceContract);
     assert(profile.sourceContract === undefined || codeGeneration, "Unknown source-generation contract.");
     const remainingRevisionAdvertisement = profile.revisionAvailability === "remaining-builder-attempts-v1";
@@ -259,14 +284,15 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
           backend: recordingBackend(config, "director-structured", report.providerCalls),
           ...(remainingRevisionAdvertisement ? {
             getRemainingRevisions: () => fixture.maxRevisions - builder.getAttempts().length
-          } : {}) })
+          } : {}),
+          ...(projectedFeedback ? { feedbackContract: profile.feedbackContract } : {}) })
       : new LlamaCppDirectorCommandProvider(config, recordingBackend(config, "director", report.providerCalls));
     const feedbackPlanner = {
       async propose(input) {
         assertSettled();
         // Keep the result first and compact: the existing native provider
         // bounds each preview to 2000 characters. Full artifacts stay durable.
-        const history = input.history.map(entry => ({
+        const history = projectedFeedback ? input.history : input.history.map(entry => ({
           ...entry,
           result: {
             status: entry.result?.status,
@@ -285,7 +311,8 @@ export async function runRepairExperiment({ outputDirectory, image, modelPath, s
       }
     };
     const runtime = createDirectorTaskRuntime({ capabilities: new DirectorCapabilities({ memory: new MemoryManager() }),
-      toolDirector: director, provider: feedbackPlanner, maxSteps: profile.maxDirectorTurns, availableCommands: ["develop-tool"] });
+      toolDirector: director, provider: feedbackPlanner, maxSteps: profile.maxDirectorTurns, availableCommands: ["develop-tool"],
+      ...(projectedFeedback ? { projectResult: projectRepairFeedback } : {}) });
     const objective = [
       "Repair this single registered experimental tool through its existing workshop.",
       "The initial candidate already exists as version 1 and failed actual development tests.",

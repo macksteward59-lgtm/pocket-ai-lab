@@ -16,6 +16,7 @@ export interface DirectorTaskRuntimeOptions {
   provider: DirectorTaskProvider;
   maxSteps?: number;
   availableCommands?: DirectorTaskRunnerOptions["availableCommands"];
+  projectResult?: DirectorTaskRunnerOptions["projectResult"];
 }
 
 export interface DirectorTaskRuntime {
@@ -45,7 +46,8 @@ export function createDirectorTaskRuntime(options: DirectorTaskRuntimeOptions): 
   const router = new DirectorCommandRouter(options.capabilities, options.toolDirector);
   const runner = new DirectorTaskRunner(router, {
     maxSteps: options.maxSteps,
-    availableCommands: options.availableCommands
+    availableCommands: options.availableCommands,
+    projectResult: options.projectResult
   });
   const provider = options.provider;
 

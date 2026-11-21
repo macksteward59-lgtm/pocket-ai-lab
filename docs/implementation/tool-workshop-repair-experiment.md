@@ -57,8 +57,9 @@ A v2 success would not pass v1's native function-calling gate or establish a
 general autonomous-repair success rate.
 
 The v1 profile bytes remain unchanged. profile.mjs verifies each independently
-frozen profile hash and only accepts an explicit v1, v2, v3, v4 or v5 selector. The default
-remains v1; there is no automatic profile switch after failure.
+frozen profile hash and only accepts an explicit v1, v2, v3, v4, v5 or baseline-v1
+selector. The default remains v1; there is no automatic profile switch after
+failure.
 
 ### Observed v2 dispatch and separate v3 output-budget diagnostic
 
@@ -162,6 +163,85 @@ the sole cause. This is the final small interface diagnostic in this
 continuation; failure leaves this configuration unqualified and ends these
 small prompt iterations on the reused task.
 
+## Observed v5 and the separate ordinary coding baseline
+
+[V5 workflow 44892136884](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44892136884)
+at source `6c01e953ceb6d6633a770a31980aaf19125d5c47` made three real model calls.
+The Engineer produced a 334-byte executable Python candidate. It passed 1/8
+development cases and 1/20 held-out cases, below the faulty baseline's 3/8 and
+4/20. The Director received the failed development score, but chose complete
+with one generation still available. Control completion was valid; host quality
+acceptance was false. All 56 case containers were cleaned up, the server settled,
+and the model hash was unchanged. The second-generation and zero-budget paths
+were not exercised by this live run. The
+[preserved v5 record](https://github.com/macksteward59-lgtm/pocket-ai-lab/tree/0c016a1bea1b398a1c0fbb367763a271d43b293e/coordination/evidence/tool-workshop-repair-2026-11-21/live-v5)
+retains the original outcome.
+
+Review of those records exposed two observation problems. In v5, the host
+wrapper had already selected three of seven findings before the planner
+calculated truncation, so the model saw an incorrect false truncation flag.
+V4's larger results exposed an earlier loss: DirectorTaskRunner had replaced
+the full artifact with a bounded serialized preview before that wrapper read
+the typed fields. The later Director requests therefore contained null status,
+identity and grade counts with an empty findings array. The Engineer still
+received all compiler findings through its separate artifact-store path. This
+new diagnosis does not change the retained model outputs or their grades.
+
+The explicit `host-artifact-summary-v1` contract projects the actual workshop
+result before the existing runner snapshot. It retains tool identity, version,
+digest, status and grade counts, plus at most three findings of 200 characters.
+It records original/included finding counts, text clipping and aggregate
+truncation. The planner validates those fields and their consistency, including
+binding to the fixed tool, before inference. Full source stays in the artifact
+store. Normal runner redaction, size/depth limits, freezing and
+`untrusted-tool-output` labels still apply. This provenance marker grants no
+authorization and cannot replace host grading. The optional projection hook and
+planner selector are omitted by v1-v5, preserving their historical behavior.
+
+`baseline-v1` is one separately frozen code-and-control qualification using
+the official Qwen2.5-Coder-7B-Instruct Q4_K_M artifact for both roles. Its
+[publisher model card](https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/blob/13fb94bfda8c8cf22497dc57b78f391a9acb426a/README.md)
+and [immutable artifact pointer](https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/raw/13fb94bfda8c8cf22497dc57b78f391a9acb426a/qwen2.5-coder-7b-instruct-q4_k_m.gguf)
+identify the selected release:
+
+| Setting | Frozen baseline value |
+|---|---|
+| Publisher revision | `13fb94bfda8c8cf22497dc57b78f391a9acb426a` |
+| GGUF bytes | 4,683,073,536 |
+| GGUF SHA-256 | `509287f78cb4d4cf6b3843734733b914b2c158e43e22a7f4bf5e963800894d3c` |
+| License | Apache-2.0; upstream license source pinned separately in the catalog |
+| Profile SHA-256 | `34356ece0f89dc96b5b7ebe0a9a1c172c6f3752a99e21df0a77540a0de602cb1` |
+| CPU threads / GPU layers | 2 / 0 |
+| Provider / acquisition timeout | 300 / 900 seconds |
+| Workflow acquisition / live / total job limit | 16 / 70 / 120 minutes |
+| Feedback | `host-artifact-summary-v1` |
+
+The R1 reasoning-budget option is omitted for this ordinary instruct model.
+The existing server uses the loaded model's chat template. The pin does not
+attest which upstream model revision was used for conversion; the separate
+license revision is not represented as conversion provenance. Existing catalog
+entries and the app's default model remain unchanged.
+
+The same llama.cpp pin, source-generation prompts/parser, initial objective,
+fixture, host grading, context, sampling, 1,024-token ceiling, two-generation
+limit and three Director turns remain in force. Acquisition uses the existing
+streaming downloader with exact size/hash checks and atomic completion. The
+host records OS, CPU, memory and available disk snapshots before inference.
+Those snapshots are not peak memory measurements or physical-device acceptance.
+GitHub's [hosted runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+documents the public Ubuntu runner resources, but the actual run must establish
+whether this configuration loads and completes there.
+
+The predeclared stopping rule in `run-request-baseline-v1.json` allows one trial.
+Its genuine result is retained, including malformed output, early stopping,
+incorrect code or timeout. There is no prompt tuning, response substitution,
+larger token allowance or additional model attempt after observing quality.
+A setup failure before inference may receive a separately recorded
+infrastructure correction. This is a new model and feedback configuration, not
+a model-only causal comparison or a fresh generalization benchmark. It neither
+establishes newest-model status nor qualifies iPhone performance, internal
+language efficiency or general autonomous self-improvement.
+
 ## Recovered existing implementation
 
 The November 21 cross-conversation and branch audit identified:
@@ -195,7 +275,8 @@ nonexistent.
 5. A model-selected develop-tool revision calls InferenceToolBuilder using the
    existing Engineer inference interface.
 6. The Engineer receives the previous candidate and development feedback,
-   returning one raw Python module in payload.analysis for v1–v3 or in the dedicated source field for v4–v5.
+   returning one raw Python module in payload.analysis for v1–v3 or in the
+   dedicated source field for v4–v5 and baseline-v1.
 7. ToolDirector records the version, invokes the sandbox and records actual
    findings. The next Director turn receives a compact outcome-first observation.
 8. The model may request at most two source generations in total, or stop. The
@@ -204,10 +285,11 @@ nonexistent.
    No model call follows that point.
 
 The existing native Director adapter bounds a history preview to 2,000
-characters. Passing a full artifact could put its test summary beyond that
-limit. The experimental host therefore sends status, counts and a bounded sample
-of development findings first. Full source, all findings and version history
-remain in the report and artifact store.
+characters, and the runner separately bounds each result. Legacy profiles
+project status/counts after the runner snapshot; the v4/v5 limitations above are
+retained in those trials. Baseline-v1 projects the typed summary before that
+snapshot. Full source, all findings and version history remain in the report
+and artifact store.
 
 ## Frozen task and model profile
 
@@ -237,7 +319,7 @@ DeepSeek-R1-Distill-Qwen-1.5B Q4_K_M pin:
 - At most three Director turns and two Engineer generations.
 - No provider-level output repair retries or alternative model fallback.
 - Profiles v1–v3 retain the existing independent-stage analysis schema, which
-  limits source to 700 characters. V4–v5 explicitly select the dedicated code
+  limits source to 700 characters. V4–v5 and baseline-v1 select the dedicated code
   contract with the existing 16,384-byte source cap; it does not change ordinary
   analysis schemas or implicitly switch older profiles.
 
@@ -324,6 +406,8 @@ An explicit [workshop-live-v2] marker selects the separate v2 trial.
 An explicit [workshop-live-v3] marker selects the v3 thinking-budget diagnostic.
 An explicit [workshop-live-v4] marker selects the consistent code-contract trial.
 An explicit [workshop-live-v5] marker selects the schema-only prompt and remaining-budget trial.
+An explicit [workshop-baseline-v1] marker selects the frozen Qwen coding baseline
+and corrected feedback contract. Marker-free pushes do not launch that trial.
 
 ## Host entry points
 
@@ -345,6 +429,8 @@ omit it or set v1 to retain the original native function-call profile.
 Set v3 only for the separate bounded-thinking profile.
 Set v4 only for the explicit source-generation and compiler-feedback contract.
 Set v5 only for the explicit schema-only prompts and remaining-revision advertisement.
+Set baseline-v1 only for the separate Qwen coding baseline and pre-snapshot
+feedback contract; it is never an automatic fallback.
 
 Missing capabilities stop the attempt. Local development in the current
 workspace has no Docker daemon and cannot claim actual candidate execution.

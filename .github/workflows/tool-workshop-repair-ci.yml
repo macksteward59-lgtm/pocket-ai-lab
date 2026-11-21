@@ -6,6 +6,7 @@ on:
       - codex/tool-workshop-repair-integration-20261121
     paths:
       - scripts/tool-workshop/**
+      - scripts/local-gguf/pins.json
       - runtime/adapters/director/**
       - runtime/adapters/llama-cpp/**
       - packages/intelligence/orchestrator/**
@@ -18,6 +19,7 @@ on:
       - codex/deepseek-local-qualification-20261121
     paths:
       - scripts/tool-workshop/**
+      - scripts/local-gguf/pins.json
       - runtime/adapters/director/**
       - runtime/adapters/llama-cpp/**
       - packages/intelligence/orchestrator/**
@@ -89,11 +91,12 @@ jobs:
 
   live-model:
     needs: sandbox
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[workshop-live-v1]') || contains(github.event.head_commit.message, '[workshop-live-v2]') || contains(github.event.head_commit.message, '[workshop-live-v3]') || contains(github.event.head_commit.message, '[workshop-live-v4]') || contains(github.event.head_commit.message, '[workshop-live-v5]')))
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[workshop-live-v1]') || contains(github.event.head_commit.message, '[workshop-live-v2]') || contains(github.event.head_commit.message, '[workshop-live-v3]') || contains(github.event.head_commit.message, '[workshop-live-v4]') || contains(github.event.head_commit.message, '[workshop-live-v5]') || contains(github.event.head_commit.message, '[workshop-baseline-v1]')))
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: ${{ contains(github.event.head_commit.message, '[workshop-baseline-v1]') && 120 || 45 }}
     env:
-      POCKET_WORKSHOP_PROFILE: ${{ contains(github.event.head_commit.message, '[workshop-live-v5]') && 'v5' || contains(github.event.head_commit.message, '[workshop-live-v4]') && 'v4' || contains(github.event.head_commit.message, '[workshop-live-v3]') && 'v3' || contains(github.event.head_commit.message, '[workshop-live-v2]') && 'v2' || 'v1' }}
+      POCKET_WORKSHOP_PROFILE: ${{ contains(github.event.head_commit.message, '[workshop-baseline-v1]') && 'baseline-v1' || contains(github.event.head_commit.message, '[workshop-live-v5]') && 'v5' || contains(github.event.head_commit.message, '[workshop-live-v4]') && 'v4' || contains(github.event.head_commit.message, '[workshop-live-v3]') && 'v3' || contains(github.event.head_commit.message, '[workshop-live-v2]') && 'v2' || 'v1' }}
+      WORKSHOP_MODEL_FILENAME: ${{ contains(github.event.head_commit.message, '[workshop-baseline-v1]') && 'workshop-baseline.gguf' || 'workshop-deepseek.gguf' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,16 +114,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/tool-workshop/build-server.sh
-      - name: Acquire and hash the existing DeepSeek artifact
-        timeout-minutes: 6
-        run: node scripts/tool-workshop/prepare-model.mjs "$RUNNER_TEMP/workshop-deepseek.gguf"
+      - name: Acquire and hash the selected immutable model artifact
+        timeout-minutes: ${{ env.POCKET_WORKSHOP_PROFILE == 'baseline-v1' && 16 || 6 }}
+        run: node scripts/tool-workshop/prepare-model.mjs "$RUNNER_TEMP/$WORKSHOP_MODEL_FILENAME"
       - name: Run the frozen model-selected candidate-revision experiment
-        timeout-minutes: 17
+        timeout-minutes: ${{ env.POCKET_WORKSHOP_PROFILE == 'baseline-v1' && 70 || 17 }}
         env:
           POCKET_WORKSHOP_EXPERIMENT: '1'
           POCKET_WORKSHOP_PYTHON_IMAGE: ${{ needs.sandbox.outputs.image }}
           POCKET_WORKSHOP_OUTPUT: ${{ runner.temp }}/pocket-workshop-live
-          POCKET_WORKSHOP_MODEL: ${{ runner.temp }}/workshop-deepseek.gguf
+          POCKET_WORKSHOP_MODEL: ${{ runner.temp }}/${{ env.WORKSHOP_MODEL_FILENAME }}
           POCKET_WORKSHOP_SERVER: ${{ github.workspace }}/runtime/ios/build/workshop-server/bin/llama-server
         run: node --import tsx scripts/tool-workshop/run-repair.mjs
       - uses: actions/upload-artifact@v4

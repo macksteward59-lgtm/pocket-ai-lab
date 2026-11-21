@@ -46,6 +46,8 @@ export interface DirectorTaskRunnerOptions {
   maxSteps?: number;
   /** Host-selected subset of configured commands. Controls remain available. Defaults to the canonical vocabulary. */
   availableCommands?: readonly DirectorCommand["kind"][];
+  /** Optional synchronous host projection before normal history sanitization and size limits. */
+  projectResult?: (input: { command: Readonly<DirectorCommand>; result: unknown }) => unknown;
 }
 
 const CONTROL_COMMANDS = ["complete", "blocked", "needs-input"] as const;
@@ -54,6 +56,7 @@ const RESULT_PREVIEW_LIMIT = 6_000;
 export class DirectorTaskRunner {
   private readonly maxSteps: number;
   private readonly availableCommands: readonly DirectorCommand["kind"][];
+  private readonly projectResult: DirectorTaskRunnerOptions["projectResult"];
 
   constructor(
     private readonly router: DirectorCommandRouter,
@@ -72,6 +75,11 @@ export class DirectorTaskRunner {
       throw new Error("availableCommands must be a unique subset of canonical Director commands");
     }
     this.availableCommands = Object.freeze([...availableCommands]);
+    const projectResult = options.projectResult;
+    if (projectResult !== undefined && typeof projectResult !== "function") {
+      throw new Error("Director result projector must be a function");
+    }
+    this.projectResult = projectResult;
   }
 
   async run(
@@ -118,12 +126,22 @@ export class DirectorTaskRunner {
       if (!this.availableCommands.includes(command.kind)) {
         throw new Error("Director command is not available in this runtime: " + command.kind);
       }
+      const commandKind = command.kind;
       const result = await this.router.dispatch(context, command);
+      const projectResult = this.projectResult;
+      const projected = projectResult ? projectResult({ command, result }) : result;
+      if (projectResult && isThenable(projected)) {
+        try {
+          // Observe a native Promise rejection without invoking arbitrary thenables.
+          void Promise.prototype.then.call(projected, undefined, () => undefined);
+        } catch { /* Non-Promise thenables are rejected without executing their then method. */ }
+        throw new Error("Director result projector must return synchronously");
+      }
       history.push(deepFreeze({
         step,
-        commandKind: command.kind,
+        commandKind,
         trust: "untrusted-tool-output" as const,
-        result: boundedSnapshot(result)
+        result: boundedSnapshot(projected)
       }));
     }
 
@@ -134,6 +152,11 @@ export class DirectorTaskRunner {
       history: freezeHistory(history)
     };
   }
+}
+
+function isThenable(value: unknown): boolean {
+  return value !== null && (typeof value === "object" || typeof value === "function") &&
+    typeof (value as { then?: unknown }).then === "function";
 }
 
 function parseTaskControl(input: unknown): DirectorTaskControl | undefined {
