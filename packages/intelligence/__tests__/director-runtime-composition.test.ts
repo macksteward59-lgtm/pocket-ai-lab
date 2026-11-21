@@ -76,4 +76,18 @@ describe("createDirectorTaskRuntime", () => {
     expect(() => createDirectorTaskRuntime({ ...dependencies, provider: null as never }))
       .toThrow(/task provider/);
   });
+
+  it("forwards the host command subset through composition and enforces it before dispatch", async () => {
+    const runtime = createDirectorTaskRuntime({
+      ...makeDependencies({
+        async propose(input) {
+          expect(input.availableCommands).toEqual(["develop-tool", "complete", "blocked", "needs-input"]);
+          return { kind: "research", query: "not enabled for this runtime" };
+        }
+      }),
+      availableCommands: ["develop-tool"]
+    });
+    await expect(runtime.runTask({ taskId: "composition-subset" }, "Develop a candidate"))
+      .rejects.toThrow(/not available in this runtime: research/);
+  });
 });

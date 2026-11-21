@@ -7,7 +7,7 @@
  */
 import { DirectorCapabilities } from "./DirectorCapabilities";
 import { DirectorCommandRouter } from "./DirectorCommandRouter";
-import { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult } from "./DirectorTaskRunner";
+import { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskResult, type DirectorTaskRunnerOptions } from "./DirectorTaskRunner";
 import type { ToolDirector } from "../tooling/ToolDirector";
 
 export interface DirectorTaskRuntimeOptions {
@@ -15,6 +15,7 @@ export interface DirectorTaskRuntimeOptions {
   toolDirector: ToolDirector;
   provider: DirectorTaskProvider;
   maxSteps?: number;
+  availableCommands?: DirectorTaskRunnerOptions["availableCommands"];
 }
 
 export interface DirectorTaskRuntime {
@@ -42,7 +43,10 @@ export function createDirectorTaskRuntime(options: DirectorTaskRuntimeOptions): 
   }
 
   const router = new DirectorCommandRouter(options.capabilities, options.toolDirector);
-  const runner = new DirectorTaskRunner(router, { maxSteps: options.maxSteps });
+  const runner = new DirectorTaskRunner(router, {
+    maxSteps: options.maxSteps,
+    availableCommands: options.availableCommands
+  });
   const provider = options.provider;
 
   return Object.freeze({

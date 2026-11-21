@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DirectorCapabilities } from "../director/DirectorCapabilities";
 import { DirectorCommandRouter } from "../director/DirectorCommandRouter";
-import { DirectorTaskRunner, type DirectorTaskProvider } from "../director/DirectorTaskRunner";
+import { DirectorTaskRunner, type DirectorTaskProvider, type DirectorTaskRunnerOptions } from "../director/DirectorTaskRunner";
 import { MemoryManager } from "../memory/MemoryManager";
 import { ToolDirector } from "../tooling/ToolDirector";
 import { ToolRegistry } from "../security/tools";
 
-function makeRunner(options: { maxSteps?: number; research?: (query: string) => Promise<unknown> } = {}) {
+function makeRunner(options: DirectorTaskRunnerOptions & { research?: (query: string) => Promise<unknown> } = {}) {
   const capabilities = new DirectorCapabilities({
     memory: new MemoryManager(),
     research: options.research ? {
@@ -27,7 +27,7 @@ function makeRunner(options: { maxSteps?: number; research?: (query: string) => 
   });
   return new DirectorTaskRunner(
     new DirectorCommandRouter(capabilities, new ToolDirector({ registry: new ToolRegistry() })),
-    { maxSteps: options.maxSteps }
+    { maxSteps: options.maxSteps, availableCommands: options.availableCommands }
   );
 }
 
@@ -118,5 +118,51 @@ describe("DirectorTaskRunner", () => {
   it("rejects invalid step limits", () => {
     expect(() => makeRunner({ maxSteps: 21 })).toThrow(/between 1 and 20/);
     expect(() => makeRunner({ maxSteps: 0 })).toThrow(/between 1 and 20/);
+  });
+
+  it("advertises a snapshotted host command subset and retains the fixed task controls", async () => {
+    const commands: Array<"research" | "use-device"> = ["research"];
+    const runner = makeRunner({ availableCommands: commands });
+    commands.push("use-device");
+    const result = await runner.run({
+      async propose(input) {
+        expect(input.availableCommands).toEqual(["research", "complete", "blocked", "needs-input"]);
+        expect(Object.isFrozen(input.availableCommands)).toBe(true);
+        if (!input.history.length) return { kind: "research", query: "configured capability" };
+        expect(input.history[0].result).toMatchObject([{ title: "configured capability" }]);
+        return { kind: "complete", summary: "Used the configured research adapter." };
+      }
+    }, { taskId: "subset" }, "Research the task");
+    expect(result).toMatchObject({ status: "completed", steps: 1 });
+  });
+
+  it("rejects an unavailable command before invoking an otherwise configured capability", async () => {
+    let researchCalls = 0;
+    const runner = makeRunner({
+      availableCommands: ["analyze-project"],
+      research: async () => { researchCalls += 1; return []; }
+    });
+    await expect(runner.run({
+      async propose() { return { kind: "research", query: "provider ignored the advertised subset" }; }
+    }, { taskId: "enforced-subset" }, "Inspect the project"))
+      .rejects.toThrow(/not available in this runtime: research/);
+    expect(researchCalls).toBe(0);
+  });
+
+  it("supports a control-only host without claiming that tools are configured", async () => {
+    const result = await makeRunner({ availableCommands: [] }).run({
+      async propose(input) {
+        expect(input.availableCommands).toEqual(["complete", "blocked", "needs-input"]);
+        return { kind: "blocked", reason: "No tools are configured for this task." };
+      }
+    }, { taskId: "control-only" }, "Review capability availability");
+    expect(result).toMatchObject({ status: "blocked", steps: 0 });
+  });
+
+  it("rejects invalid, duplicate, and control names in the host command subset", () => {
+    for (const availableCommands of [["run-shell"], ["research", "research"], ["complete"], null, "research"]) {
+      expect(() => makeRunner({ availableCommands: availableCommands as never }))
+        .toThrow(/unique subset of canonical Director commands/);
+    }
   });
 });

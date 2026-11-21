@@ -11,6 +11,7 @@ import {
   DIRECTOR_COMMAND_KINDS,
   DirectorCommandRouter,
   parseDirectorCommand,
+  type DirectorCommand,
 } from "./DirectorCommandRouter";
 
 export type DirectorTaskControl =
@@ -41,8 +42,10 @@ export type DirectorTaskResult =
   | { status: "needs-input"; steps: number; question: string; history: readonly DirectorTaskHistoryEntry[] };
 
 export interface DirectorTaskRunnerOptions {
-  /** Maximum tool dispatches for one task. Defaults to 8; hard ceiling is 20. */
+  /** Maximum model proposal turns, including a terminal control. Defaults to 8; hard ceiling is 20. */
   maxSteps?: number;
+  /** Host-selected subset of configured commands. Controls remain available. Defaults to the canonical vocabulary. */
+  availableCommands?: readonly DirectorCommand["kind"][];
 }
 
 const CONTROL_COMMANDS = ["complete", "blocked", "needs-input"] as const;
@@ -50,6 +53,7 @@ const RESULT_PREVIEW_LIMIT = 6_000;
 
 export class DirectorTaskRunner {
   private readonly maxSteps: number;
+  private readonly availableCommands: readonly DirectorCommand["kind"][];
 
   constructor(
     private readonly router: DirectorCommandRouter,
@@ -60,6 +64,14 @@ export class DirectorTaskRunner {
       throw new Error("maxSteps must be an integer between 1 and 20");
     }
     this.maxSteps = maxSteps;
+    const availableCommands = options.availableCommands === undefined
+      ? DIRECTOR_COMMAND_KINDS : options.availableCommands;
+    if (!Array.isArray(availableCommands) ||
+        availableCommands.some(kind => !(DIRECTOR_COMMAND_KINDS as readonly string[]).includes(kind)) ||
+        new Set(availableCommands).size !== availableCommands.length) {
+      throw new Error("availableCommands must be a unique subset of canonical Director commands");
+    }
+    this.availableCommands = Object.freeze([...availableCommands]);
   }
 
   async run(
@@ -76,7 +88,7 @@ export class DirectorTaskRunner {
 
     const history: DirectorTaskHistoryEntry[] = [];
     const availableCommands = Object.freeze([
-      ...DIRECTOR_COMMAND_KINDS,
+      ...this.availableCommands,
       ...CONTROL_COMMANDS
     ]);
 
@@ -103,6 +115,9 @@ export class DirectorTaskRunner {
       // Validate the model proposal before dispatch. The router validates it
       // again at its trust boundary, so callers cannot bypass its checks.
       const command = parseDirectorCommand(response);
+      if (!this.availableCommands.includes(command.kind)) {
+        throw new Error("Director command is not available in this runtime: " + command.kind);
+      }
       const result = await this.router.dispatch(context, command);
       history.push(deepFreeze({
         step,

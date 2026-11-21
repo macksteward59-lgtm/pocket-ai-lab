@@ -1,0 +1,123 @@
+name: Tool workshop code repair
+
+on:
+  push:
+    branches:
+      - codex/tool-workshop-repair-integration-20261121
+    paths:
+      - scripts/tool-workshop/**
+      - runtime/adapters/director/**
+      - packages/intelligence/director/**
+      - packages/intelligence/__tests__/director-*.test.ts
+      - apps/web/directorRuntime.ts
+      - .github/workflows/tool-workshop-repair-ci.yml
+  pull_request:
+    branches:
+      - codex/deepseek-local-qualification-20261121
+    paths:
+      - scripts/tool-workshop/**
+      - runtime/adapters/director/**
+      - packages/intelligence/director/**
+      - packages/intelligence/__tests__/director-*.test.ts
+      - apps/web/directorRuntime.ts
+      - .github/workflows/tool-workshop-repair-ci.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workshop-repair-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --package-lock=false
+      - name: Typecheck and focused contracts
+        run: |
+          node_modules/.bin/tsc --noEmit -p tsconfig.json
+          node_modules/.bin/vitest run runtime/adapters/director packages/intelligence/__tests__/director-task-runner.test.ts packages/intelligence/__tests__/director-runtime-composition.test.ts packages/intelligence/__tests__/tool-director.test.ts
+          node --test scripts/tool-workshop/fixture.test.mjs scripts/tool-workshop/evidence.test.mjs
+          node --check scripts/tool-workshop/run-repair.mjs
+          node --check scripts/tool-workshop/check-sandbox.mjs
+          bash -n scripts/tool-workshop/build-server.sh
+
+  sandbox:
+    needs: contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --package-lock=false
+      - name: Resolve trusted Python image before any candidate executes
+        id: image
+        run: |
+          docker pull python:3.12-slim-bookworm
+          workshop_image="$(docker image inspect python:3.12-slim-bookworm --format '{{index .RepoDigests 0}}')"
+          printf 'image=%s\n' "$workshop_image" >> "$GITHUB_OUTPUT"
+      - name: Execute fixture source, revision, and isolation controls
+        env:
+          POCKET_WORKSHOP_PYTHON_IMAGE: ${{ steps.image.outputs.image }}
+          POCKET_WORKSHOP_OUTPUT: ${{ runner.temp }}/pocket-workshop-sandbox
+        run: node --import tsx scripts/tool-workshop/check-sandbox.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workshop-sandbox-${{ github.sha }}
+          path: ${{ runner.temp }}/pocket-workshop-sandbox
+          if-no-files-found: warn
+
+  live-model:
+    needs: sandbox
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[workshop-live-v1]'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --package-lock=false
+      - name: Install the exact sandbox image already tested
+        env:
+          WORKSHOP_IMAGE: ${{ needs.sandbox.outputs.image }}
+        run: docker pull "$WORKSHOP_IMAGE"
+      - name: Build server from the existing verified llama.cpp pin
+        timeout-minutes: 20
+        run: bash scripts/tool-workshop/build-server.sh
+      - name: Acquire and hash the existing DeepSeek artifact
+        timeout-minutes: 6
+        run: node scripts/tool-workshop/prepare-model.mjs "$RUNNER_TEMP/workshop-deepseek.gguf"
+      - name: Run the frozen model-selected candidate-revision experiment
+        timeout-minutes: 17
+        env:
+          POCKET_WORKSHOP_EXPERIMENT: '1'
+          POCKET_WORKSHOP_PYTHON_IMAGE: ${{ needs.sandbox.outputs.image }}
+          POCKET_WORKSHOP_OUTPUT: ${{ runner.temp }}/pocket-workshop-live
+          POCKET_WORKSHOP_MODEL: ${{ runner.temp }}/workshop-deepseek.gguf
+          POCKET_WORKSHOP_SERVER: ${{ github.workspace }}/runtime/ios/build/workshop-server/bin/llama-server
+        run: node --import tsx scripts/tool-workshop/run-repair.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workshop-live-${{ github.sha }}
+          path: ${{ runner.temp }}/pocket-workshop-live
+          if-no-files-found: warn
