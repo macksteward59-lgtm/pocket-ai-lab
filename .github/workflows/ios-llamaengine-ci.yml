@@ -14,6 +14,7 @@ on:
       - codex/native-recipient-text-benchmark-20261120
       - codex/recipient-format-calibration-20261120
       - codex/native-cloud-analysis-20261120
+      - codex/memory-source-preservation
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"

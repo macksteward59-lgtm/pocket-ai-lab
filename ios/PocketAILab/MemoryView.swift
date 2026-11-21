@@ -8,7 +8,7 @@ struct MemoryView: View {
     @State private var editingID: String?
     @State private var draftContent = ""
     @State private var draftLayer: NativeMemoryLayer = .episodic
-    @State private var draftSourceRefs = ""
+    @State private var draftSourceRefs: [ReferenceField] = []
     @State private var status = "Memory is encrypted on this device. Nothing is saved automatically."
     @State private var isBusy = false
     @State private var showError = false
@@ -41,12 +41,18 @@ struct MemoryView: View {
                                 }
                                 .font(.caption2).foregroundStyle(.tertiary)
                                 if !entry.provenance.sourceRefs.isEmpty {
-                                    Text("References: " + entry.provenance.sourceRefs.joined(separator: ", "))
-                                        .font(.caption2).foregroundStyle(.tertiary)
-                                        .textSelection(.enabled)
+                                    VStack(alignment: .leading) {
+                                        Text("References").bold()
+                                        ForEach(entry.provenance.sourceRefs.indices, id: \.self) { index in
+                                            Text(verbatim: entry.provenance.sourceRefs[index])
+                                        }
+                                    }
+                                    .font(.caption2).foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
                                 }
                             }
                             .padding(.vertical, 4)
+                            .accessibilityElement(children: .contain)
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) { delete(entry) } label: {
                                     Label("Delete", systemImage: "trash")
@@ -63,7 +69,7 @@ struct MemoryView: View {
             .navigationTitle("Memory")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { beginCreate() } label: { Image(systemName: "plus") }
+                    Button { beginCreate() } label: { Label("Add memory", systemImage: "plus") }
                         .disabled(isBusy)
                 }
             }
@@ -82,11 +88,27 @@ struct MemoryView: View {
                         }
                         Section("Information to remember") {
                             TextEditor(text: $draftContent).frame(minHeight: 150)
+                                .accessibilityLabel("Information to remember")
                         }
                         Section("Source references") {
-                            TextField("Optional comma-separated references", text: $draftSourceRefs)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
+                            ForEach($draftSourceRefs) { $reference in
+                                HStack {
+                                    TextField("Reference", text: $reference.text)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .accessibilityIdentifier("memory-reference")
+                                    Button {
+                                        let id = reference.id
+                                        draftSourceRefs.removeAll { $0.id == id }
+                                    } label: {
+                                        Label("Remove reference", systemImage: "minus.circle")
+                                            .labelStyle(.iconOnly)
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                            }
+                            Button("Add reference") { draftSourceRefs.append(ReferenceField()) }
+                                .disabled(draftSourceRefs.count >= NativeMemoryStore.maximumSourceReferences)
                         }
                         Section {
                             Text("New and edited memories are unverified. Saving does not grant permissions or authorize actions.")
@@ -118,7 +140,7 @@ struct MemoryView: View {
         editingID = nil
         draftContent = ""
         draftLayer = .episodic
-        draftSourceRefs = ""
+        draftSourceRefs = [ReferenceField()]
         isEditorPresented = true
     }
 
@@ -126,15 +148,13 @@ struct MemoryView: View {
         editingID = entry.id
         draftContent = entry.content
         draftLayer = entry.layer
-        draftSourceRefs = entry.provenance.sourceRefs.joined(separator: ", ")
+        draftSourceRefs = entry.provenance.sourceRefs.map { ReferenceField(text: $0) }
         isEditorPresented = true
     }
 
     private func saveDraft() {
         let content = draftContent
-        let sourceRefs = draftSourceRefs.split(separator: ",").map {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.filter { !$0.isEmpty }
+        let sourceRefs = draftSourceRefs.map(\.text).filter { !$0.isEmpty }
         let editing = editingID
         let layer = draftLayer
         isBusy = true
@@ -188,4 +208,9 @@ struct MemoryView: View {
             showError = true
         }
     }
+}
+
+private struct ReferenceField: Identifiable {
+    let id = UUID()
+    var text = ""
 }
