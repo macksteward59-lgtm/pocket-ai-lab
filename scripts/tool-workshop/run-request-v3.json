@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "experiment": "workshop-utf8-code-repair-v3",
+  "profile": "workshop-utf8-repair-deepseek-v3",
+  "profileSHA256": "f8173fd949c7c8f9adab9ee26eb38a17d23d699af02f65aacb528a293b2450ce",
+  "fixtureSHA256": "00b849a53254d1a28612b4d0bac2b15c24317a7c18af18fb36c52a27fe44ab6d",
+  "priorTrialHead": "8777e4f2fe5e311be78dc04c98155c0168b36511",
+  "priorTrialRun": 44880061412,
+  "priorTrialArtifact": 14697329849,
+  "priorTrialOutcome": "Director selected revise and invoked Engineer; Engineer generated 1,024 tokens but returned no usable final content/toolCalls. No revised source or held-out result. Acceptance false.",
+  "hypothesis": "A bounded thinking allowance may leave enough output budget for final structured code. Raw v2 response-channel data was not retained, so this explanation is unconfirmed.",
+  "change": "Pass --reasoning-budget 128 to the pinned model server for both roles.",
+  "unchanged": ["v2 planner and Engineer prompts", "model artifact", "sampling/context/maxTokens1024", "development and held-out fixture", "two-generation/three-turn budgets", "parser and grading"],
+  "interpretation": "Separate configuration diagnostic. Preserve v1/v2; no source fallback, automatic profile switch or claimed internal-language speedup."
+}

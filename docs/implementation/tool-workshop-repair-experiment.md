@@ -57,8 +57,29 @@ A v2 success would not pass v1's native function-calling gate or establish a
 general autonomous-repair success rate.
 
 The v1 profile bytes remain unchanged. profile.mjs verifies each independently
-frozen profile hash and only accepts an explicit v1 or v2 selector. The default
+frozen profile hash and only accepts an explicit v1, v2 or v3 selector. The default
 remains v1; there is no automatic profile switch after failure.
+
+### Observed v2 dispatch and separate v3 output-budget diagnostic
+
+At `8777e4f2fe5e311be78dc04c98155c0168b36511`,
+[v2 workflow44880061412](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44880061412)
+made two real calls. The structured Director selected revise; the existing
+workshop invoked the Engineer. The Engineer generated 1,024 tokens, then the
+existing HTTP adapter reported neither usable final content nor tool calls.
+One build attempt failed before retaining source. The baseline remained at 3/8;
+no revised artifact or held-out result existed. Cleanup and model integrity
+passed. This is an output-contract failure before code quality was measured.
+
+The raw HTTP response body was not retained. The hypothesis that emitted
+thinking consumed the generation allowance is therefore not a directly observed
+response-channel fact. V3 tests one targeted configuration change:
+`--reasoning-budget 128`, supported by the pinned server's README. It preserves
+the v2 planner and Engineer prompts, model, context/sampling, 1,024-token response
+ceiling, fixture, two-generation/three-turn budgets and held-out gate. It does not
+reinterpret reasoning as source or relax the response parser. Each profile and
+outcome remains separately identified. A timing difference would not establish
+a learned internal language or a general speedup.
 
 ## Recovered existing implementation
 
@@ -217,6 +238,7 @@ The workflow pins Ubuntu 24.04 and has read-only repository permissions. Its
 ordinary pushes run contracts and actual sandbox checks. A workflow dispatch or
 an explicit [workshop-live-v1] commit marker runs v1 after those checks pass.
 An explicit [workshop-live-v2] marker selects the separate v2 trial.
+An explicit [workshop-live-v3] marker selects the v3 thinking-budget diagnostic.
 
 ## Host entry points
 
@@ -235,6 +257,7 @@ a new private directory outside the source checkout. Then run:
 
 Set POCKET_WORKSHOP_PROFILE=v2 only for the separate structured-action trial;
 omit it or set v1 to retain the original native function-call profile.
+Set v3 only for the separate bounded-thinking profile.
 
 Missing capabilities stop the attempt. Local development in the current
 workspace has no Docker daemon and cannot claim actual candidate execution.

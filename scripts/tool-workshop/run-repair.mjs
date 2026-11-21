@@ -77,6 +77,11 @@ async function startServer(binary, modelPath, profile, outputDirectory) {
     "--ctx-size", String(profile.contextLength), "--threads", String(profile.threads),
     "--n-gpu-layers", String(profile.gpuLayers), "--parallel", "1", "--jinja",
     "--seed", String(profile.seed), "--no-context-shift"];
+  if (profile.reasoningBudget !== undefined) {
+    assert(Number.isSafeInteger(profile.reasoningBudget) && profile.reasoningBudget >= 0 &&
+      profile.reasoningBudget < profile.maxTokens, "Thinking budget must leave a final-response allowance.");
+    args.push("--reasoning-budget", String(profile.reasoningBudget));
+  }
   const child = spawn(binary, args, { cwd: outputDirectory, stdio: ["ignore", "pipe", "pipe"] });
   let logBytes = 0;
   let logLimitExceeded = false;
