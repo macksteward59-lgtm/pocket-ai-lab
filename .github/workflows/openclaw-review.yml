@@ -1,0 +1,44 @@
+name: OpenClaw PR 245 review
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened]
+    paths:
+      - tools/openclaw-review/**
+      - .github/workflows/openclaw-review.yml
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: >-
+      github.repository == 'macksteward59-lgtm/pocket-ai-lab' &&
+      toJSON(github.event.repository.private) == 'false' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.head_ref == 'codex/openclaw-ci-review-pilot'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.22.3'
+      - name: Run the isolated evidence review
+        run: tools/openclaw-review/run-linux.sh > "$RUNNER_TEMP/openclaw-review.json"
+      - name: Show the draft and model usage
+        shell: python
+        run: |
+          import html, json, os
+          from pathlib import Path
+          result = json.loads((Path(os.environ["RUNNER_TEMP"]) / "openclaw-review.json").read_text())
+          receipt = result["receipt"]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              print("### OpenClaw draft for PR #245", file=summary)
+              print("<pre>" + html.escape(receipt["final"]) + "</pre>", file=summary)
+              print("Model:", receipt["model"], "| Provider:", receipt["provider"], file=summary)
+              print("Token usage:", receipt.get("usage", {}).get("total", "unavailable"), file=summary)
+              print("Evidence SHA-256:", result["evidence_sha256"], file=summary)
