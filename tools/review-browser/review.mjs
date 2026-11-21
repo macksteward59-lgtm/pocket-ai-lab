@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -175,6 +175,11 @@ for (const engine of [chromium, webkit]) {
       assert.equal(native.provenance.verified, false);
       assert.deepEqual(native.provenance.sourceRefs, ["urn:sha256:" + expected]);
       assert.ok(native.content.includes("unicode-roundtrip"));
+      if (process.env.POCKET_CI_REVIEW_DIR) {
+        const summary = before[0].content + "\n\n" + native.content;
+        assert.ok(Buffer.byteLength(summary) <= 4000);
+        await writeFile(path.join(process.env.POCKET_CI_REVIEW_DIR, engine.name() + ".txt"), summary);
+      }
       assert.deepEqual(errors, []);
     });
 }

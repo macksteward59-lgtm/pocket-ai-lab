@@ -8,6 +8,8 @@ on:
       - apps/web/**
       - tools/openclaw-review/**
       - tools/review-browser/**
+      - workers/document-analysis/**
+      - packages/intelligence/cloud/cloudflare/DurableTaskLifecycleStore.ts
       - tools/evaluation-review/**
       - ios/PocketAILab/NativeEvaluationJournal.swift
       - .github/workflows/owner-review.yml
@@ -75,7 +77,21 @@ jobs:
           OPENCLAW_REVIEW_PACKET: ${{ needs.local-model.outputs.packet }}
           NATIVE_REVIEW_PACKET: ${{ needs.native-record.outputs.packet }}
           NATIVE_REVIEW_DIGEST: ${{ needs.native-record.outputs.digest }}
+          POCKET_CI_REVIEW_DIR: ${{ runner.temp }}/pocket-reviewed-notes
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           ./node_modules/.bin/playwright install --with-deps chromium webkit
+          mkdir -p "$POCKET_CI_REVIEW_DIR"
           node --test review.mjs
+      - name: Reopen the browser handoff after restarting the local Worker
+        working-directory: workers/document-analysis
+        env:
+          POCKET_CI_REVIEW_DIR: ${{ runner.temp }}/pocket-reviewed-notes
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          set -eu
+          test -s "$POCKET_CI_REVIEW_DIR/chromium.txt"
+          test -s "$POCKET_CI_REVIEW_DIR/webkit.txt"
+          npm ci --no-audit --no-fund
+          npm run build
+          npm test

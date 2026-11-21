@@ -39,3 +39,8 @@ tools/openclaw-review/run-linux.sh --activity-record > review.json
 Activity also opens a single JSON attempt exported from the native self-evaluation history in PR #248. Select the file and paste the event SHA-256 copied separately from that history. The browser checks the original Swift payload bytes on the device before showing the reported model, status and output. **Prepare an evaluation note** copies the summary and event digest to the existing Memory editor. The owner decides what to save. The record stays unverified in Memory.
 
 The cross-platform workflow builds the Swift exporter from the same checkout on macOS, reopens its fixture journal, checks the export with the independent Python reader, then supplies the same bytes and digest to the Chromium and WebKit tests. A separate CPU job runs the actual pinned model through OpenClaw and sends its fresh compact result to those same tests. Both browser runs check rejection of altered data and recover the saved notes after a server restart. The fixture has an explicitly unverified provider.
+
+
+### Cloudflare handoff
+
+The combined checkout includes the private note Worker under `workers/document-analysis/`. CI uses temporary credentials and a local Durable Object. It takes the actual notes recovered from both browsers, compares them, saves the agreed text over MCP, repeats the save with the original revision and reads it back after restarting the Worker. The connected Pocket AI Lab Handoff app can relay project decisions to the live preview separately. Saving notes is independent of model and build triggers.
