@@ -92,3 +92,52 @@ The pre-existing **316-row November 16 traceability snapshot** is not the comple
 **Out of scope:** automatic remote-provider execution without authorization; unsandboxed security testing; production-readiness claims from simulator CI; fabricated model responses; changing protected approval/merge/release rules; adding unrelated hardware-brand language.
 
 This integration contract is the bridge between the owner's two-week design vision and reproducible end-to-end acceptance. It is not authorization to merge, sign, ship, deploy or test external targets.
+
+
+## 8. 2026-11-21 continuation: internal-language priority and ExploitGym proposal
+
+### Owner direction and the experiment boundary
+
+The owner reaffirmed faster/better processing through an internal model/agent language, then proposed going directly to ExploitGym with other models assigned to different parts. Preserve this as one Pocket AI Lab objective. ExploitGym can supply a concrete evaluation setting for specialized agents; it does not automatically train weights, supply a shared latent language, or measure the whole product's general capability.
+
+There are two related optimization hypotheses:
+
+1. **Compact inter-agent communication:** send task-relevant internal representations to a receiver that has been trained and validated to use them, reducing repeated message serialization and processing where measurements support it.
+2. **Latent-only intermediate reasoning:** change/train the inference process so selected reasoning steps proceed through internal states without generating the corresponding natural-language tokens.
+
+The existing GIE capture/codec implements primitives for the first. It still performs autoregressive token generation before/while copying vectors, so it does not establish the second. Research such as [Coconut](https://github.com/facebookresearch/coconut) provides a training/runtime reference for continuous latent reasoning; no such method or checkpoint has been integrated or accepted here.
+
+[PR #240](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/240) and its [immutable results](../docs/evidence/deepseek-local-qualification/44870413700/README.md) are a **text-path baseline only**: eight completed calls, 1/8 strict valid/correct final answers, no GIE/numerical receiver operation. Preserve the failed result; neither it nor the ordinary-text CPU timings prove or disprove internal-language quality or speed.
+
+### Reconciled implementation checkpoint
+
+- Producer capture-to-GIE execution is supported by PR #229's hosted real-GGUF smoke, using an explicitly synthetic/untrained codebook. The current deterministic k-means codebook training algorithm is not a trained recipient mapping.
+- PR #230 demonstrated repeatable real-model raw-input logit effects. GIE reconstructs pooled final-layer outputs; the numerical primitive expects first-layer input embeddings. No conversion or semantic interpretation follows from matching shapes or model identity. It currently returns logits without a retained prefix or generated continuation.
+- Numerical admission is restricted to validated `llama` decoder support. DeepSeek qualification verifies `qwen2`. Architecture-specific numerical support must be qualified before using that candidate in a GIE recipient experiment.
+- Exact same-model/revision compatibility remains the v1 rule; PR #235 records the guard correction. Heterogeneous models require validated alignment, with existing typed/text communication until that exists.
+
+### ExploitGym and specialist models
+
+Reuse [PR #165](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/165) and its [integration boundary](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/b89d0bffd319ba940b17c50ee971fa1674dd541f/docs/integrations/exploitgym.md). At inspection it was draft/unmerged, head `b89d0bffd319ba940b17c50ee971fa1674dd541f`, with upstream gitlink `a8029e47135a29f1c1a6e79109bf86fba379b3f3`. The restored pin is separate from current upstream documentation and must be inspected as its own version; no current-upstream feature is assumed present in the pin. No task/image/dataset execution was established by restoration.
+
+| Function | Existing owner or proposed model role |
+| --- | --- |
+| Task selection, scope, dispatch and durable lifecycle | Director/APEX and East/e3 |
+| Reasoning and engineering proposals | Explicitly selected model(s); DeepSeek remains a candidate, not an accepted winner |
+| Independent criticism | Separately attributed critic invocation/model |
+| Environment execution and task success | Isolated ExploitGym worker and its evaluator |
+| Evidence interpretation and final report | Validator/Director, retaining evaluator artifacts and disagreement |
+| Local interface and memory | Existing Pocket runtime and attributed records |
+
+The TypeScript `ModelRegistry.associateAgent` and `Orchestrator` already carry per-role model IDs into an `InferenceProvider`; the router owns reservations. The current `runtime/lab/session.ts` initializes one model for all roles. `runtime/adapters/llama-cpp/config.ts` explicitly distinguishes requested aliases from the actual model loaded by native `/completion`. Reuse verified provider dispatch or existing native model-pool routing; do not create a second orchestrator or merely relabel one inference endpoint as several models.
+
+### Next bounded evidence sequence
+
+1. Reconcile PR #165/base and inspect the exact upstream pin's task, reset/run, evaluator and artifact interfaces. Implement a narrow adapter using existing host authorization and East lifecycle. Begin with inert fixtures for the adapter contract; a fixture pass is not an ExploitGym model score.
+2. Define a small versioned isolated evaluation manifest, actual provider/model identities, role assignment and time/resource/cost limits. Execute only within the existing approved worker/task boundary. Keep benchmark evaluator output independent of model-authored claims.
+3. Compare a single-model setup with specialist-role setups on identical episodes and recorded budgets. Preserve errors, unsuccessful attempts and actual runtime attribution. Report this security-task result separately from general reasoning/communication controls.
+4. For the internal-language treatment, establish a useful text receiver control and train/validate a same-model mapping into the recipient's actual input representation. Freeze training/validation/held-out splits and correct/absent/shuffled/counterfactual controls before evaluating. Compare mapped raw vectors and mapped GIE separately to distinguish mapping quality from compression loss.
+5. Measure full task latency, p50/p95, task success, model invocations, bytes including metadata, peak/temporary memory and provider cost. Include sender generation, capture, encode, transfer, decode/mapping, recipient computation and final reporting; measure cold/warm loading separately. Codebook size or payload compression alone is not a speed result.
+6. Investigate latent-only reasoning and cross-model alignment as separately versioned trained/runtime treatments, with unchanged held-out acceptance and later physical iPhone measurements. Evaluation traces alone do not update a model; training and promotion remain explicit stages.
+
+This continuation reorders the proposed evaluation focus while preserving the original G.I.R.L. definitions, historical failures, same-model gate, broader product scope and existing execution boundaries. It records no new workload run, neuralese fluency, model promotion, speedup, deployment or merge.
