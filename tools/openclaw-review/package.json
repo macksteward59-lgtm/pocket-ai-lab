@@ -1,0 +1,7 @@
+{
+  "name": "pocket-openclaw-ci-review",
+  "private": true,
+  "dependencies": {
+    "openclaw": "2026.11.6"
+  }
+}

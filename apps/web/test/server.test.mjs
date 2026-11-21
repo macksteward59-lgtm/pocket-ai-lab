@@ -373,3 +373,28 @@ test("Director task endpoint rejects an empty objective before contacting the mo
   });
   assert.equal(response.status, 400);
 }, { LLAMACPP_API: "openai-chat", LLAMACPP_MODEL_ALIAS: "test-model" }));
+
+test("Activity loads the bounded model draft beside the independent PR #245 source", async t => {
+  const directory = await mkdtemp(path.join(tmpdir(), "pocket-activity-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await withServer(async base => {
+    const response = await fetch(base + "/api/activity/openclaw-245");
+    assert.equal(response.status, 200);
+    const source = await response.json();
+    assert.equal(source.bundled.evidence_sha256, source.digest);
+    assert.equal(source.bundled.format, "pocket-ai-lab.ci-review.v1");
+    assert.equal(source.job, "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206/job/136909320451");
+    assert.equal(source.jobId, source.bundled.source.job_id);
+    assert.equal(source.localTests, 359);
+    assert.equal(source.localFiles, 11);
+    assert.match(source.sourceSummary, /passed 359 tests in 11 files/);
+    assert.ok(source.sourceSummary.includes("physical iPhone run"));
+    assert.match(source.evidence, /359 provider, lifecycle and compatibility tests/);
+    assert.match(source.evidence, /physical iPhone run/);
+    assert.deepEqual(Object.keys(source.bundled.receipt).sort(), ["final", "model", "ok", "provider"]);
+    const denied = await fetch(base + "/api/activity/openclaw-245", {headers: {origin: "https://example.org"}});
+    assert.equal(denied.status, 403);
+    const memory = await (await fetch(base + "/api/memory")).json();
+    assert.equal(memory.entries.length, 0);
+  }, { POCKET_MEMORY_DIR: directory });
+});

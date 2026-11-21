@@ -1,0 +1,18 @@
+{
+  "name": "pocket-document-analysis-host",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test host.test.mjs",
+    "build": "wrangler deploy --dry-run --outdir dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "^4.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "miniflare": "4.20260730.0",
+    "wrangler": "4.166.0"
+  }
+}

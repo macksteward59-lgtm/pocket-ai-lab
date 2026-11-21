@@ -41,3 +41,9 @@
 .view{min-height:0}
 #agents-view{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .agent-transcript{max-height:none;overflow:visible}
+
+#activity-view { overflow-y: auto; }
+#review-details h2 { font-size: 16px; }
+#review-details a { color: var(--accent, #aac5fa); overflow-wrap: anywhere; }
+#review-status, #review-comparison, #review-action-status { font-size: 13px; line-height: 1.5; }
+#review-action-status:empty { display: none; }
