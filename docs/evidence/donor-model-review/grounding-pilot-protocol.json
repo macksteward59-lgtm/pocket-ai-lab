@@ -1,0 +1,62 @@
+{
+  "purpose": "Offline English evidence-support screening, fixed public project summaries. Each source is scored against one paraphrase, one contradiction and one claim absent from the source. Previously examined source register; new claims. This pilot tests classification, not citation selection or generation.",
+  "sourceCommit": "996d8ed1fc600e828f996ca59b506816e7a52c55",
+  "sourcePath": "docs/research/project-sources.json",
+  "sourceSHA256": "9cf4acff35b106767f049de9814a9cc660796515d530d58622efabefd2b996c7",
+  "model": "Horizon-Labs/hallucination-guard-small",
+  "revision": "de08e58e536cf1c7285568dc3380ca9281362c58",
+  "artifact": "onnx/model_quantized.onnx",
+  "artifactSHA256": "d055ba5d7ca5e94a793a5b7457ea118d93036a176ae873789430780caae4a7ec",
+  "tokenizerSHA256": "6b99d3bf966298a637beb18cdd0ff760c73cc6e77bf5d354fd1ce14dd164f0ff",
+  "protocol": "Read only the finding field as the first sequence and the claim as the second. Use the shipped tokenizer with special tokens, CPU ONNX Runtime 1.24.4 and softmax class 1 probability >=0.5 as SUPPORTED (class 0 UNSUPPORTED). Exactly 24 calls, no retries, all rows retained. Proceed to wider independent testing only if at least 7/8 supported paraphrases are accepted and at most 1/8 contradictions and at most 1/8 absent claims are accepted. A pass is a pilot outcome.",
+  "cases": [
+    {
+      "sourceId": "APPLE-DEVICE",
+      "supported": "Results from a simulator may differ from performance on the actual phone.",
+      "contradicted": "The simulator is guaranteed to match performance on the physical device.",
+      "absent": "The iPhone Air generated 25 tokens per second in the team's device trial."
+    },
+    {
+      "sourceId": "APPLE-TEAM",
+      "supported": "A Personal Team profile lasts one week from issuance.",
+      "contradicted": "Personal Team provisioning profiles last thirty days after issuance.",
+      "absent": "A Personal Team account can register twelve iPhones in a week."
+    },
+    {
+      "sourceId": "CF-BIND",
+      "supported": "A Worker can pass a model identifier and an input object to the AI binding.",
+      "contradicted": "The AI binding accepts only a model identifier and rejects an input object.",
+      "absent": "The hosted model completed this project's first inference in 180 milliseconds."
+    },
+    {
+      "sourceId": "CF-QUOTA",
+      "supported": "The daily free allowance is ten thousand neurons.",
+      "contradicted": "The daily free allowance is one thousand neurons.",
+      "absent": "Each of our research questions will consume exactly fifty neurons."
+    },
+    {
+      "sourceId": "W3C-PROV",
+      "supported": "A link to a primary source and a link to an earlier revision express different relationships.",
+      "contradicted": "A primary-source link has exactly the same meaning as a revision link.",
+      "absent": "The project retained eleven revisions of the primary source."
+    },
+    {
+      "sourceId": "W3C-QUOTE",
+      "supported": "Text surrounding an exact quotation can distinguish repeated passages.",
+      "contradicted": "A text quote selector identifies passages only by page number and ignores their wording.",
+      "absent": "The recommended amount of surrounding text is exactly forty characters on either side."
+    },
+    {
+      "sourceId": "ACL-CITE",
+      "supported": "ALCE evaluates fluency, correctness, and citation quality.",
+      "contradicted": "ALCE excludes citation quality from its evaluation.",
+      "absent": "The model leading the published evaluation scored ninety percent for citation quality."
+    },
+    {
+      "sourceId": "ACL-ABSTAIN",
+      "supported": "Some plausible questions have no answer supported by the supplied passage.",
+      "contradicted": "Every question can be answered from the supplied passage.",
+      "absent": "Exactly one third of the study's questions were unanswerable."
+    }
+  ]
+}
