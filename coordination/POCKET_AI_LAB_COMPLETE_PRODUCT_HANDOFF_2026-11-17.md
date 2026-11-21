@@ -9,7 +9,38 @@
 
 > This handoff consolidates the durable product decisions and technical requirements available from prior project discussions and the repository's current coordination records. The master checklist remains the detailed requirement baseline; the traceability matrix remains the requirement-level audit ledger. This document connects those records into one implementation-ready plan. If an original source artifact is unavailable, its contents are explicitly marked as needing recovery rather than reconstructed by guesswork.
 
-## 2026-11-21 execution update — existing workshop connected and measured
+## 2026-11-21 continuation — executable code measured; repair remains unqualified
+
+[Draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241), still stacked on #240, now has source head `6c01e953ceb6d6633a770a31980aaf19125d5c47`, tree `a4a30278ea00a3c769e2ad0d913a1ee1cd8dbf67`. This continuation implemented the dedicated source-generation contract identified by the v3 audit, connected actual compiler feedback, preserved all earlier raw trials, and ran separately frozen v4 and v5 diagnostics through the existing workshop. No duplicate engine or plugin was created.
+
+### Current evidence
+
+| Layer | Observed result |
+|---|---|
+| Software and interface checks at current head | TypeScript; 262 passing focused runtime tests plus one existing skip; 17 fixture/evidence/profile tests; independent source review; [full repository CI 44892136889](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44892136889) passed. |
+| Actual Docker controls | V4 and v5 each executed 21 cases. Baseline 3/8, scripted correction 8/8; compiler diagnostics, isolation, wrong-output rejection, timeout, output cap, lineage/reopen and cleanup met expectations. These are fixture-authored controls. |
+| V4 dedicated source contract | Five real calls. Both Engineer source values were exactly `Python source`, an illustrative prompt value. Each scored 0/8 development; final 0/20 held-out versus baseline 4/20. Actual compiler feedback reached the second Engineer. Third revise decision hit the existing generation limit. Acceptance false; all 64 containers cleaned. |
+| V5 schema-only prompts and revision availability | Three real calls: Director revise → Engineer source → Director complete. One exact 334-byte executable candidate scored **1/8 development and 1/20 held-out**, worse than baseline **3/8 and 4/20**. Director completed with one revision still available. Host acceptance remained false; all 56 containers cleaned. |
+
+V4 added optional `InferenceProvider.generateCode` through the existing llama.cpp provider, preserving ordinary analysis behavior. Compiler/process diagnostics are bounded and explicitly labeled as untrusted candidate output. V5 explicitly removes illustrative source values and advertises the actual remaining builder attempts. V1–v4 frozen profiles and legacy prompt paths are preserved; model/runtime pins, fixture, source parser, grading and two-generation/three-turn budgets are unchanged.
+
+The v5 candidate executes but returns the whole original input instead of applying the UTF-8 byte limit. Its complete backend source, stored artifact and final selection match exactly. The Director saw the quarantined failed 1/8 summary and three concrete failures, yet chose complete. `controlPassed:true` describes a valid terminal protocol, not a correct completion judgment. `qualityPassed:false` and `accepted:false` are decisive.
+
+Independent audits verified archive/report bytes, source lineage, per-case hashes/grades, cleanup and freeze-before-held-out timing. No held-out identifiers appeared in model requests, and no model call occurred after final selection. Host checks recorded the model file unchanged; the model bytes are not bundled for independent post-run rehash. The v5 zero-budget filter and stale-balance guard were tested with declared doubles but were not reached in the live run, which stopped at balances 2 → 1.
+
+### Follow-up and qualification boundaries
+
+This was the final small interface diagnostic in this continuation; no v6 prompt trial was run. The current model/prompt/task configuration remains unqualified for successful repair or reliable completion judgments. The useful progress is the working connection among real model choice, source generation, persisted candidates, isolated execution, actual feedback and independent rejection of failed results.
+
+One inherited metadata issue must be corrected before another benchmark: the host pre-slices findings to three, so the planner reports `findingsTruncated:false` even when seven failures exist. The explicit failed score is intact. Preserve this limitation; do not relabel the Director's observed input as all seven findings.
+
+The next engineering need is a reliable ordinary code-and-control baseline under this connected harness, with a separately defined qualification plan. Broader autonomous experiments, learner/teacher training, G.I.R.L. communication and speed measurements should be compared against that baseline. This reused task is not a fresh generalization benchmark or a whole-harness score. ALI #217, skill lifecycle #91/#92, multi-agent proof #227, a concrete ExploitGym adapter, native application integration and physical iPhone acceptance remain the separate integration work mapped below. The earlier native/text 1/8 qualification remains unchanged.
+
+Durable evidence: [current interpretation and run history](evidence/tool-workshop-repair-2026-11-21/README.md), [provenance](evidence/tool-workshop-repair-2026-11-21/provenance.json), [raw v4 report](evidence/tool-workshop-repair-2026-11-21/live-v4/report.json), [raw v5 report](evidence/tool-workshop-repair-2026-11-21/live-v5/report.json), and [v5 actual controls](evidence/tool-workshop-repair-2026-11-21/v5-sandbox/sandbox-report.json).
+
+PR #241 remains draft and unmerged. Generated tools remain candidate artifacts; production self-editing, tool activation, weight training, cloud deployment and device acceptance are not established by these runs. This current checkpoint supersedes the v3 next-step paragraph immediately below while preserving its historical observations and the complete-product requirements.
+
+## 2026-11-21 historical v3 checkpoint — existing workshop connected and measured
 
 The owner's recollection of code execution, revision and self-improvement support was substantially correct: merged [workshop #46](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/46) and Director work #53–57 already supplied the lifecycle and bounded control loop. The missing part in the inspected host was the concrete source builder and executor. [Draft PR #241](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/241), stacked on #240, now supplies those connections instead of duplicating the engine. Current source head is `d3294457e65e59a3d4d53510441f5a6b79474852`, tree `ac840eabe97fad684ad447e4fa98746d1bec8fa2`.
 
