@@ -13,11 +13,13 @@ on:
       - codex/native-input-embedding-evaluation-20261120
       - codex/native-recipient-text-benchmark-20261120
       - codex/recipient-format-calibration-20261120
+      - codex/native-cloud-analysis-20261120
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
       - "docs/architecture/GIE-CANONICAL-CODEBOOK-ARTIFACT-v1.md"
       - "ios/**"
+      - "tools/evaluation-review/**"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
@@ -59,6 +61,16 @@ jobs:
           swift --version
           uname -m
           echo "xcode_hash=$(xcodebuild -version | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Verify a Swift evaluation export with the independent reader
+        run: |
+          set -euo pipefail
+          sample=$(mktemp -d)
+          trap 'rm -rf "$sample"' EXIT
+          swiftc -parse-as-library ios/PocketAILab/NativeEvaluationJournal.swift tools/evaluation-review/Smoke.swift -o "$sample/smoke"
+          digest=$("$sample/smoke" "$sample")
+          python3 tools/evaluation-review/verify.py "$sample/attempt.json" --expected-event-hash "$digest"
+          python3 -m unittest discover -s tools/evaluation-review -p 'test_*.py'
 
       - name: Install CMake and Ninja
         id: build-tools

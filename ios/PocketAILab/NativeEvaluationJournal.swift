@@ -142,8 +142,9 @@ struct NativeEvaluationJournalEvent: Codable, Equatable, Identifiable {
     let payload: NativeEvaluationJournalPayload
 }
 
-/// Hash-chained, append-only local journal. A changed, reordered, or removed
-/// event causes reads and subsequent writes to fail closed.
+/// New instances validate the chain present on disk. While open, the journal also
+/// compares its last observed tip on each read and write. Detecting rollback across a
+/// restart requires a tip retained independently of the journal file.
 actor NativeEvaluationJournal {
     private static let genesis = "GENESIS"
     private let fileURL: URL
@@ -200,8 +201,7 @@ actor NativeEvaluationJournal {
               Self.validDeterministicScore(rule: draft.scoringRule, passed: draft.deterministicPassed, score: draft.deterministicScore) else {
             throw NativeEvaluationJournalError.invalidAttempt("Required metadata, SHA-256 fingerprint, or generation bounds are invalid.")
         }
-        try verifyDiskState()
-        let existingAttempts = try Self.readAndVerify(fileURL: fileURL).compactMap(\.payload.attempt)
+        let existingAttempts = try events().compactMap(\.payload.attempt)
         guard !existingAttempts.contains(where: { $0.id == draft.id }) else {
             throw NativeEvaluationJournalError.invalidAttempt("Attempt ID already exists.")
         }
@@ -237,8 +237,7 @@ actor NativeEvaluationJournal {
               Self.hasCompleteCategoryScores(assessment.categoryScores) else {
             throw NativeEvaluationJournalError.invalidAssessment("Assessment metadata, rationale, or score is invalid.")
         }
-        try verifyDiskState()
-        let existingEvents = try Self.readAndVerify(fileURL: fileURL)
+        let existingEvents = try events()
         guard !existingEvents.compactMap(\.payload.assessment).contains(where: { $0.id == assessment.id }) else {
             throw NativeEvaluationJournalError.invalidAssessment("Assessment ID already exists.")
         }
@@ -260,8 +259,7 @@ actor NativeEvaluationJournal {
               !challenge.reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NativeEvaluationJournalError.invalidChallenge("Challenge must identify its author and rationale.")
         }
-        try verifyDiskState()
-        let existingEvents = try Self.readAndVerify(fileURL: fileURL)
+        let existingEvents = try events()
         guard !existingEvents.compactMap(\.payload.challenge).contains(where: { $0.id == challenge.id }) else {
             throw NativeEvaluationJournalError.invalidChallenge("Challenge ID already exists.")
         }
@@ -273,11 +271,16 @@ actor NativeEvaluationJournal {
     }
 
     func events() throws -> [NativeEvaluationJournalEvent] {
-        try Self.readAndVerify(fileURL: fileURL)
+        let records = try Self.readAndVerify(fileURL: fileURL)
+        guard (records.last?.sequence ?? 0) == lastSequence,
+              (records.last?.eventHash ?? Self.genesis) == lastHash else {
+            throw NativeEvaluationJournalError.corruptJournal("Journal changed outside the append-only writer.")
+        }
+        return records
     }
 
     private func append(_ payload: NativeEvaluationJournalPayload) throws -> NativeEvaluationJournalEvent {
-        try verifyDiskState()
+        _ = try events()
         let nextSequence = lastSequence + 1
         let eventID = UUID().uuidString
         let hash = try Self.hash(sequence: nextSequence, eventID: eventID, previousHash: lastHash, payload: payload)
@@ -295,15 +298,6 @@ actor NativeEvaluationJournal {
         lastSequence = nextSequence
         lastHash = hash
         return event
-    }
-
-    private func verifyDiskState() throws {
-        let events = try Self.readAndVerify(fileURL: fileURL)
-        let diskSequence = events.last?.sequence ?? 0
-        let diskHash = events.last?.eventHash ?? Self.genesis
-        guard diskSequence == lastSequence, diskHash == lastHash else {
-            throw NativeEvaluationJournalError.corruptJournal("Journal changed outside the append-only writer.")
-        }
     }
 
     private static func readAndVerify(fileURL: URL) throws -> [NativeEvaluationJournalEvent] {
@@ -407,10 +401,35 @@ actor NativeEvaluationJournal {
     }
 
     private static func hash(sequence: Int, eventID: String, previousHash: String, payload: NativeEvaluationJournalPayload) throws -> String {
-        let payloadData = try encoder().encode(payload)
+        digest(sequence: sequence, eventID: eventID, previousHash: previousHash,
+               payloadData: try encoder().encode(payload))
+    }
+
+    private static func digest(sequence: Int, eventID: String, previousHash: String, payloadData: Data) -> String {
         var material = Data("\(sequence)\n\(eventID)\n\(previousHash)\n".utf8)
         material.append(payloadData)
         return SHA256.hash(data: material).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Preserve the original hashed bytes so a reviewer can check dates, Unicode and
+    /// floating-point values without reproducing Foundation's JSON formatting.
+    static func exportAttempt(_ event: NativeEvaluationJournalEvent) throws -> Data {
+        guard event.payload.kind == .attempt, let attempt = event.payload.attempt,
+              validAttempt(attempt), event.payload.assessment == nil, event.payload.challenge == nil else {
+            throw NativeEvaluationJournalError.invalidAttempt("Choose a recorded evaluation attempt.")
+        }
+        let payload = try encoder().encode(event.payload)
+        let hash = digest(sequence: event.sequence, eventID: event.id, previousHash: event.previousHash, payloadData: payload)
+        guard hash == event.eventHash else {
+            throw NativeEvaluationJournalError.corruptJournal("The selected record differs from its recorded hash.")
+        }
+        let packet = NativeEvaluationReviewPacket(sequence: event.sequence, eventID: event.id,
+            previousHash: event.previousHash, eventHash: hash, payloadJSON: String(decoding: payload, as: UTF8.self))
+        let result = try encoder().encode(packet)
+        guard result.count <= 2 * 1024 * 1024 else {
+            throw NativeEvaluationJournalError.invalidAttempt("The selected review exceeds the 2 MiB export limit.")
+        }
+        return result
     }
 
     private static func encoder() -> JSONEncoder {
@@ -418,4 +437,13 @@ actor NativeEvaluationJournal {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return encoder
     }
+}
+
+private struct NativeEvaluationReviewPacket: Encodable {
+    let format = "pocket-ai-lab.evaluation-attempt.v1"
+    let sequence: Int
+    let eventID: String
+    let previousHash: String
+    let eventHash: String
+    let payloadJSON: String
 }
