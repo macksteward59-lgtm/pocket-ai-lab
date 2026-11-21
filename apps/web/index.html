@@ -61,8 +61,25 @@
         <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
       </section>
       <section class="view secondary-view hidden" id="activity-view">
-        <div class="section-heading"><h1>Activity</h1><p>Review the OpenClaw draft for PR #245 alongside its original CI evidence.</p></div>
+        <div class="section-heading"><h1>Activity</h1><p>Review an iPhone evaluation or compare OpenClaw’s CI draft with its source.</p></div>
+        <form class="memory-form" id="native-review-form">
+          <h2>iPhone evaluation</h2>
+          <label for="native-review-file">Exported attempt (.json)</label>
+          <input id="native-review-file" type="file" accept=".json,application/json" required>
+          <label for="native-review-hash">Event SHA-256 copied from the app’s evaluation history</label>
+          <input id="native-review-hash" placeholder="64 hexadecimal characters" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+          <button class="secondary-button" type="submit">Check evaluation</button>
+          <p id="native-review-status" role="status"></p>
+          <div id="native-review-result" hidden>
+            <h3>Recorded attempt</h3>
+            <p class="memory-entry-content" id="native-review-metadata"></p>
+            <h3>Generated output</h3>
+            <p class="memory-entry-content" id="native-review-output"></p>
+            <button class="secondary-button" id="native-to-memory" type="button">Prepare an evaluation note</button>
+          </div>
+        </form>
         <div class="memory-form" id="review-panel">
+          <h2>OpenClaw CI review</h2>
           <p id="review-status" role="status">Loading the review…</p>
           <div id="review-details" hidden>
             <h2>Source evidence</h2>
@@ -82,5 +99,6 @@
     </main>
   </div>
   <script src="/app.js" defer></script>
+  <script src="/native-review.js" defer></script>
 </body>
 </html>

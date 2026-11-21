@@ -124,6 +124,46 @@ for (const engine of [chromium, webkit]) {
       assert.ok((await reopened.locator(".memory-entry").innerText()).includes(assessment));
       const after = (await (await fetch(server.url + "/api/memory")).json()).entries;
       assert.deepEqual(after, before);
+
+      // Exercise exactly the bytes Swift exported after reopening the journal.
+      const packet = Buffer.from(process.env.NATIVE_REVIEW_PACKET, "base64");
+      const expected = process.env.NATIVE_REVIEW_DIGEST;
+      assert.match(expected, /^[0-9a-f]{64}$/);
+      await openView(reopened, "activity");
+      const uploadNative = data => reopened.locator("#native-review-file").setInputFiles({
+        name: "native-attempt.json", mimeType: "application/json", buffer: data
+      });
+      const check = reopened.getByRole("button", { name: "Check evaluation" });
+      await uploadNative(packet);
+      await reopened.locator("#native-review-hash").fill("0".repeat(64));
+      await check.click();
+      await reopened.getByText("The file does not match the digest you supplied.").waitFor();
+      await reopened.locator("#native-review-hash").fill(expected);
+      const changed = JSON.parse(packet);
+      changed.payloadJSON = changed.payloadJSON.replace("café", "cafe");
+      await uploadNative(Buffer.from(JSON.stringify(changed)));
+      await check.click();
+      await reopened.getByText("The file does not match the digest you supplied.").waitFor();
+      await uploadNative(packet);
+      await check.click();
+      await reopened.locator("#native-review-result").waitFor();
+      assert.equal(await reopened.locator("#native-review-output").innerText(), "café\n茶");
+      assert.match(await reopened.locator("#native-review-metadata").innerText(), /unverifiedProvider/);
+      assert.equal((await (await fetch(server.url + "/api/memory")).json()).entries.length, 1);
+      await reopened.locator("#native-to-memory").click();
+      assert.equal(await reopened.locator("#memory-source").inputValue(), "urn:sha256:" + expected);
+      await reopened.locator("#memory-save").click();
+      await reopened.locator(".memory-entry").nth(1).waitFor();
+      await fresh.close();
+      await server.stop();
+      server = await startServer(directory);
+      const records = (await (await fetch(server.url + "/api/memory")).json()).entries;
+      assert.equal(records.length, 2);
+      assert.deepEqual(records.find(entry => entry.id === before[0].id), before[0]);
+      const native = records.find(entry => entry.id !== before[0].id);
+      assert.equal(native.provenance.verified, false);
+      assert.deepEqual(native.provenance.sourceRefs, ["urn:sha256:" + expected]);
+      assert.ok(native.content.includes("unicode-roundtrip"));
       assert.deepEqual(errors, []);
     });
 }

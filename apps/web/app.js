@@ -282,17 +282,22 @@ $("review-file").addEventListener("change", async event => {
 });
 $("review-to-memory").addEventListener("click", () => {
   if (!reviewSource || $("review-details").hidden) return;
+  prepareReviewNote("PR #245 CI evidence\n\n" + reviewSource.evidence +
+    "\n\nEvidence SHA-256: " + reviewSource.digest +
+    "\n\nOpenClaw draft (" + $("review-status").textContent + ")\n" + $("review-draft").textContent,
+    reviewSource.job, $("review-action-status"));
+});
+
+function prepareReviewNote(content, source, status) {
   if ($("memory-content").value.trim() || $("memory-source").value.trim()) {
-    $("review-action-status").textContent = "A note is already being edited in Memory. Save or clear it first.";
+    status.textContent = "A note is already being edited in Memory. Save or clear it first.";
     return;
   }
-  $("memory-content").value = "PR #245 CI evidence\n\n" + reviewSource.evidence +
-    "\n\nEvidence SHA-256: " + reviewSource.digest +
-    "\n\nOpenClaw draft (" + $("review-status").textContent + ")\n" + $("review-draft").textContent;
-  $("memory-source").value = reviewSource.job;
+  $("memory-content").value = content;
+  $("memory-source").value = source;
   $("memory-layer").value = "episodic";
   setView("memory");
   $("memory-content").focus();
-});
+}
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 health();
