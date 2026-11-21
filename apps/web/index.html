@@ -60,9 +60,45 @@
         <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
         <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
       </section>
-      <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
+      <section class="view secondary-view hidden" id="activity-view">
+        <div class="section-heading"><h1>Activity</h1><p>Review an iPhone evaluation or compare OpenClaw’s CI draft with its source.</p></div>
+        <form class="memory-form" id="native-review-form">
+          <h2>iPhone evaluation</h2>
+          <label for="native-review-file">Exported attempt (.json)</label>
+          <input id="native-review-file" type="file" accept=".json,application/json" required>
+          <label for="native-review-hash">Event SHA-256 copied from the app’s evaluation history</label>
+          <input id="native-review-hash" placeholder="64 hexadecimal characters" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+          <button class="secondary-button" type="submit">Check evaluation</button>
+          <p id="native-review-status" role="status"></p>
+          <div id="native-review-result" hidden>
+            <h3>Recorded attempt</h3>
+            <p class="memory-entry-content" id="native-review-metadata"></p>
+            <h3>Generated output</h3>
+            <p class="memory-entry-content" id="native-review-output"></p>
+            <button class="secondary-button" id="native-to-memory" type="button">Prepare an evaluation note</button>
+          </div>
+        </form>
+        <div class="memory-form" id="review-panel">
+          <h2>OpenClaw CI review</h2>
+          <p id="review-status" role="status">Loading the review…</p>
+          <div id="review-details" hidden>
+            <h2>Source evidence</h2>
+            <a id="review-job" target="_blank" rel="noreferrer"></a>
+            <p class="memory-entry-content" id="review-evidence"></p>
+            <h2>Model draft</h2>
+            <p class="memory-entry-content" id="review-draft"></p>
+            <p id="review-comparison"></p>
+            <button type="button" class="secondary-button" id="review-to-memory">Prepare a memory note</button>
+          </div>
+          <label for="review-file">Open another PR #245 review from this device</label>
+          <input id="review-file" type="file" accept=".json,application/json" disabled>
+          <button type="button" class="secondary-button" id="review-reset">Load bundled review</button>
+          <p id="review-action-status" role="status"></p>
+        </div>
+      </section>
     </main>
   </div>
   <script src="/app.js" defer></script>
+  <script src="/native-review.js" defer></script>
 </body>
 </html>

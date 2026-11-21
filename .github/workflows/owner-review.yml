@@ -1,0 +1,81 @@
+name: Owner review and recovery
+on:
+  push:
+    branches: [codex/owner-review-integrated]
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/web/**
+      - tools/openclaw-review/**
+      - tools/review-browser/**
+      - tools/evaluation-review/**
+      - ios/PocketAILab/NativeEvaluationJournal.swift
+      - .github/workflows/owner-review.yml
+permissions:
+  contents: read
+jobs:
+  native-record:
+    if: github.event.repository.private == false
+    runs-on: macos-15-intel
+    timeout-minutes: 6
+    outputs:
+      packet: ${{ steps.export.outputs.packet }}
+      digest: ${{ steps.export.outputs.digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - id: export
+        name: Export a synthetic attempt with the native journal
+        run: |
+          set -euo pipefail
+          sample=$(mktemp -d)
+          trap 'rm -rf "$sample"' EXIT
+          swiftc -parse-as-library ios/PocketAILab/NativeEvaluationJournal.swift tools/evaluation-review/Smoke.swift -o "$sample/smoke"
+          digest=$("$sample/smoke" "$sample")
+          python3 tools/evaluation-review/verify.py "$sample/attempt.json" --expected-event-hash "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          python3 -c 'import base64, pathlib, sys; print("packet=" + base64.b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode("ascii"))' "$sample/attempt.json" >> "$GITHUB_OUTPUT"
+  local-model:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      packet: ${{ steps.review.outputs.packet }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.22.3'
+      - id: review
+        name: Run OpenClaw on the pinned local model and evidence
+        run: |
+          set -euo pipefail
+          result="$RUNNER_TEMP/ci-review.json"
+          tools/openclaw-review/run-linux.sh --activity-record > "$result"
+          python3 -c 'import base64, pathlib, sys; print("packet=" + base64.b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode("ascii"))' "$result" >> "$GITHUB_OUTPUT"
+  browsers:
+    needs: [native-record, local-model]
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npm run test:web
+      - working-directory: tools/review-browser
+        env:
+          OPENCLAW_REVIEW_PACKET: ${{ needs.local-model.outputs.packet }}
+          NATIVE_REVIEW_PACKET: ${{ needs.native-record.outputs.packet }}
+          NATIVE_REVIEW_DIGEST: ${{ needs.native-record.outputs.digest }}
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/playwright install --with-deps chromium webkit
+          node --test review.mjs
