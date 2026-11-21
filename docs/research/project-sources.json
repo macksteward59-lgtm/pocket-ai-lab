@@ -1,0 +1,79 @@
+{
+  "project": "Pocket AI Lab",
+  "reviewed": "2026-11-21",
+  "scope": "Device testing, hosted inference, source provenance and evidence-grounded answering",
+  "sources": [
+    {
+      "id": "APPLE-DEVICE",
+      "publisher": "Apple",
+      "title": "Running your app on simulated or physical devices",
+      "url": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
+      "locator": "Overview; Set up code signing for physical devices",
+      "finding": "Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured.",
+      "projectUse": "Collect the task export, restart outcome and model timing from the owner's iPhone Air. Tag simulator and Linux results separately."
+    },
+    {
+      "id": "APPLE-TEAM",
+      "publisher": "Apple",
+      "title": "Developer account overview",
+      "url": "https://developer.apple.com/help/account/basics/about-your-developer-account/",
+      "locator": "Enable a personal team in Xcode",
+      "finding": "A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance.",
+      "projectUse": "Try the free Personal Team route for a device build. A paired Mac with Xcode and the physical phone are dependencies for this route."
+    },
+    {
+      "id": "CF-BIND",
+      "publisher": "Cloudflare",
+      "title": "Workers Bindings",
+      "url": "https://developers.cloudflare.com/workers-ai/configuration/bindings/",
+      "locator": "Workers; async env.AI.run()",
+      "finding": "A Worker can invoke a hosted model through an AI binding. The run method takes the model identifier and an input object.",
+      "projectUse": "For a hosted smoke test, retain the requested model, attempt identifier, response and error status. The existing note round trip establishes storage only."
+    },
+    {
+      "id": "CF-QUOTA",
+      "publisher": "Cloudflare",
+      "title": "Workers AI pricing",
+      "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "locator": "Overview; model pricing",
+      "finding": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation.",
+      "projectUse": "Check the owner's available balance and plan before a hosted run. Count model usage separately from HTTP requests and stop at the available free allocation."
+    },
+    {
+      "id": "W3C-PROV",
+      "publisher": "W3C",
+      "title": "PROV-O: The PROV Ontology",
+      "url": "https://www.w3.org/TR/prov-o/",
+      "locator": "Expanded terms: hadPrimarySource and wasRevisionOf",
+      "finding": "PROV-O distinguishes a link to primary evidence from a link to an earlier revision of an entity.",
+      "projectUse": "Keep the upstream URL, retrieval date and revision lineage when a research note changes. The original note remains attributable."
+    },
+    {
+      "id": "W3C-QUOTE",
+      "publisher": "W3C",
+      "title": "Web Annotation Data Model",
+      "url": "https://www.w3.org/TR/annotation-model/",
+      "locator": "4.2.4 Text Quote Selector",
+      "finding": "A text quote selector identifies a passage using exact text. Context immediately before and after the passage can disambiguate repeated wording.",
+      "projectUse": "Store a heading or short passage locator with each claim. Check it again if the publisher revises the page."
+    },
+    {
+      "id": "ACL-CITE",
+      "publisher": "Gao et al., ACL Anthology",
+      "title": "Enabling Large Language Models to Generate Text with Citations",
+      "url": "https://aclanthology.org/2023.emnlp-main.398/",
+      "locator": "Abstract; ALCE evaluation",
+      "finding": "ALCE evaluates answers with citations across three dimensions: fluency, correctness and citation quality.",
+      "projectUse": "Score the answer and its supporting source separately. A readable answer can still cite the wrong document."
+    },
+    {
+      "id": "ACL-ABSTAIN",
+      "publisher": "Rajpurkar, Jia and Liang, ACL Anthology",
+      "title": "Know What You Don’t Know: Unanswerable Questions for SQuAD",
+      "url": "https://aclanthology.org/P18-2124/",
+      "locator": "Abstract; unanswerable questions",
+      "finding": "The authors include plausible questions that cannot be answered from the supplied passage. Success requires recognizing when the passage offers insufficient evidence.",
+      "projectUse": "Withhold the supporting document on paired examples and score an explicit insufficient-evidence answer. Report false answers when evidence is absent."
+    }
+  ]
+}
