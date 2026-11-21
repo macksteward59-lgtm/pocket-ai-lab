@@ -4851,3 +4851,7 @@ The owner authenticated the one-time deployment of [PR #245](https://github.com/
 ## 2026-11-21 - Native ChatGPT project handoff verified
 
 A fresh Pocket AI Lab Work chat used the owner-private [Pocket AI Lab Handoff](https://chatgpt.com/plugins/plugin_asdk_app_sites_ae9fb2a80eac81918eae62f16f7cc1df) app to read the project note, submit an identical save against revision 1, and read it back. All three operations returned revision 1 and matching text for the [shared handoff](./CLOUD_AGENT_HANDOFF.md). The app uses the existing preview Worker. The chat integration passed after correcting its redirect handling in source revision `68342f6ccdfe72bc3cfa775d514fae23c8b6abf4`.
+
+## 2026-11-21 - Competitive bug bounty research scope restored to both handoffs
+
+The owner clarified the offensive red-team purpose of the bug bounty division. The November 14 discussion names experienced human hunters as the benchmark and prioritizes business-logic research. Section 13, Gate 9, and PAL-13-001 through PAL-13-015 supply the program-scope and evidence requirements. ChatGPT saved the revised [shared project brief](./CLOUD_AGENT_HANDOFF.md) through the private handoff app and read back revision 2 verbatim. The handoff identifies comparison measures as proposals pending benchmark evidence.
