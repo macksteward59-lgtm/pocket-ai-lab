@@ -66,3 +66,19 @@ The `journalFor()` routine records ordinal, previous hash, immutable JSON payloa
 - No T0–T4 module permissions, original M01–M42 descriptions or RLS v3.12 authority are inferred. Recover primary sources before changing those trust boundaries.
 - No code in existing product runtime files is modified. Tests are for the new tool directory only; a passed test does not imply systemwide CI success.
 - All synthetic paths and user identifiers are invented for testing and do not identify real users.
+
+
+## Legitimate privileged auditing — false-positive negative control (v1 follow-up)
+
+The original enforced/intentionally-flawed two-tenant seven-request baseline is unchanged. A *separate*, deliberately legitimate privileged read workflow now models the kind of context-sensitive exception a security agent must **not** automatically call a vulnerability. The synthetic `auditor` actor may read both alpha and beta invoices via an explicit `/api/audit/invoices/:invoiceId` **read-only** endpoint, in *both* fixture modes. Ordinary tenant actors cannot use this endpoint. The auditor cannot use tenant-specific API routes and cannot mutate invoices via `/approve`. This is a toy fixture using fake headers, not a production identity system or permission grant.
+
+The new independently specified `assessAuditSequence` oracle checks five actual loopback HTTP responses, including read-only controls and state readback. It marks a matching admin-audit sequence as `legitimate-admin-control-passed` with `confirmedFinding:false`; malformed or inconsistent observations are inconclusive, not automatically safe. A false-positive study should present the admin behavior alongside deliberately flawed tenant behavior **without giving the model the answer**, and independently score whether a proposed agent flags only the actual cross-tenant authorization defect. No agent/model inference has been run yet.
+
+Run from the repository root:
+
+```sh
+node --test tools/security-fixtures/tenant-workflow-v1/*.test.mjs
+node tools/security-fixtures/tenant-workflow-v1/admin-control.mjs
+```
+
+The audit-control demo makes **5 local loopback requests per fixture mode** (10 total). It never contacts public targets or uses third-party screenshots. Both modes preserve beta's invoice as pending in the audit-only sequence. A full-model benchmark requires frozen prompts, unseen trials and independent scoring before citing false-positive rates; passing this deterministic oracle is not a claim of general AI security capability.
