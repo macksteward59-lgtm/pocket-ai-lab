@@ -134,7 +134,7 @@ final class LocalChatModel: ObservableObject {
         }
     }
 
-    func runSelfEvaluation() async {
+    func runSelfEvaluation(sourceCheck: Bool = false) async {
         guard !isBusy else { return }
         guard let runtime, let lease, let modelURL else {
             evaluationStatus = "Load a catalog-selected local model before running self-evaluation."
@@ -147,17 +147,16 @@ final class LocalChatModel: ObservableObject {
             let runner = try NativeEvaluationRunner(
                 runtime: runtime, lease: lease, journal: journal, modelFileURL: modelURL
             )
-            for evaluationCase in NativeEvaluationSuite.cases {
+            let cases = try sourceCheck ? PassageCheckSuite.bundledCases() : NativeEvaluationSuite.cases
+            for evaluationCase in cases {
                 _ = try await runner.run(evaluationCase)
             }
             evaluationEvents = try await journal.events()
-            let summary = currentEvaluationSummary
-            let retainedAttempts = evaluationAttempts.filter {
-                $0.modelID == selectedModelID &&
-                $0.suiteID == NativeEvaluationSuite.id &&
-                $0.suiteVersion == NativeEvaluationSuite.version
-            }.count
-            evaluationStatus = "\(summary.displayText) · \(retainedAttempts) retained attempts."
+            let retained = evaluationAttempts.filter {
+                $0.modelID == selectedModelID && $0.suiteID == cases.first?.suiteID && $0.suiteVersion == cases.first?.suiteVersion
+            }
+            let summary = NativeEvaluationScoreSummary(attempts: retained)
+            evaluationStatus = "\(summary.displayText) · \(retained.count) retained attempts."
             status = "Self-evaluation completed through the shared ModelPool lease and inference scheduler. Runtime trust remains unverified."
         } catch {
             if let journal = evaluationJournal, let events = try? await journal.events() {
@@ -933,6 +932,11 @@ struct LocalChatView: View {
                     HStack {
                         Button("Run self-evaluation") { Task { await model.runSelfEvaluation() } }
                             .buttonStyle(.borderedProminent)
+                            .disabled(!model.isModelLoaded || model.isBusy)
+                    }
+                    HStack {
+                        Button("Check source evidence") { Task { await model.runSelfEvaluation(sourceCheck: true) } }
+                            .buttonStyle(.bordered)
                             .disabled(!model.isModelLoaded || model.isBusy)
                         Button("Evaluation history") { showEvaluationHistory = true }
                             .buttonStyle(.bordered)

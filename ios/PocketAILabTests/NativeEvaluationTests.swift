@@ -387,7 +387,6 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertTrue(model.isModelLoaded, model.status)
 
         await model.runSelfEvaluation()
-        await model.unloadModel()
 
         let events = try await journal.events()
         let attempts = events.compactMap(\.payload.attempt)
@@ -398,6 +397,20 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertTrue(attempts.allSatisfy { $0.providerKind == .unverifiedProvider })
         XCTAssertTrue(attempts.allSatisfy { !$0.nativeExecutionObserved && !$0.runtimeTrustVerified })
         XCTAssertTrue(model.evaluationStatus.contains("\(NativeEvaluationSuite.cases.count) retained attempts"))
+
+        let frozen = try PassageCheckSuite.bundledCases()
+        XCTAssertEqual(frozen.count, 6)
+        await model.runSelfEvaluation(sourceCheck: true)
+        await model.unloadModel()
+        let reopened = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("evaluation.ndjson"))
+        let durable = try await reopened.events().compactMap(\.payload.attempt)
+        let passage = durable.filter { $0.suiteID == "pocket-passage-evidence" }
+        XCTAssertEqual(passage.map(\.caseID), frozen.map(\.caseID))
+        XCTAssertEqual(passage.map(\.prompt), frozen.map(\.prompt))
+        XCTAssertEqual(passage.map(\.expectedOutcome), frozen.map(\.expectedOutcome))
+        XCTAssertTrue(passage.allSatisfy { $0.deterministicPassed == false && !$0.nativeExecutionObserved })
+        XCTAssertEqual(durable.count, attempts.count + passage.count)
+
     }
 
     func testRuntimeOwnedProviderIdentityDistinguishesLlamaCppFromTestEngine() async throws {

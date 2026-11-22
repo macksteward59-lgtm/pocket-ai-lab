@@ -2,7 +2,7 @@ import hashlib
 import json
 import unittest
 
-from verify import verify
+from verify import PASSAGE_SUITE, verify
 
 
 class ReviewTests(unittest.TestCase):
@@ -58,6 +58,26 @@ class ReviewTests(unittest.TestCase):
                 else:
                     with self.assertRaises(ValueError):
                         verify(packet, digest, expected)
+
+    def test_passage_scoring_requires_the_correct_citation_and_exact_case(self):
+        suite = json.loads(PASSAGE_SUITE.read_text())
+        case = suite["cases"][0]
+        attempt = dict(prompt=case["prompt"], output=case["expected"], status="completed",
+                       caseID=case["id"], suiteID=suite["suiteID"], suiteVersion=suite["version"],
+                       scoringRule="exactMatch", maxTokens=suite["maxTokens"], deterministicPassed=True)
+        def grade():
+            payload = json.dumps({"kind": "attempt", "attempt": attempt})
+            digest = hashlib.sha256(f"1\n{self.record['eventID']}\nGENESIS\n{payload}".encode()).hexdigest()
+            packet = json.dumps(dict(self.record, payloadJSON=payload, eventHash=digest)).encode()
+            return verify(packet, digest, passage_case=case["id"])["passageCheck"]
+        self.assertTrue(grade()["passed"])
+        attempt["output"] = case["expected"].split(" [")[0]
+        self.assertFalse(grade()["passed"])
+        attempt.update(output=case["expected"], status="partial")
+        self.assertFalse(grade()["passed"])
+        attempt.update(status="completed", suiteVersion="wrong")
+        with self.assertRaisesRegex(ValueError, "frozen"):
+            grade()
 
     def test_duplicate_json_keys_are_rejected(self):
         duplicated = json.dumps(self.record).replace('"sequence": 1', '"sequence": 2, "sequence": 1')

@@ -86,3 +86,17 @@ python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$e
 ```
 
 The checker requires a completed attempt and compares the recorded prompt and output exactly, including whitespace. Suite 1.1.0 also uses a literal comparison in its four exact-answer cases. Earlier attempts retain their original suite version and score. Record the physical device and observed run separately.
+
+### Compare the phone and server on the same passage check
+
+In **Local AI**, load an imported GGUF and tap **Check source evidence**. Six bundled questions exercise two published facts, two records with different synthetic balances and two questions whose evidence is absent. The expected response for a supported claim includes the passage label. Both implementations use the versioned prompts and expected outputs in [PassageChecks.json](PocketAILab/PassageChecks.json).
+
+For a comparable model, use Qwen2.5-1.5B-Instruct Q4_K_M, SHA-256 `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e`. The server uses llama.cpp's chat endpoint. Native uses the currently loaded app runtime and its input formatting. Record the actual model hash and runtime on each side. The accepted research target for this fixed check is six exact answers, including both abstentions.
+
+On the physical iPhone, run offline after importing and loading the model. In **Evaluation history**, record the case ID and event digest from an attempt. Terminate the app, relaunch it and export that same saved attempt. The independent reader checks both the event digest and the answer against the pinned suite, for example:
+
+```sh
+python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$event_hash" --passage-case account-corrected
+```
+
+Repeat for the other cases and retain failures. Separately record the device model, iOS/app build, offline state and any observed interruptions or thermal limits. The file digest alone cannot attest to hardware. The server reference can be reproduced on Linux x86_64 with `bash tools/openclaw-review/run-linux.sh --passage-results passage-server.json`. It writes raw outputs, model identity, runtime version and per-case scores. Inspect the artifact from the **Source passage server proof** workflow for the hosted run.

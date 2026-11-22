@@ -19,7 +19,10 @@ def unique_fields(pairs):
     return result
 
 
-def verify(data, expected_hash, expected_answer=None):
+PASSAGE_SUITE = Path(__file__).resolve().parents[2] / "ios/PocketAILab/PassageChecks.json"
+
+
+def verify(data, expected_hash, expected_answer=None, passage_case=None):
     if len(data) > MAX_BYTES or not SHA256.fullmatch(expected_hash):
         raise ValueError("Invalid file size or expected SHA-256")
     record = json.loads(data.decode("utf-8"), object_pairs_hook=unique_fields)
@@ -49,6 +52,19 @@ def verify(data, expected_hash, expected_answer=None):
         if attempt.get("prompt") != prompt or attempt.get("output") != output:
             raise ValueError("The recorded prompt or output differs from the supplied answer check")
         result["completedAnswerMatches"] = True
+    if passage_case is not None:
+        suite = json.loads(PASSAGE_SUITE.read_text(encoding="utf-8"))
+        case = next((item for item in suite["cases"] if item["id"] == passage_case), None)
+        attempt = decoded["attempt"]
+        if not case or any(attempt.get(key) != value for key, value in {
+                "suiteID": suite["suiteID"], "suiteVersion": suite["version"], "caseID": passage_case,
+                "prompt": case["prompt"], "maxTokens": suite["maxTokens"], "scoringRule": "exactMatch"}.items()):
+            raise ValueError("The event does not match the frozen passage case")
+        complete = attempt.get("status") == "completed" and attempt.get("errorMessage") is None
+        result["passageCheck"] = {"caseID": passage_case, "complete": complete,
+            "passed": complete and attempt.get("output") == case["expected"],
+            "expected": case["expected"], "recordedOutput": attempt.get("output"),
+            "sources": case["sources"], "hardwareVerified": False}
     return result
 
 
@@ -56,12 +72,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file", type=Path)
     parser.add_argument("--expected-event-hash", required=True)
-    parser.add_argument("--expect-answer", nargs=2, metavar=("PROMPT", "OUTPUT"),
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--passage-case", help="Independently score the named case from the bundled passage suite")
+    selection.add_argument("--expect-answer", nargs=2, metavar=("PROMPT", "OUTPUT"),
                         help="Also check a completed attempt against the supplied literal prompt and output")
     args = parser.parse_args()
     try:
         with args.file.open("rb") as stream:
-            result = verify(stream.read(MAX_BYTES + 1), args.expected_event_hash, args.expect_answer)
+            result = verify(stream.read(MAX_BYTES + 1), args.expected_event_hash, args.expect_answer, args.passage_case)
         print(json.dumps(result))
+        if args.passage_case and not result["passageCheck"]["passed"]:
+            parser.exit(1, "The verified event did not pass the passage check.\n")
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(1, f"Review failed: {error}\n")

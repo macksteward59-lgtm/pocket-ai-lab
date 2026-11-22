@@ -15,6 +15,7 @@ on:
       - codex/recipient-format-calibration-20261120
       - codex/native-cloud-analysis-20261120
       - codex/memory-source-preservation
+      - codex/source-register-handoff
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
