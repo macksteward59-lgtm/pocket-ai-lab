@@ -45,3 +45,29 @@ The following are byte-for-byte copies of the GitHub Actions ZIP files. They con
 | [Source CLI results](scoped-cli.zip) | `287c044c54e224539393354bf64b5a08a58653ace7da92fdd191b511a9303672` |
 
 The three changes are draft PRs. The physical iPhone Air still needs a signed offline run and independently verified export. The earlier [unsigned kit and simulator export](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/9b404b75d9bf7d20483818034f355e03a08e963a/coordination/evidence/rls-v312-2026-11-22/V71-postgres.md#unsigned-iphone-kit-from-the-apple-hosted-build) document the current device boundary. The Cloudflare note for this research is `1f089190-19f3-4d40-b700-94afe5c432a8`.
+
+## November 22 · Can the selected source answer the question?
+
+[Draft #284](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/284) tests questions where both members of each pair retrieve the same public document. One asks for a documented fact. The other asks for a similar detail the document omits. The first [six pairs](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/5ff16283ec397f40aa98d181168d07b8edecbf96/tools/source-answers/support-cases.json) were committed before the first inference. Four [additional pairs](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/6e52f289b25940dc3806f90c229bcc9b20e1c9bd/tools/source-answers/support-transfer-cases.json) were committed before the full-sentence change. The design follows the answerable/unanswerable distinction in [Rajpurkar et al.](https://aclanthology.org/P18-2124/).
+
+Each table entry gives correct documented answers followed by correct abstentions. The baseline in each row uses that run's original proposals. A documented answer must include every required phrase in the correct source and an omitted fact must return `UNKNOWN`. Independent rescoring checked source identity, exact quotes, raw replies, distinct request IDs, verdicts, model digest and all 44 per-case comparisons across the four rows. The fourth row contains eight additional questions. The others reused the original twelve.
+
+| Hosted comparison on Linux, pinned Qwen2.5-1.5B | Baseline | With assessment |
+|---|---|---|
+| [Short quotes](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45044152145), six pairs | 2/6 and 6/6 | 2/6 and 6/6 |
+| [Short quotes, repeat](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45044307123), six pairs | 1/6 and 6/6 | 1/6 and 6/6 |
+| [Complete sentences](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45044378906), original six pairs | 2/6 and 4/6 | 4/6 and 5/6 |
+| Same complete-sentence run, four additional pairs | 1/4 and 4/4 | 2/4 and 4/4 |
+
+On the final run, the complete-sentence approach scored 15/20 overall versus 11/20 for its paired baseline. It recovered missing details on the model arguments, text selector and ALCE dimensions. It wrongly accepted the ALCE dimensions as an answer about their weights and rejected the published neuron allocation. The target was all 20. A same-model judgment is insufficient for independent verification. Initial replies also varied on different runner invocations. These counts characterize these test questions and this pinned Linux model. Raw output from every comparison is preserved below.
+
+[Draft #285](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/285), head `ff9aa58a056e92a9ff14be55939cf76db6964c76`, adds a separate model-free lookup for 14 authored questions across all eight bundled public sources. `--list-reviewed` shows the canonical questions for a source. `--reviewed-only` returns the bound excerpt for a listed question and `UNKNOWN` for an unlisted question. A change to the source ID, URL or summary invalidates the prior binding. The [30 actual CLI responses](reviewed-question-cli.json) include 14/14 listed questions with exact excerpts and URLs, and 16/16 unlisted questions with explicit abstentions. This is an exact catalog lookup. It does not measure paraphrase recognition or free-form QA. The local checks passed all 20 Python/SQLite and five web source tests. [Hosted CLI checks](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45044789591) exercised the catalog without a model.
+
+| Retained file | SHA-256 |
+|---|---|
+| [Short-quote run](short-proposals.zip) | `45110190c38ebdd0ad3546046e623f66bfa519ce34f278cc426b02e21c62795b` |
+| [Short-quote repeat](short-proposals-repeat.zip) | `edeb52bd48704f326abca5f787dc96f0ce2784375c03ac910a39cab47a34795c` |
+| [Full-sentence original and transfer run](sentence-assessment.zip) | `dfeec324f66b09d9f7a1d45ed9ab025d85f9ede32eea2a7cc56793701e6d3d78` |
+| [Reviewed catalog CLI output](reviewed-question-cli.json) | `cfa03f7efce9e0ff5a1a23029440e6b760b48c9e5b5ff93d19d1c9d9468edbc7` |
+
+The application integration gates remain open. These checks exercised the source-answer command on a host. The iPhone Air still needs a signed offline run and an independently verified export.
