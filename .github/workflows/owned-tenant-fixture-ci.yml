@@ -30,6 +30,8 @@ jobs:
         with:
           node-version: '22.16.0'
       - name: Run synthetic fixture and negative controls
-        run: node --test tools/security-fixtures/tenant-workflow-v1/run.test.mjs
+        run: node --test tools/security-fixtures/tenant-workflow-v1/*.test.mjs
       - name: Run bounded loopback demonstration
         run: node tools/security-fixtures/tenant-workflow-v1/run.mjs
+      - name: Run intended admin privilege negative control
+        run: node tools/security-fixtures/tenant-workflow-v1/admin-control.mjs
