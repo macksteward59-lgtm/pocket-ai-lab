@@ -16,22 +16,30 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/openclaw-review"))
 from review import MODEL, MODEL_SHA256, wait_for_model
+from extractive import passage_grammar
 
 SUITE = ROOT / "ios/PocketAILab/PassageChecks.json"
 
 
-def run(gguf, executable, output):
+def run(gguf, executable, output, *, suite_path=SUITE, grammar=None, extractive=False):
     with gguf.open("rb") as model:
         if hashlib.file_digest(model, "sha256").hexdigest() != MODEL_SHA256:
             raise ValueError("Model differs from the pinned Qwen artifact")
     executable = executable.resolve(strict=True)
-    suite_bytes = SUITE.read_bytes()
+    suite_bytes = suite_path.read_bytes()
     suite = json.loads(suite_bytes)
     result = dict(suiteID=suite["suiteID"], suiteVersion=suite["version"],
                   suiteSHA256=hashlib.sha256(suite_bytes).hexdigest(), model=MODEL,
                   modelSHA256=MODEL_SHA256, host=platform.system() + "/" + platform.machine(),
                   runtimeVersion=subprocess.check_output([executable, "--version"], stderr=subprocess.STDOUT, text=True).strip(),
                   provider="llama.cpp /v1/chat/completions", cases=[])
+    if grammar is not None and extractive:
+        raise ValueError("Choose one decoding constraint")
+    result["generationFormat"] = "unrestricted" if grammar is None else "citation-grammar"
+    if extractive:
+        result["generationFormat"] = "quoted-span"
+    if grammar is not None:
+        result["grammarSHA256"] = hashlib.sha256(grammar.encode()).hexdigest()
     # Reserve a new destination once. Each checkpoint replaces only this run's file.
     with output.open("x", encoding="utf-8") as initial:
         json.dump(result, initial)
@@ -57,11 +65,16 @@ def run(gguf, executable, output):
             for case in suite["cases"]:
                 body = dict(model=MODEL, messages=[{"role":"user","content":case["prompt"]}],
                             temperature=0, seed=17, max_tokens=suite["maxTokens"], stream=False)
+                constraint = passage_grammar(case["prompt"]) if extractive else grammar
+                if constraint is not None:
+                    body["grammar"] = constraint
                 request = urllib.request.Request(f"http://127.0.0.1:{port}/v1/chat/completions",
                     data=json.dumps(body).encode(), headers={"Content-Type":"application/json","Authorization":"Bearer " + key})
                 start = time.monotonic()
                 row = dict(caseID=case["id"], promptSHA256=hashlib.sha256(case["prompt"].encode()).hexdigest(),
                            expected=case["expected"], passed=False)
+                if constraint is not None:
+                    row["grammarSHA256"] = hashlib.sha256(constraint.encode()).hexdigest()
                 try:
                     with client.open(request, timeout=90) as response:
                         reply = json.load(response)
