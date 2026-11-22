@@ -1,0 +1,89 @@
+[
+  {
+    "id": "quota-given",
+    "sourceID": "CF-QUOTA",
+    "question": "How many neurons are included in the published free daily allocation?",
+    "requires": [
+      "10,000 neurons"
+    ]
+  },
+  {
+    "id": "quota-absent",
+    "sourceID": "CF-QUOTA",
+    "question": "How many neurons are included in the published free allocation per individual request?",
+    "requires": []
+  },
+  {
+    "id": "profiles-given",
+    "sourceID": "APPLE-TEAM",
+    "question": "How long do Personal Team provisioning profiles last after issuance?",
+    "requires": [
+      "seven days"
+    ]
+  },
+  {
+    "id": "profiles-absent",
+    "sourceID": "APPLE-TEAM",
+    "question": "How long before expiry does Xcode notify a Personal Team about provisioning profiles?",
+    "requires": []
+  },
+  {
+    "id": "binding-given",
+    "sourceID": "CF-BIND",
+    "question": "What two arguments does the run method take?",
+    "requires": [
+      "model identifier",
+      "input object"
+    ]
+  },
+  {
+    "id": "binding-absent",
+    "sourceID": "CF-BIND",
+    "question": "What is the maximum permitted size of the input object for the run method?",
+    "requires": []
+  },
+  {
+    "id": "hardware-given",
+    "sourceID": "APPLE-DEVICE",
+    "question": "What must be configured before Xcode can launch the app on a paired physical device?",
+    "requires": [
+      "signing"
+    ]
+  },
+  {
+    "id": "hardware-absent",
+    "sourceID": "APPLE-DEVICE",
+    "question": "What minimum Xcode version can launch the app on a paired physical device?",
+    "requires": []
+  },
+  {
+    "id": "selector-given",
+    "sourceID": "W3C-QUOTE",
+    "question": "What does a text quote selector use to identify a passage?",
+    "requires": [
+      "exact text"
+    ]
+  },
+  {
+    "id": "selector-absent",
+    "sourceID": "W3C-QUOTE",
+    "question": "How many characters before the passage must a text quote selector store?",
+    "requires": []
+  },
+  {
+    "id": "citation-given",
+    "sourceID": "ACL-CITE",
+    "question": "What three dimensions does ALCE use to evaluate answers with citations?",
+    "requires": [
+      "fluency",
+      "correctness",
+      "citation quality"
+    ]
+  },
+  {
+    "id": "citation-absent",
+    "sourceID": "ACL-CITE",
+    "question": "How does ALCE weight the three dimensions when evaluating answers with citations?",
+    "requires": []
+  }
+]
