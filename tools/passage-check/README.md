@@ -11,3 +11,16 @@ Each suite contains six questions. The first is shared with the iPhone. The seco
 | Quoted span | Up to eight consecutive words extracted from one supplied passage and its matching label, or UNKNOWN |
 
 The last mode can select the wrong phrase or an irrelevant passage. The grader requires the expected answer and the expected citation, and also grades refusals. Use this mode only for extractive questions. Compute broader research quality separately. The native application currently uses its ordinary model output.
+
+
+## Compare a second server model
+
+With the same b12608 Linux runtime, use a separate directory for the publisher's [Qwen2.5-3B-Instruct Q4_K_M file](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/blob/7dabda4d13d513e3e842b20f0d435c732f172cbe/qwen2.5-3b-instruct-q4_k_m.gguf). The runner verifies its SHA-256 before starting. On the same host run the following command with the downloaded files. Each report records which model served the request.
+
+```bash
+python3 tools/passage-check/compare.py --model qwen2.5-3b-instruct-q4_k_m \
+  --gguf /path/to/qwen2.5-3b-instruct-q4_k_m.gguf --llama-server /path/to/llama-server \
+  --output-dir /tmp/pocket-study-3b
+```
+
+This comparison uses CPU inference. Its timing and memory use cannot establish that the 3B model fits an iPhone Air. The GitHub job uses the 1.5B reference by default.

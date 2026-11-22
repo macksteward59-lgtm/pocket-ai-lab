@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from server import SUITE, run
+from server import MODEL, MODEL_PINS, SUITE, run
 
 HERE = Path(__file__).resolve().parent
 
@@ -16,7 +16,7 @@ def contains_cited_value(row):
             and re.search(r"(?<![\w,])" + quote + r"(?![\w,])", row["output"]) is not None)
 
 
-def compare(gguf, executable, destination):
+def compare(gguf, executable, destination, model_id=MODEL):
     grammar = (HERE / "citation.gbnf").read_text(encoding="utf-8")
     destination.mkdir(parents=True, exist_ok=False)
     scores = []
@@ -28,7 +28,7 @@ def compare(gguf, executable, destination):
             report = destination / f"{suite['suiteID']}-{mode}.json"
             observed = run(gguf, executable, report, suite_path=path,
                            grammar=grammar if mode == "citation-grammar" else None,
-                           extractive=mode == "quoted-span")
+                           extractive=mode == "quoted-span", model_id=model_id)
             rows = observed["cases"]
             if [row["caseID"] for row in rows] != case_ids:
                 raise ValueError(f"Incomplete case list in {report.name}")
@@ -54,5 +54,6 @@ if __name__ == "__main__":
     parser.add_argument("--gguf", type=Path, required=True)
     parser.add_argument("--llama-server", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--model", choices=MODEL_PINS, default=MODEL)
     arguments = parser.parse_args()
-    print(json.dumps(compare(arguments.gguf, arguments.llama_server, arguments.output_dir), indent=2))
+    print(json.dumps(compare(arguments.gguf, arguments.llama_server, arguments.output_dir, arguments.model), indent=2))

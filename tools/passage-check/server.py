@@ -21,16 +21,23 @@ from extractive import passage_grammar
 SUITE = ROOT / "ios/PocketAILab/PassageChecks.json"
 
 
-def run(gguf, executable, output, *, suite_path=SUITE, grammar=None, extractive=False):
+MODEL_PINS = {
+    MODEL: MODEL_SHA256,
+    "qwen2.5-3b-instruct-q4_k_m": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+}
+
+
+def run(gguf, executable, output, *, suite_path=SUITE, grammar=None, extractive=False, model_id=MODEL):
+    model_sha = MODEL_PINS[model_id]
     with gguf.open("rb") as model:
-        if hashlib.file_digest(model, "sha256").hexdigest() != MODEL_SHA256:
+        if hashlib.file_digest(model, "sha256").hexdigest() != model_sha:
             raise ValueError("Model differs from the pinned Qwen artifact")
     executable = executable.resolve(strict=True)
     suite_bytes = suite_path.read_bytes()
     suite = json.loads(suite_bytes)
     result = dict(suiteID=suite["suiteID"], suiteVersion=suite["version"],
-                  suiteSHA256=hashlib.sha256(suite_bytes).hexdigest(), model=MODEL,
-                  modelSHA256=MODEL_SHA256, host=platform.system() + "/" + platform.machine(),
+                  suiteSHA256=hashlib.sha256(suite_bytes).hexdigest(), model=model_id,
+                  modelSHA256=model_sha, host=platform.system() + "/" + platform.machine(),
                   runtimeVersion=subprocess.check_output([executable, "--version"], stderr=subprocess.STDOUT, text=True).strip(),
                   provider="llama.cpp /v1/chat/completions", cases=[])
     if grammar is not None and extractive:
@@ -55,15 +62,15 @@ def run(gguf, executable, output, *, suite_path=SUITE, grammar=None, extractive=
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
-        cmd = [executable, "--model", gguf.resolve(), "--alias", MODEL, "--host", "127.0.0.1",
+        cmd = [executable, "--model", gguf.resolve(), "--alias", model_id, "--host", "127.0.0.1",
                "--port", str(port), "--api-key-file", key_file, "--ctx-size", "2048",
                "--threads", "4", "--parallel", "1", "-ngl", "0", "--no-warmup"]
         server = subprocess.Popen(cmd, stdout=sys.stderr, stderr=sys.stderr)
         try:
-            wait_for_model(server, port, key)
+            wait_for_model(server, port, key, model_id)
             client = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             for case in suite["cases"]:
-                body = dict(model=MODEL, messages=[{"role":"user","content":case["prompt"]}],
+                body = dict(model=model_id, messages=[{"role":"user","content":case["prompt"]}],
                             temperature=0, seed=17, max_tokens=suite["maxTokens"], stream=False)
                 constraint = passage_grammar(case["prompt"]) if extractive else grammar
                 if constraint is not None:
@@ -80,7 +87,7 @@ def run(gguf, executable, output, *, suite_path=SUITE, grammar=None, extractive=
                         reply = json.load(response)
                     choice = reply["choices"][0]
                     actual = choice["message"]["content"]
-                    if reply["model"] != MODEL or not isinstance(actual, str):
+                    if reply["model"] != model_id or not isinstance(actual, str):
                         raise ValueError("Unexpected reply identity or content")
                     row.update(output=actual, requestID=reply["id"], finishReason=choice["finish_reason"],
                                completionTokens=reply["usage"]["completion_tokens"],
