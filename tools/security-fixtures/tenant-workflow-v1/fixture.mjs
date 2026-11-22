@@ -9,6 +9,8 @@ import { createServer } from 'node:http';
 export const FIXTURE_KIND = 'pocket-owned-tenant-workflow-v1';
 const ACTORS = Object.freeze({alice: 'alpha', bob: 'beta'});
 const ROUTE = /^\/api\/tenants\/(alpha|beta)\/invoices\/(invoice-alpha|invoice-beta)(\/approve)?$/;
+// Separate read-only, intended platform-audit capability. No customer/account data.
+const AUDIT_ROUTE = /^\/api\/audit\/invoices\/(invoice-alpha|invoice-beta)(\/approve)?$/;
 const TASK_ID = /^[A-Za-z0-9._:-]{1,96}$/;
 const FIXTURE_INVOICES = Object.freeze({
   'invoice-alpha': Object.freeze({id: 'invoice-alpha', ownerTenant: 'alpha', amountUnits: 130, status: 'pending', version: 1}),
@@ -38,6 +40,39 @@ export async function createOwnedFixture({mode, taskId}) {
     if ((req.headers['content-length'] && req.headers['content-length'] !== '0') ||
         req.headers['transfer-encoding']) {
       send(res, 413, {error: 'body_not_supported'});
+      return;
+    }
+    // Read-only audit endpoint: cross-tenant reads by the one synthetic auditor
+    // are intentional. This is a test capability, NOT a production authentication
+    // mechanism; x-fixture-* headers are merely scripted lab identities.
+    const auditMatch = AUDIT_ROUTE.exec(path);
+    if (auditMatch) {
+      const [, invoiceId, attemptedApproval] = auditMatch;
+      const actor = req.headers['x-fixture-actor'];
+      if (req.headers['x-fixture-kind'] !== FIXTURE_KIND ||
+          req.headers['x-fixture-task'] !== taskId || actor !== 'auditor') {
+        events.push(Object.freeze({method, actor: typeof actor === 'string' ? actor : null,
+          routeTenant: 'audit', invoiceId, result: 'audit-denied'}));
+        send(res, 403, {error: 'audit_role_required'});
+        return;
+      }
+      if ((attemptedApproval && method !== 'POST') || (!attemptedApproval && method !== 'GET')) {
+        send(res, 405, {error: 'audit_method_not_allowed'});
+        return;
+      }
+      // Explicitly forbid all audit mutations, even from the audit actor.
+      if (attemptedApproval) {
+        events.push(Object.freeze({method, actor, routeTenant: 'audit', invoiceId, result: 'audit-write-denied'}));
+        send(res, 403, {error: 'audit_read_only'});
+        return;
+      }
+      const invoice = invoices.get(invoiceId);
+      if (!invoice) {
+        send(res, 404, {error: 'fixture_invoice_not_found'});
+        return;
+      }
+      events.push(Object.freeze({method, actor, routeTenant: 'audit', invoiceId, result: 'authorized-audit-read'}));
+      send(res, 200, {...invoice});
       return;
     }
     const match = ROUTE.exec(path);
