@@ -1,0 +1,50 @@
+name: Public document distillation
+on:
+  pull_request:
+    paths:
+      - "tools/public-source-distillation/**"
+      - ".github/workflows/public-document-distillation.yml"
+permissions:
+  contents: read
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify the split and portable selector
+        run: python3 -m unittest discover -s tools/public-source-distillation -v
+      - name: Fetch and verify the pinned CPU runtime and teacher
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/distill"
+          mkdir -p "$work"
+          curl -fsSL --retry 2 --max-time 240 -o "$work/server.tgz" https://github.com/ggml-org/llama.cpp/releases/download/b12608/llama-b12608-bin-ubuntu-x64.tar.gz
+          echo "437a78088609f8faac6eddb8654614a0bafd761d3e9803b304c1b623074f599c  $work/server.tgz" | sha256sum -c
+          tar xzf "$work/server.tgz" -C "$work"
+          repo=bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF
+          rev=$(curl -fsSL --retry 2 --max-time 30 "https://huggingface.co/api/models/$repo" | jq -er '.sha | select(test("^[0-9a-f]{40}$"))')
+          echo "$rev" > "$work/teacher-revision.txt"
+          curl -fsSL --retry 2 --max-time 300 -o "$work/model.gguf" "https://huggingface.co/$repo/resolve/$rev/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true"
+          echo "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f  $work/model.gguf" | sha256sum -c
+      - name: Fit student and test frozen exports on unseen documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/distill"
+          python3 tools/public-source-distillation/experiment.py --gguf "$work/model.gguf" --llama-server "$work/llama-b12608/llama-server" --out "$work/out"
+          jq -e '.trainQuestions == 44 and .answers == 8 and .absent == 8 and (.predictions | length) == 16' "$work/out/results.json"
+          jq '{counts, studentMeetsPilotTarget, training, studentBytes}' "$work/out/results.json" >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-document-distillation
+          path: |
+            ${{ runner.temp }}/distill/out/
+            ${{ runner.temp }}/distill/teacher-revision.txt
+          if-no-files-found: warn
+          retention-days: 14
