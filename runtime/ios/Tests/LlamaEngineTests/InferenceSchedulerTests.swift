@@ -57,6 +57,9 @@ final class InferenceSchedulerTests: XCTestCase {
         }
 
         try await waitForTestCondition { await gate.startedCount() < 2 }
+        // Two operations holding permits does not prove the third Task
+        // has reached the scheduler's wait queue.
+        try await waitForTestCondition { (await scheduler.snapshot()).waitingRequests == 0 }
         let waiting = await scheduler.snapshot()
         XCTAssertEqual(waiting.activeRequests, 2)
         XCTAssertEqual(waiting.waitingRequests, 1)
