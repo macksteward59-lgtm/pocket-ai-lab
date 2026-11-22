@@ -114,3 +114,16 @@ python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$e
 ```
 
 The process footprint covers the whole app. A short spike between samples can be missed. The system thermal state describes pressure, without a Celsius reading. Low Power Mode describes a setting and cannot measure battery consumption. Model loading, preflight file hashing and post-run verification are outside the sampling window. Earlier exports can be read with the original command. An export’s environment label is self-reported. Keep an independent record of the actual device, iOS build, signing, model and observed run.
+
+
+### Export a whole source check after restart
+
+In **Self-evaluation history**, the **Latest source check** section shows the number of recorded cases for the selected model. Copy its run SHA-256 into a separate note, then choose **Export source check as JSON**. Each invocation gets its own identity even if two checks share a loaded model. An interrupted run can be reviewed with its recorded cases. If a run stops before its first journal write there is no export for that invocation.
+
+Run this from the extracted kit on the Mac. It uses the verified hosted Linux report bundled with the kit and needs no network connection.
+
+```sh
+python3 tools/evaluation-review/source_run.py source-check.json --expected-run-hash "$run_hash"
+```
+
+The report compares raw replies per case. It also shows whether the model fingerprints match, how many native generations the app reported, how many cases contain OS readings and which thermal state was highest. A digest copied separately checks the selected records and their order. It cannot establish which physical device produced them.

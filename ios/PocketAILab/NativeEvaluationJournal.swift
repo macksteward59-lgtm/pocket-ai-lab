@@ -50,6 +50,7 @@ struct NativeEvaluationAttempt: Codable, Equatable, Identifiable {
     let promptUTF8Bytes: Int
     let outputUTF8Bytes: Int
 
+    let sourceRunID: UUID?
     let resourceSamples: EvaluationResourceSamples?
 
     enum Status: String, Codable { case completed, partial, failed }
@@ -84,6 +85,7 @@ struct NativeEvaluationAttemptDraft {
     let estimatedMemoryMB: Int
     let promptUTF8Bytes: Int
     let outputUTF8Bytes: Int
+    var sourceRunID: UUID? = nil
     var resourceSamples: EvaluationResourceSamples? = nil
 }
 
@@ -225,7 +227,8 @@ actor NativeEvaluationJournal {
             errorMessage: draft.errorMessage, startedAt: draft.startedAt, completedAt: draft.completedAt,
             latencyMilliseconds: draft.latencyMilliseconds, maxTokens: draft.maxTokens,
             estimatedMemoryMB: draft.estimatedMemoryMB, promptUTF8Bytes: draft.promptUTF8Bytes,
-            outputUTF8Bytes: draft.outputUTF8Bytes, resourceSamples: draft.resourceSamples
+            outputUTF8Bytes: draft.outputUTF8Bytes, sourceRunID: draft.sourceRunID,
+            resourceSamples: draft.resourceSamples
         )
         _ = try append(.init(kind: .attempt, attempt: attempt, assessment: nil, challenge: nil))
         return attempt

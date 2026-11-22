@@ -148,8 +148,9 @@ final class LocalChatModel: ObservableObject {
                 runtime: runtime, lease: lease, journal: journal, modelFileURL: modelURL
             )
             let cases = try sourceCheck ? PassageCheckSuite.bundledCases() : NativeEvaluationSuite.cases
+            let sourceRunID = sourceCheck ? UUID() : nil
             for evaluationCase in cases {
-                _ = try await runner.run(evaluationCase, observeResources: sourceCheck)
+                _ = try await runner.run(evaluationCase, sourceRunID: sourceRunID)
             }
             evaluationEvents = try await journal.events()
             let retained = evaluationAttempts.filter {

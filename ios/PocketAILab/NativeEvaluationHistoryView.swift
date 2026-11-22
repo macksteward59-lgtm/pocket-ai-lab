@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 struct NativeEvaluationHistoryView: View {
     let events: [NativeEvaluationJournalEvent]
@@ -11,6 +12,9 @@ struct NativeEvaluationHistoryView: View {
     @State private var choosingDestination = false
     @State private var exportError = ""
     @State private var showExportError = false
+    @State private var copiedRunHash: String?
+
+    private static let sourceCases = (try? PassageCheckSuite.bundledCases()) ?? []
 
     private var attempts: [NativeEvaluationAttempt] {
         events.compactMap(\.payload.attempt)
@@ -35,6 +39,26 @@ struct NativeEvaluationHistoryView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 List {
+                    if let run = NativeSourceRunExport.latest(in: events, modelID: selectedModelID, cases: Self.sourceCases) {
+                        Section("Latest source check · \(run.events.count)/\(run.expectedCount) cases") {
+                            Button("Export source check as JSON") {
+                                do {
+                                    exportDocument = NativeReviewDocument(data: try run.export())
+                                    exportName = "pocket-source-run-" + run.id.uuidString
+                                    choosingDestination = true
+                                } catch {
+                                    exportError = String(describing: error)
+                                    showExportError = true
+                                }
+                            }
+                            Button(copiedRunHash == run.digest ? "Run SHA-256 copied" : "Copy run SHA-256") {
+                                UIPasteboard.general.string = run.digest
+                                copiedRunHash = run.digest
+                            }
+                            Text("Includes the recorded prompts, answers and app resource readings.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     ForEach(Array(events.reversed())) { event in
                         if let attempt = event.payload.attempt {
                             DisclosureGroup {

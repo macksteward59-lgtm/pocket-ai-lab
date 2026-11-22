@@ -420,12 +420,31 @@ final class NativeEvaluationTests: XCTestCase {
             XCTAssertNil(samples.minObservedHeadroomBytes)
             #endif
         }
-        // CI only: retain one export from the reopened test journal for the independent reader.
-        let eventsAfterRestart = try await reopened.events()
-        let event = try XCTUnwrap(eventsAfterRestart.first { $0.payload.attempt?.caseID == frozen.first?.caseID })
-        let packet = try NativeEvaluationJournal.exportAttempt(event)
-        print("POCKET_RESOURCE_SAMPLE_FIXTURE \(event.eventHash) \(packet.base64EncodedString())")
+        let firstHistory = try await reopened.events()
+        let first = try XCTUnwrap(NativeSourceRunExport.latest(in: firstHistory, modelID: selectedModelID, cases: frozen))
+        XCTAssertEqual(first.events.count, frozen.count)
+        let firstDigest = first.digest
+        await model.runSelfEvaluation(sourceCheck: true)
+        let secondHistory = try await journal.events()
+        let second = try XCTUnwrap(NativeSourceRunExport.latest(in: secondHistory, modelID: selectedModelID, cases: frozen))
+        XCTAssertNotEqual(first.id, second.id)
+        XCTAssertNotEqual(firstDigest, second.digest)
+        let partial = try XCTUnwrap(NativeSourceRunExport.latest(in: Array(secondHistory.dropLast()), modelID: selectedModelID, cases: frozen))
+        XCTAssertEqual(partial.id, second.id)
+        XCTAssertEqual(partial.events.count, frozen.count - 1)
+        XCTAssertEqual(first.digest, firstDigest)
 
+        // Synthetic model replies, real process observations. Retain a restarted run for offline verification.
+        let encoded = try first.export().base64EncodedString()
+        print("POCKET_SOURCE_RUN_HASH \(firstDigest)")
+        var index = encoded.startIndex
+        var part = 0
+        while index < encoded.endIndex {
+            let end = encoded.index(index, offsetBy: 512, limitedBy: encoded.endIndex) ?? encoded.endIndex
+            print("POCKET_SOURCE_RUN_PART \(part) \(encoded[index..<end])")
+            index = end
+            part += 1
+        }
 
     }
 

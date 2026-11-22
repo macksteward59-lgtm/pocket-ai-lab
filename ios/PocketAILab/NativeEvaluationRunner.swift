@@ -158,7 +158,7 @@ struct NativeEvaluationRunner: Sendable {
         self.modelArtifactSHA256 = fingerprint
     }
 
-    func run(_ evaluationCase: NativeEvaluationCase, observeResources: Bool = false) async throws -> NativeEvaluationAttempt {
+    func run(_ evaluationCase: NativeEvaluationCase, sourceRunID: UUID? = nil) async throws -> NativeEvaluationAttempt {
         guard !evaluationCase.suiteID.isEmpty, !evaluationCase.suiteVersion.isEmpty,
               !evaluationCase.caseID.isEmpty,
               !evaluationCase.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -185,7 +185,7 @@ struct NativeEvaluationRunner: Sendable {
 
         var resourceSamples: EvaluationResourceSamples?
         if failure == nil {
-            let sampler = observeResources ? EvaluationResourceSampler() : nil
+            let sampler = sourceRunID != nil ? EvaluationResourceSampler() : nil
             defer { resourceSamples = sampler?.finish() }
             do {
                 generation = try await runtime.generateForEvaluation(
@@ -214,7 +214,7 @@ struct NativeEvaluationRunner: Sendable {
                 )
                 return try await persist(
                     evaluationCase, requestID: requestID, startedAt: startedAt,
-                    generation: generation, failure: failure, resourceSamples: resourceSamples
+                    generation: generation, failure: failure, sourceRunID: sourceRunID, resourceSamples: resourceSamples
                 )
             }
         } catch {
@@ -224,7 +224,7 @@ struct NativeEvaluationRunner: Sendable {
 
         return try await persist(
             evaluationCase, requestID: requestID, startedAt: startedAt,
-            generation: generation, failure: failure, resourceSamples: resourceSamples
+            generation: generation, failure: failure, sourceRunID: sourceRunID, resourceSamples: resourceSamples
         )
     }
 
@@ -234,6 +234,7 @@ struct NativeEvaluationRunner: Sendable {
         startedAt: Date,
         generation: NativeInferenceEvaluationResult?,
         failure: String?,
+        sourceRunID: UUID?,
         resourceSamples: EvaluationResourceSamples?
     ) async throws -> NativeEvaluationAttempt {
         let completedAt = Date()
@@ -288,7 +289,7 @@ struct NativeEvaluationRunner: Sendable {
             estimatedMemoryMB: lease.estimatedMemoryMB,
             promptUTF8Bytes: evaluationCase.prompt.utf8.count,
             outputUTF8Bytes: output.utf8.count,
-            resourceSamples: resourceSamples
+            sourceRunID: sourceRunID, resourceSamples: resourceSamples
         )
         return try await journal.appendAttempt(draft)
     }
