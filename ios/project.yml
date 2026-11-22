@@ -12,10 +12,12 @@ schemes:
       targets:
         PocketAILab: all
         PocketAILabTests: [test]
+        PocketAILabUITests: [test]
     test:
       config: Debug
       targets:
         - PocketAILabTests
+        - PocketAILabUITests
 targets:
   PocketAILab:
     type: application
@@ -54,3 +56,16 @@ targets:
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         GENERATE_INFOPLIST_FILE: true
+  PocketAILabUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PocketAILabUITests
+    dependencies:
+      - target: PocketAILab
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal.uitests
+        TEST_TARGET_NAME: PocketAILab
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "5.9"

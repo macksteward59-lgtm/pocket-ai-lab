@@ -14,6 +14,7 @@ on:
       - codex/native-recipient-text-benchmark-20261120
       - codex/recipient-format-calibration-20261120
       - codex/native-cloud-analysis-20261120
+      - codex/memory-source-preservation
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -514,6 +515,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: XCTest the native Pocket AI Lab app
+        id: app-xctest
         if: ${{ !cancelled() && steps.sim-boot.outcome == 'success' && steps.app-build.outcome == 'success' }}
         timeout-minutes: 20
         run: |
@@ -521,9 +523,31 @@ jobs:
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
-            -derivedDataPath /tmp/pocket-app-test-derived \
+            -derivedDataPath /tmp/pocket-app-derived \
             -parallel-testing-enabled NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY=-
+
+      - name: Check the simulator Memory vault header
+        if: ${{ !cancelled() && (steps.app-xctest.outcome == 'success' || steps.app-xctest.outcome == 'failure') }}
+        env:
+          SIMULATOR_ID: ${{ steps.sim.outputs.id }}
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+
+          container = subprocess.check_output(
+              ["xcrun", "simctl", "get_app_container", os.environ["SIMULATOR_ID"], "com.pocketailab.personal", "data"],
+              text=True,
+          ).strip()
+          vault = Path(container) / "Library/Application Support/PocketAILab/Memory/memory.enc"
+          if not vault.is_file():
+              raise SystemExit("The simulator has no saved Memory vault.")
+          with vault.open("rb") as stored:
+              if stored.read(8) != b"PALMEM01":
+                  raise SystemExit("The simulator vault has an unexpected header.")
+          print("The installed app wrote the encrypted Memory vault header.")
 
       - name: XCTest on the iOS simulator
         if: ${{ !cancelled() && steps.sim-boot.outcome == 'success' }}

@@ -4,11 +4,7 @@ import SwiftUI
 struct MemoryView: View {
     @State private var store = NativeMemoryStore.applicationDefault()
     @State private var entries: [NativeMemoryEntry] = []
-    @State private var isEditorPresented = false
-    @State private var editingID: String?
-    @State private var draftContent = ""
-    @State private var draftLayer: NativeMemoryLayer = .episodic
-    @State private var draftSourceRefs = ""
+    @State private var editor: MemoryDraft?
     @State private var status = "Memory is encrypted on this device. Nothing is saved automatically."
     @State private var isBusy = false
     @State private var showError = false
@@ -32,6 +28,11 @@ struct MemoryView: View {
                                     Spacer()
                                     Text(entry.provenance.verified ? "Verified" : "Unverified")
                                         .font(.caption2).foregroundStyle(entry.provenance.verified ? Color.green : Color.secondary)
+                                    Button { editor = MemoryDraft(entry: entry) } label: {
+                                        Label("Edit memory", systemImage: "pencil").labelStyle(.iconOnly)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .accessibilityIdentifier("edit-memory-" + entry.id)
                                 }
                                 Text(entry.content).textSelection(.enabled)
                                 HStack(spacing: 8) {
@@ -41,17 +42,23 @@ struct MemoryView: View {
                                 }
                                 .font(.caption2).foregroundStyle(.tertiary)
                                 if !entry.provenance.sourceRefs.isEmpty {
-                                    Text("References: " + entry.provenance.sourceRefs.joined(separator: ", "))
-                                        .font(.caption2).foregroundStyle(.tertiary)
-                                        .textSelection(.enabled)
+                                    VStack(alignment: .leading) {
+                                        Text("References").bold()
+                                        ForEach(entry.provenance.sourceRefs.indices, id: \.self) { index in
+                                            Text(verbatim: entry.provenance.sourceRefs[index])
+                                        }
+                                    }
+                                    .font(.caption2).foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
                                 }
                             }
                             .padding(.vertical, 4)
+                            .accessibilityElement(children: .contain)
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) { delete(entry) } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
-                                Button { beginEdit(entry) } label: {
+                                Button { editor = MemoryDraft(entry: entry) } label: {
                                     Label("Edit", systemImage: "pencil")
                                 }.tint(.blue)
                             }
@@ -63,7 +70,7 @@ struct MemoryView: View {
             .navigationTitle("Memory")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { beginCreate() } label: { Image(systemName: "plus") }
+                    Button { editor = MemoryDraft() } label: { Label("Add memory", systemImage: "plus") }
                         .disabled(isBusy)
                 }
             }
@@ -72,38 +79,8 @@ struct MemoryView: View {
                     .frame(maxWidth: .infinity).padding(.horizontal).padding(.vertical, 8)
                     .background(.bar)
             }
-            .sheet(isPresented: $isEditorPresented) {
-                NavigationStack {
-                    Form {
-                        Picker("Memory layer", selection: $draftLayer) {
-                            ForEach(NativeMemoryLayer.allCases) { layer in
-                                Text(layer.title).tag(layer)
-                            }
-                        }
-                        Section("Information to remember") {
-                            TextEditor(text: $draftContent).frame(minHeight: 150)
-                        }
-                        Section("Source references") {
-                            TextField("Optional comma-separated references", text: $draftSourceRefs)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                        }
-                        Section {
-                            Text("New and edited memories are unverified. Saving does not grant permissions or authorize actions.")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .navigationTitle(editingID == nil ? "Save memory" : "Edit memory")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { isEditorPresented = false }
-                        }
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Save") { saveDraft() }
-                                .disabled(draftContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isBusy)
-                        }
-                    }
-                }
+            .sheet(item: $editor) { draft in
+                MemoryEditor(draft: draft, isBusy: isBusy, onSave: saveDraft)
             }
             .task { await reload() }
             .alert("Memory unavailable", isPresented: $showError) {
@@ -114,39 +91,24 @@ struct MemoryView: View {
         }
     }
 
-    private func beginCreate() {
-        editingID = nil
-        draftContent = ""
-        draftLayer = .episodic
-        draftSourceRefs = ""
-        isEditorPresented = true
-    }
-
-    private func beginEdit(_ entry: NativeMemoryEntry) {
-        editingID = entry.id
-        draftContent = entry.content
-        draftLayer = entry.layer
-        draftSourceRefs = entry.provenance.sourceRefs.joined(separator: ", ")
-        isEditorPresented = true
-    }
-
-    private func saveDraft() {
-        let content = draftContent
-        let sourceRefs = draftSourceRefs.split(separator: ",").map {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.filter { !$0.isEmpty }
-        let editing = editingID
-        let layer = draftLayer
+    private func saveDraft(_ draft: MemoryDraft) {
+        let refs = draft.references.map(\.text).filter { !$0.isEmpty }
         isBusy = true
         Task {
             do {
-                if let editing {
-                    _ = try await store.update(id: editing, content: content, sourceRefs: sourceRefs)
+                if let id = draft.entryID {
+                    let changes = refs == draft.originalReferences ? nil : refs
+                    guard try await store.update(id: id, content: draft.content, sourceRefs: changes) else {
+                        status = "This memory is no longer available."
+                        showError = true
+                        isBusy = false
+                        return
+                    }
                 } else {
-                    _ = try await store.insert(layer: layer, content: content, sourceRefs: sourceRefs)
+                    _ = try await store.insert(layer: draft.layer, content: draft.content, sourceRefs: refs)
                 }
                 await reload()
-                isEditorPresented = false
+                editor = nil
             } catch {
                 status = "Memory could not be saved. Check that the device is unlocked and the Keychain key is available."
                 showError = true
@@ -186,6 +148,111 @@ struct MemoryView: View {
         } catch {
             status = "Memory could not be authenticated or read. No plaintext fallback is available."
             showError = true
+        }
+    }
+}
+
+private struct ReferenceField: Identifiable {
+    let id = UUID()
+    var text = ""
+}
+
+private enum EditorFocus: Hashable {
+    case content
+    case reference(UUID)
+}
+
+private struct MemoryDraft: Identifiable {
+    let id = UUID()
+    let entryID: String?
+    let originalReferences: [String]
+    var content: String
+    var layer: NativeMemoryLayer
+    var references: [ReferenceField]
+
+    init(entry: NativeMemoryEntry? = nil) {
+        entryID = entry?.id
+        originalReferences = entry?.provenance.sourceRefs ?? []
+        content = entry?.content ?? ""
+        layer = entry?.layer ?? .episodic
+        references = entry == nil ? [ReferenceField()] : originalReferences.map { ReferenceField(text: $0) }
+    }
+}
+
+private struct MemoryEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: EditorFocus?
+    @State private var draft: MemoryDraft
+    let isBusy: Bool
+    let onSave: (MemoryDraft) -> Void
+
+    init(draft: MemoryDraft, isBusy: Bool, onSave: @escaping (MemoryDraft) -> Void) {
+        _draft = State(initialValue: draft)
+        self.isBusy = isBusy
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    LabeledContent("Memory layer") {
+                        Picker("Memory layer", selection: $draft.layer) {
+                            ForEach(NativeMemoryLayer.allCases) { layer in
+                                Text(layer.title).tag(layer)
+                            }
+                        }
+                        .labelsHidden()
+                        .disabled(draft.entryID != nil)
+                    }
+                    Text("Information to remember").font(.headline)
+                    TextEditor(text: $draft.content)
+                        .frame(height: 110)
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(.secondary.opacity(0.35)))
+                        .focused($focusedField, equals: .content)
+                        .accessibilityLabel("Information to remember")
+                    Text("Source references (\(draft.references.count))").font(.headline)
+                        .accessibilityIdentifier("memory-reference-count")
+                    ForEach($draft.references) { $reference in
+                        let position = draft.references.firstIndex { $0.id == reference.id }.map { $0 + 1 } ?? 0
+                        HStack {
+                            TextField("Reference", text: $reference.text)
+                                .textFieldStyle(.roundedBorder)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($focusedField, equals: .reference(reference.id))
+                                .accessibilityLabel("Reference \(position) of \(draft.references.count)")
+                                .accessibilityIdentifier("memory-reference-\(position)")
+                            Button {
+                                let id = reference.id
+                                draft.references.removeAll { $0.id == id }
+                            } label: {
+                                Label("Remove reference", systemImage: "minus.circle").labelStyle(.iconOnly)
+                            }
+                        }
+                    }
+                    Button("Add reference") { draft.references.append(ReferenceField()) }
+                        .disabled(draft.references.count >= NativeMemoryStore.maximumSourceReferences)
+                    Text("New and edited memories are unverified.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle(draft.entryID == nil ? "Save memory" : "Edit memory")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done typing") { focusedField = nil }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { onSave(draft) }
+                        .disabled(draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isBusy)
+                }
+            }
         }
     }
 }

@@ -59,6 +59,7 @@ public actor NativeMemoryStore {
     private static let magic = Data("PALMEM01".utf8)
     private static let aad = Data("pocket-ai-lab:native-memory:v1".utf8)
     private static let maximumVaultBytes = 8 * 1_024 * 1_024
+    static let maximumSourceReferences = 32
     private static let maximumEntries = 10_000
     private static let maximumContentBytes = 32_000
     private let fileURL: URL
@@ -112,7 +113,7 @@ public actor NativeMemoryStore {
         let normalized = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty, normalized.utf8.count <= Self.maximumContentBytes,
               !agentId.isEmpty, agentId.utf8.count <= 128,
-              sourceRefs.count <= 32, sourceRefs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 512 }),
+              sourceRefs.count <= Self.maximumSourceReferences, sourceRefs.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 512 }),
               taskId == nil || taskId!.utf8.count <= 512 else {
             throw NativeMemoryVaultError.invalidEntry
         }
@@ -132,7 +133,7 @@ public actor NativeMemoryStore {
     public func update(id: String, content: String, sourceRefs: [String]? = nil) throws -> Bool {
         let normalized = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty, normalized.utf8.count <= Self.maximumContentBytes,
-              sourceRefs == nil || (sourceRefs!.count <= 32 && sourceRefs!.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 512 })) else {
+              sourceRefs == nil || (sourceRefs!.count <= Self.maximumSourceReferences && sourceRefs!.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 512 })) else {
             throw NativeMemoryVaultError.invalidEntry
         }
         var entries = try load()
@@ -186,7 +187,7 @@ public actor NativeMemoryStore {
         entry.content.utf8.count <= maximumContentBytes &&
         !entry.provenance.agentId.isEmpty && entry.provenance.agentId.utf8.count <= 128 &&
         (entry.provenance.taskId == nil || entry.provenance.taskId!.utf8.count <= 512) &&
-        entry.provenance.sourceRefs.count <= 32 &&
+        entry.provenance.sourceRefs.count <= Self.maximumSourceReferences &&
         entry.provenance.sourceRefs.allSatisfy { !$0.isEmpty && $0.utf8.count <= 512 }
     }
 }

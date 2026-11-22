@@ -46,6 +46,27 @@ final class NativeMemoryStoreTests: XCTestCase {
         XCTAssertFalse(String(decoding: bytes, as: UTF8.self).contains("Remember the architecture decision."))
     }
 
+    func testReopenedVaultKeepsTheSameEditedNoteAndBothReferenceValues() async throws {
+        let directory = try makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("memory.enc")
+        let provider = FixedNativeMemoryKeyProvider(material: Data(repeating: 5, count: 32), mayCreate: true)
+        let store = NativeMemoryStore(fileURL: url, keyProvider: provider)
+        let references = ["Chapter 1, Table 2", "Chapter 3"]
+        let id = try await store.insert(layer: .working, content: "First draft", taskId: "review-1", sourceRefs: references)
+        let updated = try await store.update(id: id, content: "Saved revision")
+        XCTAssertTrue(updated)
+        let reopened = NativeMemoryStore(fileURL: url, keyProvider: provider)
+        let entries = try await reopened.load()
+        XCTAssertEqual(entries.count, 1)
+        let note = try XCTUnwrap(entries.first)
+        XCTAssertEqual(note.id, id)
+        XCTAssertEqual(note.content, "Saved revision")
+        XCTAssertEqual(note.provenance.sourceRefs, references)
+        XCTAssertEqual(note.provenance.taskId, "review-1")
+        XCTAssertFalse(note.provenance.verified)
+    }
+
     func testTamperedCiphertextFailsClosed() async throws {
         let directory = try makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
