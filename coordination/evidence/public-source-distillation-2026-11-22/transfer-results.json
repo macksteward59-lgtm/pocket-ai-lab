@@ -1,0 +1,332 @@
+{
+  "fixtureSHA256": "b2ac6e95e0805575e15ad3e24d4189202d1786f01488d2b04a114d11c846c2aa",
+  "modelSHA256": {
+    "student": "a83d342fa81b413eb38602ed2c6f76f3be4153fad3db5b628f1ea02314826754",
+    "hard": "cbe45e272cd1f398bb2b141a5ef0ee453db70d1e78f288c988f73f09b1ee82e9",
+    "direct": "639091955cccee31e2b1a1e9481a37c627dbc333219fafce92fb7dc793347da3"
+  },
+  "counts": {
+    "student": [
+      3,
+      8
+    ],
+    "hard": [
+      7,
+      7
+    ],
+    "direct": [
+      6,
+      6
+    ],
+    "lexical": [
+      7,
+      6
+    ]
+  },
+  "rows": [
+    {
+      "source": "NASA-MARS",
+      "question": "What are the names of the Martian moons?",
+      "gold": 0,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.43839053387626026,
+          0.34558152743039233
+        ]
+      }
+    },
+    {
+      "source": "NASA-MARS",
+      "question": "How many trips around Mars does Phobos make per day?",
+      "gold": 1,
+      "decisions": {
+        "student": -1,
+        "hard": 1,
+        "direct": 1,
+        "lexical": 1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.41334940768216555,
+          0.49553822704139056
+        ]
+      }
+    },
+    {
+      "source": "NASA-MARS",
+      "question": "How many times per day does Deimos orbit Mars?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": 1,
+        "lexical": 1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.42490019017774694,
+          0.4547368868341818
+        ]
+      }
+    },
+    {
+      "source": "NASA-MARS",
+      "question": "Which moon has the greater surface gravity?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.3668872628853982,
+          0.36552945565624145
+        ]
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "How many grams does a nickel weigh?",
+      "gold": 0,
+      "decisions": {
+        "student": -1,
+        "hard": 0,
+        "direct": 0,
+        "lexical": 0
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.46159939550467566,
+          0.40494512135752553
+        ]
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "What is the diameter of the five-cent coin in millimeters?",
+      "gold": 1,
+      "decisions": {
+        "student": -1,
+        "hard": 1,
+        "direct": 1,
+        "lexical": 1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.33707414249397216,
+          0.479863537334061
+        ]
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "What is the thickness of a nickel in millimeters?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": 1,
+        "direct": 1,
+        "lexical": 1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.3774485171742013,
+          0.499168323583142
+        ]
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "Which metal accounts for most of the coin's mass?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.4010034748989562,
+          0.3540874307434369
+        ]
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "How many squares make up the virtual board?",
+      "gold": 0,
+      "decisions": {
+        "student": -1,
+        "hard": 0,
+        "direct": 0,
+        "lexical": 0
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.4472645153776043,
+          0.37236467309003696
+        ]
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "How are the light and dark squares arranged?",
+      "gold": 1,
+      "decisions": {
+        "student": 1,
+        "hard": 1,
+        "direct": 1,
+        "lexical": 1
+      },
+      "studentOutput": {
+        "index": 1,
+        "answer": "The squares alternate between light and dark.",
+        "scores": [
+          0.45743877127671273,
+          0.5934420813266195
+        ]
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "Which color is assigned to the player who moves first?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.3653260970522804,
+          0.40572140614752944
+        ]
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "How wide is a square on a player's screen?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.3707765785914356,
+          0.4134232278738853
+        ]
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "What symbol represents the SI unit of time?",
+      "gold": 0,
+      "decisions": {
+        "student": 0,
+        "hard": 0,
+        "direct": -1,
+        "lexical": 0
+      },
+      "studentOutput": {
+        "index": 0,
+        "answer": "The SI unit of time is the second, written s.",
+        "scores": [
+          0.5512782265098836,
+          0.3456112360364462
+        ]
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "What numerical frequency in hertz is used for the cesium-133 transition?",
+      "gold": 1,
+      "decisions": {
+        "student": 1,
+        "hard": 1,
+        "direct": 1,
+        "lexical": 1
+      },
+      "studentOutput": {
+        "index": 1,
+        "answer": "The definition fixes the cesium-133 transition frequency at 9,192,631,770 hertz.",
+        "scores": [
+          0.35310594672574097,
+          0.5650660418519008
+        ]
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "What was the measured frequency error of this particular clock?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.3903008178670871,
+          0.40616064138721747
+        ]
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "Which laboratory first built a cesium clock?",
+      "gold": -1,
+      "decisions": {
+        "student": -1,
+        "hard": -1,
+        "direct": -1,
+        "lexical": -1
+      },
+      "studentOutput": {
+        "index": -1,
+        "answer": "UNKNOWN",
+        "scores": [
+          0.3903008178670871,
+          0.4045822745265603
+        ]
+      }
+    }
+  ]
+}
