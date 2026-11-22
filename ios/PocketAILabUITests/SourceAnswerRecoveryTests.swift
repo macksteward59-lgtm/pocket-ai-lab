@@ -42,14 +42,22 @@ final class SourceAnswerRecoveryTests: XCTestCase {
         XCTAssertEqual(app.state, .notRunning)
         app.launch()
         openAnswers()
-        let query = app.textFields["source-question"]
-        query.tap()
-        query.typeText("At what time does the daily free neuron allocation reset?\n")
         let records = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "source-record-"))
+        // The list starts empty while the relaunched view loads the vault.
+        XCTAssertTrue(records.firstMatch.waitForExistence(timeout: 12),
+                      "No saved source answer appeared after relaunch with no query")
+        let query = app.textFields["source-question"]
+        let question = "At what time does the daily free neuron allocation reset?"
+        query.tap()
+        query.typeText(question + "\n")
+        XCTAssertEqual(query.value as? String, question, "The Search field did not receive the complete question")
+        let recall = app.buttons["Read saved answer"]
+        XCTAssertTrue(recall.waitForExistence(timeout: 10),
+                      "The saved record was visible before search, but the exact-question shortcut did not appear")
+        XCTAssertTrue(records.firstMatch.waitForExistence(timeout: 10),
+                      "The exact-question shortcut is available, but the saved answer row did not appear")
         XCTAssertEqual(records.count, 1)
         let savedID = records.firstMatch.identifier
-        let recall = app.buttons["Read saved answer"]
-        XCTAssertTrue(recall.waitForExistence(timeout: 10))
         recall.tap()
         XCTAssertEqual(app.staticTexts["review-current"].label, expected)
         XCTAssertEqual(app.staticTexts["review-citation"].label, "CF-QUOTA")
