@@ -17,7 +17,7 @@ The first model retrieved the right passage and quoted the quantity instead of t
 
 - The [repository checks](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44995881798), [consumer checks](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44995884885) and [Linux model workflow](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44995884933) passed on this candidate. The consumer runner recorded 46 web/connector tests, 355 intelligence tests, 160 runtime tests passed with one skipped, four Chromium/WebKit checks, and a Worker persistence test across restarts. Related local nonexecuting governance checks passed 46 tests.
 - Covered the project from the original brief through publication, inference, owner correction, persistence and release criteria. The [14-gate review](project-gates.md), [full branch inventory](project-inventory.json) and [exact-head PR workflow survey](pr-workflows.json) describe both existing proof and missing observations.
-- The repository contains the code and public test evidence. The private Cloudflare connection holds a revisioned coordination note. Linux hosted the two model calls. A separate Workers AI inference, its account usage and its 30% reserve have yet to be demonstrated.
+- The repository contains the code and public test evidence. The private Cloudflare connection holds a revisioned coordination note. Linux hosted the two model calls. A hosted Workers AI inference and its actual account usage still need verification.
 
 
 ## Native failure reproduced and corrected
