@@ -1,0 +1,43 @@
+name: Owned fixture to finding-quality integration CI
+
+on:
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/fixture-to-quality-v1/**'
+      - 'tools/security-evaluation/heldout-finding-quality-v1/**'
+      - 'tools/security-fixtures/tenant-workflow-v1/**'
+      - '.github/workflows/fixture-to-quality-ci.yml'
+  push:
+    branches:
+      - codex/fixture-quality-integration-20261122
+    paths:
+      - 'tools/security-evaluation/fixture-to-quality-v1/**'
+      - 'tools/security-evaluation/heldout-finding-quality-v1/**'
+      - 'tools/security-fixtures/tenant-workflow-v1/**'
+      - '.github/workflows/fixture-to-quality-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  owned-evidence-bridge:
+    name: Only-owned loopback HTTP evidence and scoring
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out exact current head without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up bounded Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Run original owned fixture controls
+        run: node --test tools/security-fixtures/tenant-workflow-v1/run.test.mjs tools/security-fixtures/tenant-workflow-v1/admin-control.test.mjs
+      - name: Run exact source finding quality scorer controls
+        run: node --test tools/security-evaluation/heldout-finding-quality-v1/score.test.mjs
+      - name: Run real HTTP receipt-to-score consistency tests
+        run: node --test tools/security-evaluation/fixture-to-quality-v1/bridge.test.mjs
+      - name: Demonstrate separate scripted baselines, no external targets
+        run: node tools/security-evaluation/fixture-to-quality-v1/run.mjs
