@@ -27,7 +27,7 @@ function localUrl(value) {
   if (u.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)) {
     throw new Error('only loopback HTTP is allowed in the offline fixture');
   }
-  if (u.username || u.password || u.hash) throw new Error('URL credentials or fragments forbidden');
+  if (u.username || u.password || u.hash || u.search) throw new Error('URL credentials, queries or fragments forbidden');
   return u;
 }
 
@@ -42,7 +42,10 @@ export function verifyVisualFixture(record, inputs, trusted) {
   if (record.taskId !== trusted.expectedTaskId || record.scopeId !== trusted.scopeId) {
     throw new Error('trusted task/scope binding mismatch');
   }
-  if (record.dataClass !== 'synthetic-owned-fixture') throw new Error('untrusted data class');
+  if (trusted?.isTrustedSyntheticFixture !== true || trusted?.dataClass !== 'synthetic-owned-fixture') {
+    throw new Error('trusted fixture classification unavailable');
+  }
+  if (record.dataClass !== trusted.dataClass) throw new Error('untrusted data class');
   if (record.redactionReview !== 'synthetic-no-user-data') throw new Error('image needs an independent privacy review');
   if (record.contentKind !== 'image/png') throw new Error('only synthetic PNG bytes accepted');
   if (!(inputs?.screenshotBytes instanceof Uint8Array)) throw new Error('missing screenshot bytes');
