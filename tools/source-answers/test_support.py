@@ -34,8 +34,13 @@ class SupportTests(unittest.TestCase):
     def test_accepted_quote_still_has_no_independent_semantic_verification(self):
         with patch.object(cli, "request_reply", return_value=self.decision("YES")):
             result = cli.assess_support(self.proposal, object())
-        self.assertEqual(result["answer"], "six")
+        self.assertEqual(result["answer"], "The flower has six petals.")
         self.assertFalse(result["semanticSupportVerified"])
+
+    def test_only_one_containing_sentence_can_extend_the_quote(self):
+        self.assertEqual(cli.containing_sentence("petals", "Red petals. Blue petals."), "petals")
+        self.assertEqual(cli.containing_sentence("Red. Blue", "Red. Blue petals."), "Red. Blue")
+        self.assertEqual(cli.containing_sentence("petals", "Red buds. Blue petals!"), "Blue petals!")
 
     def test_invalid_assessment_cannot_accept_quote(self):
         for verdict, finish in (("YES", "length"), ("maybe", "stop")):

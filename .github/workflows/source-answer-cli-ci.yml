@@ -80,6 +80,14 @@ jobs:
           if ! jq -e '.allAssessedPassed' "$work/results/support-pairs.json" > /dev/null; then
             echo "::warning::The opt-in assessment missed the acceptance target. See the individual answers."
           fi
+          python3 tools/source-answers/compare_support.py --fixture transfer --gguf "$work/model.gguf" \
+            --llama-server "$work/llama-b12608/llama-server" > "$work/results/support-transfer.json"
+          jq -e '(.rows | length) == 8 and .counts.answerable.total == 4 and .counts.unanswerable.total == 4' \
+            "$work/results/support-transfer.json"
+          jq '.counts' "$work/results/support-transfer.json" >> "$GITHUB_STEP_SUMMARY"
+          if ! jq -e '.allAssessedPassed' "$work/results/support-transfer.json" > /dev/null; then
+            echo "::warning::The opt-in assessment missed its transfer target. See the individual answers."
+          fi
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

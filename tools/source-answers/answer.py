@@ -70,12 +70,19 @@ def answer(question, connection, model_id, *, record=None):
     return result
 
 
+def containing_sentence(quote, finding):
+    """Extend a quote only when it identifies a single sentence of the reviewed summary."""
+    matches = [sentence for sentence in re.split(r"(?<=[.!?])\s+", finding) if quote in sentence]
+    return matches[0] if len(matches) == 1 else quote
+
+
 def assess_support(proposal, connection):
-    """Ask the same model whether its exact quote answers the whole question."""
+    """Check the complete cited sentence so the extractive span limit cannot clip a fact."""
     if proposal["status"] != "quote_proposed":
         return proposal
     source = next(item for item in proposal["retrieved"] if item["id"] == proposal["source"])
-    evidence = {"question": proposal["question"], "proposedQuote": proposal["answer"],
+    excerpt = containing_sentence(proposal["answer"], source["finding"])
+    evidence = {"question": proposal["question"], "proposedQuote": excerpt,
                 "sourceSummary": source["finding"]}
     prompt = ("Judge the proposed quote using only the supplied text. "
               "Does the quote itself provide the whole fact requested by the question, "
@@ -89,9 +96,9 @@ def assess_support(proposal, connection):
     if (reply["model"] != proposal["model"] or not reply["id"] or
             choice["finish_reason"] != "stop" or verdict not in ("YES", "NO")):
         raise ValueError("Incomplete or invalid quote support assessment")
-    checked = dict(proposal, supportAssessment=dict(
+    checked = dict(proposal, answer=excerpt, supportAssessment=dict(
         verdict=verdict, requestID=reply["id"], prompt=prompt,
-        proposedQuote=proposal["answer"], proposedSource=proposal["source"]))
+        proposedQuote=proposal["answer"], assessedQuote=excerpt, proposedSource=proposal["source"]))
     if verdict == "NO":
         checked.update(status="insufficient_evidence", answer="UNKNOWN", source=None)
         checked.pop("sourceURL", None)
