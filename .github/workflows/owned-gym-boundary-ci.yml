@@ -36,8 +36,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker pull node:22.16.0-bookworm-slim
-          docker image inspect node:22.16.0-bookworm-slim --format 'Resolved image id: {{.Id}}'
+          docker pull node:22.16.0-bookworm-slim@sha256:048ed02c5fd52e86fda6fbd2f6a76cf0d4492fd6c6fee9e2c463ed5108da0e34
+          docker image inspect node:22.16.0-bookworm-slim@sha256:048ed02c5fd52e86fda6fbd2f6a76cf0d4492fd6c6fee9e2c463ed5108da0e34 --format 'Resolved image id: {{.Id}}'
           docker build --network none --pull=false --no-cache \
             -t pal-owned-gym-smoke -f tools/security-evaluation/owned-gym-boundary-v1/Dockerfile .
       - name: Verify host controls then execute owned counterfactual in the isolated worker
