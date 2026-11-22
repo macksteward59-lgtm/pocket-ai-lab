@@ -1,0 +1,56 @@
+{
+  "APPLE-DEVICE": {
+    "sourceSHA256": "1b5ee200c68c10251575d45b5cfca46c794b40213d4a75dfb5e0c99d4ed1454f",
+    "questions": {
+      "How can simulator performance compare with real hardware?": "Simulator performance can differ from actual hardware.",
+      "What setup lets Xcode launch an app on a paired physical device?": "Xcode can launch the app on a paired physical device after signing is configured."
+    }
+  },
+  "APPLE-TEAM": {
+    "sourceSHA256": "eda5bd4cc62a6240df86bd67fe746351bd70f7c6912e46e5398f2512b1bd4522",
+    "questions": {
+      "How can a personal Apple Account test apps on the owner's devices?": "A personal Apple Account can test apps on the owner's devices through Xcode.",
+      "When do Personal Team provisioning profiles expire?": "Personal Team provisioning profiles expire seven days after issuance."
+    }
+  },
+  "CF-BIND": {
+    "sourceSHA256": "4712ebc93eded785f221c4774036bb5c235910f91f942a131461c31a554b69fe",
+    "questions": {
+      "How does a Worker invoke a hosted model?": "A Worker can invoke a hosted model through an AI binding.",
+      "What does the run method accept?": "The run method takes the model identifier and an input object."
+    }
+  },
+  "CF-QUOTA": {
+    "sourceSHA256": "015a5bbd666afdb205c878a9879e6aa97a929e00b07f6fad6ea235cffba5b265",
+    "questions": {
+      "What is the published daily free allocation and reset time?": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC.",
+      "Which plan can incur charges above the free allocation?": "The Workers Paid plan can incur charges above that allocation."
+    }
+  },
+  "W3C-PROV": {
+    "sourceSHA256": "f626b38a2762dca1c01b69e405c9528f3f19e97024cd2e5d41a3768750887724",
+    "questions": {
+      "Which two kinds of links does the PROV-O summary distinguish?": "PROV-O distinguishes a link to primary evidence from a link to an earlier revision of an entity."
+    }
+  },
+  "W3C-QUOTE": {
+    "sourceSHA256": "4c691cd05a42b48a1e4a8af7e426c20485c63ed77c167b50c3943a0ca566ec78",
+    "questions": {
+      "How does a text quote selector identify a passage?": "A text quote selector identifies a passage using exact text.",
+      "How can a reader disambiguate repeated wording?": "Context immediately before and after the passage can disambiguate repeated wording."
+    }
+  },
+  "ACL-CITE": {
+    "sourceSHA256": "468d50e63dbd38742b156b62c51c69261220588aaca553c00324d8e0315e448b",
+    "questions": {
+      "Which dimensions does ALCE evaluate?": "ALCE evaluates answers with citations across three dimensions: fluency, correctness and citation quality."
+    }
+  },
+  "ACL-ABSTAIN": {
+    "sourceSHA256": "67cf661996cd52db48238de4d5b89ca4e57d49fd654a8257b2b72dbc34974d6d",
+    "questions": {
+      "What kinds of questions did the authors include?": "The authors include plausible questions that cannot be answered from the supplied passage.",
+      "What does success on these questions require?": "Success requires recognizing when the passage offers insufficient evidence."
+    }
+  }
+}

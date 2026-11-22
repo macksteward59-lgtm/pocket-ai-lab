@@ -1,5 +1,15 @@
 # Ask about Pocket AI Lab project sources
 
+For an offline answer from the project's reviewed catalog, list the questions for one source and pass a listed question back to the command. This uses Node SQLite and Python. No model or server is required.
+
+```bash
+python3 tools/source-answers/answer.py --source-id CF-QUOTA --list-reviewed
+python3 tools/source-answers/answer.py --source-id CF-QUOTA --reviewed-only \
+  --question "What is the published daily free allocation and reset time?"
+```
+
+The catalog covers 14 questions across eight public source summaries. A listed question returns its exact excerpt, publisher URL, and source revision fingerprint. For an unlisted question the command returns `UNKNOWN` and shows the questions it can answer. Copy a question as listed, including capitalization and punctuation. A change to the source ID, URL or finding requires a new review. These are excerpts of the project's reviewed summaries.
+
 Ask a question about the bundled, reviewed public source summaries. This command uses the consumer app's SQLite search, takes up to two source records, then asks the local model for a short quoted answer with a source ID or UNKNOWN. It only reads the reviewed register. A quoted phrase can be irrelevant to the question. Each result carries the original finding, source link, register revision, model identity and a flag identifying semantic support as unverified.
 
 Using Node 22.13+ or Node 24 and the pinned model and Linux runtime from [the comparison guide](../passage-check/README.md), run:
