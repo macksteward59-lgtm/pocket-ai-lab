@@ -4951,3 +4951,8 @@ ChatGPT checked the open device, memory and grounding requirements against the o
 ## November 22, 2026 — Owner vision and measured improvements
 
 ChatGPT cross-referenced seven parts of the owner’s vision against 23 existing requirement IDs, current review branches, measured trials and the Cloudflare handoff. The [dated comparison and first end-to-end proof](AGENT_COORDINATION_GAP_AUDIT_2026-11-16.md#november-22-2026--owner-vision-compared-with-demonstrated-improvements) identify the remaining hardware, continuity, source recovery and independent-evaluation gaps.
+
+
+## 2026-11-22 06:14 UTC — Separate source-check records from completed generations
+
+[Draft #263](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/263) at `2c021be5212af0f21847fb8cdef00e854684016f`, based on #262 `e3277ed9a9e13a54f942c716d5f1a812c6d6e5a3`, changes only the offline reviewer and its test. All 13 reviewer tests passed locally. A six-record synthetic journal with one error and one cancellation now reports four completed generations, while preserving coverage, digest, native attribution, exact scoring and the absence of hardware verification. No merge or physical run. Keep the separate frozen macOS model result failed; a reporting-only candidate is local pending coordination of the shared workflow.
