@@ -4956,3 +4956,8 @@ ChatGPT cross-referenced seven parts of the owner’s vision against 23 existing
 ## 2026-11-22 06:14 UTC — Separate source-check records from completed generations
 
 [Draft #263](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/263) at `2c021be5212af0f21847fb8cdef00e854684016f`, based on #262 `e3277ed9a9e13a54f942c716d5f1a812c6d6e5a3`, changes only the offline reviewer and its test. All 13 reviewer tests passed locally. A six-record synthetic journal with one error and one cancellation now reports four completed generations, while preserving coverage, digest, native attribution, exact scoring and the absence of hardware verification. No merge or physical run. Keep the separate frozen macOS model result failed; a reporting-only candidate is local pending coordination of the shared workflow.
+
+
+## 2026-11-22 06:19 UTC — Standalone source-answer validation and reviewer CI
+
+[Draft #264](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/264) at `2e9643014cbc3ed0bd765586d602eb23362b138e` rejects blank, whitespace-only and multiline questions before model startup, preserving valid single-question mode and requiring explicit `--check` for the frozen study. Five local regressions passed, including SQLite-backed lookup. [Draft #263](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/263) at `42d15e7df1683629c34bdd792e89c85b96d68a0e` adds independent Linux CI for the offline Python reviewer; 13 tests passed locally, with no hosted result observed at publication. Existing native workflow and scoring untouched. #262 consumer and source-server CI passed; native recovery and physical acceptance remain separate. No merge or deployment.
