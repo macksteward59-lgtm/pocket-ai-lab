@@ -1,0 +1,31 @@
+name: Source answer CLI CI
+
+on:
+  pull_request:
+    paths:
+      - "tools/source-answers/**"
+      - "tools/passage-check/extractive.py"
+      - "tools/passage-check/server.py"
+      - "tools/openclaw-review/review.py"
+      - "apps/web/project-sources.mjs"
+      - "docs/research/project-sources.json"
+      - ".github/workflows/source-answer-cli-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-answer-cli:
+    name: CLI and SQLite retrieval (no model)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Run CLI regressions with real Node SQLite
+        run: python3 -m unittest discover -s tools/source-answers -p 'test_*.py' -v
