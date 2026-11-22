@@ -1,7 +1,7 @@
 {
-  "run": 44993171705,
+  "run": 44995884933,
   "model": "qwen2.5-1.5b-instruct-q4_k_m",
-  "archiveSHA256": "sha256:2635940452b2d1ac2615cdc4f3a93a1ef82a4b5c785433c2b649fe4088721c68",
+  "archiveSHA256": "sha256:c13b21664a5f8dc9fa62df2bcd8020242a2f85ab3a0ecec782e7d547da681f34",
   "fixtureSHA256": "5d3a4fb3dbd75c53bb3799b17f98426ecaedc4d53c7c49e89a43bc3c519df408",
   "passed": 2,
   "total": 5,
