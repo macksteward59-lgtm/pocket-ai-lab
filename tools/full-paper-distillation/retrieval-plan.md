@@ -1,0 +1,5 @@
+## Independent retrieval check
+
+The first BM25 development run retrieved an annotated supporting sentence in its top five for 7 of 24 supported questions. To test whether better semantic matching improves the available evidence, compare BM25 with the frozen English E5-small-v2 encoder, ONNX int8 conversion at `02af79985278377e65c724a76275707cb0333c70`. Use masked mean pooling, L2 normalization, a 512-token limit, and the published query/passage prefixes. Rank raw single sentences in their original order for ties. Score evidence recall at one and five. No retraining, threshold fitting or answer generation.
+
+Reserve unseen QASPER test paper IDs by excluding all papers selected in #288's full-document benchmark. Use the same title filter, minimum length and single-span evidence alignment. Sort supported questions by the SHA-256 of their IDs and take one per additional paper, up to 24. Report actual sample and span retrieval outcomes, including all misses. The result is evidence-search recall and cannot establish that a selected sentence answers a new question. [E5 model card](https://huggingface.co/intfloat/e5-small-v2)
