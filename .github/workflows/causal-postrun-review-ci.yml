@@ -38,4 +38,5 @@ jobs:
           node --test \
             tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs \
             tools/security-evaluation/pinned-causal-inference-v1/adapter.test.mjs \
-            tools/security-evaluation/causal-postrun-review-v1/verify.test.mjs
+            tools/security-evaluation/causal-postrun-review-v1/verify.test.mjs \
+            tools/security-evaluation/causal-postrun-review-v1/write.test.mjs
