@@ -1,0 +1,81 @@
+name: Pinned Qwen owned causal evidence trial
+
+on:
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/pinned-causal-inference-v1/**'
+      - '.github/workflows/pinned-causal-inference-ci.yml'
+  push:
+    branches:
+      - codex/pinned-causal-inference-20261122
+    paths:
+      - 'tools/security-evaluation/pinned-causal-inference-v1/**'
+      - '.github/workflows/pinned-causal-inference-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-boundary-tests:
+    name: Inference boundary and synthetic scoring checks (no model)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - name: Exact checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fixed Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Check original owned causality plus new provider adapter
+        run: |
+          node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs \
+            tools/security-evaluation/pinned-causal-inference-v1/adapter.test.mjs
+
+  one-pinned-real-model-probe:
+    name: One pinned local llama.cpp HTTP model attempt (not qualification)
+    if: github.event_name == 'push'
+    needs: evidence-boundary-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      NO_PROXY: 127.0.0.1,localhost
+      no_proxy: 127.0.0.1,localhost
+    steps:
+      - name: Checkout exact feature revision without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fixed Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Verify downloaded pinned official llama.cpp and publisher GGUF then run one probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          stage=$(mktemp -d)
+          trap 'rm -rf -- "$stage"' EXIT
+          curl --fail --location --proto '=https' --retry 2 --max-time 600 --silent --show-error \
+            'https://github.com/ggml-org/llama.cpp/releases/download/b12608/llama-b12608-bin-ubuntu-x64.tar.gz' \
+            --output "$stage/llama.tar.gz"
+          printf '%s  %s\n' 437a78088609f8faac6eddb8654614a0bafd761d3e9803b304c1b623074f599c "$stage/llama.tar.gz" | sha256sum --check --status
+          tar -xf "$stage/llama.tar.gz" -C "$stage"
+          curl --fail --location --proto '=https' --retry 2 --max-time 600 --silent --show-error \
+            'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true' \
+            --output "$stage/model.gguf"
+          printf '%s  %s\n' 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e "$stage/model.gguf" | sha256sum --check --status
+          node tools/security-evaluation/pinned-causal-inference-v1/run-live.mjs \
+            --gguf "$stage/model.gguf" --llama-server "$stage/llama-b12608/llama-server" \
+            --variant missing-owner-check --out "$GITHUB_WORKSPACE/owned-causal-pinned-qwen-trial.json"
+      - name: Archive synthetic-only outcome, including negative model results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: owned-causal-pinned-qwen-trial
+          path: owned-causal-pinned-qwen-trial.json
+          if-no-files-found: warn
+          retention-days: 7
