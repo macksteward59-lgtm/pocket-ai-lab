@@ -11,6 +11,7 @@ import time
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "passage-check"))
 from extractive import labeled_grammar
+from reviewed import reviewed_result
 from server import MODEL, MODEL_PINS, local_server, request_reply, verify_model
 
 
@@ -110,13 +111,22 @@ def main():
     parser.add_argument("--gguf", type=Path, help="Required for inference or --check")
     parser.add_argument("--llama-server", type=Path, help="Required for inference or --check")
     parser.add_argument("--source-id", help="Only consider this reviewed source record")
+    parser.add_argument("--reviewed-only", action="store_true",
+                        help="Look up a listed question without a model")
     parser.add_argument("--assess-support", action="store_true",
                         help="Ask the model to check a proposed quote before returning it")
     parser.add_argument("--model", choices=MODEL_PINS, default=MODEL)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--question")
+    group.add_argument("--list-reviewed", action="store_true",
+                       help="List the reviewed questions for --source-id")
     group.add_argument("--check", action="store_true", help="Run the frozen end-to-end study")
     args = parser.parse_args()
+    if args.reviewed_only and args.question is None:
+        parser.error("--reviewed-only requires --question")
+    if args.reviewed_only or args.list_reviewed:
+        if args.source_id is None or args.assess_support:
+            parser.error("Reviewed questions require --source-id and cannot use --assess-support")
     if args.check and args.assess_support:
         parser.error("--assess-support applies to a single --question")
     if args.source_id is not None:
@@ -125,6 +135,15 @@ def main():
         args.source_id = args.source_id.strip().upper()
         if not re.fullmatch(r"[A-Z0-9][A-Z0-9_-]{0,63}", args.source_id):
             parser.error("Use a source ID of 1 to 64 letters, digits, underscores or hyphens")
+    if args.reviewed_only or args.list_reviewed:
+        if args.question is not None:
+            try:
+                validate_question(args.question)
+            except ValueError as error:
+                parser.error(str(error))
+        record = retrieve(args.source_id, args.source_id)
+        print(json.dumps(reviewed_result(record, args.source_id, args.question), ensure_ascii=False, indent=2))
+        return
     record = None
     if args.question is not None:
         try:
