@@ -1,0 +1,19 @@
+{
+  "workflowRun": 44986761973,
+  "artifactID": 14740773243,
+  "artifact": "pocket-ai-lab-device-kit",
+  "archiveBytes": 16277706,
+  "archiveSHA256": "64a598ef9c051d271d454c0b38a7232de6cc65885ee6dd32cb93d92a0df0a464",
+  "tarSHA256": "db951ea697ee2c33c3d5f348f7303655ac6d18701e5efe82c93f4c91941bbde5",
+  "entries": 223,
+  "builtCommit": "0cb6bf938f1c293f0139859cb57e24b62a52638a",
+  "featureHead": "2115057a6affe8160c786309b56a2100ad883c81",
+  "caseSuiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+  "signingCredentialsIncluded": false,
+  "modelWeightsIncluded": false,
+  "physicalDeviceRunObserved": false,
+  "githubArtifact": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44986761973/artifacts/14740773243",
+  "githubExpiresAt": "2026-11-29T05:20:26Z",
+  "identicalTree": "21fa44c3f5c72b69cc0fa6a00cad9c8d94525768",
+  "verifiedAfterCleanExtraction": "The hosted Mac independently rebuilt the extracted Xcode project for generic iOS with code signing disabled and compared the app-bundled case suite byte-for-byte. The downloaded archive hashes, source files, pinned hosted report and simulator reviewer were also checked independently."
+}

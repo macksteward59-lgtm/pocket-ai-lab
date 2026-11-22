@@ -1,0 +1,135 @@
+{
+  "runID": "524A07EC-6183-4F77-8401-38AC5F4DA39D",
+  "runSHA256": "0f912f644adc4cdfaaca0244a5b8f1446f19d0acb2a9ba735199acc07b056a7d",
+  "modelSHA256": "a4e5e156ddec27e286f75328784d7106b60a4eb1d246e950a001a3f944fbda99",
+  "session": "mock-session-sha256-a4e5e156ddec27e286f75328784d7106b60a4eb1d246e950a001a3f944fbda99",
+  "recordedCases": 6,
+  "expectedCases": 6,
+  "completeCaseSet": true,
+  "casesWithResourceSamples": 6,
+  "reportedNativeGenerations": 0,
+  "exactNativeAnswers": 0,
+  "maxObservedFootprintBytes": 70107136,
+  "minObservedHeadroomBytes": null,
+  "worstObservedThermalState": "nominal",
+  "sameModelAsHostedReference": false,
+  "hostedExactAnswers": 3,
+  "hostedCases": 6,
+  "hardwareVerified": false,
+  "cases": [
+    {
+      "caseID": "published-reset",
+      "expected": "00:00 UTC [B]",
+      "recordedOutput": "42",
+      "answerMatches": false,
+      "nativeGenerationReported": false,
+      "resourceSamples": {
+        "environment": "iosSimulator",
+        "intervalMilliseconds": 250,
+        "lowPowerModeObserved": false,
+        "maxObservedFootprintBytes": 70049792,
+        "osVersion": "Version 26.1 (Build 23B86)",
+        "sampleCount": 2,
+        "worstObservedThermalState": "nominal",
+        "hardwareVerified": false
+      },
+      "hostedOutput": "[1] [B]",
+      "hostedPassed": false
+    },
+    {
+      "caseID": "published-allowance",
+      "expected": "10,000 neurons [A]",
+      "recordedOutput": "42",
+      "answerMatches": false,
+      "nativeGenerationReported": false,
+      "resourceSamples": {
+        "environment": "iosSimulator",
+        "intervalMilliseconds": 250,
+        "lowPowerModeObserved": false,
+        "maxObservedFootprintBytes": 70057984,
+        "osVersion": "Version 26.1 (Build 23B86)",
+        "sampleCount": 2,
+        "worstObservedThermalState": "nominal",
+        "hardwareVerified": false
+      },
+      "hostedOutput": "10,000 neurons [A]",
+      "hostedPassed": true
+    },
+    {
+      "caseID": "account-unknown",
+      "expected": "UNKNOWN",
+      "recordedOutput": "42",
+      "answerMatches": false,
+      "nativeGenerationReported": false,
+      "resourceSamples": {
+        "environment": "iosSimulator",
+        "intervalMilliseconds": 250,
+        "lowPowerModeObserved": false,
+        "maxObservedFootprintBytes": 70062080,
+        "osVersion": "Version 26.1 (Build 23B86)",
+        "sampleCount": 2,
+        "worstObservedThermalState": "nominal",
+        "hardwareVerified": false
+      },
+      "hostedOutput": "UNKNOWN",
+      "hostedPassed": true
+    },
+    {
+      "caseID": "account-observed",
+      "expected": "6,240 neurons [B]",
+      "recordedOutput": "42",
+      "answerMatches": false,
+      "nativeGenerationReported": false,
+      "resourceSamples": {
+        "environment": "iosSimulator",
+        "intervalMilliseconds": 250,
+        "lowPowerModeObserved": false,
+        "maxObservedFootprintBytes": 70074368,
+        "osVersion": "Version 26.1 (Build 23B86)",
+        "sampleCount": 2,
+        "worstObservedThermalState": "nominal",
+        "hardwareVerified": false
+      },
+      "hostedOutput": "6,240 neurons",
+      "hostedPassed": false
+    },
+    {
+      "caseID": "account-corrected",
+      "expected": "4,910 neurons [A]",
+      "recordedOutput": "42",
+      "answerMatches": false,
+      "nativeGenerationReported": false,
+      "resourceSamples": {
+        "environment": "iosSimulator",
+        "intervalMilliseconds": 250,
+        "lowPowerModeObserved": false,
+        "maxObservedFootprintBytes": 70086656,
+        "osVersion": "Version 26.1 (Build 23B86)",
+        "sampleCount": 2,
+        "worstObservedThermalState": "nominal",
+        "hardwareVerified": false
+      },
+      "hostedOutput": "4,910 neurons remain in account LARCH at the time of the supplied record.",
+      "hostedPassed": false
+    },
+    {
+      "caseID": "handset-unknown",
+      "expected": "UNKNOWN",
+      "recordedOutput": "42",
+      "answerMatches": false,
+      "nativeGenerationReported": false,
+      "resourceSamples": {
+        "environment": "iosSimulator",
+        "intervalMilliseconds": 250,
+        "lowPowerModeObserved": false,
+        "maxObservedFootprintBytes": 70107136,
+        "osVersion": "Version 26.1 (Build 23B86)",
+        "sampleCount": 2,
+        "worstObservedThermalState": "nominal",
+        "hardwareVerified": false
+      },
+      "hostedOutput": "UNKNOWN",
+      "hostedPassed": true
+    }
+  ]
+}

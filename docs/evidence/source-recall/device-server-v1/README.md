@@ -64,3 +64,7 @@ In [draft #260](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/260), a
 | [Local 3B](lookup-local-3b.json) | 3/5 | 3/3 | 2/2 | provision, allocation |
 
 An answer can cite the correct source while selecting the wrong fact. For example, the user question about the reset time yielded a quote about the size of the allocation in the local 1.5B study. Returned quotes require review. The 3B run returned the exact reset time and correctly declined both unknowns. Its remaining two quotes contain the requested fact with extra wording. The reference [hosted job](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44983148242) also exercised the model comparison after factoring out the shared local-server lifecycle.
+
+## Single-export phone and simulator check
+
+[Draft #261](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/261) records per-case process memory and thermal pressure, and preserves one offline-verifiable export per invocation. Six simulator cases yielded 12 OS readings with a test provider. Three Linux runs of the real 1.5B model each answered 4/6 exactly. The USB-paired iPhone Air session remains outstanding. See [iPhone measurements and verified simulator export](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/resource-samples/README.md).

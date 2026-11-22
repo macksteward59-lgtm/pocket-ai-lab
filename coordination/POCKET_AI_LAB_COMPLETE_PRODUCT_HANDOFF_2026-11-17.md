@@ -746,6 +746,8 @@ The [model and device comparison](../docs/evidence/source-recall/device-server-v
 
 The Apple runner built the app for arm64 iOS and the simulator, rebuilt the extracted test kit for a generic iOS device, and passed the native app XCTest suite on a simulator. The separate frozen macOS recipient benchmark produced zero valid answers in 36 attempts and its independent check failed. [Device test kit artifact](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44981550178/artifacts/14738847528) and [verified package identities](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/device-kit.json). The kit is unsigned. Its PR test-merge tree matches feature head `7fc3b96` exactly.
 
+[Draft #261](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/261) records per-case process memory and thermal pressure, and preserves one offline-verifiable export per invocation. Six simulator cases yielded 12 OS readings with a test provider. Three Linux runs of the real 1.5B model each answered 4/6 exactly. The USB-paired iPhone Air session remains outstanding. See [iPhone measurements and verified simulator export](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/resource-samples/README.md).
+
 ### P2 — Governed autonomy and evidence
 1. Complete APEX policy integration and exact-scope approval flows.
 2. Independently validate evidence candidate, signer, key management, revocation, replay defense, and receipts.
