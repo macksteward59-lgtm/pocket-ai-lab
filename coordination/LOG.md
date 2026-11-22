@@ -5078,3 +5078,8 @@ On disjoint [draft #272](https://github.com/macksteward59-lgtm/pocket-ai-lab/pul
 ## November 22, 2026 · v3.12 database monitor integration
 
 Draft [#271](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/271) at `5f0706202c326f39db7260c9e21793942b2faa44` passed 36 assertions per PostgreSQL version on two real servers. The migration and follow-up reports cover the original V71 cases and the four declared tables, including three source-backed positive grant expectations. The schema owner and observer used separate restricted logins. The generic build and consumer suite fail on East lifecycle modules absent from the base. Review the database slice separately, reconcile the existing East integration, and repeat general CI before merge. [Source reconciliation and job links](evidence/rls-v312-2026-11-22/V71-postgres.md#hosted-integration-in-draft-pr-271).
+
+
+## 2026-11-22 13:46 UTC · Database and lifecycle integration evidence
+
+[Draft #273](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/273) at `da5ca85df1a2fa46546a177442b8bf966a7eac6a` verified tree `fb224c7ecbacb06e25a54a463405b92ac60371d8` using #157's existing runtime and cancellation test and #271's five database PR files. The hosted TypeScript build, full root npm test and all 30 lifecycle tests passed. The database suite passed 36 checks each on PG15 and PG16. The optional live llama.cpp test was skipped in source and compiled form. Current main's suite passed 19/30 on #159 and 29/30 on #157 in local comparisons. Review the worker-confirmed cancellation contract before combining the product branches. [Evidence and component run](evidence/rls-v312-2026-11-22/V71-postgres.md#lifecycle-dependency-comparison).
