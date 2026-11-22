@@ -34,6 +34,10 @@ def complete(prompt, mode):
             "stream": False, "seed": 1}
     if mode == "letters":
         body["grammar"] = 'root ::= "A" | "B"'
+    elif mode == "letters_or_unknown":
+        body["grammar"] = 'root ::= "A" | "B" | "U"'
+    elif mode != "plain":
+        raise ValueError("Unknown word-choice decoder")
     request = Request(URL + "/completion", json.dumps(body).encode(),
                       {"Content-Type": "application/json"})
     with urlopen(request, timeout=15) as response:
