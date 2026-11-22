@@ -5007,3 +5007,8 @@ Draft [#267](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/267) advan
 ## November 22, 2026 — Desktop launch and device kit publication reliability
 
 [Draft #268](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/268), `dc85ba95b4e3ec45847b539710ffea5097337560`, fixes the doubled path in the documented checkout-relative launcher invocation; help and invalid arguments no longer start services. Four focused subprocess regressions passed, with launch stubbed. [Draft #269](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/269), `a0762047c8da02aaf083f57728fd27256978b5ac`, keeps the previous kit and checksum intact when the rebuild or fixture checks fail, by staging first and publishing after verification. Three tests passed using real Git, tar and SHA tooling and stubbed Xcode. The paired final moves are not claimed crash-atomic. Separate #266 Apple validation continues unchanged; no merge, device or live launch action.
+
+
+### Desktop draft exact-hosted follow-up
+
+On #268 head `dc85ba95b4e3ec45847b539710ffea5097337560`, Governance and Cursor passed; [Consumer](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45019929044) and [Pocket AI Lab](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45019929066) were blocked by the pre-existing unresolved `../autonomy/EastTaskLifecycleAdapter` test import. At main `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873`, the identical import exists and the corresponding file does not. The desktop branch has only launcher changes and cannot count as broad CI-passed. #269 showed no PR-triggered workflow at its stacked base; Apple validation remains open.
