@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { build } from "esbuild";
 import { Miniflare } from "miniflare";
+import { handoffTransport } from "../../tools/source-handoff/cli.mjs";
+import { makeBundle, publishBundle, readPublishedRegister } from "../../tools/source-handoff/register.mjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
@@ -114,11 +116,18 @@ test("MCP protects lifecycle status and persists revision-checked handoff notes 
       assert.deepEqual((await save(revision, chromium)).structuredContent, saved);
     }
   } finally { await editor.close(); }
+  const register = makeBundle();
+  const notes = handoffTransport(editorKey, (input, init) => runtime.dispatchFetch(input, init));
+  assert.equal((await publishBundle(register, notes)).created, register.records.length + 1);
   await runtime.dispose();
   runtime = open(production, { MCP_READ_KEY: key, MCP_NOTE_WRITE_KEY: editorKey });
   editor = await connect(editorKey);
   try { assert.deepEqual((await read()).structuredContent, saved); }
   finally { await editor.close(); }
+  assert.equal((await publishBundle(register, notes)).created, 0);
+  const reopened = await readPublishedRegister(register, notes.read);
+  const canonical = JSON.parse(await readFile(new URL("../../docs/research/project-sources.json", import.meta.url)));
+  assert.deepEqual(reopened, canonical);
   await runtime.dispose();
   runtime = open(production, { MCP_READ_KEY: key, MCP_NOTE_WRITE_KEY: key });
   const sameKey = await connect(key);

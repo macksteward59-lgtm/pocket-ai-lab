@@ -78,6 +78,10 @@ for (const engine of [chromium, webkit]) {
       await query.fill("W3C-PROV");
       await query.press("Enter");
       await page.locator("#source-results").getByText("W3C-PROV", { exact: true }).waitFor();
+      await query.fill("How many neurons are left in my own Cloudflare account at this moment?");
+      await query.press("Enter");
+      await page.locator("#source-results").getByText("CF-QUOTA", { exact: true }).waitFor();
+      assert.match(await page.locator("#source-status").innerText(), /Suggested sources.*Check the cited passage/);
       await query.fill("xzqxzzzz");
       await query.press("Enter");
       await page.getByText("No matching project source.").waitFor();
