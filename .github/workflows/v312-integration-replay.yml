@@ -1,0 +1,66 @@
+name: Reproduce v3.12 integration evidence
+
+on:
+  pull_request:
+    branches: [codex/v312-privilege-monitor-ci]
+    paths: ['.github/workflows/v312-integration-replay.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the existing lifecycle integration snapshot
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ab2ad101d1a2ebfa277bd2c136db79b6b1afc094
+          path: integration
+          persist-credentials: false
+
+      - name: Check out the reviewed database candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 5f0706202c326f39db7260c9e21793942b2faa44
+          path: candidate
+          persist-credentials: false
+
+      - name: Verify the combined Git tree before testing
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths=(.github/workflows/v312-privilege-monitor.yml coordination/LEADERSHIP.md packages/director/db/v3.12)
+          test -z "$(git -C integration ls-files -- "${paths[@]}")"
+          git -C candidate archive HEAD -- "${paths[@]}" | tar -x -C integration
+          git -C integration add -- "${paths[@]}"
+          tree=$(git -C integration write-tree)
+          echo "Integration tree: $tree"
+          test "$tree" = fb224c7ecbacb06e25a54a463405b92ac60371d8
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.16.0
+
+      - name: Compile the integration snapshot
+        working-directory: integration
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --no-package-lock
+          npm run build
+
+      - name: Run the lifecycle contract tests
+        working-directory: integration
+        run: ./node_modules/.bin/vitest run packages/intelligence/__tests__/autonomy.test.ts
+
+      - name: Verify the database monitor on PostgreSQL 15
+        working-directory: integration
+        run: python3 packages/director/db/v3.12/test_integration.py 15
+
+      - name: Verify the database monitor on PostgreSQL 16
+        working-directory: integration
+        run: python3 packages/director/db/v3.12/test_integration.py 16
+
+      - name: Confirm tests preserved the tracked inputs
+        working-directory: integration
+        run: git diff --exit-code
