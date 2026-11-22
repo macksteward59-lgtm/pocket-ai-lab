@@ -7,7 +7,9 @@ destination=$1
 mkdir -p "$destination"
 destination=$(cd "$destination" && pwd)
 stage=$(mktemp -d)
-trap 'rm -rf "$stage"' EXIT
+candidate=
+trap 'rm -rf "$stage"; if [[ -n "$candidate" ]]; then rm -rf "$candidate"; fi' EXIT
+candidate=$(mktemp -d "$destination/.device-kit.XXXXXX")
 kit="$stage/PocketAILab"
 mkdir -p "$kit"
 cd "$root"
@@ -27,14 +29,24 @@ upstream=(runtime/ios/build/src/llama.cpp-*)
     cp "${upstream[0]}/$file" "$kit/third-party/llama.cpp/$file"
   done
 git rev-parse HEAD > "$kit/SOURCE-COMMIT.txt"
-tar -czf "$destination/pocket-ai-lab-device-kit.tar.gz" -C "$stage" PocketAILab
-(cd "$destination" && shasum -a 256 pocket-ai-lab-device-kit.tar.gz > pocket-ai-lab-device-kit.sha256)
+tar -czf "$candidate/pocket-ai-lab-device-kit.tar.gz" -C "$stage" PocketAILab
+(cd "$candidate" && shasum -a 256 pocket-ai-lab-device-kit.tar.gz > pocket-ai-lab-device-kit.sha256)
 # Build from a new extraction to catch host checkout paths and missing packaged dependencies.
 mkdir "$stage/reopened"
-tar -xzf "$destination/pocket-ai-lab-device-kit.tar.gz" -C "$stage/reopened"
+tar -xzf "$candidate/pocket-ai-lab-device-kit.tar.gz" -C "$stage/reopened"
 cd "$stage/reopened/PocketAILab"
 xcodebuild build -project ios/PocketAILab.xcodeproj -scheme PocketAILab \
   -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath "$stage/derived" CODE_SIGNING_ALLOWED=NO
 cmp ios/PocketAILab/PassageChecks.json "$stage/derived/Build/Products/Debug-iphoneos/PocketAILab.app/PassageChecks.json"
 
 cmp docs/research/project-sources.json "$stage/derived/Build/Products/Debug-iphoneos/PocketAILab.app/project-sources.json"
+
+# The public filenames must not be changed by a failed rebuild or fixture check.
+for name in pocket-ai-lab-device-kit.tar.gz pocket-ai-lab-device-kit.sha256; do
+  if [[ -d "$destination/$name" ]]; then
+    echo "Cannot publish device kit over directory: $destination/$name" >&2
+    exit 1
+  fi
+done
+mv -f "$candidate/pocket-ai-lab-device-kit.tar.gz" "$destination/pocket-ai-lab-device-kit.tar.gz"
+mv -f "$candidate/pocket-ai-lab-device-kit.sha256" "$destination/pocket-ai-lab-device-kit.sha256"
