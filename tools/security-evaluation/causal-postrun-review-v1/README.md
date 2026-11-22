@@ -15,7 +15,7 @@ Usage:
     node tools/security-evaluation/causal-postrun-review-v1/verify.mjs trial.json trial.json.answer-key.json
 
 Tests:
-    node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs tools/security-evaluation/pinned-causal-inference-v1/adapter.test.mjs tools/security-evaluation/causal-postrun-review-v1/verify.test.mjs
+    node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs tools/security-evaluation/pinned-causal-inference-v1/adapter.test.mjs tools/security-evaluation/causal-postrun-review-v1/verify.test.mjs tools/security-evaluation/causal-postrun-review-v1/write.test.mjs
 
 ## Trust and disclosure caveats
 - The key is separately disclosed after inference, not encrypted and not signed. SHA-256 catches ordinary partial alteration but cannot prevent substitution of both unsigned files. This is neither source-independent proof nor verified runtime attestation.
