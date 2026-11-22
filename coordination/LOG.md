@@ -4932,3 +4932,7 @@ At `59046bcefe4a30771e4765448195adea66e3a640` the Memory editor takes one draft 
 ## Project-source lookup and fresh-chat recovery
 
 [Draft #256](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/256) adds a read-only search screen to the consumer prototype. The [canonical register](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/a13f2314652f5243296acf8d8c4d74e0349eda1b/docs/research/project-sources.json) records both native exact-answer rules and pins a code citation for each. A reviewer in a fresh session reached both citations through the private Cloudflare handoff and recovered the change in scoring. See [the research handoff](../docs/research/project-research-memory.md) for the test evidence and remaining scope.
+
+## Private research register publication and readback
+
+[Draft #257](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/257) builds on #256. The live private handoff now carries all nine reviewed records. The catalog was published after the records and the existing research index was read back at revision 6 with the release pointer, results and PR. The second publication wrote no notes. The precommitted retrieval check ranked the designated source first on seven of nine supported questions and suggested documents for all three unsupported questions. The research handoff records the raw ranks, browser behavior and scope of the test. See [the current project research record](../docs/research/project-research-memory.md#full-register-in-the-private-cloudflare-handoff).

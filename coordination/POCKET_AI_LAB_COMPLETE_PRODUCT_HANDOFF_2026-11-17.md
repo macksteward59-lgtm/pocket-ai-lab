@@ -735,6 +735,8 @@ A capability is not complete until the relevant gates pass:
 2. Connect OWASP/provenance-backed knowledge context to the Orchestrator only through explicit, tested, injection-resistant integration.
 3. Add source conflict, trust, correction, retention, export/delete, and project isolation tests.
 
+The private ChatGPT handoff now reads the full reviewed GitHub source register from Cloudflare. Eight source records and one versioned decision were published and verified. An interrupted publish can resume, and a changed record is rejected when reading a pinned release. The frozen search found the designated source within five results for all nine answerable questions, while all three questions about absent information still received suggestions. This advances curated retrieval, source identity and reproducibility in PAL-10-001, PAL-10-002 and PAL-10-007. Passage-supported answering and uncertainty handling in PAL-10-003 remain open. [Research handoff and evidence](../docs/research/project-research-memory.md#full-register-in-the-private-cloudflare-handoff)
+
 ### P1 — Device resource/performance acceptance
 1. Measure real iPhone Air memory and thermal limits.
 2. Tune one-model/multi-role scheduling, context budgets, and model unload.
