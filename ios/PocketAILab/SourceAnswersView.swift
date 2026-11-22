@@ -8,6 +8,7 @@ struct SourceAnswersView: View {
     @State private var catalog: ProjectPassages?
     @State private var passageID = ""
     @State private var question = ""
+    @FocusState private var enteringQuestion: Bool
     @State private var history: [NativeMemoryEntry] = []
     @State private var selected: NativeMemoryEntry?
     @State private var importing = false
@@ -37,6 +38,7 @@ struct SourceAnswersView: View {
             Section("Question") {
                 TextField("Ask or find a saved question", text: $question)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .focused($enteringQuestion).submitLabel(.search).onSubmit { enteringQuestion = false }
                     .accessibilityIdentifier("source-question")
                 if let savedReply {
                     Button("Read saved answer") { selected = savedReply }
@@ -108,7 +110,7 @@ struct SourceAnswersView: View {
                 try await accept(url)
             }
         }
-        .sheet(item: $selected, onDismiss: {
+        .fullScreenCover(item: $selected, onDismiss: {
             Task { do { try await reload() } catch { message = error.localizedDescription } }
         }) { entry in
             SourceAnswerDetail(entry: entry, store: store)
@@ -146,6 +148,8 @@ private struct SourceAnswerDetail: View {
     @State var entry: NativeMemoryEntry
     let store: NativeMemoryStore
     @State private var correction = ""
+    @FocusState private var enteringCorrection: Bool
+    @State private var savedRevision: Int?
     @State private var errorText: String?
     @State private var saving = false
     @State private var savedDigest: String?
@@ -167,8 +171,11 @@ private struct SourceAnswerDetail: View {
                     }
                     Section("Owner review") {
                         TextField("Exact corrected excerpt", text: $correction)
-                            .textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("review-correction")
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .focused($enteringCorrection).submitLabel(.done).onSubmit { enteringCorrection = false }
+                            .accessibilityIdentifier("review-correction")
                         Button("Save correction") {
+                            enteringCorrection = false
                             saving = true
                             Task {
                                 defer { saving = false }
@@ -177,9 +184,13 @@ private struct SourceAnswerDetail: View {
                                     errorText = nil
                                     correction = ""
                                     savedDigest = nil
+                                    savedRevision = entry.sourceAnswer?.corrections.count
                                 } catch { errorText = error.localizedDescription }
                             }
                         }.disabled(saving || correction.isEmpty)
+                        if let savedRevision {
+                            Text("Saved revision " + String(savedRevision)).accessibilityIdentifier("review-saved")
+                        }
                         if let errorText { Text(errorText) }
                     }
                     Section("History") {

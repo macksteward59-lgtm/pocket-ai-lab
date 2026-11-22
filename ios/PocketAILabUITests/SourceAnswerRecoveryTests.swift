@@ -12,12 +12,12 @@ final class SourceAnswerRecoveryTests: XCTestCase {
             app.buttons["Source answers"].tap()
             XCTAssertTrue(app.textFields["source-question"].waitForExistence(timeout: 12))
         }
-        func reveal(_ control: XCUIElement, up: Bool) {
+        func reveal(_ control: XCUIElement, up: Bool, action: Bool = true) {
             for _ in 0..<6 {
-                if control.exists && control.isHittable { return }
+                if control.exists && (!action || control.isHittable) { return }
                 if up { app.swipeUp() } else { app.swipeDown() }
             }
-            XCTAssertTrue(control.exists && control.isHittable)
+            XCTAssertTrue(control.exists && (!action || control.isHittable), "Could not reveal " + control.description)
         }
         func openExample() {
             let open = app.buttons["Open example server answer"]
@@ -36,8 +36,8 @@ final class SourceAnswerRecoveryTests: XCTestCase {
         let save = app.buttons["Save correction"]
         reveal(save, up: true)
         save.tap()
-        reveal(app.staticTexts["review-current"], up: false)
-        XCTAssertEqual(app.staticTexts["review-current"].label, expected)
+        // Wait for the vault write before killing the process. The recovered content is checked after relaunch.
+        XCTAssertTrue(app.staticTexts["review-saved"].waitForExistence(timeout: 12))
         app.terminate()
         XCTAssertEqual(app.state, .notRunning)
         app.launch()
@@ -54,7 +54,7 @@ final class SourceAnswerRecoveryTests: XCTestCase {
         XCTAssertEqual(app.staticTexts["review-current"].label, expected)
         XCTAssertEqual(app.staticTexts["review-citation"].label, "CF-QUOTA")
         let original = app.staticTexts["review-original"]
-        reveal(original, up: true)
+        reveal(original, up: true, action: false)
         XCTAssertTrue(original.label.contains("10,000 neurons"))
         app.buttons["Done"].tap()
         openExample()
@@ -63,7 +63,7 @@ final class SourceAnswerRecoveryTests: XCTestCase {
         reveal(export, up: true)
         export.tap()
         let digest = app.staticTexts["source-review-digest"]
-        reveal(digest, up: true)
+        reveal(digest, up: true, action: false)
         let hash = digest.label
         XCTAssertEqual(hash.count, 64)
         print("POCKET_SOURCE_UI_DIGEST " + hash)

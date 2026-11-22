@@ -550,6 +550,15 @@ jobs:
             CODE_SIGN_IDENTITY=- \
             | tee "$RUNNER_TEMP/owner-app-xctest.log"
 
+      - name: Retain the failed app test report
+        if: ${{ !cancelled() && steps.app-xctest.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocket-ai-lab-app-test-log
+          path: ${{ runner.temp }}/owner-app-xctest.log
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Independently read the reviewed source answer exported by the app
         id: reviewed-source
         if: ${{ !cancelled() && steps.app-xctest.outcome == 'success' }}
