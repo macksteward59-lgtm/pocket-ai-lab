@@ -49,6 +49,8 @@ Compare the native app first with the unmodified six-question 1.5B server run. I
 
 The Apple runner built the app for arm64 iOS and the simulator, rebuilt the extracted test kit for a generic iOS device, and passed the native app XCTest suite on a simulator. The separate frozen macOS recipient benchmark produced zero valid answers in 36 attempts and its independent check failed. [Device test kit artifact](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44981550178/artifacts/14738847528) and [verified package identities](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/device-kit.json). The kit is unsigned. Its PR test-merge tree matches feature head `7fc3b96` exactly.
 
+The final [Apple job](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44981550178/job/137083021356) reports 75 app unit tests and one UI test with zero failures. The app test that uses a catalog-selected model lease and reopens all six passage events passed with its test provider. The simulator runtime suite reported 154 tests, five skipped and zero failures. The installed Memory vault header check passed. The only failed steps were the original macOS recipient benchmark and its independent verifier.
+
 Feature heads under review are `7fc3b96` for #258, `4f38f30` for #259 and `2083972` for #260. The main branch was observed at `fb59f76`. The PR stack is the build source for this evidence.
 
 ## From a question to a retrieved passage
