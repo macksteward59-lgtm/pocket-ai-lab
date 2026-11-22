@@ -25,12 +25,15 @@ on:
       - codex/passage-device-server-proof
       - codex/device-resource-samples
       - codex/reviewed-answer-relaunch
+      - codex/reviewed-answer-verified-kit
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
       - "docs/architecture/GIE-CANONICAL-CODEBOOK-ARTIFACT-v1.md"
       - "ios/**"
       - "tools/evaluation-review/**"
+      - "tools/passage-check/package-device-kit.sh"
+      - "tools/passage-check/test_device_kit_packaging.py"
       - "docs/implementation/ios-llamaengine-gate*.md"
       - "README.md"
       - ".github/workflows/ios-llamaengine-ci.yml"
@@ -526,8 +529,12 @@ jobs:
 
       - name: Package and independently rebuild the device test kit
         id: device-kit
-        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples' || github.head_ref == 'codex/reviewed-answer-relaunch' || github.head_ref == 'codex/reviewed-answer-verified-kit') }}
-        run: bash tools/passage-check/package-device-kit.sh "$RUNNER_TEMP/device-kit"
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples' || github.head_ref == 'codex/reviewed-answer-relaunch' || github.head_ref == 'codex/reviewed-answer-verified-kit' || github.head_ref == 'codex/device-kit-publish-after-verify') }}
+        run: |
+          if [[ "${GITHUB_HEAD_REF:-}" == "codex/device-kit-publish-after-verify" ]]; then
+            python3 -m unittest -v tools/passage-check/test_device_kit_packaging.py
+          fi
+          bash tools/passage-check/package-device-kit.sh "$RUNNER_TEMP/device-kit"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.device-kit.outcome == 'success' }}
         with:
