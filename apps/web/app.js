@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const state = { model: "model not connected", busy: false };
-const views = ["chat","agents","memory","activity","settings"];
+const views = ["chat","agents","memory","sources","activity","settings"];
 function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();if(name==="activity"&&!reviewSource)loadBundledReview();}
 function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
 function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}

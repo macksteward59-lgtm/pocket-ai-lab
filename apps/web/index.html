@@ -19,6 +19,7 @@
       <button class="nav-item active" data-view="chat">◫ <span>Chat</span></button>
       <button class="nav-item" data-view="agents">◎ <span>Agent team</span><span class="nav-soon">PREVIEW</span></button>
       <button class="nav-item" data-view="memory">▤ <span>Memory</span></button>
+      <button class="nav-item" data-view="sources">⌕ <span>Project sources</span></button>
       <button class="nav-item" data-view="activity">◷ <span>Activity</span></button>
       <div class="sidebar-spacer"></div>
       <div class="privacy-card"><span class="privacy-dot"></span><div><strong>Local-first mode</strong><small>Your prompts stay on this device when using a local model.</small></div></div>
@@ -59,6 +60,16 @@
         </form>
         <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
         <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
+      </section>
+      <section class="view secondary-view hidden" id="sources-view">
+        <div class="section-heading"><h1>Project sources</h1><p>Find a published source or trace a project decision through its revisions.</p></div>
+        <form id="source-form" class="memory-form">
+          <label for="source-query">Topic or source ID</label>
+          <input id="source-query" type="search" required maxlength="300" placeholder="e.g. trailing newline">
+          <button class="primary-button" type="submit">Search</button>
+        </form>
+        <p id="source-status" role="status"></p>
+        <div id="source-results" class="memory-list"></div>
       </section>
       <section class="view secondary-view hidden" id="activity-view">
         <div class="section-heading"><h1>Activity</h1><p>Review an iPhone evaluation or compare OpenClaw’s CI draft with its source.</p></div>
@@ -102,5 +113,6 @@
   </div>
   <script src="/app.js" defer></script>
   <script src="/native-review.js" defer></script>
+  <script type="module" src="/project-sources-ui.js"></script>
 </body>
 </html>

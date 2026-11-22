@@ -257,13 +257,28 @@ function chatFailure(error) {
 
 export function createServer() {
   const take = createLimiter(rateLimitConfig());
-  return http.createServer(async (req, res) => {
+  let sourceIndex;
+  const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
         if (!localApiAllowed(req)) {
           drain(req);
           return rejectLocal(res);
+        }
+      }
+      if (url.pathname === "/api/project-sources") {
+        if (req.method !== "GET") return json(res, 405, { error: "Use GET for project sources." }, { allow: "GET" });
+        if (url.searchParams.size !== 1 || !url.searchParams.has("q")) {
+          return json(res, 400, { error: "Supply a single q parameter containing search text or a source ID." });
+        }
+        try {
+          const { openProjectSources, registerRevision } = await import("./project-sources.mjs");
+          sourceIndex ??= openProjectSources();
+          return json(res, 200, { registerRevision, results: sourceIndex.lookup(url.searchParams.get("q")) });
+        } catch (error) {
+          if (error instanceof RangeError) return json(res, 400, { error: error.message });
+          return json(res, 503, { error: "Project source search is unavailable." });
         }
       }
       if (url.pathname === "/api/activity/openclaw-245" && req.method === "GET") {
@@ -591,6 +606,8 @@ export function createServer() {
       return json(res, status, { error: error instanceof Error ? error.message : "Request failed." });
     }
   });
+  server.once("close", () => sourceIndex?.close());
+  return server;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
