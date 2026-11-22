@@ -50,12 +50,22 @@ final class MemoryRecoveryTests: XCTestCase {
             XCTAssertEqual(content.value as? String, expected)
         }
 
-        let fields = app.textFields.matching(identifier: "memory-reference")
+        func reference(at index: Int) -> XCUIElement {
+            let field = app.textFields["memory-reference-\(index + 1)"]
+            // Form may create only the visible cells on a small simulator.
+            for _ in 0..<3 {
+                if field.exists && field.isHittable { break }
+                app.swipeUp()
+            }
+            XCTAssertTrue(field.waitForExistence(timeout: 5), "Missing reference \(index + 1)")
+            XCTAssertEqual(field.label, "Reference \(index + 1) of \(sources.count)")
+            return field
+        }
+
         func checkReferences() {
-            XCTAssertTrue(fields.firstMatch.waitForExistence(timeout: 5))
-            XCTAssertEqual(fields.count, sources.count)
             for (index, source) in sources.enumerated() {
-                XCTAssertEqual(fields.element(boundBy: index).value as? String, source)
+                let field = reference(at: index)
+                XCTAssertEqual(field.value as? String, source)
             }
         }
 
@@ -65,14 +75,11 @@ final class MemoryRecoveryTests: XCTestCase {
         // Enter content first, then scroll the form as needed above the keyboard.
         enter(original, in: content)
         for (index, source) in sources.enumerated() {
-            let field = fields.element(boundBy: index)
-            if !field.isHittable { app.swipeUp() }
-            enter(source, in: field)
+            enter(source, in: reference(at: index))
         }
         app.buttons["Save"].tap()
 
         openEditor(for: original)
-        checkReferences()
         content.tap()
         content.typeText("7")
         waitForValue(content, NSPredicate(format: "value MATCHES %@", "[0-9]{\(original.count + 1)}"))
@@ -80,7 +87,6 @@ final class MemoryRecoveryTests: XCTestCase {
         app.buttons["Save"].tap()
 
         openEditor(for: revised)
-        checkReferences()
         content.tap()
         content.typeText("8")
         waitForValue(content, NSPredicate(format: "value MATCHES %@", "[0-9]{\(revised.count + 1)}"))

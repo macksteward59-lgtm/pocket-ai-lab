@@ -97,11 +97,13 @@ struct MemoryView: View {
                         }
                         Section("Source references") {
                             ForEach($draftSourceRefs) { $reference in
+                                let position = draftSourceRefs.firstIndex { $0.id == reference.id }.map { $0 + 1 } ?? 0
                                 HStack {
                                     TextField("Reference", text: $reference.text)
                                         .textInputAutocapitalization(.never)
                                         .autocorrectionDisabled()
-                                        .accessibilityIdentifier("memory-reference")
+                                        .accessibilityLabel("Reference \(position) of \(draftSourceRefs.count)")
+                                        .accessibilityIdentifier("memory-reference-\(position)")
                                     Button {
                                         let id = reference.id
                                         draftSourceRefs.removeAll { $0.id == id }
