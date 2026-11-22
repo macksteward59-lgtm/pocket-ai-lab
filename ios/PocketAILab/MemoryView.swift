@@ -6,6 +6,7 @@ struct MemoryView: View {
     @State private var entries: [NativeMemoryEntry] = []
     @State private var isEditorPresented = false
     @State private var editingID: String?
+    @FocusState private var focusedField: EditorFocus?
     @State private var draftContent = ""
     @State private var draftLayer: NativeMemoryLayer = .episodic
     @State private var draftSourceRefs: [ReferenceField] = []
@@ -93,6 +94,7 @@ struct MemoryView: View {
                         }
                         Section("Information to remember") {
                             TextEditor(text: $draftContent).frame(minHeight: 150)
+                                .focused($focusedField, equals: .content)
                                 .accessibilityLabel("Information to remember")
                         }
                         Section("Source references") {
@@ -102,6 +104,7 @@ struct MemoryView: View {
                                     TextField("Reference", text: $reference.text)
                                         .textInputAutocapitalization(.never)
                                         .autocorrectionDisabled()
+                                        .focused($focusedField, equals: .reference(reference.id))
                                         .accessibilityLabel("Reference \(position) of \(draftSourceRefs.count)")
                                         .accessibilityIdentifier("memory-reference-\(position)")
                                     Button {
@@ -124,6 +127,10 @@ struct MemoryView: View {
                     }
                     .navigationTitle(editingID == nil ? "Save memory" : "Edit memory")
                     .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done typing") { focusedField = nil }
+                        }
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { isEditorPresented = false }
                         }
@@ -220,4 +227,9 @@ struct MemoryView: View {
 private struct ReferenceField: Identifiable {
     let id = UUID()
     var text = ""
+}
+
+private enum EditorFocus: Hashable {
+    case content
+    case reference(UUID)
 }

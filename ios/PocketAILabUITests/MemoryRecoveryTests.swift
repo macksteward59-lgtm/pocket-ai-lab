@@ -26,6 +26,14 @@ final class MemoryRecoveryTests: XCTestCase {
             }
         }
 
+        func finishTyping() {
+            if app.keyboards.firstMatch.exists {
+                let done = app.buttons["Done typing"]
+                XCTAssertTrue(done.waitForExistence(timeout: 5))
+                done.tap()
+            }
+        }
+
         func openMemory() {
             let tab = app.tabBars.buttons["Memory"]
             XCTAssertTrue(tab.waitForExistence(timeout: 10))
@@ -53,10 +61,8 @@ final class MemoryRecoveryTests: XCTestCase {
         func reference(at index: Int) -> XCUIElement {
             let field = app.textFields["memory-reference-\(index + 1)"]
             // Form may create only the visible cells on a small simulator.
-            for _ in 0..<3 {
-                if field.exists && field.isHittable { break }
-                app.swipeUp()
-            }
+            if !field.exists { app.swipeDown() }
+            if !field.exists { app.swipeUp() }
             XCTAssertTrue(field.waitForExistence(timeout: 5), "Missing reference \(index + 1)")
             XCTAssertEqual(field.label, "Reference \(index + 1) of \(sources.count)")
             return field
@@ -74,9 +80,12 @@ final class MemoryRecoveryTests: XCTestCase {
         app.buttons["Add reference"].tap()
         // Enter content first, then scroll the form as needed above the keyboard.
         enter(original, in: content)
+        finishTyping()
         for (index, source) in sources.enumerated() {
             enter(source, in: reference(at: index))
+            finishTyping()
         }
+        checkReferences()
         app.buttons["Save"].tap()
 
         openEditor(for: original)
