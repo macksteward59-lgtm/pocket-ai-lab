@@ -47,6 +47,16 @@ jobs:
             --weights "$work/encoder.onnx" --tokenizer "$work/tokenizer.json" \
             --baseline "$work/baseline.json" --out "$work/windows.json"
           python3 tools/long-document-reader/benchmark.py --archive "$work/test.tgz" --out "$work/reader"
+      - name: Measure MiniLM reranking within the same five-sentence budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/window-search"
+          source=https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/233902d25c440f23af6f7d6e94d2946bac0bee0a
+          curl -fsSL --retry 2 --max-time 180 -o "$work/minilm.onnx" "$source/onnx/model_qint8_arm64.onnx?download=true"
+          python3 tools/full-paper-distillation/retrieval_rerank.py --archive "$work/test.tgz" \
+            --weights "$work/minilm.onnx" --tokenizer "$work/tokenizer.json" \
+            --windows "$work/windows.json" --out "$work/reranked.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: ${{ !cancelled() }}
         with:
@@ -54,6 +64,7 @@ jobs:
           path: |
             ${{ runner.temp }}/window-search/baseline.json
             ${{ runner.temp }}/window-search/windows.json
+            ${{ runner.temp }}/window-search/reranked.json
             ${{ runner.temp }}/window-search/reader/report.json
           if-no-files-found: warn
           retention-days: 14
