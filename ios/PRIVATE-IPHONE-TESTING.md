@@ -89,6 +89,8 @@ The checker requires a completed attempt and compares the recorded prompt and ou
 
 ### Compare the phone and server on the same passage check
 
+The hosted Apple workflow publishes a **pocket-ai-lab-device-kit** artifact when its extracted Xcode project builds for generic iOS. On a Mac with Xcode, open the artifact ZIP, verify its tarball against the included SHA-256 file, extract it, and open `PocketAILab/ios/PocketAILab.xcodeproj`. The kit includes the pinned native libraries and source for signing with your Personal Team and running on a paired device. It contains no Apple signing material or model weights.
+
 In **Local AI**, load an imported GGUF and tap **Check source evidence**. Six bundled questions exercise two published facts, two records with different synthetic balances and two questions whose evidence is absent. The expected response for a supported claim includes the passage label. Both implementations use the versioned prompts and expected outputs in [PassageChecks.json](PocketAILab/PassageChecks.json).
 
 For a comparable model, use Qwen2.5-1.5B-Instruct Q4_K_M, SHA-256 `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e`. The server uses llama.cpp's chat endpoint. Native uses the currently loaded app runtime and its input formatting. Record the actual model hash and runtime on each side. The accepted research target for this fixed check is six exact answers, including both abstentions.
