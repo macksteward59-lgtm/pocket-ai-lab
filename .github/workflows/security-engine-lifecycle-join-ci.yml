@@ -1,0 +1,92 @@
+name: Join three host-gated engines to owned causal review and East
+
+on:
+  push:
+    branches: [codex/security-engine-lifecycle-join-20261122]
+    paths:
+      - 'tools/security-evaluation/security-engine-lifecycle-join-v1/**'
+      - '.github/workflows/security-engine-lifecycle-join-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/security-engine-lifecycle-join-v1/**'
+      - '.github/workflows/security-engine-lifecycle-join-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cross-source-join:
+    name: Exact frozen sources and synthetic host→East recovery acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - name: Restore frozen pre-existing East lifecycle sources from draft PR #157
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ab2ad101d1a2ebfa277bd2c136db79b6b1afc094
+          path: east
+          persist-credentials: false
+      - name: Restore frozen host gate from draft PR #286
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: e75f44b281db1ae583f4e1657e94bd860d4ec9dd
+          path: gate
+          persist-credentials: false
+      - name: Restore frozen owned review and oracle from draft PR #281
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: e42467012abefe3d5f6083ab6dbfcdbe9f9a148f
+          path: causal
+          persist-credentials: false
+      - name: Checkout this test-only proposed branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proposed
+          persist-credentials: false
+      - name: Reconstruct source-pinned composite without modifying any donor feature PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C east rev-parse HEAD)" = ab2ad101d1a2ebfa277bd2c136db79b6b1afc094
+          test "$(git -C gate rev-parse HEAD)" = e75f44b281db1ae583f4e1657e94bd860d4ec9dd
+          test "$(git -C causal rev-parse HEAD)" = e42467012abefe3d5f6083ab6dbfcdbe9f9a148f
+          test "$(git -C proposed rev-parse HEAD)" = "$GITHUB_SHA"
+          hostpath=tools/security-evaluation/multi-engine-boundary-v1
+          reviewpaths=(tools/security-evaluation/causal-counterfactual-v1 tools/security-evaluation/pinned-causal-inference-v1 tools/security-evaluation/causal-postrun-review-v1)
+          newpath=tools/security-evaluation/security-engine-lifecycle-join-v1
+          test -z "$(git -C east ls-files -- "$hostpath" "${reviewpaths[@]}" "$newpath")"
+          test -z "$(git -C gate ls-files -- "${reviewpaths[@]}" "$newpath")"
+          test -z "$(git -C causal ls-files -- "$newpath")"
+          git -C gate archive HEAD -- "$hostpath" | tar -xf - -C east
+          git -C causal archive HEAD -- "${reviewpaths[@]}" | tar -xf - -C east
+          git -C proposed archive HEAD -- "$newpath" | tar -xf - -C east
+          git -C east add -- "$hostpath" "${reviewpaths[@]}" "$newpath"
+          echo "Pinned East: $(git -C east rev-parse HEAD)"
+          echo "Pinned host: $(git -C gate rev-parse HEAD)"
+          echo "Pinned oracle: $(git -C causal rev-parse HEAD)"
+          echo "Composite Git tree (not a merge): $(git -C east write-tree)"
+      - name: Pinned Node 22.16.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22.16.0'
+      - name: Compile existing East product contracts and test lifecycle state
+        working-directory: east
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --ignore-scripts --no-audit --no-fund --no-package-lock
+          npm run build
+          ./node_modules/.bin/vitest run packages/intelligence/__tests__/autonomy.test.ts
+      - name: Recheck unchanged source admission and causal contracts
+        working-directory: east
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tools/security-evaluation/multi-engine-boundary-v1/admission.test.mjs
+          node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs
+      - name: Execute new joined three-engine host-gated synthetic task and East recovery tests
+        working-directory: east
+        run: node --import tsx --test tools/security-evaluation/security-engine-lifecycle-join-v1/integration.test.mjs
+      - name: Confirm checked out products and synthetic fixtures were not changed by tests
+        working-directory: east
+        run: git diff --exit-code
