@@ -11,7 +11,7 @@ trap 'rm -rf "$stage"' EXIT
 kit="$stage/PocketAILab"
 mkdir -p "$kit"
 cd "$root"
-for path in ios/PocketAILab ios/PocketAILabTests ios/PocketAILabUITests ios/PocketAILab.xcodeproj \
+for path in docs/research/project-sources.json ios/PocketAILab ios/PocketAILabTests ios/PocketAILabUITests ios/PocketAILab.xcodeproj \
   ios/PRIVATE-IPHONE-TESTING.md runtime/ios/Package.swift runtime/ios/Sources runtime/ios/Tests \
   runtime/ios/build/xc runtime/ios/pin tools/evaluation-review/verify.py \
   tools/evaluation-review/source_run.py tools/evaluation-review/hosted-passage-reference.json; do
@@ -36,3 +36,5 @@ cd "$stage/reopened/PocketAILab"
 xcodebuild build -project ios/PocketAILab.xcodeproj -scheme PocketAILab \
   -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath "$stage/derived" CODE_SIGNING_ALLOWED=NO
 cmp ios/PocketAILab/PassageChecks.json "$stage/derived/Build/Products/Debug-iphoneos/PocketAILab.app/PassageChecks.json"
+
+cmp docs/research/project-sources.json "$stage/derived/Build/Products/Debug-iphoneos/PocketAILab.app/project-sources.json"

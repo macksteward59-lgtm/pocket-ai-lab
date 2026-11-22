@@ -24,6 +24,8 @@ targets:
     platform: iOS
     sources:
       - path: PocketAILab
+      - path: ../docs/research/project-sources.json
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pocketailab.personal

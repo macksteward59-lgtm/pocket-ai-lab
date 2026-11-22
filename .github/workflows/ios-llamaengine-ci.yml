@@ -23,6 +23,7 @@ on:
       - codex/memory-source-preservation
       - codex/source-register-handoff
       - codex/passage-device-server-proof
+      - codex/device-resource-samples
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -524,7 +525,7 @@ jobs:
 
       - name: Package and independently rebuild the device test kit
         id: device-kit
-        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples') }}
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples' || github.head_ref == 'codex/reviewed-answer-relaunch') }}
         run: bash tools/passage-check/package-device-kit.sh "$RUNNER_TEMP/device-kit"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.device-kit.outcome == 'success' }}

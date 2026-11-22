@@ -27,6 +27,7 @@ public struct NativeMemoryEntry: Codable, Equatable, Identifiable, Sendable {
     public let layer: NativeMemoryLayer
     public var content: String
     public var provenance: NativeMemoryProvenance
+    var sourceAnswer: SavedSourceAnswer?
     public let createdAt: Date
 
     public init(id: String = UUID().uuidString, layer: NativeMemoryLayer, content: String,
@@ -138,6 +139,7 @@ public actor NativeMemoryStore {
         }
         var entries = try load()
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return false }
+        guard entries[index].sourceAnswer == nil else { throw SourceAnswerError.stale }
         entries[index].content = normalized
         if let sourceRefs { entries[index].provenance.sourceRefs = sourceRefs }
         entries[index].provenance.verified = false
@@ -152,6 +154,38 @@ public actor NativeMemoryStore {
         entries.remove(at: index)
         try persist(entries)
         return true
+    }
+
+    func retainSourceAnswer(_ draft: SourceAnswerDraft) throws -> NativeMemoryEntry {
+        guard draft.valid else { throw SourceAnswerError.invalidFile }
+        var entries = try load()
+        if let existing = entries.first(where: { $0.sourceAnswer?.draft.requestID == draft.requestID }) {
+            guard existing.sourceAnswer?.draft == draft else { throw SourceAnswerError.conflict }
+            return existing
+        }
+        let provenance = NativeMemoryProvenance(agentId: draft.origin == .imported ? "imported-model" : "local-runtime",
+            taskId: draft.requestID, sourceRefs: [draft.passage.url])
+        var entry = NativeMemoryEntry(layer: .semantic, content: draft.excerpt, provenance: provenance, createdAt: Date())
+        entry.sourceAnswer = SavedSourceAnswer(draft: draft)
+        entries.append(entry)
+        try persist(entries)
+        return entry
+    }
+
+    func correctSourceAnswer(id: String, expectedRevision: Int, excerpt: String) throws -> NativeMemoryEntry {
+        let value = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        var entries = try load()
+        guard let index = entries.firstIndex(where: { $0.id == id }),
+              var answer = entries[index].sourceAnswer else { throw SourceAnswerError.stale }
+        guard !value.isEmpty, answer.draft.passage.finding.contains(value) else { throw SourceAnswerError.invalidQuote }
+        if answer.current == value { return entries[index] }
+        guard answer.corrections.count == expectedRevision else { throw SourceAnswerError.stale }
+        guard answer.corrections.count < 32 else { throw SourceAnswerError.limit }
+        answer.corrections.append(.init(excerpt: value, date: Date()))
+        entries[index].sourceAnswer = answer
+        entries[index].content = value
+        try persist(entries)
+        return entries[index]
     }
 
     private func persist(_ entries: [NativeMemoryEntry]) throws {

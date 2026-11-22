@@ -429,6 +429,28 @@ final class LocalChatModel: ObservableObject {
         }
     }
 
+    func answerProjectQuestion(_ question: String, passage: ProjectPassage) async throws -> SourceAnswerDraft {
+        let question = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty, question.utf8.count <= 1200, !question.contains(where: { $0.isNewline }) else {
+            throw SourceAnswerError.noAnswer
+        }
+        guard !isBusy, let runtime, let lease, let fingerprint = artifactFingerprint else {
+            throw SourceAnswerError.modelRequired
+        }
+        isBusy = true
+        defer { isBusy = false }
+        let requestID = UUID().uuidString
+        let prompt = "Quote the shortest exact excerpt from the passage that answers the question. " +
+            "Return only the excerpt, or UNKNOWN if the answer is absent.\n\nPassage: " + passage.finding + "\nQuestion: " + question
+        let result = try await runtime.generate(lease: lease,
+            request: GenerationRequest(requestId: requestID, prompt: prompt, maxTokens: 48, temperature: 0),
+            maxOutputBytes: 4096)
+        let quote = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard quote != "UNKNOWN", !quote.isEmpty, passage.finding.contains(quote) else { throw SourceAnswerError.noAnswer }
+        return SourceAnswerDraft(question: question, requestID: requestID, registerRevision: ProjectPassages.revision,
+            model: modelName, modelSHA256: fingerprint.sha256, passage: passage, excerpt: quote, origin: .localRuntime)
+    }
+
     /// Agent Team uses the same model lease and scheduler as native chat.
     /// The returned messages remain untrusted proposals, never approvals or evidence.
     func updateRoutingCapabilities(_ modelID: String, from text: String) {
@@ -849,7 +871,7 @@ private enum LocalInteractionMode: String, CaseIterable, Identifiable {
 }
 
 struct LocalChatView: View {
-    @StateObject private var model = LocalChatModel()
+    @ObservedObject var model: LocalChatModel
     @State private var mode: LocalInteractionMode = .chat
     @State private var showImporter = false
     @State private var prompt = ""

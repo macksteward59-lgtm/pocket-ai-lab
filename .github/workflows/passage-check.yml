@@ -1,7 +1,7 @@
 name: Source passage server proof
 on:
   pull_request:
-    branches: [main, codex/source-register-handoff, codex/passage-device-server-proof, codex/passage-citation-comparison]
+    branches: [main, codex/source-register-handoff, codex/passage-device-server-proof, codex/passage-citation-comparison, codex/device-resource-samples]
     paths:
       - ios/PocketAILab/PassageChecks.json
       - tools/passage-check/**
