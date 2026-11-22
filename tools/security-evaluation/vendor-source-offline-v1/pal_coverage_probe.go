@@ -14,10 +14,10 @@ import (
 )
 
 type input struct {
- Schema string \`json:"schema"\`
- TaskID string \`json:"taskId"\`
- Mandatory []string \`json:"mandatory"\`
- Entries []db.CoverageEntry \`json:"entries"\`
+ Schema string `json:"schema"`
+ TaskID string `json:"taskId"`
+ Mandatory []string `json:"mandatory"`
+ Entries []db.CoverageEntry `json:"entries"`
 }
 
 func run() error {
@@ -43,14 +43,14 @@ func run() error {
   return errors.New("ARTEX missing-evidence/unexamined gap contract drift")
  }
  output:=struct{
-  Schema string \`json:"schema"\`
-  TaskID string \`json:"taskId"\`
-  Engine string \`json:"engine"\`
-  GenuineARTEXModule bool \`json:"genuineARTEXModule"\`
-  Ledger *db.CoverageLedger \`json:"ledger"\`
-  ExternalTargets int \`json:"externalTargets"\`
-  ModelCalls int \`json:"modelCalls"\`
-  Authorized bool \`json:"authorized"\`
+  Schema string `json:"schema"`
+  TaskID string `json:"taskId"`
+  Engine string `json:"engine"`
+  GenuineARTEXModule bool `json:"genuineARTEXModule"`
+  Ledger *db.CoverageLedger `json:"ledger"`
+  ExternalTargets int `json:"externalTargets"`
+  ModelCalls int `json:"modelCalls"`
+  Authorized bool `json:"authorized"`
  }{
   Schema:"pal-vendor-owned-coverage-v1",TaskID:in.TaskID,
   Engine:"artex-official-db.BuildCoverageLedger",
