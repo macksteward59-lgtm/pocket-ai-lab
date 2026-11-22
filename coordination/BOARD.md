@@ -904,3 +904,5 @@ ChatGPT checked the original v3.12 source through §12 and the hosted results fo
 ### 2026-11-22 · Governance evidence review
 
 ChatGPT completed the [twelve-section v3.12 repository comparison](evidence/rls-v312-2026-11-22/README.md) and linked the captured branch/PR tips and successful component jobs. The release conditions remain open. Source review and documentation are complete for this snapshot.
+
+| Kay (ChatGPT) | #266 exact scheduler XCTest queue-arrival synchronization, `runtime/ios/Tests/LlamaEngineTests/InferenceSchedulerTests.swift` only. Preserve capacity and drain assertions; no production or workflow changes. | `codex/reviewed-answer-verified-kit` | in-progress | Repair observed timing gap in simulator job 137145006114; validate on Apple CI. |
