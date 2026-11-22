@@ -1,0 +1,75 @@
+{
+  "observed": "2026-11-22",
+  "scope": "Local compatibility of the existing lifecycle unit file with unmodified candidate runtimes. Owned ephemeral fixtures; no application service or target invoked. The only substituted input for the main comparison was the existing main test file.",
+  "environment": {
+    "node": "24.22.3",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  },
+  "commands": [
+    "tsc -p tsconfig.json --noEmit",
+    "vitest run packages/intelligence/__tests__/autonomy.test.ts"
+  ],
+  "main": "fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873",
+  "database_candidate": "5f0706202c326f39db7260c9e21793942b2faa44",
+  "comparisons": [
+    {
+      "runtime_commit": "30f414012dbfbd43ad84f28b714d8b1450388750",
+      "pull_request": 159,
+      "suite_inputs": {
+        "branch": {
+          "test_commit": "30f414012dbfbd43ad84f28b714d8b1450388750",
+          "test_blob": "30f371a24130c8b8baad425e4cb5d25c16ef9d7c",
+          "typecheck_diagnostics": 0,
+          "passed": 19,
+          "failed": []
+        },
+        "main": {
+          "test_commit": "fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873",
+          "test_blob": "1b0cf656baf908815d7963daa0e083b3e2fd18be",
+          "typecheck_diagnostics": 49,
+          "passed": 19,
+          "failed": [
+            "persists an ordered append-only lifecycle event history across restart",
+            "migrates pre-versioned multi-attempt records with persisted false to fail-closed expiry",
+            "classifies every East adapter failure conservatively and never replays a failed stage",
+            "treats an expired multi-attempt lease as uncertain unless safe retry is explicit",
+            "marks expired single-attempt work uncertain and never auto-replays it after restart",
+            "binds a live lease to its claiming worker and rejects foreign completion or failure",
+            "does not let a restarted worker adopt a live lease and recovers it only after expiry",
+            "fails closed on a legacy active lease without owner identity until it expires",
+            "rejects malformed persisted worker owner identities",
+            "keeps an unknown provider outcome uncertain even when the step has retry budget",
+            "does not erase a live sibling lease when another parallel step fails"
+          ]
+        }
+      }
+    },
+    {
+      "runtime_commit": "ab2ad101d1a2ebfa277bd2c136db79b6b1afc094",
+      "pull_request": 157,
+      "suite_inputs": {
+        "branch": {
+          "test_commit": "ab2ad101d1a2ebfa277bd2c136db79b6b1afc094",
+          "test_blob": "18eb5ac64f0b5b35dbc65fc957e414ce37cac925",
+          "typecheck_diagnostics": 0,
+          "passed": 30,
+          "failed": []
+        },
+        "main": {
+          "test_commit": "fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873",
+          "test_blob": "1b0cf656baf908815d7963daa0e083b3e2fd18be",
+          "typecheck_diagnostics": 0,
+          "passed": 29,
+          "failed": [
+            "cancels live leases and ignores late worker results"
+          ]
+        }
+      }
+    }
+  ],
+  "conflict_file": "packages/intelligence/__tests__/autonomy.test.ts",
+  "selected_suite_commit": "ab2ad101d1a2ebfa277bd2c136db79b6b1afc094",
+  "combined_tree": "fb224c7ecbacb06e25a54a463405b92ac60371d8",
+  "hosted_initial_replay": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45028633472/job/137227085667"
+}
