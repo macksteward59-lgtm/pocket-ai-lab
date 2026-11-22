@@ -14,9 +14,13 @@ from extractive import labeled_grammar
 from server import MODEL, MODEL_PINS, local_server, request_reply, verify_model
 
 
-def retrieve(question):
+def validate_question(question):
     if not 1 <= len(question.strip()) <= 300 or any(ch in question for ch in "\r\n\x00"):
         raise ValueError("Use one question of 1 to 300 characters")
+
+
+def retrieve(question):
+    validate_question(question)
     result = subprocess.run(["node", str(HERE / "retrieve.mjs"), question], capture_output=True,
                             check=True, timeout=15, text=True)
     return json.loads(result.stdout)
@@ -66,10 +70,15 @@ def main():
     group.add_argument("--question")
     group.add_argument("--check", action="store_true", help="Run the frozen end-to-end study")
     args = parser.parse_args()
+    if args.question is not None:
+        try:
+            validate_question(args.question)
+        except ValueError as error:
+            parser.error(str(error))
     verify_model(args.gguf, args.model)
     binary = args.llama_server.resolve(strict=True)
     with local_server(args.gguf, binary, args.model) as connection:
-        if args.question:
+        if args.question is not None:
             result = answer(args.question, connection, args.model)
         else:
             fixture = (HERE / "questions.json").read_bytes()

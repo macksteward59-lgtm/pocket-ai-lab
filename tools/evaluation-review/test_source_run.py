@@ -43,8 +43,23 @@ class RunReviewTests(unittest.TestCase):
     def test_incomplete_prefix_is_preserved(self):
         self.attempts.pop()
         result = review_run(*self.packet())
-        self.assertEqual(result["recordedCases"], 5)
+        self.assertEqual((result["recordedCases"], result["completedGenerations"]), (5, 5))
         self.assertFalse(result["completeCaseSet"])
+
+    def test_full_case_set_can_contain_uncompleted_generations(self):
+        self.attempts[0].update(providerKind="llamaCppBackend", nativeExecutionObserved=True)
+        self.attempts[-2].update(providerKind="llamaCppBackend", nativeExecutionObserved=True,
+                                 errorMessage="generation interrupted")
+        self.attempts[-1].update(providerKind="llamaCppBackend", nativeExecutionObserved=True, status="cancelled")
+        result = review_run(*self.packet())
+        self.assertTrue(result["completeCaseSet"])
+        self.assertEqual((result["recordedCases"], result["completedGenerations"],
+                          result["reportedNativeGenerations"], result["exactNativeAnswers"]), (6, 4, 1, 1))
+        for row in result["cases"][-2:]:
+            self.assertIs(row["generationCompleted"], False)
+            self.assertIs(row["answerMatches"], False)
+            self.assertIs(row["nativeGenerationReported"], False)
+        self.assertIs(result["hardwareVerified"], False)
 
     def test_distinct_run_session_model_or_case_order_is_rejected(self):
         for field, value in (("sourceRunID", str(uuid4()).upper()), ("runtimeSessionID", "different"),

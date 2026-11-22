@@ -55,7 +55,12 @@ export function openProjectSources(register = JSON.parse(readFileSync(registerFi
     return {
       lookup(value) {
         const query = value.trim();
-        if (!query || query.length > 300) throw RangeError("Enter 1 to 300 characters.");
+        if (!query) throw RangeError("Enter 1 to 300 characters.");
+        // Count Unicode code points, like the source-answer CLI's Python validator.
+        let length = 0;
+        for (const _ of query) {
+          if (++length > 300) throw RangeError("Enter 1 to 300 characters.");
+        }
         const exact = records.get(query.toUpperCase());
         if (exact) return [exact];
         const words = [...new Set(query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
