@@ -1,0 +1,59 @@
+[
+  {
+    "id": "revision-given",
+    "sourceID": "W3C-PROV",
+    "question": "What two kinds of links does PROV-O distinguish in this source?",
+    "requires": [
+      "primary evidence",
+      "earlier revision"
+    ]
+  },
+  {
+    "id": "revision-absent",
+    "sourceID": "W3C-PROV",
+    "question": "What numeric version does PROV-O assign to an earlier revision of an entity?",
+    "requires": []
+  },
+  {
+    "id": "insufficient-given",
+    "sourceID": "ACL-ABSTAIN",
+    "question": "What must readers recognize to succeed on the passage questions?",
+    "requires": [
+      "insufficient evidence"
+    ]
+  },
+  {
+    "id": "insufficient-absent",
+    "sourceID": "ACL-ABSTAIN",
+    "question": "How many readers did the authors use to review each unanswerable passage question?",
+    "requires": []
+  },
+  {
+    "id": "wording-given",
+    "sourceID": "W3C-QUOTE",
+    "question": "Where is the context that can disambiguate repeated wording in a passage?",
+    "requires": [
+      "before and after the passage"
+    ]
+  },
+  {
+    "id": "wording-absent",
+    "sourceID": "W3C-QUOTE",
+    "question": "What is the largest number of repeated passages a text quote selector can disambiguate?",
+    "requires": []
+  },
+  {
+    "id": "paid-given",
+    "sourceID": "CF-QUOTA",
+    "question": "Which Workers plan can incur charges above the free allocation?",
+    "requires": [
+      "Workers Paid plan"
+    ]
+  },
+  {
+    "id": "paid-absent",
+    "sourceID": "CF-QUOTA",
+    "question": "What maximum monthly charge does the Workers Paid plan impose above the free allocation?",
+    "requires": []
+  }
+]
