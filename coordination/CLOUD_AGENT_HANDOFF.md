@@ -80,3 +80,5 @@ A concrete recovery check lives in [draft #253](https://github.com/macksteward59
 ### iPhone Memory recovery and independent answer checks
 
 [Draft PR #254](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/254) extends #253 to the native iPhone Memory editor. Source fields preserve punctuation. The new native evaluation suite version scores the generated answer literally. The offline reader accepts a separately recorded event digest, prompt and expected output. ChatGPT saved the test evidence in Cloudflare note `95ac3529-1963-5039-b1a9-1627a2c46695`. The engineering handoff points to it at revision 6. Keep simulator recovery, a physical iPhone Air model run, and independent answer validation as separate results.
+
+The [iPhone simulator recovery test](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44970262913/job/137048288545) and vault-header check both passed for draft #254 at `59046bce`. The result was read back from the native acceptance note at revision 4. The next device check requires a physical iPhone Air and independent review of its exported attempt.
