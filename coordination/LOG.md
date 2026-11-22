@@ -5275,3 +5275,10 @@ Re-downloaded #269 kit artifact `14758936566` and simulator review `14759087783`
 - Factory is a proposed external engineering executor, not an already admitted or authorized project agent. Any joining Factory Droid must identify its account/environment, branch/files, permissions and validation plan in this coordination branch and receive a non-overlapping assignment before edits.
 - Stage 1: vendor-documented REST adapter with no network on default/dry-run, minimal privileges, explicit execute opt-in, report of raw session identity and honest success criteria, and local synthetic tests. Stage 2: owner authorizes Factory GitHub app and supplies API key securely to a hosted authenticated bridge; deploy and private ChatGPT plugin after endpoint verification.
 - No live external execution, provider credentials, spend, protected change, merges, production deployment, or claim of ChatGPT Dot memory exposure. Review against documented Factory API before enabling.
+
+## 2026-11-22 — ChatGPT: Factory Droid staged integration handoff
+
+- Draft [PR #293](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/293), `codex/factory-droid-bridge-20261122`, head `c7e7cf450760a5851c5cfb7f51acbdb1f19625c2`, base main `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873`.
+- Four new files under `integrations/factory-droid/`: HTTP API client, synthetic tests, README, and comprehensive `HANDOFF.md` preserving owner vision and blocked requests (memory restrictions, continuing agents, iPhone physical signing, agent admission, distillation and security evaluation).
+- No tests run/CI confirmed, no Factory account connected, no API key, no deployed plugin/gateway, no actual Droid task, no protected modifications, no merge. Vendor endpoint and accepted-versus-completed response behavior checked against official Factory documentation. Further verification requires `computerId`-bound session polling and message ordering.
+- Factory is NOT an admitted agent yet; requires owner authentication/budget and the protocol's specific independent claim before executing work.
