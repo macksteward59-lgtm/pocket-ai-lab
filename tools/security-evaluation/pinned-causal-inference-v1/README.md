@@ -51,7 +51,7 @@ node tools/security-evaluation/pinned-causal-inference-v1/run-live.mjs \
   --out ./owned-causal-pinned-qwen-trial.json
 ```
 
-The CI workflow uses path-specific push/PR unit tests, plus **one model download+inference on branch push only**. Failure to download a pinned artifact is a preflight failure, not a zero finding. If the pinned model was loaded but its reply is malformed, the JSON attempt is preserved as **negative model evidence**, not silently fixed; a valid observed model response does not imply a correct diagnosis.
+The CI is deliberately split into two disjoint workflow files. `.github/workflows/pinned-causal-inference-ci.yml` validates **49 no-model protocol/oracle and adapter test cases** on PR/push. `.github/workflows/pinned-causal-model-trial.yml` attempts one **already-pinned actual model download and HTTP inference** on branch push only; it retains negative results as an artifact. The first combined-workflow revision returned a GitHub run with **zero scheduled jobs**, so it cannot count as any test pass or real model attempt; the split isolates that workflow-definition failure from code/test or runtime failures. Failure to download a pinned artifact is a preflight failure, not a zero finding. If the pinned model was loaded but its reply is malformed, the JSON attempt is preserved as **negative model evidence**, not silently fixed; a valid observed model response does not imply a correct diagnosis.
 
 ## Gap and acceptance gates
 
