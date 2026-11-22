@@ -59,6 +59,14 @@ final class SourceAnswerRecoveryTests: XCTestCase {
         app.buttons["Done"].tap()
         openExample()
         XCTAssertEqual(app.staticTexts["review-current"].label, expected)
+        let export = app.buttons["Save review in Files"]
+        reveal(export, up: true)
+        export.tap()
+        let digest = app.staticTexts["source-review-digest"]
+        reveal(digest, up: true)
+        let hash = digest.label
+        XCTAssertEqual(hash.count, 64)
+        print("POCKET_SOURCE_UI_DIGEST " + hash)
         app.buttons["Done"].tap()
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(records.firstMatch.identifier, savedID)

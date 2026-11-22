@@ -135,3 +135,11 @@ In Memory, open **Source answers**. **Import answer file** accepts a single-ques
 Read the cited passage before accepting an excerpt. Enter an exact correction and tap **Save correction**. Fully quit the app, reopen Memory → Source answers, and type part of the question. Inspect the current answer, original draft, source, and owner revisions. Opening the identical file again retrieves the same saved answer. To ask a new question entirely on the phone, first load a model in Local AI, then select a project source and use **Ask loaded model**. A model output that does not quote the passage is reported as unavailable. Excerpt membership does not certify that an answer is correct.
 
 The importer checks the citation against the bundled public register. Model attribution in imported files is a reported value. The encrypted vault holds the answer until the owner deletes it. The history for a question can be reviewed offline.
+
+After relaunch, open the saved answer and choose **Save review in Files**. Copy its displayed SHA-256 separately. In Files, find the readable copy under **On My iPhone → Pocket AI Lab → Source reviews**. From the extracted kit, check that copy and, for an imported draft, its original server reply:
+
+```sh
+python3 tools/evaluation-review/source_review.py review.json --expected-digest "$review_hash" --original ios/PocketAILab/SourceAnswerExample.json
+```
+
+Use the corresponding original file for your own imports. For an answer generated on the phone, omit the original-file option. The report identifies the original excerpt, latest owner correction, number of corrections and source. The separately held digest detects changes to the export. Hardware identification requires independent observation.

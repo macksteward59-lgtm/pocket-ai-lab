@@ -148,6 +148,7 @@ private struct SourceAnswerDetail: View {
     @State private var correction = ""
     @State private var errorText: String?
     @State private var saving = false
+    @State private var savedDigest: String?
 
     var body: some View {
         NavigationStack {
@@ -175,6 +176,7 @@ private struct SourceAnswerDetail: View {
                                     entry = try await store.correctSourceAnswer(id: entry.id, expectedRevision: answer.corrections.count, excerpt: correction)
                                     errorText = nil
                                     correction = ""
+                                    savedDigest = nil
                                 } catch { errorText = error.localizedDescription }
                             }
                         }.disabled(saving || correction.isEmpty)
@@ -187,6 +189,25 @@ private struct SourceAnswerDetail: View {
                         Text(answer.draft.requestID).font(.caption).textSelection(.enabled)
                         ForEach(answer.corrections.indices, id: \.self) { index in
                             Text("Owner revision " + String(index + 1) + " · " + answer.corrections[index].excerpt)
+                        }
+                    }
+                    Section("Export") {
+                        Button("Save review in Files") {
+                            do {
+                                let packet = try SourceReviewExport(answer)
+                                let documents = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask,
+                                                                             appropriateFor: nil, create: true)
+                                try packet.save(in: documents)
+                                savedDigest = packet.digest
+                                errorText = nil
+                            } catch { errorText = error.localizedDescription }
+                        }
+                        Text("Saves a readable JSON copy in On My iPhone → Pocket AI Lab → Source reviews.")
+                            .font(.footnote)
+                        if let savedDigest {
+                            Text("Saved review SHA-256").font(.caption)
+                            Text(savedDigest).font(.caption.monospaced()).textSelection(.enabled)
+                                .accessibilityIdentifier("source-review-digest")
                         }
                     }
                 }

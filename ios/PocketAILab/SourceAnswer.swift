@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 struct ProjectPassage: Codable, Equatable, Identifiable {
@@ -87,4 +88,31 @@ struct SavedSourceAnswer: Codable, Equatable {
     let draft: SourceAnswerDraft
     var corrections: [Correction] = []
     var current: String { corrections.last?.excerpt ?? draft.excerpt }
+}
+
+struct SourceReviewExport {
+    let digest: String
+    let data: Data
+
+    init(_ review: SavedSourceAnswer) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        let payload = try encoder.encode(review)
+        digest = SHA256.hash(data: payload).map { String(format: "%02x", $0) }.joined()
+        data = try JSONSerialization.data(withJSONObject: ["format": "pocket-ai-lab.source-review.v1", "sha256": digest,
+            "payloadJSON": String(decoding: payload, as: UTF8.self)], options: [.sortedKeys, .withoutEscapingSlashes])
+    }
+
+    func save(in documents: URL) throws {
+        let directory = documents.appendingPathComponent("Source reviews", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                attributes: [.protectionKey: FileProtectionType.complete])
+        let file = directory.appendingPathComponent(digest + ".json")
+        if FileManager.default.fileExists(atPath: file.path) {
+            guard try Data(contentsOf: file) == data else { throw SourceAnswerError.conflict }
+            return
+        }
+        try data.write(to: file, options: [.atomic, .completeFileProtection])
+    }
 }

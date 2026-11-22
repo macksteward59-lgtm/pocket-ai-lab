@@ -14,7 +14,7 @@ cd "$root"
 for path in docs/research/project-sources.json ios/PocketAILab ios/PocketAILabTests ios/PocketAILabUITests ios/PocketAILab.xcodeproj \
   ios/PRIVATE-IPHONE-TESTING.md runtime/ios/Package.swift runtime/ios/Sources runtime/ios/Tests \
   runtime/ios/build/xc runtime/ios/pin tools/evaluation-review/verify.py \
-  tools/evaluation-review/source_run.py tools/evaluation-review/hosted-passage-reference.json; do
+  tools/evaluation-review/source_run.py tools/evaluation-review/source_review.py tools/evaluation-review/hosted-passage-reference.json; do
   mkdir -p "$kit/$(dirname "$path")"
   cp -R "$path" "$kit/$path"
 done
