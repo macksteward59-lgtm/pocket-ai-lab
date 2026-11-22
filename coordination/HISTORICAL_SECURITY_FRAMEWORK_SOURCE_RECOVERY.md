@@ -199,3 +199,17 @@ The inspected v3.12 material includes section 1 concerning row locking and `GET 
 3. Complete that transcription and reconciliation, and the applicable boundary review, **before changing APEX/East authority, RLS policies, receipts or approval behavior**. Recover the original dossier and packaged application source separately before updating their unresolved requirement fields.
 
 No private transcript excerpts, chat IDs/URLs, authentication/account details or attachments are included in this addendum. Source location does not establish a full transcript audit, verified implementation, completed API schemas, model/runtime readiness or product acceptance. No application code, security authority, model execution, deployment or merge changed.
+
+## 2026-11-22 · Complete original v3.12 message inspected
+
+The project lead opened the owner-posted v3.12 message in the previously identified project conversation, expanded the original, and confirmed that it runs through §12, Acceptance Status. The previous checkpoint had inspected only the beginning. The source identifies v3.12 as a candidate implementation baseline and names §12.1 as its acceptance gate. The adjacent v3.10 and v3.11 messages and the assistant's review are separate sources.
+
+| Original sections | What to compare with the reconciliation on main |
+| --- | --- |
+| 1–3 | Submission locking and diagnostics, the five-column privilege check, and the difference between independent inventories. |
+| 4–5 | Repair privileges under enforced row-level security and the transactional outbox for the immutable audit record. |
+| 6–7 | The migration log's dedicated writer and validation before upgrading existing records. |
+| 8–10 | Publication bound to a deployment, schema and version-specific prerequisites, and the registry writer's membership and exposed functions. |
+| 11–12 | Concurrency tests with negative controls and the author's acceptance conditions. |
+
+The [merged reconciliation](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873/docs/implementation/apex-rls-v3.12-reconciliation.md) remains a partial historical crosswalk. The owner does not need to locate the message again. The open work is to match each original clause and named acceptance condition to database objects, test cases, and observed results. An item without that evidence stays open. Access to the original message supplies a reference for this work. Runtime authorization and release acceptance require independent evidence.
