@@ -36,3 +36,13 @@ Keep direct lookup by source ID available to the owner and reviewer. Use the sav
 ### Experimental models and reusable source code
 
 The [November 21 donor review](experimental-model-donors-20261121.md) includes release pins and licenses, a 24-claim groundedness pilot, an eight-record IBM text-format round trip, a keyword retrieval baseline, and three publisher YouTube videos. Use this record alongside the original evidence register when a later chat asks which specialized model or upstream component has actually been tested.
+
+## Search the register and recover a corrected decision
+
+[Draft #256](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/256) adds **Project sources** in the local consumer app. Search for `trailing newline` or `NATIVE-EXACT-ANSWER`. The first version accepted surrounding whitespace. The revised version requires exact UTF-8 output. Both rules cite their own implementation. Earlier results keep their original version and score. See the [pinned public register](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/a13f2314652f5243296acf8d8c4d74e0349eda1b/docs/research/project-sources.json) and [local app instructions](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/35a340aba8dbe4aaa85f5036f1a1da96bfb89a66/docs/research/lookup.md).
+
+The intended reference ranked first on all six previously used development questions. The earlier keyword baseline placed the provenance source fourth. The [recorded rankings](../evidence/donor-model-review/consumer-lookup-ranks.json) cover a small, known question set. Unseen questions and screenshot retrieval remain unevaluated.
+
+A reviewer starting in a fresh agent session read the default Pocket AI Lab Handoff, followed the research index `6f6b446a-c306-5610-9fab-fa8c5777b881` at revision 4 to decision note `f663e9f6-c6ed-5cd3-ab37-573a36cd0e19` at revision 1, then checked both pinned implementations. The reviewer correctly recovered that an earlier passing score of 1.0 is retained and a new response with an extra newline scores 0.0 under suite 1.1.0. Cloudflare provides the shared note. SQLite search runs in the local consumer app.
+
+At feature head `19a69da59edeb091668ea77ebb16403471cb3d6d`, the [consumer job](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44975548218/job/137064518451) passed the repository test suite, TypeScript build, and project-source UI tests in Chromium and WebKit at 393 × 852. Each browser verified the current and previous versions and their respective citations, an exact source ID, and an empty result. [General CI](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44975544169) also passed. These were browser tests on a hosted Linux runner.
