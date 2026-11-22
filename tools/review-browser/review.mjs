@@ -54,6 +54,36 @@ async function importFile(page, data) {
 }
 
 for (const engine of [chromium, webkit]) {
+  test(engine.name() + " searches project sources and shows each decision's cited version",
+    { timeout: 60000 }, async t => {
+      const directory = await mkdtemp(path.join(tmpdir(), "pocket-source-lookup-"));
+      t.after(() => rm(directory, { recursive: true, force: true }));
+      const server = await startServer(directory);
+      t.after(() => server.stop());
+      const browser = await engine.launch();
+      t.after(() => browser.close());
+      const page = await browser.newPage(device);
+      page.setDefaultTimeout(10000);
+      await page.goto(server.url);
+      await openView(page, "sources");
+      const query = page.getByLabel("Topic or source ID");
+      await query.fill("trailing newline");
+      await query.press("Enter");
+      await page.getByRole("heading", { name: "Current · 1.1.0" }).waitFor();
+      await page.getByRole("heading", { name: "Earlier · 1.0.0" }).waitFor();
+      const refs = page.getByRole("link", { name: "View implementation" });
+      assert.equal(await refs.count(), 2);
+      assert.match(await refs.nth(0).getAttribute("href"), /59046bce[0-9a-f]{32}.*#L224$/);
+      assert.match(await refs.nth(1).getAttribute("href"), /42f02559[0-9a-f]{32}.*#L224$/);
+      await query.fill("W3C-PROV");
+      await query.press("Enter");
+      await page.locator("#source-results").getByText("W3C-PROV", { exact: true }).waitFor();
+      await query.fill("xzqxzzzz");
+      await query.press("Enter");
+      await page.getByText("No matching project source.").waitFor();
+      assert.equal(await page.locator("#source-results article").count(), 0);
+    });
+
   test(engine.name() + " preserves separate citations after an edit and an abrupt server restart",
     { timeout: 60000 }, async t => {
       const directory = await mkdtemp(path.join(tmpdir(), "pocket-citation-recovery-"));

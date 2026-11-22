@@ -1,0 +1,108 @@
+{
+  "project": "Pocket AI Lab",
+  "reviewed": "2026-11-21",
+  "scope": "Device testing, hosted inference, source provenance and evidence-grounded answering",
+  "sources": [
+    {
+      "id": "APPLE-DEVICE",
+      "publisher": "Apple",
+      "title": "Running your app on simulated or physical devices",
+      "url": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
+      "locator": "Overview; Set up code signing for physical devices",
+      "finding": "Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured.",
+      "projectUse": "Collect the task export, restart outcome and model timing from the owner's iPhone Air. Tag simulator and Linux results separately.",
+      "topics": "physical hardware, simulator, device performance"
+    },
+    {
+      "id": "APPLE-TEAM",
+      "publisher": "Apple",
+      "title": "Developer account overview",
+      "url": "https://developer.apple.com/help/account/basics/about-your-developer-account/",
+      "locator": "Enable a personal team in Xcode",
+      "finding": "A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance.",
+      "projectUse": "Try the free Personal Team route for a device build. A paired Mac with Xcode and the physical phone are dependencies for this route.",
+      "topics": "personal team, provisioning, profile expiry"
+    },
+    {
+      "id": "CF-BIND",
+      "publisher": "Cloudflare",
+      "title": "Workers Bindings",
+      "url": "https://developers.cloudflare.com/workers-ai/configuration/bindings/",
+      "locator": "Workers; async env.AI.run()",
+      "finding": "A Worker can invoke a hosted model through an AI binding. The run method takes the model identifier and an input object.",
+      "projectUse": "For a hosted smoke test, retain the requested model, attempt identifier, response and error status. The existing note round trip establishes storage only.",
+      "topics": "hosted inference, worker bindings"
+    },
+    {
+      "id": "CF-QUOTA",
+      "publisher": "Cloudflare",
+      "title": "Workers AI pricing",
+      "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "locator": "Overview; model pricing",
+      "finding": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation.",
+      "projectUse": "Check the owner's available balance and plan before a hosted run. Count model usage separately from HTTP requests and stop at the available free allocation.",
+      "topics": "billing, free tier, usage limits"
+    },
+    {
+      "id": "W3C-PROV",
+      "publisher": "W3C",
+      "title": "PROV-O: The PROV Ontology",
+      "url": "https://www.w3.org/TR/prov-o/",
+      "locator": "Expanded terms: hadPrimarySource and wasRevisionOf",
+      "finding": "PROV-O distinguishes a link to primary evidence from a link to an earlier revision of an entity.",
+      "projectUse": "Keep the upstream URL, retrieval date and revision lineage when a research note changes. The original note remains attributable.",
+      "topics": "provenance, primary evidence, source revisions and attribution"
+    },
+    {
+      "id": "W3C-QUOTE",
+      "publisher": "W3C",
+      "title": "Web Annotation Data Model",
+      "url": "https://www.w3.org/TR/annotation-model/",
+      "locator": "4.2.4 Text Quote Selector",
+      "finding": "A text quote selector identifies a passage using exact text. Context immediately before and after the passage can disambiguate repeated wording.",
+      "projectUse": "Store a heading or short passage locator with each claim. Check it again if the publisher revises the page.",
+      "topics": "annotations, passage context"
+    },
+    {
+      "id": "ACL-CITE",
+      "publisher": "Gao et al., ACL Anthology",
+      "title": "Enabling Large Language Models to Generate Text with Citations",
+      "url": "https://aclanthology.org/2023.emnlp-main.398/",
+      "locator": "Abstract; ALCE evaluation",
+      "finding": "ALCE evaluates answers with citations across three dimensions: fluency, correctness and citation quality.",
+      "projectUse": "Score the answer and its supporting source separately. A readable answer can still cite the wrong document.",
+      "topics": "citations, answer quality"
+    },
+    {
+      "id": "ACL-ABSTAIN",
+      "publisher": "Rajpurkar, Jia and Liang, ACL Anthology",
+      "title": "Know What You Don’t Know: Unanswerable Questions for SQuAD",
+      "url": "https://aclanthology.org/P18-2124/",
+      "locator": "Abstract; unanswerable questions",
+      "finding": "The authors include plausible questions that cannot be answered from the supplied passage. Success requires recognizing when the passage offers insufficient evidence.",
+      "projectUse": "Withhold the supporting document on paired examples and score an explicit insufficient-evidence answer. Report false answers when evidence is absent.",
+      "topics": "abstention, insufficient evidence"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "NATIVE-EXACT-ANSWER",
+      "title": "How the native evaluation suite scores exact answers",
+      "topics": "native evaluator, literal output, extra space, whitespace, line break, trailing newline, grading policy, historical results",
+      "revisions": [
+        {
+          "version": "1.0.0",
+          "finding": "Suite 1.0.0 trimmed surrounding whitespace and newlines before comparing a completed answer. Preserve that recorded score when reading a historical attempt.",
+          "citation": "https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/42f025593a7bc15df1a9659c11d19f2e497249c2/ios/PocketAILab/NativeEvaluationRunner.swift#L224"
+        },
+        {
+          "version": "1.1.0",
+          "supersedes": "1.0.0",
+          "finding": "In draft PR #254, suite 1.1.0 requires a completed answer with the exact expected UTF-8 bytes. An extra newline or space fails. Older attempts retain their recorded suite version and score.",
+          "citation": "https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/59046bcefe4a30771e4765448195adea66e3a640/ios/PocketAILab/NativeEvaluationRunner.swift#L224",
+          "test": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44970262913/job/137048288545"
+        }
+      ]
+    }
+  ]
+}
