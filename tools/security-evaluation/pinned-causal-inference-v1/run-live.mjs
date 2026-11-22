@@ -14,6 +14,7 @@ import {performance} from 'node:perf_hooks';
 import {fileURLToPath} from 'node:url';
 import {prepareCausalStudy,runProviderOnce,publicObservationBaseline,scoreSubmission,exportPostRunCausalTruth} from '../causal-counterfactual-v1/protocol.mjs';
 import {MODEL_ALIAS,MODEL_SHA256,createPinnedLlamaProvider} from './adapter.mjs';
+import {writeReviewPair} from '../causal-postrun-review-v1/write.mjs';
 
 function requireFlag(args,name){
   const i=args.indexOf(name);
@@ -119,12 +120,9 @@ export async function runActualPinnedTrial({gguf,binary,out,variant='missing-own
   };
   // The CLI may exit successfully after a *failed model answer*; that is still
   // a completed model experiment with negative evidence, never model acceptance.
-  if(answerKey){
-    // Never expose the synthetic answer key before the model call has completed.
-    // The digest binds the paired JSON at the data level, not to a trusted signer.
-    await writeFile(outPath+'.answer-key.json',JSON.stringify(answerKey,null,2)+'\n',{flag:'wx',mode:0o600});
-  }
-  await writeFile(outPath,JSON.stringify(packet,null,2)+'\n',{flag:'wx',mode:0o600});
+  // Centralized paired-file writer: fail closed on digest/study mismatch,
+  // never overwrite files, clean up only a newly created key on write failure.
+  await writeReviewPair({outPath,packet,answerKey});
   return packet;
 }
 
