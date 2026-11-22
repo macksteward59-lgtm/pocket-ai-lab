@@ -60,10 +60,8 @@ final class MemoryRecoveryTests: XCTestCase {
 
         func reference(at index: Int) -> XCUIElement {
             let field = app.textFields["memory-reference-\(index + 1)"]
-            // Form may create only the visible cells on a small simulator.
-            if !field.exists { app.swipeDown() }
-            if !field.exists { app.swipeUp() }
-            XCTAssertTrue(field.waitForExistence(timeout: 5), "Missing reference \(index + 1)")
+            XCTAssertTrue(field.waitForExistence(timeout: 5),
+                          "Missing reference \(index + 1). Editor shows: \(app.staticTexts["memory-reference-count"].label)")
             XCTAssertEqual(field.label, "Reference \(index + 1) of \(sources.count)")
             return field
         }
@@ -89,6 +87,7 @@ final class MemoryRecoveryTests: XCTestCase {
         app.buttons["Save"].tap()
 
         openEditor(for: original)
+        checkReferences()
         content.tap()
         content.typeText("7")
         waitForValue(content, NSPredicate(format: "value MATCHES %@", "[0-9]{\(original.count + 1)}"))
