@@ -1,0 +1,63 @@
+name: Frozen long-document reader
+on:
+  pull_request:
+    paths:
+      - "tools/long-document-reader/**"
+      - "tools/public-source-distillation/student.py"
+      - ".github/workflows/long-document-reader.yml"
+permissions:
+  contents: read
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify source alignment and pinned weights
+        run: python3 -m unittest discover -s tools/long-document-reader -v
+      - name: Score the complete text against the frozen question split
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/reader"
+          mkdir "$work"
+          curl -fsSL --retry 2 --max-time 120 -o "$work/qasper.tgz" https://qasper-dataset.s3.us-west-2.amazonaws.com/qasper-test-and-evaluator-v0.3.tgz
+          python3 tools/long-document-reader/benchmark.py --archive "$work/qasper.tgz" --out "$work"
+      - name: Compile and execute the reader inside the iPhone simulator
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/reader"
+          xcrun simctl list devices available -j > "$work/devices.json"
+          udid=$(python3 - "$work/devices.json" <<'PY'
+          import json,sys
+          devices=json.load(open(sys.argv[1]))["devices"]
+          choices=[(d["state"]=="Booted", tuple(int(v) for v in runtime.split(".iOS-")[-1].split("-")), d["name"], d["udid"])
+                   for runtime,items in devices.items() if ".iOS-" in runtime for d in items if d.get("isAvailable") and d["name"].startswith("iPhone")]
+          print(max(choices)[-1])
+          PY
+          )
+          xcrun simctl bootstatus "$udid" -b
+          sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
+          xcrun --sdk iphonesimulator swiftc -O -sdk "$sdk" -target "$(uname -m)-apple-ios17.0-simulator" tools/long-document-reader/Reader.swift -o "$work/document-reader"
+          codesign --force --sign - "$work/document-reader"
+          xcrun simctl spawn "$udid" "$work/document-reader" "$PWD/tools/long-document-reader/hard.json" "$work/inputs.json" "$work/native.json"
+          python3 tools/long-document-reader/verify_native.py --oracle "$work/oracle.json" --native "$work/native.json" --out "$work/parity.json"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reader-results-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/reader/report.json
+            ${{ runner.temp }}/reader/parity.json
+            ${{ runner.temp }}/reader/native.json
+          if-no-files-found: warn
+          retention-days: 14
