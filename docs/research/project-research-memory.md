@@ -56,3 +56,8 @@ The [twelve new questions](https://github.com/macksteward59-lgtm/pocket-ai-lab/b
 The consumer UI now labels these as suggested sources and asks the reader to check the cited passage. A next evaluation should score whether an answer is supported by its passage and whether the system abstains when only an external observation could resolve the question. Current account usage, physical iPhone Air behavior and acceptance of hosted inference each require their own observation.
 
 At feature commit `0944346e4af5d1123c63b9990cc3881d18becfe5`, the [consumer CI job](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44976675125/job/137068008587) passed the repository tests, TypeScript build, Chromium and WebKit phone-width tests, and the Cloudflare Worker runtime test. The CLI transport sent MCP requests to a real local Worker runtime with fixture credentials. After restarting the runtime, the entire published register was recovered byte-for-byte at the note level and compared field-for-field to the original document. [General CI](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44976646011) also passed. Live note storage was verified separately with the owner-private ChatGPT connection.
+
+
+## Answering from passages on a model server and iPhone
+
+The [device and server evidence record](../evidence/source-recall/device-server-v1/README.md) extends the search study to questions whose passages are actually supplied to the model. It records a Cloudflare work order executed on a Linux model server, two Linux hosts, a second model, missing-evidence and near-match questions, and the test required to compare the six native exports. Keep retrieval quality, answering quality and hardware acceptance as distinct results.

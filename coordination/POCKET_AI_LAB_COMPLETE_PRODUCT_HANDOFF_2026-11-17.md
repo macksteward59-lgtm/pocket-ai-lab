@@ -713,7 +713,7 @@ A capability is not complete until the relevant gates pass:
 
 ### P0 — Reconcile requirements and original module registry
 1. Preserve the original 316-row snapshot and 28 explicit addenda (344 tracked entries), maintaining honest per-row statuses until requirement-specific re-audit.
-2. Recover authoritative original M01–M42 source and map exact IDs to six layers.
+2. Section 5.4 preserves all 42 original IDs and names. The six layer titles are also recorded. Locate the original assignment table and verify each mapping before marking that part complete. A prior-chat search points to a proposed registry on November 1 at 09:06 UTC. Its row-level assignments and owner approval remain unverified.
 3. Map every requirement to code, tests, PR, CI, device evidence, and owner.
 4. Resolve duplicate/stale coordination claims and current branch ownership without overwriting collaborators.
 
@@ -737,10 +737,14 @@ A capability is not complete until the relevant gates pass:
 
 The private ChatGPT handoff now reads the full reviewed GitHub source register from Cloudflare. Eight source records and one versioned decision were published and verified. An interrupted publish can resume, and a changed record is rejected when reading a pinned release. The frozen search found the designated source within five results for all nine answerable questions, while all three questions about absent information still received suggestions. This advances curated retrieval, source identity and reproducibility in PAL-10-001, PAL-10-002 and PAL-10-007. Passage-supported answering and uncertainty handling in PAL-10-003 remain open. [Research handoff and evidence](../docs/research/project-research-memory.md#full-register-in-the-private-cloudflare-handoff)
 
+The [model and device comparison](../docs/evidence/source-recall/device-server-v1/README.md) now exercises real model answers, strict source labels and missing evidence. A Cloudflare-backed work order completed one supervised round trip with the Linux reference server. The 1.5B model still misses strict answers, including on new records. Native app and server use the same six-case fixture in [#258](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/258). [#259](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/259) includes the per-case comparison and a six-export native journal checker. The public-register CLI now performs SQLite retrieval, model inference and quote-to-source validation in [#260](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/260). Source selection and short-answer correctness are graded separately. Open-ended synthesis, quality on independently authored sources and the physical session remain open.
+
 ### P1 — Device resource/performance acceptance
 1. Measure real iPhone Air memory and thermal limits.
 2. Tune one-model/multi-role scheduling, context budgets, and model unload.
 3. Establish target thresholds for TTFT, tokens/sec, battery, sustained generation, and recovery.
+
+The Apple runner built the app for arm64 iOS and the simulator, rebuilt the extracted test kit for a generic iOS device, and passed the native app XCTest suite on a simulator. The separate frozen macOS recipient benchmark produced zero valid answers in 36 attempts and its independent check failed. [Device test kit artifact](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44981550178/artifacts/14738847528) and [verified package identities](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/device-kit.json). The kit is unsigned. Its PR test-merge tree matches feature head `7fc3b96` exactly.
 
 ### P2 — Governed autonomy and evidence
 1. Complete APEX policy integration and exact-scope approval flows.
@@ -789,7 +793,7 @@ The product is complete only when the native iPhone Air experience can, with evi
 
 ## 19. Owner decisions / source artifacts still required
 
-- **@owner:** Provide or identify the authoritative original M01–M42 six-layer registry/source archive so exact identifiers and descriptions can be recovered.
+- Verify the original descriptions and module-to-layer assignments against the source archive or November 1 conversation. The 42 identifiers and names are already recorded in section 5.4.
 - **@owner:** Confirm any final product trade-offs that materially change offline-first, native iOS, model-provider, or external compute boundaries. Existing decisions remain in force unless explicitly changed.
 - **@owner:** Supply physical-device access/signing approval when the native iPhone Air acceptance gate is ready. No signing credentials or device access should be assumed.
 - **@owner:** Review any proposed production deployment, public visibility, credential use, irreversible data operation, protected local change, or final merge requiring owner consent.
