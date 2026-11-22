@@ -137,6 +137,9 @@ def verify(sql, major):
            "missing_matrix_allowance\nunexpected_effective_table_update")
     sql(OWNER, "REVOKE UPDATE ON app.redemption_tickets FROM app_repair_executor")
     sql(OWNER, "UPDATE app.column_privilege_matrix SET allowed=true WHERE table_name='redemption_tickets'")
+    expect("revoking table UPDATE also removed its matching column grant", grant_issues("redemption_tickets"),
+           "missing_direct_column_grant")
+    sql(OWNER, "GRANT UPDATE(consumed_by_nonce) ON app.redemption_tickets TO app_repair_executor")
     expect("positive expectations restored", read(f"SELECT count(*) FROM {EXPECTED_ISSUES}"), "0")
     expect("clean after restores", read(f"SELECT (SELECT count(*) FROM {MONITOR}), (SELECT count(*) FROM {UNLISTED}),"
                                         f" (SELECT count(*) FROM {INVENTORY} WHERE direct_column_grant AND effective_column_privilege)"), "0|0|4")
