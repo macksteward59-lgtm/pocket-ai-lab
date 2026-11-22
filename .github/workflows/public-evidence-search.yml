@@ -1,0 +1,35 @@
+name: Independent full-paper retrieval
+on:
+  pull_request:
+    paths:
+      - "tools/full-paper-distillation/retrieval.py"
+      - ".github/workflows/public-evidence-search.yml"
+permissions:
+  contents: read
+jobs:
+  retrieval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Install CPU inference dependencies
+        run: python3 -m pip install --only-binary=:all: numpy==2.2.6 onnxruntime==1.21.1 tokenizers==0.21.1
+      - name: Evaluate the fixed encoder and term matching on disjoint papers
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/search"
+          mkdir "$work"
+          source=https://huggingface.co/Xenova/e5-small-v2/resolve/02af79985278377e65c724a76275707cb0333c70
+          curl -fsSL --retry 2 --max-time 180 -o "$work/encoder.onnx" "$source/onnx/model_int8.onnx?download=true"
+          curl -fsSL --retry 2 --max-time 60 -o "$work/tokenizer.json" "$source/tokenizer.json"
+          curl -fsSL --retry 2 --max-time 120 -o "$work/test.tgz" https://qasper-dataset.s3.us-west-2.amazonaws.com/qasper-test-and-evaluator-v0.3.tgz
+          python3 tools/full-paper-distillation/retrieval.py --archive "$work/test.tgz" --weights "$work/encoder.onnx" --tokenizer "$work/tokenizer.json" --out "$work/retrieval.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: independent-retrieval
+          path: ${{ runner.temp }}/search/retrieval.json
+          retention-days: 14
