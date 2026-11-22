@@ -1,0 +1,35 @@
+name: Owned causal counterfactual evaluation CI
+
+on:
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/causal-counterfactual-v1/**'
+      - '.github/workflows/causal-counterfactual-ci.yml'
+  push:
+    branches:
+      - codex/causal-counterfactual-fixtures-20261122
+    paths:
+      - 'tools/security-evaluation/causal-counterfactual-v1/**'
+      - '.github/workflows/causal-counterfactual-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  causal-owned-fixture:
+    name: Source-mutation identity and owned HTTP regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout proposed code without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure pinned Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Verify counterfactual fixture and provider-port tests
+        run: node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs
+      - name: Demonstrate source-specific causal scoring without a model
+        run: node tools/security-evaluation/causal-counterfactual-v1/run.mjs
