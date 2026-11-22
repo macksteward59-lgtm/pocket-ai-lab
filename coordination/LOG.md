@@ -5263,3 +5263,7 @@ Condensed the existing private shared note and verified an exact read-back at re
 Local and hosted runs got E5 10/24 and BM25 7/24 at five, the same hit outcomes as the previous archive. E5 top one was 4/24 versus 5/24 in the earlier hosted run. The matched sentence/window counts at five distinct sentences were 10/7 on the original 24 and 3/3 on the disjoint 12. At twenty they were 18/21 and 8/5. Reranking the E5 top 20 with MiniLM raised top-five hits from 10 to 13 and 3 to 4, with one lost hit in each cohort. The unchanged hard reader scored 0/24 supported and 15/15 abstained. Supplying gold passages yielded 1/24 supported. Confirm ranking on a new frozen cohort and evaluate claim support separately. Physical iPhone Air acceptance remains pending.
 
 Created one one-time verification task for the exact #292 head. The automation connector used the current Codex thread.
+
+## 2026-11-22T21:58:21Z · iPhone Air source-review preflight
+
+Re-downloaded #269 kit artifact `14758936566` and simulator review `14759087783`. The two ZIP digests, inner tarball digest and kit checkout `742f04e31b39a9b30d20181a6c9eaf71e63bbd24` matched. The reader bundled with the kit reproduced the archived imported review on Linux and rejected all three altered inputs. The signed physical run remains blocked on a paired iPhone Air and a Mac with Xcode. Recorded the exact offline generation, restart and export checks in the [device evidence record](../docs/evidence/source-recall/device-server-v1/owner-recovery/README.md#signed-iphone-air-source-review-run).

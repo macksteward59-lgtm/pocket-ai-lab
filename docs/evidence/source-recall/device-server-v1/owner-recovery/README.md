@@ -41,3 +41,19 @@ To reproduce the independent check from the extracted kit, copy the export and i
 ```sh
 python3 tools/evaluation-review/source_review.py review.json --expected-digest "$review_hash" --original ios/PocketAILab/SourceAnswerExample.json
 ```
+
+## Signed iPhone Air source-review run
+
+The unsigned #269 kit contains the generated Xcode project and six iOS arm64 frameworks. On November 22 a fresh Linux download matched GitHub's SHA-256 for both the kit and the simulator export. The inner tarball matched its checksum and identified source checkout `742f04e31b39a9b30d20181a6c9eaf71e63bbd24` (PR head `e53d7be0c8aac9b8515f834e6f40c58c3cf534cd`). The bundled reader verified the original imported reply, the saved `00:00 UTC` correction, and the independently recorded export digest. It rejected a wrong supplied digest and an unsupported replacement excerpt even when the replacement's digest was recalculated. This confirms the download and Linux review path for the simulator export. The physical run requires the owner's paired iPhone Air and a Mac with Xcode. [Kit](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45031228658/artifacts/14758936566) · [Simulator export](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45031228658/artifacts/14759087783)
+
+1. On the Mac, open the kit ZIP and run `shasum -a 256 -c pocket-ai-lab-device-kit.sha256` beside its tarball. Extract it, open `PocketAILab/ios/PocketAILab.xcodeproj`, select the paired iPhone Air, select your Personal Team under **Signing & Capabilities**, and run the app from Xcode. The artifact is scheduled to expire November 29 at 9:35 a.m. ET.
+2. In **Local AI**, import and load the pinned Qwen2.5-1.5B-Instruct Q4_K_M GGUF. Its SHA-256 is `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e`. Turn off Wi-Fi and cellular data before generation. [Pinned model download](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true)
+3. In **Memory → Source answers**, select **CF-QUOTA** and ask “How many neurons are in the published daily free allocation?” Use **Ask loaded model** for a question with no saved answer. Record the request ID and original excerpt. The bundled passage says **10,000 neurons per day**. Save a correction with an exact excerpt if the draft needs one. If the app reports an error, preserve the error and the model and device details.
+4. Choose **Save review in Files** and copy the displayed SHA-256 separately. Fully quit the app. Relaunch while offline, find the question with **Read saved answer**, and check the same request ID, cited passage and saved revision. Save the review again and compare its digest with the one copied before quitting.
+5. Retain the raw review JSON, independently copied SHA-256, device model, iOS version, kit commit, pre-quit request ID and observed offline/relaunch result. Use the reader from the extracted kit.
+
+```bash
+python3 tools/evaluation-review/source_review.py review.json --expected-digest "$review_hash"
+```
+
+The review should identify `origin: localRuntime` and source `CF-QUOTA`. Independently compare the original and reviewed excerpts with the requested fact and compare the model hash in the raw draft with the pin. Direct observation supplies the device, network and restart evidence. The signed run and its actual model result are pending.
