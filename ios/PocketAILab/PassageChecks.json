@@ -1,0 +1,61 @@
+{
+  "suiteID": "pocket-passage-evidence",
+  "version": "1.0.0",
+  "maxTokens": 48,
+  "cases": [
+    {
+      "id": "published-reset",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] Running an app in an iPhone simulator can produce different results from running it on a physical device.\n[B] The published daily allowance for Workers AI is 10,000 neurons. All limits reset at 00:00 UTC.\n\nQuestion: At what time do the daily limits reset?",
+      "expected": "00:00 UTC [B]",
+      "sources": {
+        "A": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
+        "B": "https://developers.cloudflare.com/workers-ai/platform/pricing/"
+      }
+    },
+    {
+      "id": "published-allowance",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The published daily allowance for Workers AI is 10,000 neurons. All limits reset at 00:00 UTC.\n[B] Running an app in an iPhone simulator can produce different results from running it on a physical device.\n\nQuestion: What is the published daily allowance for Workers AI?",
+      "expected": "10,000 neurons [A]",
+      "sources": {
+        "A": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+        "B": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices"
+      }
+    },
+    {
+      "id": "account-unknown",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The published daily allowance for Workers AI is 10,000 neurons. All limits reset at 00:00 UTC.\n[B] A synthetic test record says account LARCH is active.\n\nQuestion: How many neurons remain in account LARCH at the time of the supplied record?",
+      "expected": "UNKNOWN",
+      "sources": {
+        "A": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+        "B": "fixture:account-active"
+      }
+    },
+    {
+      "id": "account-observed",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The published daily allowance for Workers AI is 10,000 neurons. All limits reset at 00:00 UTC.\n[B] A synthetic test record says account LARCH has 6,240 neurons remaining.\n\nQuestion: How many neurons remain in account LARCH at the time of the supplied record?",
+      "expected": "6,240 neurons [B]",
+      "sources": {
+        "A": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+        "B": "fixture:balance-6240"
+      }
+    },
+    {
+      "id": "account-corrected",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] A synthetic test record says account LARCH has 4,910 neurons remaining.\n[B] The published daily allowance for Workers AI is 10,000 neurons. All limits reset at 00:00 UTC.\n\nQuestion: How many neurons remain in account LARCH at the time of the supplied record?",
+      "expected": "4,910 neurons [A]",
+      "sources": {
+        "A": "fixture:balance-4910",
+        "B": "https://developers.cloudflare.com/workers-ai/platform/pricing/"
+      }
+    },
+    {
+      "id": "handset-unknown",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] A synthetic simulator log reports a peak of 32 °C.\n[B] Running an app in an iPhone simulator can produce different results from running it on a physical device.\n\nQuestion: What peak temperature was measured on the physical iPhone Air?",
+      "expected": "UNKNOWN",
+      "sources": {
+        "A": "fixture:simulator-only",
+        "B": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices"
+      }
+    }
+  ]
+}

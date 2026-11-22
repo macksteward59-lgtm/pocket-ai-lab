@@ -1,6 +1,12 @@
 name: iOS LlamaEngine CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      package_device_kit:
+        description: Build the Xcode kit for personal-device testing
+        type: boolean
+        default: true
   pull_request:
     branches:
       - main
@@ -15,6 +21,7 @@ on:
       - codex/recipient-format-calibration-20261120
       - codex/native-cloud-analysis-20261120
       - codex/memory-source-preservation
+      - codex/source-register-handoff
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -513,6 +520,18 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath /tmp/pocket-app-device-derived \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Package and independently rebuild the device test kit
+        id: device-kit
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof') }}
+        run: bash tools/passage-check/package-device-kit.sh "$RUNNER_TEMP/device-kit"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.device-kit.outcome == 'success' }}
+        with:
+          name: pocket-ai-lab-device-kit
+          path: ${{ runner.temp }}/device-kit/
+          retention-days: 7
+          if-no-files-found: error
 
       - name: XCTest the native Pocket AI Lab app
         id: app-xctest

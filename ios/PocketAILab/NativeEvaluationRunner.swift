@@ -98,6 +98,35 @@ enum NativeEvaluationSuite {
     ]
 }
 
+/// The server reads this same app resource. Each supported answer must name its passage.
+struct PassageCheckSuite: Decodable {
+    struct Item: Decodable {
+        let id: String
+        let prompt: String
+        let expected: String
+    }
+    let suiteID: String
+    let version: String
+    let maxTokens: Int
+    let cases: [Item]
+
+    static func bundledCases() throws -> [NativeEvaluationCase] {
+        guard let url = Bundle.main.url(forResource: "PassageChecks", withExtension: "json") else {
+            throw NativeEvaluationJournalError.invalidAttempt("The source check is missing from this app build.")
+        }
+        let suite = try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
+        guard !suite.cases.isEmpty, Set(suite.cases.map(\.id)).count == suite.cases.count else {
+            throw NativeEvaluationJournalError.invalidAttempt("The bundled source check has missing or duplicate cases.")
+        }
+        return suite.cases.map { item in
+            NativeEvaluationCase(category: .factualAccuracyEvidence, suiteID: suite.suiteID, suiteVersion: suite.version,
+                                 caseID: item.id, prompt: item.prompt,
+                                 evaluationCriteria: "Match the answer and its cited passage exactly, or return UNKNOWN when the fact is absent.",
+                                 expectedOutcome: item.expected, scoringRule: .exactMatch, maxTokens: suite.maxTokens)
+        }
+    }
+}
+
 /// Runs benchmark cases through the app's shared NativeInferenceRuntime and
 /// exact active ModelPoolLease. No direct LlamaEngine access is exposed here.
 struct NativeEvaluationRunner: Sendable {

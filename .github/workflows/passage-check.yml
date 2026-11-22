@@ -1,0 +1,45 @@
+name: Source passage server proof
+on:
+  pull_request:
+    branches: [main, codex/source-register-handoff]
+    paths:
+      - ios/PocketAILab/PassageChecks.json
+      - tools/passage-check/**
+      - tools/openclaw-review/run-linux.sh
+      - tools/openclaw-review/review.py
+      - .github/workflows/passage-check.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Run the pinned model on the shared questions
+        run: bash tools/openclaw-review/run-linux.sh --passage-results "$RUNNER_TEMP/passage-server.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: passage-server-evidence
+          path: ${{ runner.temp }}/passage-server.json
+          if-no-files-found: error
+      - name: Check benchmark completion and report answer quality
+        run: |
+          python3 - "$RUNNER_TEMP/passage-server.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path(sys.argv[1]).read_text())
+          rows = result["cases"]
+          suite = json.loads(Path("ios/PocketAILab/PassageChecks.json").read_text())
+          assert [r["caseID"] for r in rows] == [case["id"] for case in suite["cases"]]
+          assert all(r.get("requestID") and isinstance(r.get("output"), str) for r in rows)
+          assert len(set(r["requestID"] for r in rows)) == len(rows)
+          print(f'Exact answers with required evidence: {result["passed"]}/{len(rows)}')
+          for row in rows:
+              print(json.dumps({"case": row["caseID"], "output": row["output"], "passed": row["passed"]}))
+          PY
