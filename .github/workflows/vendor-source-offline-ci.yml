@@ -109,7 +109,11 @@ jobs:
             and ($h.SecurityOpt|any(.[]; startswith("no-new-privileges")))
             and ($h.PidsLimit==64) and ($h.Memory==268435456) and ($h.NanoCpus==1000000000)
             and (.[0].Config.User=="65534:65534")'
-          docker start -a -i "$cid" < "$RUNNER_TEMP/owned-plan.json" > "$RUNNER_TEMP/coverage.json"
+          # Explicit data-boundary transform: only the Go adapter's accepted
+          # fields pass from STRIDE output to ARTEX. Unknown metadata fails
+          # the receiving decoder rather than being silently imported.
+          jq -e '{schema,taskId,mandatory,entries}' "$RUNNER_TEMP/owned-plan.json" > "$RUNNER_TEMP/coverage-input.json"
+          docker start -a -i "$cid" < "$RUNNER_TEMP/coverage-input.json" > "$RUNNER_TEMP/coverage.json"
           test "$(docker inspect -f '{{.State.ExitCode}}' "$cid")" = 0
           jq -e '.schema=="pal-vendor-owned-coverage-v1" and .taskId=="task-owned-vendor-01" and .genuineARTEXModule==true and .externalTargets==0 and .authorized==false' "$RUNNER_TEMP/coverage.json"
       - name: Use actual ExploitGym scorer quote source and host-confine path inputs
