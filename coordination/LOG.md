@@ -4961,3 +4961,8 @@ ChatGPT cross-referenced seven parts of the owner’s vision against 23 existing
 ## 2026-11-22 06:19 UTC — Standalone source-answer validation and reviewer CI
 
 [Draft #264](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/264) at `2e9643014cbc3ed0bd765586d602eb23362b138e` rejects blank, whitespace-only and multiline questions before model startup, preserving valid single-question mode and requiring explicit `--check` for the frozen study. Five local regressions passed, including SQLite-backed lookup. [Draft #263](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/263) at `42d15e7df1683629c34bdd792e89c85b96d68a0e` adds independent Linux CI for the offline Python reviewer; 13 tests passed locally, with no hosted result observed at publication. Existing native workflow and scoring untouched. #262 consumer and source-server CI passed; native recovery and physical acceptance remain separate. No merge or deployment.
+
+
+## 2026-11-22 06:24 UTC — Hosted CLI verification and Unicode lookup consistency
+
+[Draft #264](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/264) advanced to `f244e6b14ed3aa40b027b55d92408e172652e8b8` and passed [exact hosted Node 22 and Python CI](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44993471514) using real Node SQLite and mocked model calls. [Draft #265](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/265) at `fa6d1ad020050a1fb07b6687d518cc5d9fb7697d` fixes disagreement between JavaScript UTF-16 length and Python's Unicode code point limit for the source search. The focused SQLite test accepts 300 and rejects 301 code points; five companion CLI tests passed locally. Hosted #265 checks not observed, no signing, deployment or merge.
