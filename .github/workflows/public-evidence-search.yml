@@ -16,7 +16,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Install CPU inference dependencies
-        run: python3 -m pip install --only-binary=:all: numpy==2.2.6 onnxruntime==1.21.1 tokenizers==0.21.1
+        run: |
+          python3 -m pip install --only-binary=:all: numpy==2.2.6 onnxruntime==1.21.1 tokenizers==0.21.1
       - name: Evaluate the fixed encoder and term matching on disjoint papers
         shell: bash
         run: |
