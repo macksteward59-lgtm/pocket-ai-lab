@@ -1,0 +1,41 @@
+name: Owned fixture blinded agent protocol CI
+
+on:
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/blind-agent-study-v1/**'
+      - '.github/workflows/blind-agent-study-ci.yml'
+  push:
+    branches:
+      - codex/blind-agent-evidence-trial-20261122
+    paths:
+      - 'tools/security-evaluation/blind-agent-study-v1/**'
+      - '.github/workflows/blind-agent-study-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  blinded-protocol:
+    name: Offline owned security evidence and answer-isolation checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout current proposed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use fixed Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Run original synthetic owner fixture tests
+        run: node --test tools/security-fixtures/tenant-workflow-v1/run.test.mjs tools/security-fixtures/tenant-workflow-v1/admin-control.test.mjs
+      - name: Run existing finding-quality scorer tests
+        run: node --test tools/security-evaluation/heldout-finding-quality-v1/score.test.mjs
+      - name: Run existing HTTP-to-quality integration tests
+        run: node --test tools/security-evaluation/fixture-to-quality-v1/bridge.test.mjs
+      - name: Verify opaque agent-facing task and scoring seam
+        run: node --test tools/security-evaluation/blind-agent-study-v1/protocol.test.mjs
+      - name: Demonstrate public synthetic blind protocol with no model
+        run: node tools/security-evaluation/blind-agent-study-v1/run.mjs
