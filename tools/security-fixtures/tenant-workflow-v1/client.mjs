@@ -2,7 +2,7 @@
 import { FIXTURE_KIND } from './fixture.mjs';
 
 const ID = /^(alpha|beta|invoice-alpha|invoice-beta)$/;
-const ACTOR = /^(alice|bob)$/;
+const ACTOR = /^(alice|bob|auditor)$/;
 const TASK_ID = /^[A-Za-z0-9._:-]{1,96}$/;
 
 export function validateOwnedOrigin(origin) {
@@ -28,23 +28,31 @@ export function createOwnedClient({origin, taskId, requestLimit = 8, timeoutMs =
     get consumed() { return consumed; },
     observations() { return Object.freeze(observations.map(entry => Object.freeze(structuredClone(entry)))); },
     async invoke({actor, tenant, invoiceId, action, version, signal} = {}) {
-      if (!ACTOR.test(actor ?? '') || !ID.test(tenant ?? '') || !ID.test(invoiceId ?? '') ||
-          !['read', 'approve'].includes(action)) throw new Error('invalid bounded fixture request');
-      if (tenant !== 'alpha' && tenant !== 'beta') throw new Error('invalid tenant');
+      const auditAction = action === 'audit-read' || action === 'audit-approve';
+      if (!ACTOR.test(actor ?? '') || !ID.test(invoiceId ?? '') ||
+          !['read', 'approve', 'audit-read', 'audit-approve'].includes(action)) {
+        throw new Error('invalid bounded fixture request');
+      }
+      if (auditAction ? tenant !== undefined : !ID.test(tenant ?? '') || !['alpha', 'beta'].includes(tenant)) {
+        throw new Error('invalid tenant for fixture action');
+      }
       if (invoiceId !== 'invoice-alpha' && invoiceId !== 'invoice-beta') throw new Error('invalid invoice');
-      if (action === 'approve' && (!Number.isSafeInteger(version) || version < 1 || version > 1000)) {
+      if ((action === 'approve' || action === 'audit-approve') &&
+          (!Number.isSafeInteger(version) || version < 1 || version > 1000)) {
         throw new Error('approval requires an exact positive version');
       }
       if (consumed >= requestLimit) throw new Error('synthetic request budget exhausted');
       // Reserve before awaiting to keep concurrent calls inside the task limit.
       consumed += 1;
-      const path = `/api/tenants/${tenant}/invoices/${invoiceId}${action === 'approve' ? '/approve' : ''}`;
+      const path = auditAction
+        ? `/api/audit/invoices/${invoiceId}${action === 'audit-approve' ? '/approve' : ''}`
+        : `/api/tenants/${tenant}/invoices/${invoiceId}${action === 'approve' ? '/approve' : ''}`;
       const url = base + path; // URL is constructed only from literals and allowlisted IDs.
       const headers = {
         'x-fixture-kind': FIXTURE_KIND,
         'x-fixture-task': taskId,
         'x-fixture-actor': actor,
-        ...(action === 'approve' ? {'if-match': `"${version}"`} : {}),
+        ...(action === 'approve' || action === 'audit-approve' ? {'if-match': `"${version}"`} : {}),
       };
       const aborter = new AbortController();
       const timeout = setTimeout(() => aborter.abort(new Error('fixture request timed out')), timeoutMs);
@@ -53,7 +61,7 @@ export function createOwnedClient({origin, taskId, requestLimit = 8, timeoutMs =
       else signal?.addEventListener('abort', onAbort, {once: true});
       try {
         const reply = await fetch(url, {
-          method: action === 'read' ? 'GET' : 'POST',
+          method: action === 'read' || action === 'audit-read' ? 'GET' : 'POST',
           headers, redirect: 'manual', cache: 'no-store', signal: aborter.signal,
         });
         // Never follow a server-proposed redirect, even a loopback one.
@@ -66,7 +74,7 @@ export function createOwnedClient({origin, taskId, requestLimit = 8, timeoutMs =
         const raw = await reply.text();
         if (Buffer.byteLength(raw, 'utf8') > 2048) throw new Error('fixture response too large');
         const body = JSON.parse(raw);
-        const event = Object.freeze({taskId, action, actor, tenant, invoiceId, status: reply.status, body});
+        const event = Object.freeze({taskId, action, actor, tenant: auditAction ? null : tenant, invoiceId, status: reply.status, body});
         observations.push(event);
         return event;
       } finally {
