@@ -65,7 +65,8 @@ def review_run(raw, expected_digest):
                      and attempt.get("nativeExecutionObserved") is True and grade["complete"])
         ref = ref_cases[case["id"]]
         rows.append(dict(caseID=case["id"], expected=case["expected"], recordedOutput=grade["recordedOutput"],
-                         answerMatches=grade["passed"], nativeGenerationReported=is_native,
+                         generationCompleted=grade["complete"], answerMatches=grade["passed"],
+                         nativeGenerationReported=is_native,
                          resourceSamples=resources, hostedOutput=ref["output"], hostedPassed=ref["passed"]))
     if len(sessions) != 1 or len(models) != 1 or len(environments) > 1:
         raise ValueError("Mixed sessions, model artifacts or runtime environments")
@@ -74,8 +75,11 @@ def review_run(raw, expected_digest):
     headroom = [s["minObservedHeadroomBytes"] for s in observed if s.get("minObservedHeadroomBytes") is not None]
     levels = ("nominal", "fair", "serious", "critical")
     thermal = [s["worstObservedThermalState"] for s in observed if s.get("worstObservedThermalState") is not None]
+    # A full journal can contain cancelled or failed cases. The CLI exit check
+    # indicates case-set coverage only; it is not a generation or quality gate.
     return dict(runID=run_id, runSHA256=digest, modelSHA256=next(iter(models)), session=next(iter(sessions)),
                 recordedCases=len(rows), expectedCases=len(suite["cases"]), completeCaseSet=len(rows) == len(suite["cases"]),
+                completedGenerations=sum(r["generationCompleted"] for r in rows),
                 casesWithResourceSamples=len(observed), reportedNativeGenerations=sum(r["nativeGenerationReported"] for r in rows),
                 exactNativeAnswers=sum(r["nativeGenerationReported"] and r["answerMatches"] for r in rows),
                 maxObservedFootprintBytes=max(footprints, default=None), minObservedHeadroomBytes=min(headroom, default=None),
