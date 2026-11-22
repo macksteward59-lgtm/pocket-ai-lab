@@ -1,0 +1,37 @@
+{
+  "suiteID": "pocket-passage-transfer",
+  "version": "1.0.0",
+  "maxTokens": 48,
+  "cases": [
+    {
+      "id": "west-bin",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The east bin contains 37 washers.\n[B] The west bin contains 16 washers.\n\nQuestion: What quantity does the west bin contain?",
+      "expected": "16 washers [B]"
+    },
+    {
+      "id": "new-train",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The revised timetable lists 14:08 for train SILVER.\n[B] The old timetable listed 13:20 for train SILVER.\n\nQuestion: What departure time does the revised timetable list for train SILVER?",
+      "expected": "14:08 [A]"
+    },
+    {
+      "id": "west-color",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The east bin contains 37 washers.\n[B] The west bin contains 16 washers.\n\nQuestion: What color is the west bin?",
+      "expected": "UNKNOWN"
+    },
+    {
+      "id": "north-code",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The north sample uses batch code P4N.\n[B] The south sample uses batch code Q7S.\n\nQuestion: Which batch code does the north sample use?",
+      "expected": "P4N [A]"
+    },
+    {
+      "id": "south-code",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The north sample uses batch code P4N.\n[B] The south sample uses batch code Q7S.\n\nQuestion: Which batch code does the south sample use?",
+      "expected": "Q7S [B]"
+    },
+    {
+      "id": "absent-train",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The revised timetable lists 14:08 for train SILVER.\n[B] The old timetable listed 13:20 for train SILVER.\n\nQuestion: When does the revised timetable say train BRONZE departs?",
+      "expected": "UNKNOWN"
+    }
+  ]
+}
