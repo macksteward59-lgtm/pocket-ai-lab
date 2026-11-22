@@ -19,6 +19,7 @@ POLICY = [
 MONITOR = "app.v38a_violations"
 INVENTORY = "app.v312_column_grant_inventory"
 UNLISTED = "app.v312_unlisted_column_grants"
+EXPECTED_ISSUES = "app.v312_expected_grant_issues"
 
 
 def command(args, *, input_text=None, env=None):
@@ -40,6 +41,9 @@ def verify(sql, major):
         if actual != expected:
             raise AssertionError(f"{label}: expected {expected!r}, observed {actual!r}")
         print(f"PASS {label}", flush=True)
+
+    def grant_issues(table):
+        return read(f"SELECT issue FROM {EXPECTED_ISSUES} WHERE table_name='{table}' ORDER BY issue")
 
     def finding(change, expected, restore, label):
         sql("postgres", change)
@@ -66,7 +70,7 @@ def verify(sql, major):
     sql(OWNER, "CREATE TABLE app.breakglass_grant_approvers (id integer); CREATE TABLE app.breakglass_approvals (id integer);")
     for migration in MIGRATIONS:
         sql(OWNER, (HERE / migration).read_text())
-    sql(OWNER, f"GRANT SELECT ON {MONITOR}, {INVENTORY}, {UNLISTED} TO {OBSERVER};")
+    sql(OWNER, f"GRANT SELECT ON {MONITOR}, {INVENTORY}, {UNLISTED}, {EXPECTED_ISSUES} TO {OBSERVER};")
     expect("observer login", read("SELECT session_user,current_user,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user"),
            f"{OBSERVER}|{OBSERVER}|f|f")
     expect("observer has only report access", read(
@@ -100,8 +104,16 @@ def verify(sql, major):
     for t, role, col in POLICY:
         sql(OWNER, f"REVOKE UPDATE({col}) ON app.{t} FROM {role}")
         expect(f"{t} missing grant", inventory(t), "f|f")
+        required_issue = "" if t == "approver_registry" else "missing_direct_column_grant"
+        expect(f"{t} source expectation", grant_issues(t), required_issue)
         sql(OWNER, f"GRANT UPDATE ON app.{t} TO {role}")
         expect(f"{t} table-wide access", inventory(t), "f|t")
+        if t == "redemption_tickets":
+            expect("table-wide update cannot substitute for a repair column grant", grant_issues(t),
+                   "missing_direct_column_grant\nunexpected_effective_table_update")
+            sql(OWNER, f"GRANT UPDATE({col}) ON app.{t} TO {role}")
+            expect("repair grant and broader table access both present", grant_issues(t),
+                   "unexpected_effective_table_update")
         sql(OWNER, f"REVOKE UPDATE ON app.{t} FROM {role}; GRANT UPDATE({col}) ON app.{t} TO {role}; "
                    f"GRANT UPDATE(expires_at) ON app.{t} TO {role}")
         expect(f"{t} unlisted column", read(f"SELECT table_name,grantee,column_name,privilege FROM {UNLISTED}"),
@@ -118,6 +130,14 @@ def verify(sql, major):
         f"SELECT role_exists,table_exists,column_exists,direct_column_grant,effective_column_privilege IS NULL "
         f"FROM {INVENTORY} WHERE table_name='redemption_tickets'"), "t|f|f|f|t")
     sql(OWNER, "ALTER TABLE app.redemption_held RENAME TO redemption_tickets")
+    sql(OWNER, "UPDATE app.column_privilege_matrix SET allowed=false WHERE table_name='redemption_tickets'")
+    expect("required entry survives a missing allowance", grant_issues("redemption_tickets"), "missing_matrix_allowance")
+    sql(OWNER, "GRANT UPDATE ON app.redemption_tickets TO app_repair_executor")
+    expect("broader repair grant remains visible without its allowance", grant_issues("redemption_tickets"),
+           "missing_matrix_allowance\nunexpected_effective_table_update")
+    sql(OWNER, "REVOKE UPDATE ON app.redemption_tickets FROM app_repair_executor")
+    sql(OWNER, "UPDATE app.column_privilege_matrix SET allowed=true WHERE table_name='redemption_tickets'")
+    expect("positive expectations restored", read(f"SELECT count(*) FROM {EXPECTED_ISSUES}"), "0")
     expect("clean after restores", read(f"SELECT (SELECT count(*) FROM {MONITOR}), (SELECT count(*) FROM {UNLISTED}),"
                                         f" (SELECT count(*) FROM {INVENTORY} WHERE direct_column_grant AND effective_column_privilege)"), "0|0|4")
 

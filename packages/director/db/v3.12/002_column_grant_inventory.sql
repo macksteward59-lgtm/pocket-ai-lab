@@ -14,7 +14,11 @@ SELECT m.schema_name, m.table_name, m.role_name, m.column_name, m.privilege,
        CASE WHEN r.oid IS NOT NULL AND a.attnum IS NOT NULL
                   AND m.privilege IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
             THEN has_column_privilege(r.oid, c.oid, a.attnum, m.privilege)
-       END AS effective_column_privilege
+       END AS effective_column_privilege,
+       CASE WHEN r.oid IS NOT NULL AND c.oid IS NOT NULL
+                  AND m.privilege IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
+            THEN has_table_privilege(r.oid, c.oid, m.privilege)
+       END AS effective_table_privilege
   FROM app.column_privilege_matrix m
   LEFT JOIN pg_roles r ON r.rolname = m.role_name
   LEFT JOIN pg_namespace n ON n.nspname = m.schema_name
@@ -43,5 +47,29 @@ SELECT t.schema_name, t.table_name,
                AND m.role_name = pg_get_userbyid(acl.grantee) AND m.column_name = a.attname
                AND m.privilege = acl.privilege_type AND m.allowed
         ));
+
+-- Source-backed UPDATE expectations are independent of the mutable allowlist.
+-- v3.12 V71b assumes the mutator grant; v3.12 §4.3 and v3.11 §5.5
+-- specify the repair grants. Only §4.3 supplies the explicit table-UPDATE prohibition here.
+CREATE VIEW app.v312_expected_grant_issues AS
+WITH expected(table_name, role_name, column_name, forbid_table_update) AS (
+  VALUES ('breakglass_grants', 'app_breakglass_mutator', 'revoked_at', false),
+         ('redemption_tickets', 'app_repair_executor', 'consumed_by_nonce', true),
+         ('migration_repair_authorizations', 'app_repair_executor', 'consumed_at', false)
+)
+SELECT e.table_name, e.role_name, e.column_name, problem.issue
+  FROM expected e
+  LEFT JOIN app.v312_column_grant_inventory i
+    ON i.schema_name = 'app' AND i.table_name = e.table_name::name
+   AND i.role_name = e.role_name::name AND i.column_name = e.column_name::name
+   AND i.privilege = 'UPDATE'
+ CROSS JOIN LATERAL (VALUES
+    ('missing_matrix_allowance', i.table_name IS NULL),
+    ('missing_direct_column_grant', i.table_name IS NOT NULL AND NOT i.direct_column_grant),
+    ('unexpected_effective_table_update', e.forbid_table_update AND has_table_privilege(
+         to_regrole(e.role_name), to_regclass(format('%I.%I', 'app', e.table_name)), 'UPDATE'
+     ))
+ ) problem(issue, applies)
+ WHERE problem.applies;
 
 COMMIT;
