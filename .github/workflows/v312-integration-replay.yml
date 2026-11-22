@@ -53,6 +53,14 @@ jobs:
         working-directory: integration
         run: ./node_modules/.bin/vitest run packages/intelligence/__tests__/autonomy.test.ts
 
+      - name: Run the repository regression suite with local networking only
+        working-directory: integration
+        shell: bash
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp -e CI=true -v "$PWD:/repo" -w /repo \
+            node:22.16.0-bookworm npm test
+
       - name: Verify the database monitor on PostgreSQL 15
         working-directory: integration
         run: python3 packages/director/db/v3.12/test_integration.py 15
