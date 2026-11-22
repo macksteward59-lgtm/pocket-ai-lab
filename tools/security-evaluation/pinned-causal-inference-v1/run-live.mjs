@@ -12,7 +12,7 @@ import {join,resolve} from 'node:path';
 import {createServer} from 'node:net';
 import {performance} from 'node:perf_hooks';
 import {fileURLToPath} from 'node:url';
-import {prepareCausalStudy,runProviderOnce,publicObservationBaseline,scoreSubmission} from '../causal-counterfactual-v1/protocol.mjs';
+import {prepareCausalStudy,runProviderOnce,publicObservationBaseline,scoreSubmission,exportPostRunCausalTruth} from '../causal-counterfactual-v1/protocol.mjs';
 import {MODEL_ALIAS,MODEL_SHA256,createPinnedLlamaProvider} from './adapter.mjs';
 
 function requireFlag(args,name){
@@ -70,7 +70,7 @@ export async function runActualPinnedTrial({gguf,binary,out,variant='missing-own
   const tmp=await mkdtemp(join(tmpdir(),'pocket-causal-pinned-'));
   const key=randomBytes(32).toString('hex'),keyFile=join(tmp,'server.key');
   let child=null;let observed=null;let attempt=null;let baseline=null;let study=null;
-  let error=null;const began=performance.now();
+  let error=null;let answerKey=null;const began=performance.now();
   try{
     await writeFile(keyFile,key,{flag:'wx',mode:0o600});await chmod(keyFile,0o600);
     const port=await chooseLoopbackPort();const origin='http://127.0.0.1:'+port;
@@ -87,6 +87,9 @@ export async function runActualPinnedTrial({gguf,binary,out,variant='missing-own
     // One host-controlled call. The upstream PR #276 contract caps provider
     // completion at 30 seconds, even if the model's response is incomplete.
     attempt=await runProviderOnce(study.handle,provider,{kind:'external-provider-unattested',timeoutMs:30000});
+    // Reveal the host-only source mapping strictly AFTER a scorable provider return.
+    // It never enters the public task or any model request.
+    if(attempt.status==='scored')answerKey=exportPostRunCausalTruth(study.handle);
     if(provider.calls!==1)throw Error('provider call count unexpectedly changed');
     baseline=scoreSubmission(study.handle,publicObservationBaseline(study.agentInput));
   }catch(e){error=String(e?.message||e).slice(0,300);}
@@ -105,6 +108,9 @@ export async function runActualPinnedTrial({gguf,binary,out,variant='missing-own
     modelRuntimeAttested:false,deviceModelReadyAttested:false,
     reservedAttempts:attempt?.attemptCount??0,oneCallStatus:attempt?.status||'failed-before-attempt',
     trialAttempt:attempt||null,deterministicRuleBaselineScore:baseline||null,
+    agentVisibleTask:study?.agentInput??null,
+    postRunAnswerKeySHA256:answerKey?createHash('sha256').update(JSON.stringify(answerKey)).digest('hex'):null,
+    answerKeyDisclosure:'separate-file-after-scorable-model-reply-not-a-signature',
     separateHostAnswerKeyNotSentToModel:true,modelWasGivenSourceFiles:false,
     genuineNewVulnerabilityFamily:false,humanReviewerValidated:false,
     authorizedProductionEvaluation:false,modelPromotionAllowed:false,
@@ -113,6 +119,11 @@ export async function runActualPinnedTrial({gguf,binary,out,variant='missing-own
   };
   // The CLI may exit successfully after a *failed model answer*; that is still
   // a completed model experiment with negative evidence, never model acceptance.
+  if(answerKey){
+    // Never expose the synthetic answer key before the model call has completed.
+    // The digest binds the paired JSON at the data level, not to a trusted signer.
+    await writeFile(outPath+'.answer-key.json',JSON.stringify(answerKey,null,2)+'\n',{flag:'wx',mode:0o600});
+  }
   await writeFile(outPath,JSON.stringify(packet,null,2)+'\n',{flag:'wx',mode:0o600});
   return packet;
 }
