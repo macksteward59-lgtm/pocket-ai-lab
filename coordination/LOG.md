@@ -4970,3 +4970,8 @@ ChatGPT cross-referenced seven parts of the owner’s vision against 23 existing
 ## Owner recovery across full app termination — November 22, 2026
 
 [Draft #262](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/262) at `12d511f2` recovered a corrected source answer after full app termination in the iOS simulator. Re-import retained one record. The owner-facing export, original server reply and independently copied digest matched in the shipped reader. A live Cloudflare note retained the result after a repeated save. Hardware inference, hosted Workers AI and the frozen model-quality gate remain open. [Full project check, test results and device kit](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/owner-recovery/README.md).
+
+
+## November 22, 2026 — Integrated source-review and recovery validation
+
+[Draft #266](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/266) at `a787cd5b8e8266df1b2bd987f8b5487551056848` preserves #262 `12d511f2ae6938a84f65c1d0f31124441bdfeb5d` and carries exact reviewed changes from #263, #264 and #265. Independent local aggregate passed 13 reviewer tests, five CLI tests, and one SQLite Unicode regression, plus a Python-to-Node boundary check. Only exact workflow routing changed on the integration branch; existing source branches, native behavior, authorization, model scoring and platform gates unchanged. Rebuilt integrated kit and physical validation remain pending. #262 exact-head recovery, independent export review and unsigned rebuild passed; its [kit](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44995884905/artifacts/14743884193) remains the fallback. No merge or deployment.
