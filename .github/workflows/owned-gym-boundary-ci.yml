@@ -60,7 +60,7 @@ jobs:
             $h.NetworkMode=="none" and
             $h.ReadonlyRootfs==true and $h.Privileged==false and
             ($h.CapDrop | index("ALL") != null) and
-            ($h.SecurityOpt | any(. ; startswith("no-new-privileges"))) and
+            ($h.SecurityOpt | any(.[]; startswith("no-new-privileges"))) and
             $h.PidsLimit==64 and $h.Memory==201326592 and
             $h.NanoCpus==1000000000 and
             $h.Binds==null and
