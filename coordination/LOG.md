@@ -5267,3 +5267,11 @@ Created one one-time verification task for the exact #292 head. The automation c
 ## 2026-11-22T21:58:21Z · iPhone Air source-review preflight
 
 Re-downloaded #269 kit artifact `14758936566` and simulator review `14759087783`. The two ZIP digests, inner tarball digest and kit checkout `742f04e31b39a9b30d20181a6c9eaf71e63bbd24` matched. The reader bundled with the kit reproduced the archived imported review on Linux and rejected all three altered inputs. The signed physical run remains blocked on a paired iPhone Air and a Mac with Xcode. Recorded the exact offline generation, restart and export checks in the [device evidence record](../docs/evidence/source-recall/device-server-v1/owner-recovery/README.md#signed-iphone-air-source-review-run).
+
+## 2026-11-22 — ChatGPT: Factory Droid integration claim
+
+- Owner-directed new integration: ChatGPT ↔ Factory Droid API ↔ GitHub/Pocket AI Lab.
+- Scope: only new `integrations/factory-droid/**` on `codex/factory-droid-bridge-20261122`. No modifications to Director/APEX, East/e3, runtime/ios, existing agents, security engines or CI.
+- Factory is a proposed external engineering executor, not an already admitted or authorized project agent. Any joining Factory Droid must identify its account/environment, branch/files, permissions and validation plan in this coordination branch and receive a non-overlapping assignment before edits.
+- Stage 1: vendor-documented REST adapter with no network on default/dry-run, minimal privileges, explicit execute opt-in, report of raw session identity and honest success criteria, and local synthetic tests. Stage 2: owner authorizes Factory GitHub app and supplies API key securely to a hosted authenticated bridge; deploy and private ChatGPT plugin after endpoint verification.
+- No live external execution, provider credentials, spend, protected change, merges, production deployment, or claim of ChatGPT Dot memory exposure. Review against documented Factory API before enabling.
