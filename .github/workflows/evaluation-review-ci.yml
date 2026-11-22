@@ -1,0 +1,24 @@
+name: Evaluation review CI
+
+on:
+  pull_request:
+    paths:
+      - "tools/evaluation-review/**"
+      - "ios/PocketAILab/PassageChecks.json"
+      - ".github/workflows/evaluation-review-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  evaluation-review:
+    name: Offline evaluation review (Python)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Run offline reviewer tests
+        run: python3 -m unittest discover -s tools/evaluation-review -p 'test_*.py' -v
