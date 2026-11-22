@@ -1,0 +1,106 @@
+[
+  {
+    "id": "RFC8259",
+    "url": "https://www.rfc-editor.org/rfc/rfc8259#section-1",
+    "sentences": [
+      "Values in a JSON array have a defined order.",
+      "A JSON object groups name/value pairs without defining an order for those pairs."
+    ],
+    "questions": [
+      [
+        "Does an array preserve the order of its values?",
+        0
+      ],
+      [
+        "Is there a defined order for the name/value pairs in a JSON object?",
+        1
+      ],
+      [
+        "How many values may an array contain at most?",
+        -1
+      ],
+      [
+        "What maximum length is allowed for an object member name?",
+        -1
+      ]
+    ]
+  },
+  {
+    "id": "RFC1952",
+    "url": "https://www.rfc-editor.org/rfc/rfc1952#section-2.2",
+    "sentences": [
+      "A gzip file stores its compressed members consecutively.",
+      "The gzip trailer uses the ISIZE field for the original data size modulo 2 to the power of 32."
+    ],
+    "questions": [
+      [
+        "How are compressed members arranged in a gzip file?",
+        0
+      ],
+      [
+        "What information does ISIZE record in the trailer?",
+        1
+      ],
+      [
+        "What compression level was chosen for the first gzip member?",
+        -1
+      ],
+      [
+        "How long did it take to compress the original data?",
+        -1
+      ]
+    ]
+  },
+  {
+    "id": "RFC4180",
+    "url": "https://www.rfc-editor.org/rfc/rfc4180#section-2",
+    "sentences": [
+      "A CSV file may place an optional header on its first line.",
+      "Inside a quoted CSV field, a literal double quote is represented by two successive double quotes."
+    ],
+    "questions": [
+      [
+        "Where can the optional CSV header appear?",
+        0
+      ],
+      [
+        "How can a quoted field represent a literal double quote?",
+        1
+      ],
+      [
+        "How many header names may a CSV file contain at most?",
+        -1
+      ],
+      [
+        "What maximum length is permitted for a quoted CSV field?",
+        -1
+      ]
+    ]
+  },
+  {
+    "id": "PNG3",
+    "url": "https://www.w3.org/TR/png-3/#11Critical-chunks",
+    "sentences": [
+      "After the PNG signature, the first chunk is IHDR.",
+      "The IEND chunk terminates a PNG stream and carries no data."
+    ],
+    "questions": [
+      [
+        "Which chunk comes immediately after the signature?",
+        0
+      ],
+      [
+        "Does the chunk at the end of a PNG stream contain data?",
+        1
+      ],
+      [
+        "How many bytes of image data are in this particular stream?",
+        -1
+      ],
+      [
+        "When was the file containing the IHDR chunk created?",
+        -1
+      ]
+    ]
+  }
+]
