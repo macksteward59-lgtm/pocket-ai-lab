@@ -4,7 +4,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from statistics import median
+from statistics import mean, median
 import sys
 import time
 import urllib.request
@@ -134,26 +134,49 @@ def collect(docs, connection, ids, output):
     return rows
 
 
+def log_odds(prob):
+    prob = max(1e-9, min(1 - 1e-9, prob))
+    return math.log(prob / (1 - prob))
+
+
+def calibration(rows):
+    """Equal-class midpoint of mean log odds, fit only to reviewed training pairs."""
+    values = [[], []]
+    for row in rows:
+        for i, pair in enumerate(row["teacher"]):
+            values[int(i == row["gold"])].append(log_odds(pair["probYes"]))
+    if not all(values):
+        raise ValueError("Both reviewed classes are required to calibrate the teacher")
+    return (mean(values[0]) + mean(values[1])) / 2
+
+
+def calibrated(prob, offset):
+    return 1 / (1 + math.exp(offset - log_odds(prob)))
+
+
 def learn(rows):
     all_gold, verified_gold, verified_soft = [], [], []
+    offsets = {source: calibration([r for r in rows if r["source"] != source])
+               for source in sorted({r["source"] for r in rows})}
     for row in rows:
         vectors = features(row["question"], row["sentences"])
         for i, (x, teacher) in enumerate(zip(vectors, row["teacher"])):
             y = int(i == row["gold"])
-            prob = teacher["probYes"]
+            prob = calibrated(teacher["probYes"], offsets[row["source"]])
             all_gold.append((x, y))
             if (prob > .5) == y:
                 verified_gold.append((x, y))
                 verified_soft.append((x, prob))
     stats = dict(totalPairs=len(all_gold), retainedPairs=len(verified_soft),
                  retainedPositive=sum(y for _, y in verified_gold),
-                 retainedNegative=sum(1-y for _, y in verified_gold))
+                 retainedNegative=sum(1-y for _, y in verified_gold),
+                 crossFittedOffsets=offsets, testOffset=calibration(rows))
     return {"student": fit(verified_soft), "hard": fit(verified_gold), "direct": fit(all_gold)}, stats
 
 
-def score(rows, nets):
+def score(rows, nets, offset):
     predictions = []
-    names = ["teacher", "lexical", *nets]
+    names = ["rawTeacher", "teacher", "lexical", *nets]
     counts = {name: {"answerable":0, "absent":0} for name in names}
     student_time, teacher_time = [], []
     for row in rows:
@@ -161,7 +184,8 @@ def score(rows, nets):
         raw_teacher = [t["probYes"] for t in row["teacher"]]
         lexical = [v[2] for v in features(q, s)]
         best = max(range(len(s)), key=lexical.__getitem__)
-        decisions = {"teacher":pick(raw_teacher), "lexical":best if lexical[best] > .15 else -1}
+        decisions = {"rawTeacher":pick(raw_teacher), "teacher":pick([calibrated(p, offset) for p in raw_teacher]),
+                     "lexical":best if lexical[best] > .15 else -1}
         teacher_time.append(sum(t["timeMs"] for t in row["teacher"]))
         for name, net in nets.items():
             start = time.perf_counter_ns()
@@ -201,7 +225,7 @@ def main():
         heldout = json.loads((HERE/"heldout.json").read_bytes())
         validate(heldout, train)
         test = collect(heldout, connection, ids, args.out/"test.jsonl")
-    result = score(test, nets)
+    result = score(test, nets, stats["testOffset"])
     result.update(training=stats, teacher=TEACHER, teacherSHA256=TEACHER_SHA, decisionTokenIDs=ids,
                   trainQuestions=len(labeled), trainSources=[d["id"] for d in train],
                   testSources=[d["id"] for d in heldout], studentBytes=(args.out/"student.json").stat().st_size,

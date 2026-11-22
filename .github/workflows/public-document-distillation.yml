@@ -27,7 +27,7 @@ jobs:
           echo "437a78088609f8faac6eddb8654614a0bafd761d3e9803b304c1b623074f599c  $work/server.tgz" | sha256sum -c
           tar xzf "$work/server.tgz" -C "$work"
           repo=bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF
-          rev=$(curl -fsSL --retry 2 --max-time 30 "https://huggingface.co/api/models/$repo" | jq -er '.sha | select(test("^[0-9a-f]{40}$"))')
+          rev=9cc28b17e86fa2415fcb070f8ee5ec27c965aa61
           echo "$rev" > "$work/teacher-revision.txt"
           curl -fsSL --retry 2 --max-time 300 -o "$work/model.gguf" "https://huggingface.co/$repo/resolve/$rev/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true"
           echo "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f  $work/model.gguf" | sha256sum -c
