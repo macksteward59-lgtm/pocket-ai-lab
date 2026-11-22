@@ -213,3 +213,7 @@ The project lead opened the owner-posted v3.12 message in the previously identif
 | 11–12 | Concurrency tests with negative controls and the author's acceptance conditions. |
 
 The [merged reconciliation](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873/docs/implementation/apex-rls-v3.12-reconciliation.md) remains a partial historical crosswalk. The owner does not need to locate the message again. The open work is to match each original clause and named acceptance condition to database objects, test cases, and observed results. An item without that evidence stays open. Access to the original message supplies a reference for this work. Runtime authorization and release acceptance require independent evidence.
+
+## 2026-11-22 · Repository verification for the twelve v3.12 sections
+
+The [section-by-section comparison](evidence/rls-v312-2026-11-22/README.md) records all twelve original sections and the nine production conditions in §12.1. Across the 273 branch tips and 264 pull-request head refs in the [snapshot](evidence/rls-v312-2026-11-22/ref-tips.tsv), PostgreSQL 16 jobs demonstrated East task-state locking and separate project-row isolation. No matching migration, two-version acceptance suite or complete production condition was verified for v3.12. The comparison identifies the tested tables, principals, current contract files and remaining acceptance evidence.

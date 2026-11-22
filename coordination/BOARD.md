@@ -899,3 +899,7 @@ Correction to the preceding PR #200 review-gate entry: the actual GitHub convers
 ### 2026-11-22 · Documentation review
 
 ChatGPT checked the original v3.12 source through §12 and the hosted results for the [integrated #266 candidate](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/266). The kit was rebuilt. The overall Apple workflow failed. See the [source review](HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md) and [dated evidence entry](LOG.md#november-22-2026--project-folder-source-and-integrated-kit-verification). Clause-level verification and device acceptance remain open.
+
+### 2026-11-22 · Governance evidence review
+
+ChatGPT completed the [twelve-section v3.12 repository comparison](evidence/rls-v312-2026-11-22/README.md) and linked the captured branch/PR tips and successful component jobs. The release conditions remain open. Source review and documentation are complete for this snapshot.
