@@ -1,0 +1,80 @@
+name: East plus owned causal reviewer non-authorizing smoke
+
+on:
+  push:
+    branches: [codex/east-causal-integration-smoke-20261122]
+    paths:
+      - 'tools/security-evaluation/east-causal-integration-v1/**'
+      - '.github/workflows/east-causal-integration-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/east-causal-integration-v1/**'
+      - '.github/workflows/east-causal-integration-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  composite-east-causal-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: Rebuild pinned East and red-team review source with fake provider
+    steps:
+      - name: Fetch exact original East lifecycle branch commit (#157)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ab2ad101d1a2ebfa277bd2c136db79b6b1afc094
+          path: east
+          persist-credentials: false
+      - name: Fetch exact synthetic reviewer branch commit (#281)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: e42467012abefe3d5f6083ab6dbfcdbe9f9a148f
+          path: causal
+          persist-credentials: false
+      - name: Fetch exact proposed test source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: proposed
+          persist-credentials: false
+      - name: Assemble only non-overlapping test modules, proving source pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C east rev-parse HEAD)" = ab2ad101d1a2ebfa277bd2c136db79b6b1afc094
+          test "$(git -C causal rev-parse HEAD)" = e42467012abefe3d5f6083ab6dbfcdbe9f9a148f
+          test "$(git -C proposed rev-parse HEAD)" = "$GITHUB_SHA"
+          dirs=(
+            tools/security-evaluation/causal-counterfactual-v1
+            tools/security-evaluation/pinned-causal-inference-v1
+            tools/security-evaluation/causal-postrun-review-v1
+            tools/security-evaluation/east-causal-integration-v1
+          )
+          test -z "$(git -C east ls-files -- "${dirs[@]}")"
+          test -z "$(git -C causal ls-files -- tools/security-evaluation/east-causal-integration-v1)"
+          git -C causal archive HEAD -- "${dirs[0]}" "${dirs[1]}" "${dirs[2]}" | tar -xf - -C east
+          git -C proposed archive HEAD -- "${dirs[3]}" | tar -xf - -C east
+          git -C east add -- "${dirs[@]}"
+          echo "East pin: $(git -C east rev-parse HEAD)"
+          echo "Causal pin: $(git -C causal rev-parse HEAD)"
+          echo "Composite Git tree (not a merge): $(git -C east write-tree)"
+          test -f east/packages/intelligence/autonomy/EastTaskLifecycleAdapter.ts
+          test -f east/tools/security-evaluation/east-causal-integration-v1/integration.test.mjs
+      - name: Use pinned Node 22.16.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Compile preserved East source and existing autonomy contracts
+        working-directory: east
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --ignore-scripts --no-audit --no-fund --no-package-lock
+          npm run build
+          ./node_modules/.bin/vitest run packages/intelligence/__tests__/autonomy.test.ts
+      - name: Execute causal review then East workflow then recovery
+        working-directory: east
+        run: node --import tsx --test tools/security-evaluation/east-causal-integration-v1/integration.test.mjs
+      - name: Confirm no tracked source changed during checks
+        working-directory: east
+        run: git diff --exit-code
