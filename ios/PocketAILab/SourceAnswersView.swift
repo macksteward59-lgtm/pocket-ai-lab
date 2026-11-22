@@ -19,18 +19,38 @@ struct SourceAnswersView: View {
         return history.filter { text.isEmpty || $0.sourceAnswer?.draft.question.localizedCaseInsensitiveContains(text) == true }
     }
 
+    private var savedReply: NativeMemoryEntry? {
+        let query = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        let exact = history.filter { $0.sourceAnswer?.draft.question.caseInsensitiveCompare(query) == .orderedSame }
+        let sourceIDs = Set(exact.compactMap { $0.sourceAnswer?.draft.passage.id })
+        let candidates = sourceIDs.count <= 1 ? exact : exact.filter { $0.sourceAnswer?.draft.passage.id == passageID }
+        return candidates.max { left, right in
+            let a = left.sourceAnswer?.corrections.last?.date
+            let b = right.sourceAnswer?.corrections.last?.date
+            if (a == nil) != (b == nil) { return a == nil }
+            return (a ?? left.createdAt) < (b ?? right.createdAt)
+        }
+    }
+
     var body: some View {
         List {
             Section("Question") {
                 TextField("Ask or find a saved question", text: $question)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .accessibilityIdentifier("source-question")
+                if let savedReply {
+                    Button("Read saved answer") { selected = savedReply }
+                }
                 if let catalog {
                     Picker("Project source", selection: $passageID) {
                         ForEach(catalog.sources) { Text($0.id).tag($0.id) }
                     }
                     Button("Ask loaded model") {
                         perform {
+                            if let savedReply, savedReply.sourceAnswer?.draft.passage.id == passageID {
+                                selected = savedReply
+                                return
+                            }
                             guard let passage = catalog.sources.first(where: { $0.id == passageID }) else { throw SourceAnswerError.catalog }
                             let draft = try await model.answerProjectQuestion(question, passage: passage)
                             selected = try await store.retainSourceAnswer(draft)

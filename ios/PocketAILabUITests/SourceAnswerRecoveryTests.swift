@@ -44,11 +44,13 @@ final class SourceAnswerRecoveryTests: XCTestCase {
         openAnswers()
         let query = app.textFields["source-question"]
         query.tap()
-        query.typeText("allocation\n")
+        query.typeText("At what time does the daily free neuron allocation reset?\n")
         let records = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "source-record-"))
         XCTAssertEqual(records.count, 1)
         let savedID = records.firstMatch.identifier
-        records.firstMatch.tap()
+        let recall = app.buttons["Read saved answer"]
+        XCTAssertTrue(recall.waitForExistence(timeout: 10))
+        recall.tap()
         XCTAssertEqual(app.staticTexts["review-current"].label, expected)
         XCTAssertEqual(app.staticTexts["review-citation"].label, "CF-QUOTA")
         let original = app.staticTexts["review-original"]

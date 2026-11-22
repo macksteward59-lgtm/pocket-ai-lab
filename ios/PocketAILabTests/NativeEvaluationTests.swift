@@ -425,6 +425,16 @@ final class NativeEvaluationTests: XCTestCase {
         let firstDigest = first.digest
         XCTAssertTrue(model.isModelLoaded, model.status)
         await model.runSelfEvaluation(sourceCheck: true)
+        let localPassage = ProjectPassage(id: "TEST-DOCUMENT", url: "https://example.org/fixture", finding: "The test value is 42.")
+        let local = try await model.answerProjectQuestion("What value does the fixture give?", passage: localPassage)
+        XCTAssertEqual(local.origin, .localRuntime)
+        XCTAssertEqual(local.excerpt, "42")
+        XCTAssertEqual(local.modelSHA256, first.events.first?.payload.attempt?.modelArtifactSHA256)
+        let missing = ProjectPassage(id: "TEST-ABSENT", url: "https://example.org/absent", finding: "No number is given.")
+        do {
+            _ = try await model.answerProjectQuestion("What number?", passage: missing)
+            XCTFail("Accepted a model answer absent from the selected passage")
+        } catch SourceAnswerError.noAnswer {}
         await model.unloadModel()
         let secondHistory = try await journal.events()
         let second = try XCTUnwrap(NativeSourceRunExport.latest(in: secondHistory, modelID: selectedModelID, cases: frozen))
