@@ -1,0 +1,132 @@
+name: Exact pinned STRIDE ARTEX ExploitGym source-component interoperability
+
+on:
+  push:
+    branches: [codex/offline-vendor-component-proof-20261122]
+    paths:
+      - 'tools/security-evaluation/vendor-source-offline-v1/**'
+      - '.github/workflows/vendor-source-offline-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/vendor-source-offline-v1/**'
+      - '.github/workflows/vendor-source-offline-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-real-source:
+    name: STRIDE parse → ARTEX Go coverage → ExploitGym evidence, owned/offline only
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact proposed test wrapper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proposed
+          persist-credentials: false
+      - name: Fetch exact STRIDE-GPT source matching owner ZIP
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: mrwadams/stride-gpt
+          ref: 5bc2c7b728e4c4d43da6defbf34c53a41d89b909
+          path: stride
+          persist-credentials: false
+      - name: Fetch exact ARTEX source matching owner ZIP
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: BaaRai/ARTEX
+          ref: 65045efae642159eeef3be5536c262f096f4c08d
+          path: artex
+          persist-credentials: false
+      - name: Fetch exact ExploitGym source matching owner ZIP
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: sunblaze-ucb/exploitgym
+          ref: a8029e47135a29f1c1a6e79109bf86fba379b3f3
+          path: exploitgym
+          persist-credentials: false
+      - name: Refuse substitutions of all four source commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C proposed rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C stride rev-parse HEAD)" = 5bc2c7b728e4c4d43da6defbf34c53a41d89b909
+          test "$(git -C artex rev-parse HEAD)" = 65045efae642159eeef3be5536c262f096f4c08d
+          test "$(git -C exploitgym rev-parse HEAD)" = a8029e47135a29f1c1a6e79109bf86fba379b3f3
+          test -f stride/stride_gpt/core/drawio_parser.py
+          test -f artex/db/coverage_ledger.go
+          test -f exploitgym/agent_scorer/validate_results.py
+          echo "Three exact owner-ZIP-origin upstream source commits verified"
+      - name: Set up actual ARTEX Go toolchain pinned by its source
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: artex/go.mod
+          cache: false
+      - name: Prepare a bounded Python parser dependency for STRIDE-GPT
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/vendor-venv"
+          "$RUNNER_TEMP/vendor-venv/bin/pip" install --disable-pip-version-check --no-input 'defusedxml==0.7.1'
+          "$RUNNER_TEMP/vendor-venv/bin/python" --version
+      - name: Parse actual STRIDE draw.io source into owned task plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/vendor-venv/bin/python" proposed/tools/security-evaluation/vendor-source-offline-v1/pal_vendor_probe.py plan --stride "$PWD/stride" --out "$RUNNER_TEMP/owned-plan.json"
+          jq -e '.schema=="pal-vendor-owned-plan-v1" and .taskId=="task-owned-vendor-01" and .parseActualSTRIDEModule and .externalTargets==0 and .authorized==false' "$RUNNER_TEMP/owned-plan.json"
+      - name: Build actual ARTEX db package with original Go source, but no targets
+        working-directory: artex
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(go version | awk '{print $3}')" = go1.26.10
+          go mod download
+          mkdir -p cmd/pal_vendor_probe
+          cp ../proposed/tools/security-evaluation/vendor-source-offline-v1/pal_coverage_probe.go cmd/pal_vendor_probe/main.go
+          gofmt -w cmd/pal_vendor_probe/main.go
+          CGO_ENABLED=0 GOPROXY=off GOSUMDB=off go build -o "$RUNNER_TEMP/pal-coverage" ./cmd/pal_vendor_probe
+          chmod 755 "$RUNNER_TEMP/pal-coverage"
+      - name: Run actual ARTEX coverage module in a deny-egress nonroot Docker process
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=node:22.16.0-bookworm-slim@sha256:048ed02c5fd52e86fda6fbd2f6a76cf0d4492fd6c6fee9e2c463ed5108da0e34
+          docker pull "$image"
+          cid=""
+          cleanup() {
+            if [[ -n "$cid" ]]; then docker rm -f "$cid" >/dev/null 2>&1 || true; fi
+          }
+          trap cleanup EXIT
+          cid=$(docker create -i --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 64 --memory 256m --cpus 1 \
+            --user 65534:65534 --restart no \
+            --mount "type=bind,source=$RUNNER_TEMP/pal-coverage,target=/bin/pal-coverage,readonly" \
+            --entrypoint /bin/pal-coverage "$image")
+          docker inspect "$cid" | jq -e '.[0].HostConfig as $h |
+            $h.NetworkMode=="none" and $h.ReadonlyRootfs and ($h.CapDrop|index("ALL")!=null)
+            and ($h.SecurityOpt|any(.[]; startswith("no-new-privileges")))
+            and ($h.PidsLimit==64) and ($h.Memory==268435456) and ($h.NanoCpus==1000000000)
+            and (.[0].Config.User=="65534:65534")'
+          # Explicit data-boundary transform: only the Go adapter's accepted
+          # fields pass from STRIDE output to ARTEX. Unknown metadata fails
+          # the receiving decoder rather than being silently imported.
+          jq -e '{schema,taskId,mandatory,entries}' "$RUNNER_TEMP/owned-plan.json" > "$RUNNER_TEMP/coverage-input.json"
+          docker start -a -i "$cid" < "$RUNNER_TEMP/coverage-input.json" > "$RUNNER_TEMP/coverage.json"
+          test "$(docker inspect -f '{{.State.ExitCode}}' "$cid")" = 0
+          jq -e '.schema=="pal-vendor-owned-coverage-v1" and .taskId=="task-owned-vendor-01" and .genuineARTEXModule==true and .externalTargets==0 and .authorized==false' "$RUNNER_TEMP/coverage.json"
+      - name: Use actual ExploitGym scorer quote source and host-confine path inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/vendor-venv/bin/python" proposed/tools/security-evaluation/vendor-source-offline-v1/pal_vendor_probe.py verify --gym "$PWD/exploitgym" --coverage "$RUNNER_TEMP/coverage.json" --out "$RUNNER_TEMP/review.json"
+          jq -e '.schema=="pal-real-vendor-source-compatibility-v1" and .strideParsedActualSource and .artexCoverageCalculatedByActualGoModule and .exploitgymExactQuoteValidatorExecuted and .hostPathTraversalAndSymlinkRejected and .realVendorAgentExecutions==0 and .externalSecurityTargets==0 and .apexAuthorized==false and .productionReady==false' "$RUNNER_TEMP/review.json"
+      - name: Confirm original vendor checkouts stayed unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C stride diff --exit-code
+          git -C exploitgym diff --exit-code
+          git -C proposed diff --exit-code
+          test -z "$(git -C artex status --short --untracked-files=no)"
