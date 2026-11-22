@@ -24,3 +24,17 @@ python3 tools/passage-check/compare.py --model qwen2.5-3b-instruct-q4_k_m \
 ```
 
 This comparison uses CPU inference. Its timing and memory use cannot establish that the 3B model fits an iPhone Air. The GitHub job uses the 1.5B reference by default.
+
+## Compare an iPhone run with the hosted reference
+
+Keep the six exported JSON files together in a new folder. In another file, save a JSON object mapping each case ID to the event SHA-256 copied independently from the app before exporting. All six attempts must use the same model session and model file. The checker detects a missing or repeated case, a changed export, a different model and a changed server report. A bad answer is retained and scored.
+
+The [unaltered hosted report](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/evidence/source-recall/device-server-v1/hosted-linux.json) from run 44981550177 has the SHA-256 shown below. Save its raw JSON as `hosted-linux.json`. After collecting the phone exports, run this from the checkout containing this tool.
+
+```bash
+python3 tools/passage-check/device_comparison.py --exports ./phone-exports \
+  --digests ./observed-digests.json --server ./hosted-linux.json \
+  --server-sha256 22303c00da9a96e0a25872bfb2ef9c85839d2e7706c629fc9df21cedeceb861b
+```
+
+The output gives the expected answer, both actual answers and scores for each question. Only journal attempts reporting completed native execution can count toward the native total. Record the device, iOS version, app build, user-observed run, model hash, memory, thermals and recovery separately for physical-device acceptance. These exported files can be checked locally without publishing their contents.
