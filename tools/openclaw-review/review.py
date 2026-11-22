@@ -46,7 +46,7 @@ def model_config(port, key):
     }
 
 
-def wait_for_model(server, port, key):
+def wait_for_model(server, port, key, model=MODEL):
     request = urllib.request.Request(f"http://127.0.0.1:{port}/v1/models",
                                      headers={"Authorization": f"Bearer {key}"})
     local_http = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -55,7 +55,7 @@ def wait_for_model(server, port, key):
             raise RuntimeError(f"llama-server exited during startup ({server.returncode})")
         try:
             with local_http.open(request, timeout=1) as response:
-                if MODEL in [row["id"] for row in json.load(response)["data"]]:
+                if model in [row["id"] for row in json.load(response)["data"]]:
                     return
         except OSError:
             pass

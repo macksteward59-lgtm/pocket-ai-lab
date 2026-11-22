@@ -24,6 +24,27 @@ fetch_checked \
   'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true' \
   "$stage/model.gguf" 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
 
+if [[ ${1:-} == --compare-passages ]]; then
+  [[ $# == 2 || ( $# == 3 && $3 == --include-source-answers ) ]] || exit 2
+  python3 "$here/../passage-check/compare.py" --gguf "$stage/model.gguf" \
+    --llama-server "$stage/llama-b12608/llama-server" --output-dir "$2"
+  if [[ ${3:-} == --include-source-answers ]]; then
+    python3 "$here/../source-answers/answer.py" --gguf "$stage/model.gguf" \
+      --llama-server "$stage/llama-b12608/llama-server" --check > "$2/source-answers.json"
+    python3 - "$2/source-answers.json" <<'PY_CHECK'
+import json, sys
+from pathlib import Path
+result = json.loads(Path(sys.argv[1]).read_text())
+rows = result["rows"]
+assert len(rows) == result["total"] == 5
+assert all(row.get("requestID") and row.get("retrieved") for row in rows)
+assert len({row["requestID"] for row in rows}) == 5
+print(f"End-to-end exact answers and source identities: {result['passed']}/{result['total']}")
+PY_CHECK
+  fi
+  exit
+fi
+
 if [[ ${1:-} == --passage-results ]]; then
   [[ $# == 2 ]] || exit 2
   python3 "$here/../passage-check/server.py" --gguf "$stage/model.gguf" \
