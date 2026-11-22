@@ -22,7 +22,29 @@ def unique_fields(pairs):
 PASSAGE_SUITE = Path(__file__).resolve().parents[2] / "ios/PocketAILab/PassageChecks.json"
 
 
-def verify(data, expected_hash, expected_answer=None, passage_case=None):
+def review_resource_samples(samples):
+    if not isinstance(samples, dict) or samples.get("environment") not in ("iosDevice", "iosSimulator", "macOS"):
+        raise ValueError("Invalid resource sampling environment")
+    if not isinstance(samples.get("osVersion"), str) or not samples["osVersion"].strip():
+        raise ValueError("Missing operating-system version")
+    if type(samples.get("sampleCount")) is not int or samples["sampleCount"] < 2:
+        raise ValueError("Missing start or end resource sample")
+    if type(samples.get("intervalMilliseconds")) is not int or samples["intervalMilliseconds"] != 250:
+        raise ValueError("Unknown sampling interval")
+    if type(samples.get("lowPowerModeObserved")) is not bool:
+        raise ValueError("Invalid Low Power Mode observation")
+    for name in ("maxObservedFootprintBytes", "minObservedHeadroomBytes"):
+        value = samples.get(name)
+        if value is not None and (type(value) is not int or not 0 <= value < 2**64):
+            raise ValueError("Invalid memory observation")
+    if samples["environment"] != "iosDevice" and samples.get("minObservedHeadroomBytes") is not None:
+        raise ValueError("Device memory headroom is unavailable on this environment")
+    if samples.get("worstObservedThermalState") not in (None, "nominal", "fair", "serious", "critical"):
+        raise ValueError("Unknown thermal state")
+    return {**samples, "hardwareVerified": False}
+
+
+def verify(data, expected_hash, expected_answer=None, passage_case=None, require_resource_samples=False):
     if len(data) > MAX_BYTES or not SHA256.fullmatch(expected_hash):
         raise ValueError("Invalid file size or expected SHA-256")
     record = json.loads(data.decode("utf-8"), object_pairs_hook=unique_fields)
@@ -44,6 +66,11 @@ def verify(data, expected_hash, expected_answer=None, passage_case=None):
     if not isinstance(decoded, dict) or decoded.get("kind") != "attempt" or not isinstance(decoded.get("attempt"), dict):
         raise ValueError("Expected one evaluation attempt")
     result = {"matchedEventSHA256": digest, "sequence": sequence, "eventID": event_id}
+    samples = decoded["attempt"].get("resourceSamples")
+    if samples is not None:
+        result["resourceSamples"] = review_resource_samples(samples)
+    elif require_resource_samples:
+        raise ValueError("No resource observations recorded for this attempt")
     if expected_answer is not None:
         prompt, output = expected_answer
         attempt = decoded["attempt"]
@@ -72,6 +99,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file", type=Path)
     parser.add_argument("--expected-event-hash", required=True)
+    parser.add_argument("--require-resource-samples", action="store_true",
+                        help="Require recorded OS resource samples in the verified event")
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--passage-case", help="Independently score the named case from the bundled passage suite")
     selection.add_argument("--expect-answer", nargs=2, metavar=("PROMPT", "OUTPUT"),
@@ -79,7 +108,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         with args.file.open("rb") as stream:
-            result = verify(stream.read(MAX_BYTES + 1), args.expected_event_hash, args.expect_answer, args.passage_case)
+            result = verify(stream.read(MAX_BYTES + 1), args.expected_event_hash, args.expect_answer, args.passage_case, args.require_resource_samples)
         print(json.dumps(result))
         if args.passage_case and not result["passageCheck"]["passed"]:
             parser.exit(1, "The verified event did not pass the passage check.\n")

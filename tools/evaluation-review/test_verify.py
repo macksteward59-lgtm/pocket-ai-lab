@@ -2,7 +2,7 @@ import hashlib
 import json
 import unittest
 
-from verify import PASSAGE_SUITE, verify
+from verify import PASSAGE_SUITE, review_resource_samples, verify
 
 
 class ReviewTests(unittest.TestCase):
@@ -78,6 +78,21 @@ class ReviewTests(unittest.TestCase):
         attempt.update(status="completed", suiteVersion="wrong")
         with self.assertRaisesRegex(ValueError, "frozen"):
             grade()
+
+    def test_legacy_export_has_no_measured_resources(self):
+        data = json.dumps(self.record).encode()
+        self.assertNotIn("resourceSamples", verify(data, self.digest))
+        with self.assertRaisesRegex(ValueError, "No resource"):
+            verify(data, self.digest, require_resource_samples=True)
+
+    def test_resource_observations_keep_environment_and_reject_invalid_values(self):
+        samples = dict(environment="iosDevice", osVersion="test OS", intervalMilliseconds=250,
+                       sampleCount=2, minObservedHeadroomBytes=0, lowPowerModeObserved=False)
+        self.assertFalse(review_resource_samples(samples)["hardwareVerified"])
+        for change in (dict(environment="iosSimulator"), dict(sampleCount=True), dict(sampleCount=1),
+                       dict(maxObservedFootprintBytes=-1), dict(worstObservedThermalState="hot")):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                review_resource_samples({**samples, **change})
 
     def test_duplicate_json_keys_are_rejected(self):
         duplicated = json.dumps(self.record).replace('"sequence": 1', '"sequence": 2, "sequence": 1')

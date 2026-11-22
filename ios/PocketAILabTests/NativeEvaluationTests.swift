@@ -401,7 +401,6 @@ final class NativeEvaluationTests: XCTestCase {
         let frozen = try PassageCheckSuite.bundledCases()
         XCTAssertEqual(frozen.count, 6)
         await model.runSelfEvaluation(sourceCheck: true)
-        await model.unloadModel()
         let reopened = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("evaluation.ndjson"))
         let durable = try await reopened.events().compactMap(\.payload.attempt)
         let passage = durable.filter { $0.suiteID == "pocket-passage-evidence" }
@@ -410,7 +409,58 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(passage.map(\.expectedOutcome), frozen.map(\.expectedOutcome))
         XCTAssertTrue(passage.allSatisfy { $0.deterministicPassed == false && !$0.nativeExecutionObserved })
         XCTAssertEqual(durable.count, attempts.count + passage.count)
+        XCTAssertTrue(attempts.allSatisfy { $0.resourceSamples == nil })
+        for attempt in passage {
+            let samples = try XCTUnwrap(attempt.resourceSamples)
+            XCTAssertGreaterThanOrEqual(samples.sampleCount, 2)
+            XCTAssertGreaterThan(try XCTUnwrap(samples.maxObservedFootprintBytes), 0)
+            XCTAssertEqual(samples.environment, .current)
+            #if targetEnvironment(simulator)
+            XCTAssertNil(samples.minObservedHeadroomBytes)
+            #endif
+        }
+        let firstHistory = try await reopened.events()
+        let first = try XCTUnwrap(NativeSourceRunExport.latest(in: firstHistory, modelID: selectedModelID, cases: frozen))
+        XCTAssertEqual(first.events.count, frozen.count)
+        let firstDigest = first.digest
+        XCTAssertTrue(model.isModelLoaded, model.status)
+        await model.runSelfEvaluation(sourceCheck: true)
+        await model.unloadModel()
+        let secondHistory = try await journal.events()
+        let second = try XCTUnwrap(NativeSourceRunExport.latest(in: secondHistory, modelID: selectedModelID, cases: frozen))
+        XCTAssertNotEqual(first.id, second.id)
+        XCTAssertEqual(first.events.last?.payload.attempt?.runtimeSessionID, second.events.last?.payload.attempt?.runtimeSessionID)
+        XCTAssertNotEqual(firstDigest, second.digest)
+        let partial = try XCTUnwrap(NativeSourceRunExport.latest(in: Array(secondHistory.dropLast()), modelID: selectedModelID, cases: frozen))
+        XCTAssertEqual(partial.id, second.id)
+        XCTAssertEqual(partial.events.count, frozen.count - 1)
+        XCTAssertEqual(first.digest, firstDigest)
 
+        // Synthetic model replies, real process observations. Retain a restarted run for offline verification.
+        let encoded = try first.export().base64EncodedString()
+        print("POCKET_SOURCE_RUN_HASH \(firstDigest)")
+        var index = encoded.startIndex
+        var part = 0
+        while index < encoded.endIndex {
+            let end = encoded.index(index, offsetBy: 512, limitedBy: encoded.endIndex) ?? encoded.endIndex
+            print("POCKET_SOURCE_RUN_PART \(part) \(encoded[index..<end])")
+            index = end
+            part += 1
+        }
+
+    }
+
+    func testResourceSummaryPreservesExtremaThroughMissingReadings() {
+        var result = EvaluationResourceSamples()
+        result.record(.init(footprintBytes: 100, headroomBytes: 40, thermalState: .fair, lowPowerMode: false))
+        result.record(.init(footprintBytes: 180, headroomBytes: 0, thermalState: .serious, lowPowerMode: true))
+        result.record(.init(footprintBytes: nil, headroomBytes: nil, thermalState: nil, lowPowerMode: false))
+        result.record(.init(footprintBytes: 75, headroomBytes: 80, thermalState: .nominal, lowPowerMode: false))
+        XCTAssertEqual(result.sampleCount, 4)
+        XCTAssertEqual(result.maxObservedFootprintBytes, 180)
+        XCTAssertEqual(result.minObservedHeadroomBytes, 0)
+        XCTAssertEqual(result.worstObservedThermalState, .serious)
+        XCTAssertTrue(result.lowPowerModeObserved)
     }
 
     func testRuntimeOwnedProviderIdentityDistinguishesLlamaCppFromTestEngine() async throws {

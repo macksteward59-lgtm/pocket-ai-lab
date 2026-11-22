@@ -22,6 +22,7 @@ on:
       - codex/native-cloud-analysis-20261120
       - codex/memory-source-preservation
       - codex/source-register-handoff
+      - codex/passage-device-server-proof
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -75,7 +76,7 @@ jobs:
           set -euo pipefail
           sample=$(mktemp -d)
           trap 'rm -rf "$sample"' EXIT
-          swiftc -parse-as-library ios/PocketAILab/NativeEvaluationJournal.swift tools/evaluation-review/Smoke.swift -o "$sample/smoke"
+          swiftc -parse-as-library ios/PocketAILab/EvaluationResourceSampler.swift ios/PocketAILab/NativeEvaluationJournal.swift tools/evaluation-review/Smoke.swift -o "$sample/smoke"
           digest=$("$sample/smoke" "$sample")
           python3 tools/evaluation-review/verify.py "$sample/attempt.json" --expected-event-hash "$digest"
           python3 -m unittest discover -s tools/evaluation-review -p 'test_*.py'
@@ -523,7 +524,7 @@ jobs:
 
       - name: Package and independently rebuild the device test kit
         id: device-kit
-        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof') }}
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples') }}
         run: bash tools/passage-check/package-device-kit.sh "$RUNNER_TEMP/device-kit"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.device-kit.outcome == 'success' }}
