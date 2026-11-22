@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 struct MemoryView: View {
+    @ObservedObject var model: LocalChatModel
     @State private var store = NativeMemoryStore.applicationDefault()
     @State private var entries: [NativeMemoryEntry] = []
     @State private var editor: MemoryDraft?
@@ -69,6 +70,9 @@ struct MemoryView: View {
             }
             .navigationTitle("Memory")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink("Source answers") { SourceAnswersView(store: store, model: model) }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { editor = MemoryDraft() } label: { Label("Add memory", systemImage: "plus") }
                         .disabled(isBusy)
@@ -135,7 +139,7 @@ struct MemoryView: View {
     private func reload() async {
         do {
             let loaded = try await store.load()
-            entries = loaded.sorted { $0.createdAt > $1.createdAt }
+            entries = loaded.filter { $0.sourceAnswer == nil }.sorted { $0.createdAt > $1.createdAt }
             status = entries.isEmpty
                 ? "No saved memories · first save creates an encrypted on-device vault"
                 : "Encrypted on this device · \(entries.count) saved · no automatic capture"

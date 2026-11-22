@@ -1,10 +1,13 @@
 name: Source passage server proof
 on:
   pull_request:
-    branches: [main, codex/source-register-handoff]
+    branches: [main, codex/source-register-handoff, codex/passage-device-server-proof, codex/passage-citation-comparison, codex/device-resource-samples]
     paths:
       - ios/PocketAILab/PassageChecks.json
       - tools/passage-check/**
+      - tools/source-answers/**
+      - apps/web/project-sources.mjs
+      - docs/research/project-sources.json
       - tools/openclaw-review/run-linux.sh
       - tools/openclaw-review/review.py
       - .github/workflows/passage-check.yml
@@ -20,26 +23,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Run the pinned model on the shared questions
-        run: bash tools/openclaw-review/run-linux.sh --passage-results "$RUNNER_TEMP/passage-server.json"
+      - name: Verify the extractive citation constraint
+        run: python3 -m unittest discover -s tools/passage-check
+      - name: Check source lookup and citation identity
+        run: python3 -m unittest discover -s tools/source-answers
+      - name: Run all three decoding modes against the frozen passage suites
+        run: bash tools/openclaw-review/run-linux.sh --compare-passages "$RUNNER_TEMP/passage-comparison" --include-source-answers
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: passage-server-evidence
-          path: ${{ runner.temp }}/passage-server.json
+          name: passage-comparison
+          path: ${{ runner.temp }}/passage-comparison
           if-no-files-found: error
-      - name: Check benchmark completion and report answer quality
-        run: |
-          python3 - "$RUNNER_TEMP/passage-server.json" <<'PY'
-          import json, sys
-          from pathlib import Path
-          result = json.loads(Path(sys.argv[1]).read_text())
-          rows = result["cases"]
-          suite = json.loads(Path("ios/PocketAILab/PassageChecks.json").read_text())
-          assert [r["caseID"] for r in rows] == [case["id"] for case in suite["cases"]]
-          assert all(r.get("requestID") and isinstance(r.get("output"), str) for r in rows)
-          assert len(set(r["requestID"] for r in rows)) == len(rows)
-          print(f'Exact answers with required evidence: {result["passed"]}/{len(rows)}')
-          for row in rows:
-              print(json.dumps({"case": row["caseID"], "output": row["output"], "passed": row["passed"]}))
-          PY

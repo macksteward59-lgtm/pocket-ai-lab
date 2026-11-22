@@ -23,6 +23,7 @@ on:
       - codex/memory-source-preservation
       - codex/source-register-handoff
       - codex/passage-device-server-proof
+      - codex/device-resource-samples
     paths:
       - "runtime/ios/**"
       - "packages/intelligence/**"
@@ -524,7 +525,7 @@ jobs:
 
       - name: Package and independently rebuild the device test kit
         id: device-kit
-        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples') }}
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && github.event.repository.private == false && (inputs.package_device_kit == true || github.head_ref == 'codex/passage-device-server-proof' || github.head_ref == 'codex/device-resource-samples' || github.head_ref == 'codex/reviewed-answer-relaunch') }}
         run: bash tools/passage-check/package-device-kit.sh "$RUNNER_TEMP/device-kit"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.device-kit.outcome == 'success' }}
@@ -539,13 +540,69 @@ jobs:
         if: ${{ !cancelled() && steps.sim-boot.outcome == 'success' && steps.app-build.outcome == 'success' }}
         timeout-minutes: 20
         run: |
+          set -o pipefail
           xcodebuild test \
             -project ios/PocketAILab.xcodeproj \
             -scheme PocketAILab \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
             -derivedDataPath /tmp/pocket-app-derived \
             -parallel-testing-enabled NO \
-            CODE_SIGN_IDENTITY=-
+            CODE_SIGN_IDENTITY=- \
+            | tee "$RUNNER_TEMP/owner-app-xctest.log"
+
+      - name: Retain the failed app test report
+        if: ${{ !cancelled() && steps.app-xctest.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocket-ai-lab-app-test-log
+          path: ${{ runner.temp }}/owner-app-xctest.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Independently read the reviewed source answer exported by the app
+        id: reviewed-source
+        if: ${{ !cancelled() && steps.app-xctest.outcome == 'success' }}
+        env:
+          SIMULATOR_ID: ${{ steps.sim.outputs.id }}
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import subprocess
+          import sys
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          log = (temp / "owner-app-xctest.log").read_text()
+          hashes = re.findall(r"\bPOCKET_SOURCE_UI_DIGEST ([a-f0-9]{64})\b", log)
+          if len(hashes) != 1 or "POCKET_SOURCE_REVIEW_RELAUNCH corrected=1 preservedOriginal=1 preservedCitation=1 fullTermination=1 retryRecords=1" not in log:
+              sys.exit("Missing unique visible digest or completion of the relaunch test")
+          digest = hashes[0]
+          container = subprocess.check_output(["xcrun", "simctl", "get_app_container", os.environ["SIMULATOR_ID"],
+                                               "com.pocketailab.personal", "data"], text=True).strip()
+          out = temp / "reviewed-source"
+          out.mkdir()
+          review = out / "review.json"
+          shutil.copyfile(Path(container) / "Documents" / "Source reviews" / (digest + ".json"), review)
+          result = subprocess.check_output([sys.executable, "tools/evaluation-review/source_review.py", str(review),
+                                            "--expected-digest", digest, "--original", "ios/PocketAILab/SourceAnswerExample.json"], text=True)
+          report = json.loads(result)
+          if (report["source"] != "CF-QUOTA" or report["current"] != "00:00 UTC" or report["ownerRevisions"] != 1
+                  or report["originalFileMatched"] is not True):
+              sys.exit("The fresh simulator did not preserve the expected source and correction")
+          (out / "digest.txt").write_text(digest + "\n")
+          (out / "review-result.json").write_text(result)
+          print(result)
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.reviewed-source.outcome == 'success' }}
+        with:
+          name: pocket-ai-lab-reviewed-source
+          path: ${{ runner.temp }}/reviewed-source/
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Check the simulator Memory vault header
         if: ${{ !cancelled() && (steps.app-xctest.outcome == 'success' || steps.app-xctest.outcome == 'failure') }}

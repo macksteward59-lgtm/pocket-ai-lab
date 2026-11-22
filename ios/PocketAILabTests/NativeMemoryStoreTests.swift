@@ -143,3 +143,52 @@ final class NativeMemoryStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
     }
 }
+
+extension NativeMemoryStoreTests {
+    func testCitedAnswerCorrectionSurvivesReplayAndRejectsStaleChanges() async throws {
+        let directory = try makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("vault")
+        let key = FixedNativeMemoryKeyProvider(material: Data(repeating: 8, count: 32), mayCreate: true)
+        let store = NativeMemoryStore(fileURL: file, keyProvider: key)
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "SourceAnswerExample", withExtension: "json"))
+        let bytes = try Data(contentsOf: url)
+        let sources = try ProjectPassages.bundled()
+        let draft = try SourceAnswerDraft.imported(bytes, from: sources)
+        let first = try await store.retainSourceAnswer(draft)
+        let updated = try await store.correctSourceAnswer(id: first.id, expectedRevision: 0, excerpt: "00:00 UTC")
+        XCTAssertEqual(updated.content, "00:00 UTC")
+        XCTAssertFalse(updated.provenance.verified)
+        XCTAssertEqual(updated.sourceAnswer?.draft.excerpt, draft.excerpt)
+        let reopened = NativeMemoryStore(fileURL: file, keyProvider: key)
+        let replay = try await reopened.retainSourceAnswer(draft)
+        XCTAssertEqual(replay, updated)
+        let exportedReview = try SourceReviewExport(XCTUnwrap(replay.sourceAnswer))
+        XCTAssertEqual(try SourceReviewExport(XCTUnwrap(updated.sourceAnswer)).digest, exportedReview.digest)
+        try exportedReview.save(in: directory)
+        try exportedReview.save(in: directory)
+        let exported = directory.appendingPathComponent("Source reviews").appendingPathComponent(exportedReview.digest + ".json")
+        XCTAssertEqual(try Data(contentsOf: exported), exportedReview.data)
+        try Data("changed".utf8).write(to: exported)
+        XCTAssertThrowsError(try exportedReview.save(in: directory))
+        do {
+            _ = try await reopened.correctSourceAnswer(id: first.id, expectedRevision: 0, excerpt: "10,000 neurons")
+            XCTFail("Stale correction accepted")
+        } catch SourceAnswerError.stale {}
+        do {
+            _ = try await reopened.correctSourceAnswer(id: first.id, expectedRevision: 1, excerpt: "an invented claim")
+            XCTFail("Unsupported excerpt accepted")
+        } catch SourceAnswerError.invalidQuote {}
+        var packet = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        packet["question"] = "A different question?"
+        let other = try SourceAnswerDraft.imported(JSONSerialization.data(withJSONObject: packet), from: sources)
+        do {
+            _ = try await reopened.retainSourceAnswer(other)
+            XCTFail("Request identity reused for a different question")
+        } catch SourceAnswerError.conflict {}
+        packet["sourceURL"] = "https://example.org/replaced"
+        XCTAssertThrowsError(try SourceAnswerDraft.imported(JSONSerialization.data(withJSONObject: packet), from: sources))
+        let final = try await reopened.load()
+        XCTAssertEqual(final, [updated])
+    }
+}
