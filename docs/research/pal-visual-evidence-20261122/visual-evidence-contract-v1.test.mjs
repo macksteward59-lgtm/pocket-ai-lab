@@ -6,7 +6,7 @@ import {CONTRACT_VERSION, sha256, verifyVisualFixture, evaluateSyntheticAccessPa
 const screenshotBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9s5TaoYAAAAASUVORK5CYII=', 'base64');
 const snapshotText = 'button "View record"; text "Tenant A fixture"';
 const networkSummary = 'GET /fixture/resource/A => 200 [synthetic, no cookies]';
-const trusted = {expectedTaskId:'task-visual-01',scopeId:'scope-fixture-01',allowedOrigins:['http://127.0.0.1:38081']};
+const trusted = {expectedTaskId:'task-visual-01',scopeId:'scope-fixture-01',allowedOrigins:['http://127.0.0.1:38081'],isTrustedSyntheticFixture:true,dataClass:'synthetic-owned-fixture'};
 const makeRecord = () => ({
   contractVersion:CONTRACT_VERSION, taskId:'task-visual-01', attemptId:'attempt-01', captureId:'capture-01',
   scopeId:'scope-fixture-01', dataClass:'synthetic-owned-fixture', redactionReview:'synthetic-no-user-data',
@@ -45,6 +45,14 @@ test('rejects unapproved port', () => {
 test('rejects cross-task evidence replay', () => {
   const r=makeRecord();r.taskId='task-other';
   assert.throws(()=>verifyVisualFixture(r,inputs,trusted),/binding mismatch/);
+});
+test('rejects record misclassification by an untrusted capture source', () => {
+  assert.throws(()=>verifyVisualFixture(makeRecord(), inputs, {...trusted, isTrustedSyntheticFixture:false}), /trusted fixture classification/);
+  assert.throws(()=>verifyVisualFixture(makeRecord(), inputs, {...trusted, dataClass:'restricted-user-image'}), /trusted fixture classification/);
+});
+test('rejects URLs containing queries that could carry secrets', () => {
+  const r=makeRecord();r.pageUrl+='?session=secret';
+  assert.throws(()=>verifyVisualFixture(r, inputs, trusted), /queries/);
 });
 test('rejects unreviewed or third-party images', () => {
   const r=makeRecord();r.redactionReview='unknown';
