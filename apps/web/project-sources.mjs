@@ -52,8 +52,9 @@ export function openProjectSources(register = JSON.parse(readFileSync(registerFi
     }
     db.exec("PRAGMA query_only = ON");
     const search = db.prepare("SELECT id FROM search WHERE search MATCH ? ORDER BY bm25(search,0,3,4,1), id LIMIT 5");
+    const sourceSearch = db.prepare("SELECT id FROM search WHERE search MATCH ? AND id = ?");
     return {
-      lookup(value) {
+      lookup(value, sourceId) {
         const query = value.trim();
         if (!query) throw RangeError("Enter 1 to 300 characters.");
         // Count Unicode code points, like the source-answer CLI's Python validator.
@@ -61,13 +62,16 @@ export function openProjectSources(register = JSON.parse(readFileSync(registerFi
         for (const _ of query) {
           if (++length > 300) throw RangeError("Enter 1 to 300 characters.");
         }
+        const selected = sourceId === undefined ? undefined : records.get(sourceId.trim().toUpperCase());
+        if (sourceId !== undefined && selected?.kind !== "source") return [];
         const exact = records.get(query.toUpperCase());
-        if (exact) return [exact];
+        if (exact) return selected && selected.id !== exact.id ? [] : [exact];
         const words = [...new Set(query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
           .filter(word => !stopWords.has(word));
         if (!words.length) return [];
         const match = words.map(word => '"' + word + '"').join(" OR ");
-        return search.all(match).map(row => records.get(row.id));
+        const rows = selected ? sourceSearch.all(match, selected.id) : search.all(match);
+        return rows.map(row => records.get(row.id));
       },
       close() { db.close(); }
     };

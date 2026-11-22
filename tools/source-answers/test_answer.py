@@ -56,7 +56,36 @@ class SourceAnswerCLITests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()):
             self.run_cli("--question", "CF-QUOTA")
         verify.assert_called_once_with(Path("model.gguf"), cli.MODEL)
-        answer.assert_called_once_with("CF-QUOTA", server.return_value.__enter__.return_value, cli.MODEL)
+        answer.assert_called_once_with("CF-QUOTA", server.return_value.__enter__.return_value,
+                                       cli.MODEL, record=retrieve("CF-QUOTA"))
+
+    def test_selected_source_is_matched_before_ranking_and_inference(self):
+        scoped = retrieve("neurons", "cf-quota")
+        self.assertEqual([r["id"] for r in scoped["sources"]], ["CF-QUOTA"])
+        for question, source in (("CF-QUOTA", "APPLE-TEAM"), ("neurons", "APPLE-TEAM"),
+                                 ("neurons", "CF-QUOTA-NO-SUCH-ID")):
+            with self.subTest(question=question, source=source):
+                self.assertEqual(retrieve(question, source)["sources"], [])
+
+    def test_empty_lookup_needs_no_model_files_or_server(self):
+        for query in (["--source-id", "cf-quota-missing", "--question", "neurons"],
+                      ["--question", "the"]):
+            stdout = io.StringIO()
+            with patch.object(sys, "argv", ["answer.py", *query]), patch.object(cli, "verify_model") as verify, \
+                    patch.object(cli, "local_server") as server, contextlib.redirect_stdout(stdout):
+                cli.main()
+            record = json.loads(stdout.getvalue())
+            self.assertEqual((record["status"], record["answer"], record["source"]), ("no_candidates", "UNKNOWN", None))
+            self.assertNotIn("requestID", record)
+            if "--source-id" in query:
+                self.assertEqual(record["requestedSourceID"], "CF-QUOTA-MISSING")
+            verify.assert_not_called()
+            server.assert_not_called()
+
+    def test_scoping_is_rejected_for_a_frozen_check_or_blank_id(self):
+        for args in (("--check", "--source-id", "CF-QUOTA"), ("--question", "neurons", "--source-id", " ")):
+            with self.subTest(args=args), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                self.run_cli(*args)
 
     def test_explicit_check_runs_the_frozen_fixture(self):
         with patch.object(cli, "verify_model"), patch.object(cli, "local_server"), \
