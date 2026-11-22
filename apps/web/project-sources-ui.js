@@ -43,7 +43,9 @@ form.addEventListener("submit", async event => {
     if (request !== latestRequest) return;
     if (!response.ok) throw Error(data.error || "Search unavailable.");
     results.replaceChildren(...data.results.map(render));
-    status.textContent = data.results.length ? "Matching records: " + data.results.length : "No matching project source.";
+    status.textContent = data.results.length
+      ? "Suggested sources (" + data.results.length + "). Check the cited passage before using it as an answer."
+      : "No matching project source.";
   } catch (error) {
     if (request === latestRequest) status.textContent = error.message;
   }
