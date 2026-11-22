@@ -13,6 +13,54 @@ export function expectedDecision({actor, tenant, invoiceId, action, before}) {
   return 'allow';
 }
 
+/** The auditor is explicitly allowed to view synthetic invoices across tenants,
+ * but is never permitted to approve them. This is a separate source-of-truth
+ * policy for the negative false-positive control, not a production policy. */
+export function expectedAuditDecision({actor, action, invoiceId}) {
+  if (!Object.hasOwn(OWNER, invoiceId)) return 'deny';
+  return actor === 'auditor' && action === 'audit-read' ? 'allow' : 'deny';
+}
+
+export function assessAuditSequence(sequence) {
+  const {auditorAlpha, auditorBeta, aliceAuditDenied, auditorMutationDenied, betaAfter} = sequence ?? {};
+  const events=[auditorAlpha, auditorBeta, aliceAuditDenied, auditorMutationDenied, betaAfter];
+  if (events.some(event=>!event || !Number.isInteger(event.status) || typeof event.taskId !== 'string')) {
+    return {status:'inconclusive', reason:'incomplete audit-control HTTP observations'};
+  }
+  if (new Set(events.map(x=>x.taskId)).size!==1) {
+    return {status:'inconclusive',reason:'audit-control task identity mismatch'};
+  }
+  const plan=[
+    ['auditor',null,'invoice-alpha','audit-read'],
+    ['auditor',null,'invoice-beta','audit-read'],
+    ['alice',null,'invoice-beta','audit-read'],
+    ['auditor',null,'invoice-beta','audit-approve'],
+    ['bob','beta','invoice-beta','read'],
+  ];
+  for (let i=0;i<plan.length;i++) {
+    const [actor,tenant,invoiceId,action]=plan[i],event=events[i];
+    if (event.actor!==actor || event.tenant!==tenant || event.invoiceId!==invoiceId || event.action!==action) {
+      return {status:'inconclusive',reason:'audit-control sequence differs from frozen plan'};
+    }
+  }
+  if (expectedAuditDecision(auditorAlpha)!=='allow' || expectedAuditDecision(auditorBeta)!=='allow' ||
+      expectedAuditDecision(aliceAuditDenied)!=='deny' || expectedAuditDecision(auditorMutationDenied)!=='deny') {
+    return {status:'inconclusive',reason:'invalid independent privilege policy'};
+  }
+  if (auditorAlpha.status!==200 || auditorAlpha.body?.id!=='invoice-alpha' ||
+      auditorAlpha.body.ownerTenant!=='alpha' || auditorAlpha.body.status!=='pending' || auditorAlpha.body.version!==1 ||
+      auditorBeta.status!==200 || auditorBeta.body?.id!=='invoice-beta' || auditorBeta.body.ownerTenant!=='beta' ||
+      auditorBeta.body.status!=='pending' || auditorBeta.body.version!==1 ||
+      aliceAuditDenied.status!==403 || aliceAuditDenied.body?.error!=='audit_role_required' ||
+      auditorMutationDenied.status!==403 || auditorMutationDenied.body?.error!=='audit_read_only' ||
+      betaAfter.status!==200 || betaAfter.body?.ownerTenant!=='beta' || betaAfter.body.id!=='invoice-beta' ||
+      betaAfter.body.status!=='pending' || betaAfter.body.version!==1) {
+    return {status:'inconclusive',reason:'audit-control positive/negative/state checks failed'};
+  }
+  return Object.freeze({status:'legitimate-admin-control-passed',confirmedFinding:false,
+    intentionalPrivilege:'auditor-read-only',realTargetProven:false,requiresIndependentReview:true});
+}
+
 export function assessRecordedSequence(sequence) {
   const {ownRead, betaBefore, crossRead, crossApproval, betaAfter, ownApproval, ownReplay} = sequence ?? {};
   const events = [ownRead, betaBefore, crossRead, crossApproval, betaAfter, ownApproval, ownReplay];
