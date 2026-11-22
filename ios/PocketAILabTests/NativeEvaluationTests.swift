@@ -401,7 +401,6 @@ final class NativeEvaluationTests: XCTestCase {
         let frozen = try PassageCheckSuite.bundledCases()
         XCTAssertEqual(frozen.count, 6)
         await model.runSelfEvaluation(sourceCheck: true)
-        await model.unloadModel()
         let reopened = try NativeEvaluationJournal(fileURL: directory.appendingPathComponent("evaluation.ndjson"))
         let durable = try await reopened.events().compactMap(\.payload.attempt)
         let passage = durable.filter { $0.suiteID == "pocket-passage-evidence" }
@@ -424,10 +423,13 @@ final class NativeEvaluationTests: XCTestCase {
         let first = try XCTUnwrap(NativeSourceRunExport.latest(in: firstHistory, modelID: selectedModelID, cases: frozen))
         XCTAssertEqual(first.events.count, frozen.count)
         let firstDigest = first.digest
+        XCTAssertTrue(model.isModelLoaded, model.status)
         await model.runSelfEvaluation(sourceCheck: true)
+        await model.unloadModel()
         let secondHistory = try await journal.events()
         let second = try XCTUnwrap(NativeSourceRunExport.latest(in: secondHistory, modelID: selectedModelID, cases: frozen))
         XCTAssertNotEqual(first.id, second.id)
+        XCTAssertEqual(first.events.last?.payload.attempt?.runtimeSessionID, second.events.last?.payload.attempt?.runtimeSessionID)
         XCTAssertNotEqual(firstDigest, second.digest)
         let partial = try XCTUnwrap(NativeSourceRunExport.latest(in: Array(secondHistory.dropLast()), modelID: selectedModelID, cases: frozen))
         XCTAssertEqual(partial.id, second.id)
