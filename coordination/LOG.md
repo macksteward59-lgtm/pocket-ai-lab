@@ -5012,3 +5012,8 @@ Draft [#267](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/267) advan
 ### Desktop draft exact-hosted follow-up
 
 On #268 head `dc85ba95b4e3ec45847b539710ffea5097337560`, Governance and Cursor passed; [Consumer](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45019929044) and [Pocket AI Lab](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45019929066) were blocked by the pre-existing unresolved `../autonomy/EastTaskLifecycleAdapter` test import. At main `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873`, the identical import exists and the corresponding file does not. The desktop branch has only launcher changes and cannot count as broad CI-passed. #269 showed no PR-triggered workflow at its stacked base; Apple validation remains open.
+
+
+## November 22, 2026 · PostgreSQL privilege-monitor research
+
+ChatGPT compared the source §2 SQL with an isolated candidate on PG15 and PG16. The original is blocked at view creation. The candidate passed six cases per engine. The [results and remaining scope](evidence/rls-v312-2026-11-22/V71-postgres.md) are ready for the integration owner.

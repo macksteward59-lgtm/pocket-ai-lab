@@ -1,0 +1,287 @@
+{
+  "date": "2026-11-22",
+  "scope": "Two disposable PostgreSQL stand-alone backends, no network listener or extensions. Synthetic tables, five NOLOGIN roles. Schema owner installs the monitor, restricted lab_observer reads all six cases; role and schema checked by the harness. Each case is rolled back.",
+  "original_matrix_sha256": "d33869fc19fe64923bbc71bbab77c6b0924a7822a896795a3e38ea3217103bc4",
+  "original_view_sha256": "03dd490129c590a6b7fa8bc11602c1a7d1c57a285b54e9c5304d5949f2e3dcb1",
+  "candidate_view_sha256": "bd91936a88307f4163d60bbaffc6551801c4a44a099ea76222aa83289c50de00",
+  "hash_scope": "UTF-8 from CREATE through final semicolon, no trailing newline.",
+  "candidate_substitution": "Use pg_catalog.pg_has_role(u.oid, c.relowner, 'USAGE') for immediately available owner-role privileges.",
+  "runs": [
+    {
+      "postgres": "15.20",
+      "npm_package": "@embedded-postgres/linux-x64@15.20.0-beta.19",
+      "tarball_integrity": "sha512-WGcGjdTj/Pn0feSLiv/eEO6TtVzxXKvolefRvOeHOXTUxZK7cJoxq2EQgzaWw3k9kgU1zMi/33DYApS+KlXcIA==",
+      "observer": {
+        "name": "lab_observer",
+        "superuser": false,
+        "bypass_rls": false,
+        "login": false
+      },
+      "sql_functions": {
+        "pg_catalog.has_privs_of_role(oid,oid)": false,
+        "pg_catalog.pg_has_role(oid,oid,text)": true
+      },
+      "original": {
+        "V71a": "fail",
+        "sqlstate": "42883",
+        "error": "function has_privs_of_role(oid, oid) does not exist at character 960",
+        "view_absent_after_failure": true,
+        "V71b_to_V71f": "blocked, view did not install"
+      },
+      "owner_membership_diagnostic": {
+        "inherit": {
+          "member": true,
+          "owner_privileges_available": true,
+          "owner_attributed_rows": 12
+        },
+        "noinherit": {
+          "member": true,
+          "owner_privileges_available": false,
+          "owner_attributed_rows": 0
+        }
+      },
+      "candidate_signature": [
+        [
+          "relname",
+          "name"
+        ],
+        [
+          "rolname",
+          "name"
+        ],
+        [
+          "privilege",
+          "text"
+        ],
+        [
+          "issue",
+          "text"
+        ],
+        [
+          "source",
+          "text"
+        ]
+      ],
+      "candidate": {
+        "V71a": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": []
+        },
+        "V71b": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": []
+        },
+        "V71c": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              "app_breakglass_mutator",
+              "expires_at:UPDATE",
+              "unexpected column privilege",
+              "column"
+            ]
+          ]
+        },
+        "V71d": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              "public",
+              "SELECT",
+              "PUBLIC table privilege",
+              "PUBLIC"
+            ]
+          ]
+        },
+        "V71e": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              null,
+              null,
+              "audit target table missing from catalog",
+              "missing"
+            ]
+          ]
+        },
+        "V71f": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              "lab_group",
+              "UPDATE",
+              "unexpected effective table privilege (direct)",
+              "direct"
+            ],
+            [
+              "breakglass_grants",
+              "lab_member",
+              "UPDATE",
+              "unexpected effective table privilege (unknown)",
+              "unknown"
+            ]
+          ]
+        }
+      },
+      "allowlist_diagnostic": [
+        {
+          "permission_effective": true,
+          "findings": 0
+        },
+        {
+          "permission_effective": false,
+          "findings": 0
+        }
+      ],
+      "clean_after_rollback": true
+    },
+    {
+      "postgres": "16.16",
+      "npm_package": "@embedded-postgres/linux-x64@16.16.0-beta.19",
+      "tarball_integrity": "sha512-99xFwRl+/dokUUBDjUC42CKUrWU+o9iJlbk4U7/S0RJ3fN3I2g3Dmcj1SBgKllrgvFXPRboqMB+SsApm6/W9EQ==",
+      "observer": {
+        "name": "lab_observer",
+        "superuser": false,
+        "bypass_rls": false,
+        "login": false
+      },
+      "sql_functions": {
+        "pg_catalog.has_privs_of_role(oid,oid)": false,
+        "pg_catalog.pg_has_role(oid,oid,text)": true
+      },
+      "original": {
+        "V71a": "fail",
+        "sqlstate": "42883",
+        "error": "function has_privs_of_role(oid, oid) does not exist at character 960",
+        "view_absent_after_failure": true,
+        "V71b_to_V71f": "blocked, view did not install"
+      },
+      "owner_membership_diagnostic": {
+        "inherit": {
+          "member": true,
+          "owner_privileges_available": true,
+          "owner_attributed_rows": 12
+        },
+        "noinherit": {
+          "member": true,
+          "owner_privileges_available": false,
+          "owner_attributed_rows": 0
+        }
+      },
+      "candidate_signature": [
+        [
+          "relname",
+          "name"
+        ],
+        [
+          "rolname",
+          "name"
+        ],
+        [
+          "privilege",
+          "text"
+        ],
+        [
+          "issue",
+          "text"
+        ],
+        [
+          "source",
+          "text"
+        ]
+      ],
+      "candidate": {
+        "V71a": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": []
+        },
+        "V71b": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": []
+        },
+        "V71c": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              "app_breakglass_mutator",
+              "expires_at:UPDATE",
+              "unexpected column privilege",
+              "column"
+            ]
+          ]
+        },
+        "V71d": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              "public",
+              "SELECT",
+              "PUBLIC table privilege",
+              "PUBLIC"
+            ]
+          ]
+        },
+        "V71e": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              null,
+              null,
+              "audit target table missing from catalog",
+              "missing"
+            ]
+          ]
+        },
+        "V71f": {
+          "result": "pass",
+          "fixture_condition": true,
+          "findings": [
+            [
+              "breakglass_grants",
+              "lab_group",
+              "UPDATE",
+              "unexpected effective table privilege (direct)",
+              "direct"
+            ],
+            [
+              "breakglass_grants",
+              "lab_member",
+              "UPDATE",
+              "unexpected effective table privilege (unknown)",
+              "unknown"
+            ]
+          ]
+        }
+      },
+      "allowlist_diagnostic": [
+        {
+          "permission_effective": true,
+          "findings": 0
+        },
+        {
+          "permission_effective": false,
+          "findings": 0
+        }
+      ],
+      "clean_after_rollback": true
+    }
+  ]
+}

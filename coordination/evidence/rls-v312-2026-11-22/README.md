@@ -1,5 +1,7 @@
 # v3.12 database evidence across repository branches
 
+
+**Subsequent execution on November 22.** The original §2 view failed to install on PostgreSQL 15.20 and 16.16. A one-line research candidate passed V71a–f on both. The [execution report](V71-postgres.md) records two limits of the monitor and the remaining integration work.
 Reviewed November 22, 2026. The original owner-posted revision specifies twelve sections. Section 12.1 defines the release decision. The separate assistant review raised design questions and has no authority to amend those requirements. This review joins the source sections to repository objects and completed test jobs. The original specification is accessible to the owner in the project conversation identified in the [source history](../../HISTORICAL_SECURITY_FRAMEWORK_SOURCE_RECOVERY.md).
 
 **Finding.** There is real PostgreSQL 16 evidence for two narrower components. Neither acceptance job installs the database objects from v3.12. The reviewed artifacts establish none of the nine production conditions in §12.1 in full.
