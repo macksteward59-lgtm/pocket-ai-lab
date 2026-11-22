@@ -22,7 +22,8 @@ jobs:
       - name: Test candidate boundaries and scoring budgets
         run: python3 -m unittest discover -s tools/full-paper-distillation -p 'test*.py'
       - name: Install pinned CPU inference dependencies
-        run: python3 -m pip install --only-binary=:all: numpy==2.2.6 onnxruntime==1.21.1 tokenizers==0.21.1
+        run: |
+          python3 -m pip install --only-binary=:all: numpy==2.2.6 onnxruntime==1.21.1 tokenizers==0.21.1
       - name: Replay the original benchmark and compare both cohorts
         shell: bash
         run: |
