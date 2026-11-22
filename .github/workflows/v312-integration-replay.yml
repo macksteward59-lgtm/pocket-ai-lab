@@ -57,9 +57,15 @@ jobs:
         working-directory: integration
         shell: bash
         run: |
+          docker build -t pocket-v312-test - <<'DOCKERFILE'
+          FROM node:22.16.0-bookworm
+          RUN apt-get update && apt-get install -y --no-install-recommends zip unzip && rm -rf /var/lib/apt/lists/*
+          DOCKERFILE
+          cache_path=$(npm config get cache)
           docker run --rm --network none --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp -e CI=true -v "$PWD:/repo" -w /repo \
-            node:22.16.0-bookworm npm test
+            -e HOME=/tmp -e CI=true -e npm_config_offline=true -e npm_config_cache=/tmp/replay-npm-cache \
+            -v "$cache_path:/tmp/replay-npm-cache" -v "$PWD:/repo" -w /repo \
+            pocket-v312-test npm test
 
       - name: Verify the database monitor on PostgreSQL 15
         working-directory: integration
