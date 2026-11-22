@@ -1,10 +1,13 @@
 name: Source passage server proof
 on:
   pull_request:
-    branches: [main, codex/source-register-handoff, codex/passage-device-server-proof]
+    branches: [main, codex/source-register-handoff, codex/passage-device-server-proof, codex/passage-citation-comparison]
     paths:
       - ios/PocketAILab/PassageChecks.json
       - tools/passage-check/**
+      - tools/source-answers/**
+      - apps/web/project-sources.mjs
+      - docs/research/project-sources.json
       - tools/openclaw-review/run-linux.sh
       - tools/openclaw-review/review.py
       - .github/workflows/passage-check.yml
@@ -22,8 +25,10 @@ jobs:
           persist-credentials: false
       - name: Verify the extractive citation constraint
         run: python3 -m unittest discover -s tools/passage-check
+      - name: Check source lookup and citation identity
+        run: python3 -m unittest discover -s tools/source-answers
       - name: Run all three decoding modes against the frozen passage suites
-        run: bash tools/openclaw-review/run-linux.sh --compare-passages "$RUNNER_TEMP/passage-comparison"
+        run: bash tools/openclaw-review/run-linux.sh --compare-passages "$RUNNER_TEMP/passage-comparison" --include-source-answers
       - uses: actions/upload-artifact@v4
         if: always()
         with:

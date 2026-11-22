@@ -11,6 +11,10 @@ def passage_grammar(prompt):
     passages = [line for line in lines if line.startswith(("[A] ", "[B] "))]
     if len(passages) != 2 or [line[:3] for line in passages] != ["[A]", "[B]"]:
         raise ValueError("Expected two labeled passages in source order")
+    return labeled_grammar(passages)
+
+
+def labeled_grammar(passages):
     outputs = {"UNKNOWN"}
     for line in passages:
         label, source = line.split(" ", 1)
