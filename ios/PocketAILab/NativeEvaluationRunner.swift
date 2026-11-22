@@ -158,7 +158,7 @@ struct NativeEvaluationRunner: Sendable {
         self.modelArtifactSHA256 = fingerprint
     }
 
-    func run(_ evaluationCase: NativeEvaluationCase) async throws -> NativeEvaluationAttempt {
+    func run(_ evaluationCase: NativeEvaluationCase, observeResources: Bool = false) async throws -> NativeEvaluationAttempt {
         guard !evaluationCase.suiteID.isEmpty, !evaluationCase.suiteVersion.isEmpty,
               !evaluationCase.caseID.isEmpty,
               !evaluationCase.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -183,7 +183,10 @@ struct NativeEvaluationRunner: Sendable {
             failure = "Model preflight failed: \(error)"
         }
 
+        var resourceSamples: EvaluationResourceSamples?
         if failure == nil {
+            let sampler = observeResources ? EvaluationResourceSampler() : nil
+            defer { resourceSamples = sampler?.finish() }
             do {
                 generation = try await runtime.generateForEvaluation(
                     lease: lease,
@@ -211,7 +214,7 @@ struct NativeEvaluationRunner: Sendable {
                 )
                 return try await persist(
                     evaluationCase, requestID: requestID, startedAt: startedAt,
-                    generation: generation, failure: failure
+                    generation: generation, failure: failure, resourceSamples: resourceSamples
                 )
             }
         } catch {
@@ -221,7 +224,7 @@ struct NativeEvaluationRunner: Sendable {
 
         return try await persist(
             evaluationCase, requestID: requestID, startedAt: startedAt,
-            generation: generation, failure: failure
+            generation: generation, failure: failure, resourceSamples: resourceSamples
         )
     }
 
@@ -230,7 +233,8 @@ struct NativeEvaluationRunner: Sendable {
         requestID: String,
         startedAt: Date,
         generation: NativeInferenceEvaluationResult?,
-        failure: String?
+        failure: String?,
+        resourceSamples: EvaluationResourceSamples?
     ) async throws -> NativeEvaluationAttempt {
         let completedAt = Date()
         let output = generation?.output ?? ""
@@ -283,7 +287,8 @@ struct NativeEvaluationRunner: Sendable {
             maxTokens: evaluationCase.maxTokens,
             estimatedMemoryMB: lease.estimatedMemoryMB,
             promptUTF8Bytes: evaluationCase.prompt.utf8.count,
-            outputUTF8Bytes: output.utf8.count
+            outputUTF8Bytes: output.utf8.count,
+            resourceSamples: resourceSamples
         )
         return try await journal.appendAttempt(draft)
     }

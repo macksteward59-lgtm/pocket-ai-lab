@@ -56,6 +56,17 @@ struct NativeEvaluationHistoryView: View {
                                 detail("Execution", "\(attempt.providerKind.rawValue) · native observed: \(attempt.nativeExecutionObserved) · trust verified: \(attempt.runtimeTrustVerified)")
                                 detail("Timing", "\(attempt.latencyMilliseconds) ms · max tokens \(attempt.maxTokens)")
                                 detail("Resource estimate", "\(attempt.estimatedMemoryMB) MB ModelPool admission estimate · not measured resident memory")
+                                if let samples = attempt.resourceSamples {
+                                    detail("Resource samples", "\(samples.sampleCount) · \(samples.environment.rawValue) · \(samples.osVersion)")
+                                    if let bytes = samples.maxObservedFootprintBytes {
+                                        detail("Highest sampled app footprint", ByteCountFormatter.string(fromByteCount: Int64(clamping: bytes), countStyle: .memory))
+                                    }
+                                    if let bytes = samples.minObservedHeadroomBytes {
+                                        detail("Lowest sampled app headroom", ByteCountFormatter.string(fromByteCount: Int64(clamping: bytes), countStyle: .memory))
+                                    }
+                                    detail("Highest sampled thermal state", samples.worstObservedThermalState?.rawValue ?? "Unavailable")
+                                    detail("Low Power Mode observed", samples.lowPowerModeObserved ? "Yes" : "No")
+                                }
                                 detail("Payload size", "Prompt \(attempt.promptUTF8Bytes) bytes · output \(attempt.outputUTF8Bytes) bytes")
                                 if let passed = attempt.deterministicPassed, let score = attempt.deterministicScore {
                                     detail("Objective check", "\(passed ? "PASS" : "FAIL") · \(Int(score * 100))%")

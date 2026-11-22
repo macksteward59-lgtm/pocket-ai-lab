@@ -102,3 +102,15 @@ python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$e
 ```
 
 Repeat for the other cases and retain failures. Separately record the device model, iOS/app build, offline state and any observed interruptions or thermal limits. The file digest alone cannot attest to hardware. The server reference can be reproduced on Linux x86_64 with `bash tools/openclaw-review/run-linux.sh --passage-results passage-server.json`. It writes raw outputs, model identity, runtime version and per-case scores. Inspect the artifact from the **Source passage server proof** workflow for the hosted run.
+
+
+### Read the source check’s memory and thermal observations
+
+On a paired iPhone, start **Local AI → Check source evidence** with the catalog-selected model loaded. In **Self-evaluation history**, expand a case to see the sample count, OS version and execution environment. The journal keeps the highest app-process memory footprint observed, lowest reported app memory headroom on native iOS, highest thermal-pressure category observed and whether Low Power Mode was seen. It samples before and after each generation call and targets another sample every 250 ms while the call is running. Very short runs can have just the two boundary readings. Relaunch and export an attempt to retain these observations alongside its request and model identifiers.
+
+```sh
+python3 tools/evaluation-review/verify.py attempt.json --expected-event-hash "$event_hash" \
+  --passage-case account-corrected --require-resource-samples
+```
+
+The process footprint covers the whole app. A short spike between samples can be missed. The system thermal state describes pressure, without a Celsius reading. Low Power Mode describes a setting and cannot measure battery consumption. Model loading, preflight file hashing and post-run verification are outside the sampling window. Earlier exports can be read with the original command. An export’s environment label is self-reported. Keep an independent record of the actual device, iOS build, signing, model and observed run.

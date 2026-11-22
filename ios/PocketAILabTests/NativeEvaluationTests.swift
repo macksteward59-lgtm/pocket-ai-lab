@@ -410,7 +410,36 @@ final class NativeEvaluationTests: XCTestCase {
         XCTAssertEqual(passage.map(\.expectedOutcome), frozen.map(\.expectedOutcome))
         XCTAssertTrue(passage.allSatisfy { $0.deterministicPassed == false && !$0.nativeExecutionObserved })
         XCTAssertEqual(durable.count, attempts.count + passage.count)
+        XCTAssertTrue(attempts.allSatisfy { $0.resourceSamples == nil })
+        for attempt in passage {
+            let samples = try XCTUnwrap(attempt.resourceSamples)
+            XCTAssertGreaterThanOrEqual(samples.sampleCount, 2)
+            XCTAssertGreaterThan(try XCTUnwrap(samples.maxObservedFootprintBytes), 0)
+            XCTAssertEqual(samples.environment, .current)
+            #if targetEnvironment(simulator)
+            XCTAssertNil(samples.minObservedHeadroomBytes)
+            #endif
+        }
+        // CI only: retain one export from the reopened test journal for the independent reader.
+        let eventsAfterRestart = try await reopened.events()
+        let event = try XCTUnwrap(eventsAfterRestart.first { $0.payload.attempt?.caseID == frozen.first?.caseID })
+        let packet = try NativeEvaluationJournal.exportAttempt(event)
+        print("POCKET_RESOURCE_SAMPLE_FIXTURE \(event.eventHash) \(packet.base64EncodedString())")
 
+
+    }
+
+    func testResourceSummaryPreservesExtremaThroughMissingReadings() {
+        var result = EvaluationResourceSamples()
+        result.record(.init(footprintBytes: 100, headroomBytes: 40, thermalState: .fair, lowPowerMode: false))
+        result.record(.init(footprintBytes: 180, headroomBytes: 0, thermalState: .serious, lowPowerMode: true))
+        result.record(.init(footprintBytes: nil, headroomBytes: nil, thermalState: nil, lowPowerMode: false))
+        result.record(.init(footprintBytes: 75, headroomBytes: 80, thermalState: .nominal, lowPowerMode: false))
+        XCTAssertEqual(result.sampleCount, 4)
+        XCTAssertEqual(result.maxObservedFootprintBytes, 180)
+        XCTAssertEqual(result.minObservedHeadroomBytes, 0)
+        XCTAssertEqual(result.worstObservedThermalState, .serious)
+        XCTAssertTrue(result.lowPowerModeObserved)
     }
 
     func testRuntimeOwnedProviderIdentityDistinguishesLlamaCppFromTestEngine() async throws {
