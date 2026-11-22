@@ -42,7 +42,7 @@ export async function prepareCausalStudy({variant}){
   policy:POLICY,cases:shuffle(taskCases),toolAccess:'none',instruction:'Report a decision for each case, with a matching operation and witness for findings. Do not claim real-target authorization.'});
  const encoded=JSON.stringify(task);expect(Buffer.byteLength(encoded)<=MAX_BYTES,'task too large');
  for(const leak of ['missing-owner-check','missing-separation-check','causalCaseKind','sourceCause','patched','expectedFinding','sourceMutationFamily'])expect(!encoded.includes(leak),'host secret leaked');
- const handle=Object.freeze({id:randomId('host')});HOST.set(handle,{task,mapping,oracle,used:false,created:performance.now(),totalRequests:total,commitment:sha({results,oracle})});
+ const handle=Object.freeze({id:randomId('host')});HOST.set(handle,{task,mapping,oracle,used:false,created:performance.now(),totalRequests:total,commitment:sha({results,oracle}),results,finished:false});
  return Object.freeze({agentInput:JSON.parse(encoded),handle,observedOwnedHttpRequests:total,measurementStatus:'fresh-owned-instances-public-vulnerability-templates',actualModelCalls:0,externalTargets:0});
 }
 export function scoreSubmission(handle,raw){
@@ -81,9 +81,30 @@ export async function runProviderOnce(handle,provider,{kind='test-double',timeou
  expect(['test-double','external-provider-unattested'].includes(kind),'invalid provider type');expect(Number.isSafeInteger(timeoutMs)&&timeoutMs>=50&&timeoutMs<=30000,'invalid deadline');
  st.used=true;const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),timeoutMs);const start=performance.now();
  try{const response=await Promise.race([Promise.resolve().then(()=>provider.generate({task:JSON.parse(JSON.stringify(st.task)),signal:abort.signal,maxOutputBytes:MAX_BYTES})),new Promise((_,reject)=>abort.signal.addEventListener('abort',()=>reject(Error('cancellation')), {once:true}))]);
-  const score=scoreSubmission(handle,response);return {status:'scored',kind,score,modelExecutionVerified:false,attemptCount:1,elapsedMs:Math.round(performance.now()-start)};
+  const score=scoreSubmission(handle,response);st.finished=true;return {status:'scored',kind,score,modelExecutionVerified:false,attemptCount:1,elapsedMs:Math.round(performance.now()-start)};
  }catch(e){return {status:'failed',kind,reason:abort.signal.aborted?'cancelled':'invalid-or-failed-provider-result',attemptCount:1,modelExecutionVerified:false,elapsedMs:Math.round(performance.now()-start)}}finally{clearTimeout(timer);abort.abort();}
 }
+/**
+ * Post-run-only host answer key for offline independent review.
+ * Cannot be obtained before a successfully SCORABLE provider response.
+ * Never pass this export into provider.generate or an agent prompt.
+ * Results are from an owned synthetic fixture, not signed host attestation.
+ */
+export function exportPostRunCausalTruth(handle){
+ const st=HOST.get(handle);expect(st&&st.finished,'post-run answer key unavailable before completed scoring');
+ return structuredClone({
+  schema:'pal-causal-postrun-host-truth-v1',studyRef:st.task.studyRef,
+  sourceMutationFamily:st.oracle.sourceMutationFamily,
+  oracle:st.oracle,results:st.results,resultsCommitment:st.commitment,
+  observedOwnedHttpRequests:st.totalRequests,
+  caseMapping:[...st.mapping.entries()].map(([caseRef,x])=>({
+   caseRef,kind:x.kind,witnessRef:x.witnessRef,
+   expectedFinding:x.expectedFinding,sourceCause:x.sourceCause,
+  })),
+  humanReviewerAttested:false,cryptographicallySigned:false,
+ });
+}
+
 export function publicObservationBaseline(task,{allFindings=false}={}){
  expect(task?.schema===TASK_SCHEMA,'invalid agent task');const s=task.cases.map(row=>{
   const unexpected=row.observations.find(x=>x.httpStatus===200&&x.action==='approve'&&(x.actor==='outsider'||x.actor==='maker'));
