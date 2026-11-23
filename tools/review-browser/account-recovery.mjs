@@ -28,7 +28,11 @@ async function startHost(directory, port = 0) {
   `;
   const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", code], {
     cwd: project,
-    env: { ...process.env, HOST: "127.0.0.1", PORT: String(port), POCKET_RECOVERY_DIR: directory },
+    env: {
+      ...process.env, HOST: "127.0.0.1", PORT: String(port), POCKET_RECOVERY_DIR: directory,
+      POCKET_MEMORY_DIR: path.join(directory, "memory"), POCKET_TRAINING_DIR: "",
+      LLAMACPP_BASE_URL: "http://127.0.0.1:1"
+    },
     stdio: ["ignore", "ignore", "inherit", "ipc"]
   });
   try {
