@@ -7,6 +7,7 @@ on:
     paths:
       - apps/web/recovery/**
       - apps/web/recovery-api.mjs
+      - apps/web/model-workshop/**
       - apps/web/test/*recovery*.mjs
       - apps/web/server.mjs
       - apps/web/app.js

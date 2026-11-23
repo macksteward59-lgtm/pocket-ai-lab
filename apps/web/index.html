@@ -75,6 +75,8 @@
           <p>Save an excerpt from a source, resume the review after a restart, and verify the signed result.</p>
         </div>
         <p id="recovery-status" class="status-text" role="status"></p>
+        <p id="recovery-handoff-status" role="status" hidden></p>
+        <div><button id="recovery-back-to-chat" class="secondary-button" type="button" hidden>Return to Chat</button></div>
         <form id="recovery-auth" class="memory-form">
           <h2>Local review account</h2>
           <label for="recovery-username">Username
@@ -130,7 +132,10 @@
             <label for="recovery-source">Source passage<textarea id="recovery-source" maxlength="16384" rows="4" required></textarea></label>
             <label for="recovery-quote">Exact excerpt<textarea id="recovery-quote" maxlength="4096" rows="2" required></textarea></label>
             <small>Choose text that occurs once in the passage.</small>
-            <div><button id="recovery-create" class="primary-button" type="submit">Start task</button></div>
+            <div class="recovery-actions">
+              <button id="recovery-create" class="primary-button" type="submit">Start task</button>
+              <button id="recovery-discard" class="secondary-button" type="button">Discard draft</button>
+            </div>
           </form>
         </div>
       </section>

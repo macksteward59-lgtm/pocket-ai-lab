@@ -115,11 +115,51 @@ function offerReaderMemory(output, reader, result) {
   });
   output.after(review, notice);
 }
+
+let reviewSources = new WeakMap();
+let reviewAccountGeneration = 0;
+window.addEventListener("pocket-review-clear-sources", () => {
+  reviewAccountGeneration++;
+  reviewSources = new WeakMap();
+  for (const button of $("messages").querySelectorAll(".reader-source-review")) button.remove();
+});
+
+async function openReaderReview(event) {
+  const button = event.currentTarget;
+  const draft = reviewSources.get(button);
+  if (!draft) return;
+  try {
+    const { reviewChatSource } = await import("/recovery/ui.js");
+    if (reviewSources.get(button) !== draft) return;
+    setView("recovery");
+    reviewChatSource(draft);
+  } catch {
+    $("chat-reader-status").textContent = "Review tasks could not open. Reload the app and try again.";
+  }
+}
+
+function offerSourceReview(output, reader, result, passage, question) {
+  if (reader.location === "host" || !Number.isInteger(result.index) || result.index < 0) return;
+  const quote = result.answer;
+  const offset = passage.indexOf(quote);
+  if (!quote || offset < 0 || passage.indexOf(quote, offset + 1) >= 0) return;
+  const bytes = new TextEncoder();
+  if (bytes.encode(passage).length > 16384 || bytes.encode(quote).length > 4096) return;
+  const chars = Array.from(question.trim());
+  const title = chars.length > 40 ? chars.slice(0, 39).join("") + "…" : chars.join("");
+  const button = memoryElement("button", "secondary-button reader-review reader-source-review", "Review source excerpt");
+  button.type = "button";
+  reviewSources.set(button, { title, source: passage, quote });
+  button.addEventListener("click", openReaderReview);
+  output.after(button);
+}
+
 async function sendReaderMessage(text, reader) {
   state.busy = true;
   $("send").disabled = true;
   const passage = $("chat-reader-source").value;
   const generation = chatGeneration;
+  const reviewGeneration = reviewAccountGeneration;
   try {
     const result = await reader.answer(text, passage);
     if (chatGeneration !== generation) return;
@@ -128,6 +168,7 @@ async function sendReaderMessage(text, reader) {
     if ($("prompt").value === text) $("prompt").value = "";
     const output = appendMessage("assistant", result.answer, reader.label + (reader.location === "host" ? " · LOCAL TRAINING HOST" : " · LOCAL DOCUMENT READER"));
     offerReaderMemory(output, reader, result);
+    if (reviewGeneration === reviewAccountGeneration) offerSourceReview(output, reader, result, passage, text);
     output.scrollIntoView({ block: "nearest" });
   } catch (error) {
     if (chatGeneration === generation) $("chat-reader-status").textContent = error.message;

@@ -15,6 +15,12 @@ function status(text) {
   field("status").textContent = text;
 }
 
+function handoffStatus(text = "", returnToChat = false) {
+  field("handoff-status").textContent = text;
+  field("handoff-status").hidden = !text;
+  field("back-to-chat").hidden = !returnToChat;
+}
+
 function clearDetail() {
   selected = null;
   verifiedSelection = null;
@@ -29,9 +35,11 @@ function clearDetail() {
   field("correction-form").reset();
 }
 
-function clearPrivate() {
+function clearPrivate(discardChatSources = Boolean(owner)) {
+  if (discardChatSources) window.dispatchEvent(new Event("pocket-review-clear-sources"));
   owner = null;
   pendingCreate = null;
+  handoffStatus();
   clearDetail();
   field("owner").textContent = "";
   field("auth").reset();
@@ -180,12 +188,14 @@ field("auth").addEventListener("submit", event => {
   event.preventDefault();
   const action = event.submitter?.value || "login";
   perform(async ticket => {
+    const returnForExcerpt = !field("back-to-chat").hidden;
     const password = field("password").value;
     field("password").value = "";
     const {username} = await request(ticket, action, {username: field("username").value, password});
     showOwner(username);
     channel?.postMessage("changed");
     await loadTasks(ticket);
+    if (returnForExcerpt) handoffStatus("Signed in as " + username + ". Return to Chat and choose the excerpt to review.", true);
     status("Signed in.");
   });
 });
@@ -208,17 +218,69 @@ field("logout-retry").addEventListener("click", signOut);
 field("refresh").addEventListener("click", refreshSession);
 nav.addEventListener("click", refreshSession);
 
+// A signed-out handoff carries no passage through sign-in. The owner selects
+// the original reply again once the destination account is visible.
+export function reviewChatSource(draft) {
+  if (operation || signingOut) {
+    status("Finish the current review action first.");
+    return;
+  }
+  const before = owner;
+  perform(async ticket => {
+    const {username} = await request(ticket, "session");
+    if (field("view").classList.contains("hidden")) return;
+    if (username !== before) {
+      if (username) {
+        showOwner(username);
+        await loadTasks(ticket);
+      } else {
+        clearPrivate();
+      }
+    }
+    if (before && username !== before) {
+      handoffStatus("The review account changed. Ask the question again in Chat to choose a new excerpt.", true);
+      return;
+    }
+    if (!before) {
+      const message = username ? "Signed in as " + username + "." : "Sign in to a local review account.";
+      handoffStatus(message + " Return to Chat and choose the excerpt to review.", true);
+      return;
+    }
+    if (pendingCreate || ["title", "source", "quote"].some(name => field(name).value.length > 0)) {
+      handoffStatus("Finish or discard the current draft before choosing another excerpt.", true);
+      return;
+    }
+    field("title").value = draft.title;
+    field("source").value = draft.source;
+    field("quote").value = draft.quote;
+    handoffStatus("Review for " + username + ". Check the source and excerpt, then choose Start task to save.");
+    field("title").focus();
+    field("create-form").scrollIntoView({block: "nearest"});
+  });
+}
+
+field("back-to-chat").addEventListener("click", () => {
+  handoffStatus();
+  document.querySelector('[data-view="chat"]').click();
+});
+field("discard").addEventListener("click", () => {
+  pendingCreate = null;
+  field("create-form").reset();
+  handoffStatus();
+  status("Draft discarded.");
+});
+
 channel?.addEventListener("message", () => {
   invalidate();
   signingOut = null;
-  clearPrivate();
+  clearPrivate(true);
   disableControls(false);
   refreshSession();
 });
 
 window.addEventListener("pagehide", () => {
   invalidate();
-  clearPrivate();
+  clearPrivate(true);
 });
 window.addEventListener("pageshow", event => {
   if (event.persisted) {
@@ -236,6 +298,7 @@ field("create-form").addEventListener("submit", event => {
     const {task} = await request(ticket, "create", {id: pendingCreate.id, ...input});
     pendingCreate = null;
     field("create-form").reset();
+    handoffStatus();
     showTask(task);
     await loadTasks(ticket);
     status("Task saved. You can leave and resume it later.");

@@ -12,11 +12,13 @@ import { chromium, webkit } from "playwright";
 
 const project = fileURLToPath(new URL("../../", import.meta.url));
 const mobile = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
-const title = "Archive the orchard count";
-const source = "🍐 Field note. The orchard has five pear trees. Recorded on Tuesday.";
-const quote = "The orchard has five pear trees.";
-const correction = "The count applies to the north plot.";
-const password = "Pears-in-the-north-plot-2026";
+const question = "Does an array preserve the order of its values?";
+const title = "Review JSON array ordering";
+const quote = "Values in a JSON array have a defined order.";
+// The reader normalizes sentences for inference. The review must retain the original passage.
+const source = "\n  " + quote + "\nA JSON object groups name/value pairs without defining an order for those pairs.\n";
+const correction = "The selected sentence describes array values.";
+const password = "Signed-local-review-fixture-2026";
 
 // Binding port zero lets the OS allocate an unused port without a probe/close race.
 // IPC announces readiness only after the real application server has bound its socket.
@@ -70,6 +72,43 @@ async function signIn(page, url, name, action = "login") {
   await page.locator("#recovery-logout").waitFor();
 }
 
+async function reviewFromChat(page) {
+  await page.locator("#mobile-menu").click();
+  await page.locator('[data-view="models"]').click();
+  await page.locator("#reader-train:enabled").waitFor();
+  const base = await page.locator("#reader-base").inputValue();
+  const teacher = await page.locator("#reader-teacher").inputValue();
+  assert.notEqual(base, teacher);
+  await page.locator("#reader-name").fill("Source review reader");
+  await page.locator("#reader-train").click();
+  await page.locator("#reader-scores").getByText("candidate · Source review reader · 15/16").waitFor();
+  await page.locator("#reader-save").click();
+  await page.locator("#reader-status").filter({ hasText: "is saved" }).waitFor();
+  const child = await page.locator("#reader-use").inputValue();
+  assert.notEqual(child, base);
+  assert.notEqual(child, teacher);
+  await page.locator("#reader-question").fill(question);
+  await page.locator("#reader-sentences").fill(source);
+  await page.locator("#reader-chat").click();
+  assert.equal(await page.locator("#prompt").inputValue(), question);
+  assert.equal(await page.locator("#chat-reader-source").inputValue(), source);
+  await page.locator("#send").click();
+  const reply = page.locator("#messages .message.assistant");
+  await reply.locator(".message-body").filter({ hasText: quote }).waitFor();
+  assert.match(await reply.locator(".message-label").innerText(), /Source review reader.*LOCAL DOCUMENT READER/);
+  await reply.getByRole("button", { name: "Review source excerpt", exact: true }).click();
+  await page.locator("#recovery-create").waitFor();
+  await page.waitForFunction(expected => document.querySelector("#recovery-source").value === expected, source);
+  const proposedTitle = await page.locator("#recovery-title").inputValue();
+  assert.match(proposedTitle, /^Does an array preserve the order/);
+  assert.equal(await page.locator("#recovery-quote").inputValue(), quote);
+  const list = await request(page, { action: "list" });
+  assert.equal(list.status, 200);
+  assert.deepEqual(list.body.tasks, [], "opening a review draft must not create the task");
+  await page.locator("#recovery-title").fill(title);
+  return { base, teacher, child };
+}
+
 // Use the browser's own session cookie and origin on every request, just as the UI does.
 async function request(page, input) {
   return page.evaluate(async body => {
@@ -87,7 +126,7 @@ function verifyExport(evidence, jwk, id, expectedNotes) {
   assert.equal(payload.schema, "pocket.source-review.v1");
   assert.equal(payload.taskId, id);
   assert.equal(payload.title, title);
-  assert.equal(payload.owner, "orchard-owner");
+  assert.equal(payload.owner, "review-owner");
   assert.equal(payload.source, source);
   assert.equal(payload.offset, source.indexOf(quote));
   assert.equal(payload.quote, quote);
@@ -145,10 +184,8 @@ for (const engine of [chromium, webkit]) {
       browser = await engine.launch();
       const original = await browser.newContext(mobile);
       const first = await original.newPage();
-      await signIn(first, url, "orchard-owner", "register");
-      await first.locator("#recovery-title").fill(title);
-      await first.locator("#recovery-source").fill(source);
-      await first.locator("#recovery-quote").fill(quote);
+      await signIn(first, url, "review-owner", "register");
+      const readerWeights = await reviewFromChat(first);
       await first.locator("#recovery-create").click();
       await first.locator("#recovery-run:enabled").waitFor();
       const id = await first.locator("#recovery-details").getAttribute("data-task-id");
@@ -162,7 +199,7 @@ for (const engine of [chromium, webkit]) {
       // browser request directly. route.fetch sends the actual request to the restarted server.
       const unreliable = await browser.newContext({ ...mobile, serviceWorkers: "block" });
       const resumed = await unreliable.newPage();
-      await signIn(resumed, url, "orchard-owner");
+      await signIn(resumed, url, "review-owner");
       await resumed.locator("#recovery-tasks").getByRole("button", { name: title, exact: true }).click();
       const pending = await request(resumed, { action: "get", id });
       assert.equal(pending.body.task.status, "pending");
@@ -186,7 +223,7 @@ for (const engine of [chromium, webkit]) {
 
       const recovered = await browser.newContext(mobile);
       const owner = await recovered.newPage();
-      await signIn(owner, url, "orchard-owner");
+      await signIn(owner, url, "review-owner");
       const retries = await Promise.all([request(owner, { action: "run", id }), request(owner, { action: "run", id })]);
       for (const retry of retries) {
         assert.equal(retry.status, 200);
@@ -204,7 +241,7 @@ for (const engine of [chromium, webkit]) {
 
       const other = await browser.newContext(mobile);
       const outsider = await other.newPage();
-      await signIn(outsider, url, "orchard-reader", "register");
+      await signIn(outsider, url, "other-reviewer", "register");
       const list = await request(outsider, { action: "list" });
       assert.equal(list.status, 200);
       assert.deepEqual(list.body.tasks, []);
@@ -220,7 +257,7 @@ for (const engine of [chromium, webkit]) {
       await restart();
       const final = await browser.newContext({ ...mobile, serviceWorkers: "block" });
       const page = await final.newPage();
-      await signIn(page, url, "orchard-owner");
+      await signIn(page, url, "review-owner");
       await page.locator("#recovery-tasks").getByRole("button", { name: title, exact: true }).click();
       await page.locator("#recovery-corrections").getByText(correction, { exact: true }).waitFor();
       await page.locator("#recovery-verify").click();
@@ -270,11 +307,12 @@ for (const engine of [chromium, webkit]) {
       const db = new DatabaseSync(path.join(directory, "recovery.sqlite3"), { readOnly: true });
       try {
         const attempts = db.prepare("SELECT attempt_id FROM executions WHERE owner = ? AND task_id = ?")
-          .all("orchard-owner", id);
+          .all("review-owner", id);
         assert.deepEqual(attempts.map(row => row.attempt_id), [committed.payload.attemptId]);
         await saveAcceptance(engine.name(), browser.version(), corrected, key.body.key, {
           restarts, successfulRunReplyLost: true, concurrentRetries: retries.length,
-          executionRows: attempts.length, crossAccount, peerSignOutClearedPrivateView: true
+          executionRows: attempts.length, crossAccount, peerSignOutClearedPrivateView: true,
+          readerWeights, readerDraftOpenedBeforeTaskCreation: true
         });
       } finally { db.close(); }
       t.diagnostic("Three host restarts; one committed execution; two run retries; three cross-account denials; signed correction recovered.");

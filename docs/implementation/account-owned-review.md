@@ -5,7 +5,7 @@ The owner’s November 22 milestone calls for one in-app task that survives an i
 ## Follow a task
 
 1. Start the consumer app on the local host with Node 24 and `npm run start:web`. Open **Review tasks**. Create a local account or sign in to one created on this host.
-2. Give the task a title, paste a passage, and enter an exact excerpt that appears once. Select **Start task**. This saves the pending task under the signed-in account.
+2. Start with a passage and an exact excerpt that appears once. You can enter them yourself, or choose **Review source excerpt** on a document reader’s answer in Chat. The latter carries the original passage and selected sentence into a draft. Review the destination account and fields, then choose **Start task** to save. Source review is available for answers with a unique literal match. If prompted to sign in, return to the same chat and choose the excerpt again.
 3. Close the browser or stop and restart the app host. Reopen **Review tasks**, sign in to the same account, select the title and choose **Resume task**. A retry after a lost reply returns the original attempt and result.
 4. Choose **Verify evidence** to check the signature, account, task identity, source, excerpt position and corrections. Add a correction and verify again. The original quotation stays in the signed record.
 5. Save the public verification key separately from the receipt. For an offline check, supply a key obtained from the trusted host, the expected username and task UUID to the verifier. A successful check prints the attempt ID, committed execution count and correction count.

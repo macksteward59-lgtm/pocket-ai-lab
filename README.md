@@ -12,7 +12,7 @@ Choose a base model and a teacher, train a separate candidate, compare the three
 
 ### Review tasks
 
-Open **Review tasks** to create a local account and save an excerpt from a passage. After closing the app or restarting the host, sign back in, resume the task and verify the signed excerpt. You can add a correction and export both the updated receipt and the host’s public verification key. [Recovery walkthrough and evidence](docs/implementation/account-owned-review.md)
+Open **Review tasks** to create a local account and save an excerpt from a passage. In Chat, **Review source excerpt** prepares a draft from a document reader’s answer and its original passage. After closing the app or restarting the host, sign back in, resume the task and verify the signed excerpt. You can add a correction and export both the updated receipt and the host’s public verification key. [Recovery walkthrough and evidence](docs/implementation/account-owned-review.md)
 
 ### Run locally
 
