@@ -41,3 +41,13 @@
 .view{min-height:0}
 #agents-view{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .agent-transcript{max-height:none;overflow:visible}
+
+.reader-choice{background:transparent;color:var(--accent);border:0;padding:4px;cursor:pointer;text-decoration:underline}
+.reader-context{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px}
+.reader-context>div{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.reader-context label{display:block;margin:8px 0 3px;color:var(--muted)}
+.reader-context textarea{width:100%;resize:vertical;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:7px}
+.message .reader-review{display:block;margin-top:8px}
+#composer.reader-mode .privacy-hint,#composer.reader-mode #model-pill{display:none}
+
+#models-view [hidden],#chat-reader-context[hidden],#chat-reader-context [hidden]{display:none}
