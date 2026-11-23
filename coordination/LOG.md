@@ -5282,3 +5282,16 @@ Re-downloaded #269 kit artifact `14758936566` and simulator review `14759087783`
 - Four new files under `integrations/factory-droid/`: HTTP API client, synthetic tests, README, and comprehensive `HANDOFF.md` preserving owner vision and blocked requests (memory restrictions, continuing agents, iPhone physical signing, agent admission, distillation and security evaluation).
 - No tests run/CI confirmed, no Factory account connected, no API key, no deployed plugin/gateway, no actual Droid task, no protected modifications, no merge. Vendor endpoint and accepted-versus-completed response behavior checked against official Factory documentation. Further verification requires `computerId`-bound session polling and message ordering.
 - Factory is NOT an admitted agent yet; requires owner authentication/budget and the protocol's specific independent claim before executing work.
+
+## 2026-11-23 00:22 UTC — Cloudflare website and private handoff review
+
+| Service | Draft PR and commit | Workers Builds root | Worker name |
+| --- | --- | --- | --- |
+| Read-only public website | [#294](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/294), `aa5dc920a3a8d4b9585cc83501147a118e36a12c`, based on main `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873` | `cloudflare/website` | `pocket-ai-lab` |
+| Private handoff | [#245](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/245), `66cedc4bec7c402dd30f13e2478d4dba8dc7aa07`, stacked on [#244](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/244) | `workers/document-analysis` | `pocket-ai-lab-preview` |
+
+- Use Node 24 and run `npm run build` from the respective directory after installing its dependencies. The website build also uses Python 3. A production release of either service requires owner approval.
+- The website build and Wrangler dry run passed. Local workerd returned the expected responses on all 13 public and private route checks. The DOM check passed for all five views, the mobile menu and Settings. [Website CI](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45088294653) passed at the PR head.
+- The private Worker dry run and local integration test passed for authorization, revision conflicts and persistence across restarts. [Private Worker CI](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44925093206) passed at the existing PR head. The two live-service secrets and the ANALYSIS_STATE Durable Object belong to the private service.
+- The repository-wide consumer and intelligence jobs on #294 reproduce the missing East lifecycle modules already seen in [main's consumer run](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44457508945) and [main's intelligence run](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45077804590). The public website branch only adds its own target and verification workflow.
+- The original uploaded Cloudflare log ended during environment initialization. A new Cloudflare build was not run. GitHub review and owner release decisions remain pending.
