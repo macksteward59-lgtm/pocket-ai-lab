@@ -200,6 +200,8 @@ Earlier four-group conceptual view (distinct from the six canonical layers):
 
 ## 6. Model registry, routing, and inference
 
+The owner’s November 22 clarification adds model creation to the existing selection and routing requirements. A user can keep a working model, develop a candidate from saved weights, select a base and teacher, compare both parents with their child, and choose the result in the same conversation. The release record must identify supported artifact formats, where computation ran, parent versions, what persisted, and which outcomes passed independent evaluation. The main-targeted prototype and remaining native, quality and recovery tests are traced in [the unified workflow](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/24730e7b8332c8290abf0f1468fbecd6fe4e118f/docs/implementation/unified-model-workflow.md).
+
 ### 6.1 Registry and provider adapters
 - [ ] Maintain a model registry independent of agent definitions.
 - [ ] Record model identity, version, format, source, checksum, license metadata, capabilities, context limits, quantization, hardware requirements, and availability.
