@@ -19,6 +19,7 @@
       <button class="nav-item active" data-view="chat">◫ <span>Chat</span></button>
       <button class="nav-item" data-view="agents">◎ <span>Agent team</span><span class="nav-soon">PREVIEW</span></button>
       <button class="nav-item" data-view="memory">▤ <span>Memory</span></button>
+      <button class="nav-item" data-view="models">◇ <span>Model workshop</span></button>
       <button class="nav-item" data-view="sources">⌕ <span>Project sources</span></button>
       <button class="nav-item" data-view="activity">◷ <span>Activity</span></button>
       <div class="sidebar-spacer"></div>
@@ -60,6 +61,40 @@
         </form>
         <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
         <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
+      </section>
+      <section class="view secondary-view hidden" id="models-view">
+        <div class="section-heading"><h1>Model workshop</h1><p>Train a document reader from a base and a teacher. Training and saved readers stay in this browser.</p></div>
+        <div class="memory-form">
+          <label for="reader-import">Import compatible v1 document-reader weights (.json)</label>
+          <input id="reader-import" type="file" accept=".json,application/json" disabled>
+        </div>
+        <form id="reader-build" class="memory-form">
+          <div class="memory-fields">
+            <label>Base reader<select id="reader-base" required disabled></select></label>
+            <label>Teacher reader<select id="reader-teacher" required disabled></select></label>
+          </div>
+          <label>Candidate name<input id="reader-name" maxlength="64" required placeholder="e.g. Research reader v2"></label>
+          <button class="primary-button" id="reader-train" type="submit" disabled>Train candidate</button>
+          <p id="reader-status" role="status"></p>
+        </form>
+        <section id="reader-comparison" hidden>
+          <h2>Held-out comparison</h2>
+          <p>Each score counts exact answers and correct abstentions on the same document questions.</p>
+          <ul id="reader-scores"></ul>
+          <button class="secondary-button" id="reader-save" type="button">Save candidate to my readers</button>
+        </section>
+        <form id="reader-try" class="memory-form">
+          <h2>Use a reader</h2>
+          <label>Reader<select id="reader-use" disabled></select></label>
+          <p id="reader-origin"></p>
+          <label>Question<input id="reader-question" required maxlength="500"></label>
+          <label>Source sentences, one per line<textarea id="reader-sentences" required maxlength="6000" rows="3"></textarea></label>
+          <div class="memory-actions">
+            <button class="primary-button" id="reader-answer" type="submit" disabled>Find evidence</button>
+            <button class="secondary-button" id="reader-export" type="button" disabled>Export weights</button>
+          </div>
+          <p id="reader-output" role="status"></p>
+        </form>
       </section>
       <section class="view secondary-view hidden" id="sources-view">
         <div class="section-heading"><h1>Project sources</h1><p>Find a published source or trace a project decision through its revisions.</p></div>
@@ -113,6 +148,7 @@
   </div>
   <script src="/app.js" defer></script>
   <script src="/native-review.js" defer></script>
+  <script type="module" src="/model-workshop/ui.js"></script>
   <script type="module" src="/project-sources-ui.js"></script>
 </body>
 </html>
