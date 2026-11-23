@@ -284,7 +284,7 @@ export function createServer() {
         if (!limit.allowed) { drain(req); return rejectLimited(res, limit.retryAfterSeconds); }
         try {
           const input = req.method === "GET" ? { op: "list" } : await body(req);
-          if (req.method === "POST" && !["build", "answer"].includes(input?.op)) {
+          if (req.method === "POST" && !["build", "resume", "answer"].includes(input?.op)) {
             return json(res, 400, { error: "Unknown workshop operation." });
           }
           return json(res, 200, await workshop(input));

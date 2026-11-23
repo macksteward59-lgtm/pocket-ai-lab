@@ -3,10 +3,11 @@ on:
   push:
     branches: [codex/unified-model-workshop]
   pull_request:
-    branches: [main]
+    branches: [main, codex/account-owned-task-recovery]
     paths:
       - apps/web/model-workshop/**
       - apps/web/test/model-workshop.test.mjs
+      - apps/web/test/workshop-route.test.mjs
       - apps/web/index.html
       - apps/web/app.js
       - apps/web/sw.js

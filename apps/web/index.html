@@ -158,8 +158,15 @@
           </div>
           <label>Candidate name<input id="reader-name" maxlength="64" required placeholder="e.g. Research model v2"></label>
           <button class="primary-button" id="reader-train" type="submit" disabled>Train candidate</button>
+          <button class="secondary-button" id="host-pause" type="submit" hidden disabled>Train to step 12 and pause</button>
           <p id="reader-status" role="status"></p>
         </form>
+        <section id="host-runs" class="memory-form" hidden>
+          <h2>Resume host training</h2>
+          <label for="host-drafts">Saved training run<select id="host-drafts" disabled></select></label>
+          <p id="host-draft-info" role="status"></p>
+          <button class="primary-button" id="host-resume" type="button" disabled>Resume to step 24</button>
+        </section>
         <section id="reader-comparison" hidden>
           <h2>Held-out comparison</h2>
           <p>Compare the three scores on the same held-out questions.</p>

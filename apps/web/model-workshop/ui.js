@@ -4,8 +4,10 @@ import { asset, digest, insertReader, modelRecord, openCatalog, savedReaders, so
 
 const field = name => document.getElementById("reader-" + name);
 const status = field("status"), base = field("base"), teacher = field("teacher"), use = field("use");
-const models = new Map(), hostModels = new Map();
+const models = new Map(), hostModels = new Map(), hostDrafts = new Map();
 const engine = document.getElementById("workshop-engine");
+const pause = document.getElementById("host-pause"), resume = document.getElementById("host-resume");
+const drafts = document.getElementById("host-drafts"), draftInfo = document.getElementById("host-draft-info");
 const hostMode = () => engine.value === "host";
 const catalog = () => hostMode() ? hostModels : models;
 let db, pending;
@@ -34,6 +36,23 @@ function invalidate() {
   field("comparison").hidden = true;
   status.textContent = "";
 }
+function hostParent(id) {
+  return hostModels.get(id) || { id, name: id };
+}
+function updateDraftInfo() {
+  const draft = hostDrafts.get(drafts.value);
+  draftInfo.textContent = draft
+    ? "Step " + draft.completedSteps + " of " + draft.totalSteps + " · Base: " + hostParent(draft.parents.base).name +
+      " · Teacher: " + hostParent(draft.parents.teacher).name
+    : "";
+}
+function listDrafts(selected = drafts.value) {
+  drafts.replaceChildren(...Array.from(hostDrafts.values(), draft =>
+    new Option(draft.name + " · " + draft.completedSteps + "/" + draft.totalSteps, draft.id)));
+  if (hostDrafts.has(selected)) drafts.value = selected;
+  if (!hostDrafts.size) drafts.add(new Option("No saved runs", ""));
+  updateDraftInfo();
+}
 function busy(active) {
   engine.disabled = active;
   for (const node of [base, teacher, field("name"), field("train")]) node.disabled = active || catalog().size < 2;
@@ -41,6 +60,8 @@ function busy(active) {
   field("import").disabled = active || !db || hostMode();
   field("export").disabled = active || !models.size || hostMode();
   document.getElementById("host-refresh").disabled = active;
+  pause.disabled = active || !hostMode() || hostModels.size < 2;
+  drafts.disabled = resume.disabled = active || !hostMode() || !hostDrafts.size;
 }
 async function refreshMode() {
   invalidate();
@@ -51,6 +72,8 @@ async function refreshMode() {
   field("export").hidden = host;
   document.getElementById("host-help").hidden = !host;
   document.getElementById("host-refresh").hidden = !host;
+  pause.hidden = !host;
+  document.getElementById("host-runs").hidden = !host;
   field("question").maxLength = host ? 2000 : 500;
   field("answer").textContent = host ? "Generate answer" : "Find evidence";
   field("train").textContent = host ? "Train and save checkpoint" : "Train candidate";
@@ -59,10 +82,15 @@ async function refreshMode() {
   try {
     if (host) {
       hostModels.clear();
+      const selectedDraft = drafts.value;
+      hostDrafts.clear();
+      listDrafts();
       listReaders();
       status.textContent = "Reading local checkpoints…";
       const data = await hostRequest();
       for (const model of data.models) hostModels.set(model.id, hostModel(model));
+      for (const draft of data.drafts || []) hostDrafts.set(draft.id, draft);
+      listDrafts(selectedDraft);
       status.textContent = !data.configured ? "Local-host training is off. Configure POCKET_TRAINING_DIR on the host to enable it."
         : hostModels.size < 2 ? "Add two compatible checkpoints to the host’s imports folder and refresh." : "";
     } else if (!initialized) {
@@ -93,6 +121,7 @@ document.querySelector('[data-view="models"]').addEventListener("click", () => {
 });
 for (const node of [base, teacher, field("name")]) node.addEventListener("input", invalidate);
 use.addEventListener("change", updateOrigin);
+drafts.addEventListener("change", updateDraftInfo);
 
 field("import").addEventListener("change", async event => {
   const file = event.target.files[0];
@@ -126,6 +155,44 @@ function showComparison(scores, parent, tutor, record) {
   }));
   field("comparison").hidden = false;
 }
+
+function showHostResult(result, expectedParents, expectedId) {
+  const item = result.draft || result.candidate;
+  if (!item || item.parents?.base !== expectedParents.base || item.parents?.teacher !== expectedParents.teacher ||
+      (expectedId && expectedId !== item.id)) {
+    throw Error("The host returned a different training run. Refresh the host catalog.");
+  }
+  if (result.draft) {
+    hostDrafts.set(item.id, item);
+    listDrafts(item.id);
+    status.textContent = "Paused at step " + item.completedSteps + " of " + item.totalSteps + ". This host has saved your run.";
+    return;
+  }
+  const record = hostModel(item);
+  hostModels.set(record.id, record);
+  hostDrafts.delete(record.id);
+  listDrafts();
+  listReaders();
+  use.value = record.id;
+  updateOrigin();
+  showComparison(result.scores, hostParent(item.parents.base), hostParent(item.parents.teacher), record);
+  status.textContent = "Checkpoint saved after training on " + result.verifiedExamples + " verified teacher examples.";
+}
+
+resume.addEventListener("click", async () => {
+  if (!hostMode() || resume.disabled) return;
+  const draft = hostDrafts.get(drafts.value);
+  if (!draft) return;
+  invalidate();
+  busy(true);
+  status.textContent = "Resuming " + draft.name + " from step " + draft.completedSteps + " on the local host…";
+  try {
+    const result = await hostRequest({ op: "resume", draft: draft.id });
+    showHostResult(result, draft.parents, draft.id);
+  } catch (error) {
+    status.textContent = error.message + " Refresh host models to check the saved run’s current step.";
+  } finally { busy(false); }
+});
 field("build").addEventListener("submit", async event => {
   event.preventDefault();
   if (field("train").disabled) return;
@@ -140,15 +207,11 @@ field("build").addEventListener("submit", async event => {
   status.textContent = "Training from the selected base…";
   try {
     if (hostMode()) {
-      status.textContent = "Training on the local host. The checkpoint will appear in the host catalog.";
-      const result = await hostRequest({ op: "build", base: parent.id, teacher: tutor.id, name });
-      const record = hostModel(result.candidate);
-      hostModels.set(record.id, record);
-      listReaders();
-      use.value = record.id;
-      updateOrigin();
-      showComparison(result.scores, parent, tutor, record);
-      status.textContent = "Checkpoint saved after training on " + result.verifiedExamples + " verified teacher examples.";
+      const parents = { base: parent.id, teacher: tutor.id };
+      const request = { op: "build", ...parents, name };
+      if (event.submitter === pause) request.throughStep = 12;
+      status.textContent = request.throughStep ? "Training to step 12 on the local host…" : "Training on the local host…";
+      showHostResult(await hostRequest(request), parents);
       return;
     }
     const result = train(parent.weights, tutor.weights, await asset("training"));
@@ -167,7 +230,9 @@ field("build").addEventListener("submit", async event => {
     showComparison(scores, parent, tutor, record);
     field("save").disabled = false;
     status.textContent = "Trained on " + result.verifiedPairs + " verified sentence pairs. Review the scores before saving.";
-  } catch (error) { status.textContent = error.message; }
+  } catch (error) {
+    status.textContent = hostMode() ? error.message + " Refresh host models to check saved progress." : error.message;
+  }
   finally { busy(false); }
 });
 field("save").addEventListener("click", async () => {
