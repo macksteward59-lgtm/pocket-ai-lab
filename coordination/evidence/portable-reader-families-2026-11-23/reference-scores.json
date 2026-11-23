@@ -1,0 +1,241 @@
+{
+  "transferQuestionSHA256": "b2ac6e95e0805575e15ad3e24d4189202d1786f01488d2b04a114d11c846c2aa",
+  "families": {
+    "chromium-to-webkit": {
+      "startingBase": {
+        "id": "5d076f6ee285ec149705f04197fea6a1495a35bd5b47dc59387efb9b495f294e",
+        "heldOut": {
+          "correct": 14,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 11,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      },
+      "sharedTeacher": {
+        "id": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+        "heldOut": {
+          "correct": 15,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 14,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          0,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      },
+      "trainedParent": {
+        "id": "build-c71ea866194fe22a1d23149b5bb8ba08d0f844a4889b64889edaa45086bf1aa0",
+        "heldOut": {
+          "correct": 15,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 12,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          1,
+          -1,
+          -1,
+          -1,
+          1,
+          1,
+          -1,
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      },
+      "blend": {
+        "id": "build-d7d7f1178f1afc5f6adcfbcd326eb2bc0fcd3636995b1f19601fc0021843b8ed",
+        "heldOut": {
+          "correct": 15,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 12,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          1,
+          -1,
+          -1,
+          -1,
+          1,
+          1,
+          -1,
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      }
+    },
+    "webkit-to-chromium": {
+      "startingBase": {
+        "id": "5d076f6ee285ec149705f04197fea6a1495a35bd5b47dc59387efb9b495f294e",
+        "heldOut": {
+          "correct": 14,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 11,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      },
+      "sharedTeacher": {
+        "id": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+        "heldOut": {
+          "correct": 15,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 14,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          1,
+          -1,
+          0,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      },
+      "trainedParent": {
+        "id": "build-9cded4f540e30fd94dc6aa3e702940a8adb12995442ac2350d7b5d6e42ad5573",
+        "heldOut": {
+          "correct": 15,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 12,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          1,
+          -1,
+          -1,
+          -1,
+          1,
+          1,
+          -1,
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      },
+      "blend": {
+        "id": "build-73dbf00ffe6cd746592d2a0d16f32420a4e4a192815bf2b1db55e9e3552f8e0f",
+        "heldOut": {
+          "correct": 15,
+          "total": 16
+        },
+        "transfer": {
+          "correct": 12,
+          "total": 16
+        },
+        "transferChoices": [
+          -1,
+          1,
+          -1,
+          -1,
+          -1,
+          1,
+          1,
+          -1,
+          -1,
+          1,
+          -1,
+          -1,
+          0,
+          1,
+          -1,
+          -1
+        ]
+      }
+    }
+  }
+}

@@ -13,4 +13,10 @@ Each destination started with a fresh browser profile. The tests checked preview
 
 A separate case deliberately changed a reported evaluation count and checked that the preview showed the file and local values, the new record kept the local measurement, and an existing local alias and its records survived a repeat import. The file identifies its declared training history. Its author and historical training process are unverified.
 
+### How the children scored
+
+The Python reference verified all 97 blend parameters in each file and replayed the app’s held-out scores. On the same 16 questions from four other short documents, the starting base scored **11/16**, the shared teacher **14/16**, the trained parent **12/16** and the 65/35 blend **12/16**. Both files gave these results. The browser reader and Python agreed on all 128 individual choices across the two families. These small fixed sets document the behavior of these specific weights. [Scores and selections](reference-scores.json)
+
+To reproduce with Python 3, check out the PR source at `d38a1ed1dac9313c138460077c7504221716776e` alongside this coordination checkout. Run `python verify_examples.py --workshop /path/to/pr-checkout` from this evidence folder and compare the JSON output with `reference-scores.json`. The script uses the existing Python reader and checks the hash of the additional questions. [Verification script](verify_examples.py)
+
 GitHub tested source `d38a1ed1dac9313c138460077c7504221716776e` against main `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873` using checkout `cfc5c3fd916b18079d983b11f20f1d97dfafdeea`. The checkout and source had the same tree. The downloaded workflow archive had SHA-256 `2f250be8e3144441fbe9df0a98610156adfcacad3d8a372c883bc41701d43710`. The four archived files were compared with the receipts, then both families were imported with the published verifier in Node, checking every model identity, weight hash, parent link and the pinned evaluation and training sets. The receipts cover mobile browser engines on hosted runners. Physical iPhone and native checkpoint transfer require separate evidence.
