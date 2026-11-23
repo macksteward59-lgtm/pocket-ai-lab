@@ -1,7 +1,15 @@
 const $ = (id) => document.getElementById(id);
 const state = { model: "model not connected", busy: false, reader: null };
-const views = ["chat","agents","memory","models","activity","settings"];
-function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name==="models"?"Model workshop":name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();}
+const views = ["chat","agents","memory","models","recovery","activity","settings"];
+function setView(name) {
+  views.forEach(view => $(view + "-view").classList.toggle("hidden", view !== name));
+  document.querySelectorAll("[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === name));
+  const labels = {models: "Model workshop", recovery: "Review tasks"};
+  $("page-name").textContent = labels[name] || name[0].toUpperCase() + name.slice(1);
+  $("sidebar").classList.remove("open");
+  if (name === "agents") checkAgentHealth();
+  if (name === "memory") loadMemories();
+}
 function appendMessage(role,text,attribution){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":(attribution || "POCKET AI LAB · MODEL RESPONSE");const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
 function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
 async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}

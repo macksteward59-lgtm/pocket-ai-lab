@@ -20,6 +20,7 @@
       <button class="nav-item" data-view="agents">◎ <span>Agent team</span><span class="nav-soon">PREVIEW</span></button>
       <button class="nav-item" data-view="memory">▤ <span>Memory</span></button>
       <button class="nav-item" data-view="models">◇ <span>Model workshop</span></button>
+      <button class="nav-item" data-view="recovery"><span aria-hidden="true">☑</span> <span>Review tasks</span></button>
       <button class="nav-item" data-view="activity">◷ <span>Activity</span></button>
       <div class="sidebar-spacer"></div>
       <div class="privacy-card"><span class="privacy-dot"></span><div><strong>Local-first mode</strong><small>Your prompts stay on this device when using a local model.</small></div></div>
@@ -68,6 +69,71 @@
         <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
         <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
       </section>
+      <section class="view secondary-view hidden" id="recovery-view">
+        <div class="section-heading">
+          <h1>Review tasks</h1>
+          <p>Save an excerpt from a source, resume the review after a restart, and verify the signed result.</p>
+        </div>
+        <p id="recovery-status" class="status-text" role="status"></p>
+        <form id="recovery-auth" class="memory-form">
+          <h2>Local review account</h2>
+          <label for="recovery-username">Username
+            <input id="recovery-username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="48" required>
+          </label>
+          <label for="recovery-password">Password
+            <input id="recovery-password" type="password" autocomplete="current-password" required>
+          </label>
+          <small>New accounts need a password of at least 12 bytes.</small>
+          <div class="recovery-actions">
+            <button id="recovery-login" class="primary-button" type="submit" value="login">Sign in</button>
+            <button id="recovery-register" class="secondary-button" type="submit" value="register">Create account</button>
+          </div>
+        </form>
+        <button type="button" id="recovery-logout-retry" class="secondary-button" hidden>Retry sign out</button>
+        <div id="recovery-workspace" hidden>
+          <div class="recovery-account"><span>Signed in as <strong id="recovery-owner"></strong></span>
+            <div class="recovery-actions">
+              <button id="recovery-key" class="secondary-button" type="button">Download public key</button>
+              <button id="recovery-logout" class="secondary-button" type="button">Sign out</button>
+            </div>
+          </div>
+          <section aria-labelledby="recovery-list-title">
+            <div class="memory-list-heading"><h2 id="recovery-list-title">Your tasks</h2>
+              <button id="recovery-refresh" class="secondary-button" type="button">Refresh</button>
+            </div>
+            <ul id="recovery-tasks"></ul>
+          </section>
+          <section id="recovery-details" class="memory-form" hidden>
+            <h2 id="recovery-selected-title"></h2>
+            <p id="recovery-state"></p>
+            <details><summary>Source passage</summary><p id="recovery-passage" class="recovery-source-text"></p></details>
+            <div><h3>Excerpt</h3><blockquote id="recovery-excerpt" class="recovery-source-text"></blockquote></div>
+            <button id="recovery-run" class="primary-button" type="button">Resume task</button>
+            <div id="recovery-evidence" hidden>
+              <dl><dt>Attempt ID</dt><dd id="recovery-attempt-id"></dd>
+                <dt>Committed executions</dt><dd id="recovery-execution-count"></dd></dl>
+              <h3>Corrections</h3><ol id="recovery-corrections"></ol>
+              <form id="recovery-correction-form" class="memory-editor">
+                <label for="recovery-note">Add a correction<textarea id="recovery-note" rows="2" maxlength="2048" required></textarea></label>
+                <div><button id="recovery-correct" class="secondary-button" type="submit">Save correction</button></div>
+              </form>
+              <p id="recovery-verdict" role="status"></p>
+              <div class="recovery-actions">
+                <button id="recovery-verify" class="primary-button" type="button">Verify evidence</button>
+                <button id="recovery-export" class="secondary-button" type="button">Download evidence</button>
+              </div>
+            </div>
+          </section>
+          <form id="recovery-create-form" class="memory-form">
+            <h2>Start a source review</h2>
+            <label for="recovery-title">Task title<input id="recovery-title" maxlength="160" required></label>
+            <label for="recovery-source">Source passage<textarea id="recovery-source" maxlength="16384" rows="4" required></textarea></label>
+            <label for="recovery-quote">Exact excerpt<textarea id="recovery-quote" maxlength="4096" rows="2" required></textarea></label>
+            <small>Choose text that occurs once in the passage.</small>
+            <div><button id="recovery-create" class="primary-button" type="submit">Start task</button></div>
+          </form>
+        </div>
+      </section>
       <section class="view secondary-view hidden" id="models-view">
         <div class="section-heading"><h1>Model workshop</h1><p>Choose a base and a teacher. Compare their scores with the model you train.</p></div>
         <div class="memory-form">
@@ -114,5 +180,6 @@
   </div>
   <script src="/app.js" defer></script>
   <script type="module" src="/model-workshop/ui.js"></script>
+  <script type="module" src="/recovery/ui.js"></script>
 </body>
 </html>

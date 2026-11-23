@@ -1,5 +1,6 @@
 import http from "node:http";
 import { hostWorkshop } from "./workshop-runtime.mjs";
+import { recoveryApi } from "./recovery-api.mjs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -193,13 +194,15 @@ function rejectContentType(res) {
 }
 
 async function body(req) {
-  let raw = "";
+  const chunks = [];
+  let bytes = 0;
   for await (const chunk of req) {
-    raw += chunk;
-    if (raw.length > maxBody) throw Object.assign(new Error("Request too large"), { status: 413 });
+    bytes += chunk.length;
+    if (bytes > maxBody) throw Object.assign(new Error("Request too large"), { status: 413 });
+    chunks.push(chunk);
   }
   try {
-    return JSON.parse(raw);
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     throw Object.assign(new Error("Invalid JSON"), { status: 400 });
   }
@@ -239,13 +242,39 @@ function chatFailure(error) {
 export function createServer() {
   const take = createLimiter(rateLimitConfig());
   const workshop = hostWorkshop();
-  return http.createServer(async (req, res) => {
+  const recovery = recoveryApi(root);
+  const takeReview = createLimiter({ windowMs: RATE_WINDOW_MS, account: 20, review: 240 });
+  const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
         if (!localApiAllowed(req)) {
           drain(req);
           return rejectLocal(res);
+        }
+      }
+      if (url.pathname === "/api/recovery") {
+        if (req.method !== "POST") { drain(req); return json(res, 405, { error: "Use POST." }, { allow: "POST" }); }
+        if (!jsonContentType(req)) { drain(req); return rejectContentType(res); }
+        if (req.headers.origin !== undefined && req.headers.origin !== "http://" + req.headers.host) {
+          drain(req);
+          return rejectLocal(res);
+        }
+        const budget = takeReview("review", req);
+        if (!budget.allowed) { drain(req); return rejectLimited(res, budget.retryAfterSeconds); }
+        try {
+          const input = await body(req);
+          if (input?.action === "register" || input?.action === "login") {
+            const account = takeReview("account", req);
+            if (!account.allowed) return rejectLimited(res, account.retryAfterSeconds);
+          }
+          const { data, headers } = await recovery.dispatch(input, req.headers.cookie);
+          return json(res, 200, data, headers);
+        } catch (error) {
+          return json(res, error.status || 503, {
+            error: error.status ? error.message : "The local review store is unavailable.",
+            ...(error.code === "account_changed" ? { code: error.code } : {})
+          });
         }
       }
       if (url.pathname === "/api/model-workshop") {
@@ -555,6 +584,8 @@ export function createServer() {
       return json(res, status, { error: error instanceof Error ? error.message : "Request failed." });
     }
   });
+  server.once("close", () => recovery.close());
+  return server;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
