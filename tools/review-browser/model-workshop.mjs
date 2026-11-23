@@ -66,7 +66,13 @@ for (const engine of [chromium, webkit]) {
       await page.locator("#reader-status").filter({ hasText: /compatible/ }).waitFor();
       await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
       await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-      assert.ok(await page.evaluate(async () => !!await caches.match("/")));
+      const cached = await page.evaluate(async () => {
+        const keys = await caches.keys();
+        const inventory = {};
+        for (const key of keys) inventory[key] = (await (await caches.open(key)).keys()).map(r => r.url);
+        return { inventory, root: !!await caches.match(location.href, { ignoreVary: true }) };
+      });
+      assert.ok(cached.root, JSON.stringify(cached.inventory));
       await browser.close();
       browser = undefined;
       // Physically stop the HTTP server so even a service worker cannot fetch a cache miss.
