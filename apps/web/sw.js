@@ -1,8 +1,9 @@
-const RELEASE = 18;
+const RELEASE = 19;
 const SHELL = [
   "/", "/styles.css", "/app.js",
   "/recovery/ui.js", "/recovery/verify.js",
   "/model-workshop/ui.js", "/model-workshop/host.js", "/model-workshop/catalog.js", "/model-workshop/reader.js", "/model-workshop/edit.js", "/model-workshop/family.js",
+  "/model-workshop/compare.js", "/model-workshop/comparison-example.json",
   "/model-workshop/hard.json", "/model-workshop/soft.json", "/model-workshop/training.json",
   "/model-workshop/evaluation.json", "/manifest.webmanifest", "/icon.svg"
 ];

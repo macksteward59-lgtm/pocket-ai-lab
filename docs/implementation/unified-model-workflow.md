@@ -19,6 +19,26 @@ Choose **Compare candidate** to see the parents’ and child’s scores on the s
 
 This editor supports the versioned, 97-parameter document reader. Dense Llama checkpoints use the separate host training path below. Interpolation pairs corresponding hidden units, whose learned roles may differ. In the bundled example, combining 65% of the soft-label reader with 35% of the hard-label reader scored 15/16. The two parents scored 14/16 and 15/16. Those 16 questions are a fixed regression set.
 
+### Compare the saved child and its parents on your own examples
+
+In **Model workshop → This browser → Use a model**, select a saved child. Enter a question and a passage, one source sentence per line, and choose **Compare with parents**. Each row shows which sentence that reader selected or whether it found insufficient evidence. A typed question has no answer key. An edited child has one parent, and a trained or blended child has two. A starting reader can be evaluated on its own.
+
+For scores, choose a local JSON question set. **Download example question set** provides the same 16 labeled questions used in the repository’s comparison on four additional documents. A set is an array of documents. Each document contains source sentences followed by question and answer pairs. Expected sentences are numbered from zero in the file. Use `-1` when the passage does not supply the answer.
+
+```json
+[
+  {
+    "sentences": ["The meeting starts at noon.", "It takes place in Room 4."],
+    "questions": [
+      ["Where is the meeting?", 1],
+      ["Who is chairing the meeting?", -1]
+    ]
+  }
+]
+```
+
+The results show how many questions each reader answered correctly against your labels. Select a question to inspect each answer, then choose **Use in Chat** on the reader you want. Chat opens with that reader, the question and its passage. You decide when to send. Comparisons run locally and the workshop keeps the question set in memory for the current review. Comparing a set leaves the models and their recorded training scores intact. [Download the example JSON](../../apps/web/model-workshop/comparison-example.json)
+
 ### Move a child and its parents to another browser
 
 In **Model workshop → This browser**, select the child under **Use a model**, then choose **Export model family**. The file contains that reader and the parents and earlier generations it depends on. A common ancestor appears once. You can transfer the JSON file to another browser yourself.

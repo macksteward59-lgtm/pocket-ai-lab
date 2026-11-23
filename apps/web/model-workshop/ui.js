@@ -3,6 +3,7 @@ import { evaluate, readPassage, readWeights, recipe, train } from "./reader.js";
 import { asset, digest, exportReader, importReader, insertFamily, insertReader, modelRecord, openCatalog, savedReaders, sources } from "./catalog.js";
 import { blendReaders, reviewEdit } from "./edit.js";
 import { exportFamily, FAMILY_MAX_BYTES, inspectFamily, trainingBuildId } from "./family.js";
+import { compareReaders, MAX_COMPARISON_BYTES } from "./compare.js";
 
 const field = name => document.getElementById("reader-" + name);
 const status = field("status"), base = field("base"), teacher = field("teacher"), use = field("use");
@@ -18,6 +19,8 @@ const parameterPaths = new Map();
 const workshop = document.getElementById("models-view");
 const familyFile = field("family-file"), familyPreview = field("family-preview");
 let familyDraft, familyGeneration = 0;
+const comparisonFile = field("compare-file"), casePicker = field("compare-case");
+let answerComparison, comparisonGeneration = 0;
 let typedValue = false, validDraft = false;
 const buildMethod = () => hostMode() ? "train" : method.value;
 let editorSeed = null, originalText = "", staleEditor = false;
@@ -34,6 +37,7 @@ function runOrigin(run, parentName = ref => ref.label) {
 }
 
 function updateOrigin() {
+  clearAnswerComparison();
   const entry = catalog().get(use.value);
   const fromFamily = entry?.importedFamily && entry.run;
   field("origin").textContent = entry?.run
@@ -56,6 +60,7 @@ function listReaders() {
   updateOrigin();
 }
 function invalidate() {
+  clearAnswerComparison();
   pending = undefined;
   field("save").disabled = true;
   field("edit-summary").hidden = true;
@@ -187,6 +192,7 @@ function busy(active) {
   for (const node of [use, field("answer"), field("chat")]) node.disabled = active || !catalog().size;
   field("import").disabled = active || !db || hostMode();
   field("export").disabled = active || !models.size || hostMode();
+  field("compare-parents").disabled = comparisonFile.disabled = active || !models.size || hostMode();
   familyFile.disabled = field("import").disabled;
   field("family-export").disabled = field("export").disabled;
   field("family-confirm").disabled = active || !familyDraft || hostMode();
@@ -199,6 +205,7 @@ async function refreshMode() {
   const host = hostMode();
   field("import-group").hidden = host;
   field("family-group").hidden = field("family-export").hidden = host;
+  field("compare-panel").hidden = field("compare-parents").hidden = host;
   field("source-label").hidden = host;
   field("sentences").disabled = host;
   field("export").hidden = host;
@@ -344,9 +351,13 @@ for (const type of ["input", "change", "submit", "click"]) {
   }, true);
 }
 new MutationObserver(() => {
-  if (workshop.classList.contains("hidden")) clearFamilyPreview();
+  if (workshop.classList.contains("hidden")) {
+    clearFamilyPreview();
+    clearAnswerComparison();
+  }
 }).observe(workshop, { attributes: true, attributeFilter: ["class"] });
 window.addEventListener("pagehide", clearFamilyPreview);
+window.addEventListener("pagehide", clearAnswerComparison);
 
 function showFamilyPreview(family, local) {
   const names = new Map(family.records.map(record => [record.id, record.name]));
@@ -580,8 +591,7 @@ field("try").addEventListener("submit", async event => {
   } catch (error) { field("output").textContent = error.message; }
   finally { busy(false); }
 });
-field("chat").addEventListener("click", () => {
-  const record = catalog().get(use.value);
+function openModelChat(record, question, passage) {
   if (record.location === "host") {
     selectChatReader({
       name: record.name, label: label(record), id: record.id, hash: record.hash, location: "host", parents: record.parents,
@@ -590,7 +600,7 @@ field("chat").addEventListener("click", () => {
         const sourceHash = await digest(new TextEncoder().encode(question.trim()));
         return { question, answer: result.answer, sourceHash };
       }
-    }, field("question").value);
+    }, question);
     return;
   }
   const reader = {
@@ -602,7 +612,131 @@ field("chat").addEventListener("click", () => {
       return { question: result.question, answer: result.answer, index: result.index, sourceHash };
     }
   };
-  selectChatReader(reader, field("question").value, field("sentences").value);
+  selectChatReader(reader, question, passage);
+}
+field("chat").addEventListener("click", () => {
+  openModelChat(catalog().get(use.value), field("question").value, field("sentences").value);
+});
+
+function clearAnswerComparison() {
+  comparisonGeneration++;
+  answerComparison = undefined;
+  comparisonFile.value = "";
+  field("compare-status").textContent = "";
+  field("compare-results").hidden = true;
+  field("compare-passage").open = false;
+  field("compare-question").textContent = field("compare-expected").textContent = "";
+  for (const node of [casePicker, field("compare-scores"), field("compare-source"), field("compare-outputs")]) {
+    node.replaceChildren();
+  }
+}
+
+function modelHeading(model) {
+  return model.role + " · " + model.name + " (" + model.id.replace(/^build-/, "").slice(0, 12) + ")";
+}
+
+function showComparisonCase() {
+  const snapshot = answerComparison;
+  const entry = snapshot?.cases[casePicker.selectedIndex];
+  if (!entry) return;
+  field("compare-question").textContent = entry.question;
+  field("compare-source").replaceChildren(...entry.sentences.map(sentence => {
+    const line = document.createElement("li");
+    line.textContent = sentence;
+    return line;
+  }));
+  field("compare-expected").textContent = entry.expected === null ? "Ungraded"
+    : entry.expected === -1 ? "Expected abstention" : "Expected sentence " + (entry.expected + 1) + " · " + entry.sentences[entry.expected];
+  field("compare-outputs").replaceChildren(...entry.results.map((result, index) => {
+    const model = snapshot.models[index];
+    const item = document.createElement("li");
+    item.dataset.modelId = result.id;
+    const heading = document.createElement("strong");
+    heading.textContent = modelHeading(model);
+    const answer = document.createElement("p");
+    answer.className = "reader-compare-answer";
+    answer.textContent = (result.index === -1 ? "Abstained" : "Sentence " + (result.index + 1)) + " · " + result.answer;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = "Use in Chat";
+    button.addEventListener("click", () => {
+      if (answerComparison !== snapshot || snapshot.cases[casePicker.selectedIndex] !== entry) return;
+      const prompt = document.getElementById("prompt"), passage = document.getElementById("chat-reader-source").value;
+      const wouldReplace = (prompt.value && prompt.value !== entry.question) || (passage && passage !== entry.passage);
+      if (wouldReplace && !window.confirm("Replace the current Chat draft with this question and passage?")) return;
+      prompt.value = entry.question;
+      openModelChat(models.get(result.id), entry.question, entry.passage);
+    });
+    item.append(heading, answer, button);
+    return item;
+  }));
+}
+
+async function compareAnswers(file) {
+  clearAnswerComparison();
+  const request = comparisonGeneration;
+  const root = use.value;
+  field("compare-status").textContent = "Comparing reader answers…";
+  try {
+    let documents, typedPassage;
+    if (file) {
+      if (file.size > MAX_COMPARISON_BYTES) throw Error("Choose a question set no larger than 128 KiB.");
+      try { documents = JSON.parse(await file.text()); }
+      catch { throw Error("Choose a readable question set in JSON format."); }
+      if (request !== comparisonGeneration) return;
+      if (Array.isArray(documents) && documents.some(doc => Array.isArray(doc?.questions) &&
+          doc.questions.some(pair => Array.isArray(pair) && pair[1] === null))) {
+        throw Error("Each file question needs an expected sentence index or -1 for abstention.");
+      }
+    } else {
+      typedPassage = field("sentences").value;
+      if (typedPassage.length > 6000) throw Error("Use a passage of up to 6,000 characters.");
+      documents = [{
+        sentences: typedPassage.split(/\r?\n/).filter(line => line.trim()),
+        questions: [[field("question").value, null]]
+      }];
+    }
+    const comparison = await compareReaders(root, models, documents);
+    if (request !== comparisonGeneration || hostMode() || use.value !== root) return;
+    if (!file) comparison.cases[0].passage = typedPassage;
+    answerComparison = comparison;
+    field("compare-score-group").hidden = !file;
+    if (file) {
+      field("compare-scores").replaceChildren(...comparison.models.map(model => {
+        const line = document.createElement("li");
+        line.dataset.modelId = model.id;
+        line.textContent = modelHeading(model) + " · " + model.correct + "/" + model.total + " correct";
+        return line;
+      }));
+    }
+    casePicker.replaceChildren(...comparison.cases.map((entry, i) => new Option((i + 1) + ". " + entry.question, String(i))));
+    field("compare-case-group").hidden = comparison.cases.length === 1;
+    showComparisonCase();
+    field("compare-results").hidden = false;
+    field("compare-status").textContent = comparison.models.length === 1 ? "This reader has no recorded parents."
+      : "Compared the selected reader with its recorded parents.";
+  } catch (error) {
+    if (request === comparisonGeneration) {
+      clearAnswerComparison();
+      field("compare-status").textContent = error.message;
+    }
+  }
+}
+
+for (const input of [field("question"), field("sentences"), use]) {
+  input.addEventListener("input", clearAnswerComparison);
+  input.addEventListener("change", clearAnswerComparison);
+}
+casePicker.addEventListener("change", showComparisonCase);
+comparisonFile.addEventListener("click", clearAnswerComparison);
+comparisonFile.addEventListener("change", () => {
+  const file = comparisonFile.files[0];
+  if (file && !comparisonFile.disabled && !hostMode()) compareAnswers(file);
+  else clearAnswerComparison();
+});
+field("compare-parents").addEventListener("click", () => {
+  if (!field("compare-parents").disabled && !hostMode()) compareAnswers();
 });
 function downloadJson(contents, filename) {
   const url = URL.createObjectURL(new Blob([contents], { type: "application/json" }));

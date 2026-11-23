@@ -40,6 +40,13 @@ export function blendReaders(left, right, rightPercent) {
   });
 }
 
+// Display names are not identity. Equal weights from differently derived parents retain their own lineage.
+export async function editBuildId(run, weightHash) {
+  const key = [run.recipe, run.base.id, run.base.hash, run.second?.id ?? null, run.second?.hash ?? null,
+    run.second ? run.rightPercent : null, run.evaluation, weightHash];
+  return "build-" + await sha256(JSON.stringify(key));
+}
+
 async function readParent(entry) {
   if (typeof entry?.id !== "string" || !entry.id.trim() || typeof entry.name !== "string" || !entry.name.trim()) {
     throw Error("Choose a saved reader with a model identity and name.");
@@ -96,8 +103,5 @@ export async function reviewEdit({ base, second, rightPercent, weights, name, ev
     ...(right ? { second: right.ref, rightPercent } : {}),
     editedParameters, evaluation: corpusHash, scores,
   };
-  // Names are display metadata. Equal weights from differently derived parents retain their own lineage.
-  const buildKey = [run.recipe, left.ref.id, left.ref.hash, right?.ref.id ?? null, right?.ref.hash ?? null,
-    right ? rightPercent : null, corpusHash, candidate.hash];
-  return { ...candidate, id: "build-" + await sha256(JSON.stringify(buildKey)), run };
+  return { ...candidate, id: await editBuildId(run, candidate.hash), run };
 }

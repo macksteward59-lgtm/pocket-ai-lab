@@ -220,12 +220,31 @@
           <label id="reader-source-label">Source sentences, one per line<textarea id="reader-sentences" required maxlength="6000" rows="3"></textarea></label>
           <div class="memory-actions">
             <button class="primary-button" id="reader-answer" type="submit" disabled>Find evidence</button>
+            <button class="secondary-button" id="reader-compare-parents" type="button" disabled>Compare with parents</button>
             <button class="secondary-button" id="reader-chat" type="button" disabled>Use in Chat</button>
             <button class="secondary-button" id="reader-export" type="button" disabled>Export weights</button>
             <button class="secondary-button" id="reader-family-export" type="button" disabled>Export model family</button>
           </div>
           <p id="reader-output" role="status"></p>
         </form>
+        <section id="reader-compare-panel" class="memory-form" aria-label="Compare reader answers">
+          <label for="reader-compare-file">Compare a labeled question set<input id="reader-compare-file" type="file" accept=".json,application/json" aria-describedby="reader-compare-help" disabled></label>
+          <small id="reader-compare-help">Choose a JSON file up to 128 KiB with up to 64 questions. The comparison runs in this browser.</small>
+          <a href="/model-workshop/comparison-example.json" download="pocket-reader-questions.json">Download example question set</a>
+          <details><summary>Question set format</summary>
+            <p>Each question names its expected sentence by index. The first sentence is 0. Use -1 for a question the reader should abstain from answering.</p>
+            <code>[{"sentences":["Ada lives in Oslo."],"questions":[["Where does Ada live?",0],["How old is Ada?",-1]]}]</code>
+          </details>
+          <p id="reader-compare-status" role="status"></p>
+          <section id="reader-compare-results" aria-label="Comparison results" hidden>
+            <div id="reader-compare-score-group" hidden><h3>Scores on this question set</h3><ul id="reader-compare-scores"></ul></div>
+            <label id="reader-compare-case-group">Question<select id="reader-compare-case"></select></label>
+            <h3 id="reader-compare-question"></h3>
+            <details id="reader-compare-passage"><summary>Source sentences</summary><ol id="reader-compare-source"></ol></details>
+            <p id="reader-compare-expected"></p>
+            <ul id="reader-compare-outputs"></ul>
+          </section>
+        </section>
       </section>
       <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
     </main>

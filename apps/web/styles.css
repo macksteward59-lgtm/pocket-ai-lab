@@ -58,6 +58,17 @@
 #reader-family-preview { overflow-wrap: anywhere; }
 #reader-family-members { padding-inline-start: 1.5em; }
 #reader-try .memory-actions { flex-wrap: wrap; }
+#reader-compare-panel { min-width: 0; overflow-wrap: anywhere; }
+#reader-compare-panel a { color: var(--accent); }
+#reader-compare-panel summary { cursor: pointer; }
+#reader-compare-panel code { white-space: pre-wrap; }
+#reader-compare-results { display: grid; gap: 10px; min-width: 0; }
+#reader-compare-results h3, #reader-compare-results ul, #reader-compare-results p { margin: 0; }
+#reader-compare-case-group, #reader-compare-case { min-width: 0; max-width: 100%; }
+#reader-compare-outputs { list-style: none; padding: 0; }
+#reader-compare-outputs li { padding: 12px 0; border-top: 1px solid var(--line); }
+#reader-compare-outputs .reader-compare-answer { margin: 6px 0 10px; }
+#reader-compare-status:empty { display: none; }
 @media (max-width: 760px) {
   #reader-parameter, #reader-value, #reader-editor { font-size: 16px; }
 }
