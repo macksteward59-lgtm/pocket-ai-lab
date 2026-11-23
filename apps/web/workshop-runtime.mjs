@@ -8,9 +8,22 @@ const validId = value => typeof value === "string" && /^[a-zA-Z0-9_:-]{1,96}$/.t
 
 function requestFor(input) {
   if (input?.op === "list") return { op: "list" };
+  const progress = {};
+  if (input && (input.op === "build" || input.op === "resume") && Object.hasOwn(input, "throughStep")) {
+    if (!Number.isInteger(input.throughStep) || input.throughStep < 1 || input.throughStep > 24) {
+      throw failure(400, "Choose a training step from 1 through 24.");
+    }
+    progress.throughStep = input.throughStep;
+  }
   if (input?.op === "build" && validId(input.base) && validId(input.teacher) && input.base !== input.teacher &&
       typeof input.name === "string" && input.name.trim() && input.name.trim().length <= 64) {
-    return { op: "build", base: input.base, teacher: input.teacher, name: input.name.trim() };
+    return { op: "build", base: input.base, teacher: input.teacher, name: input.name.trim(), ...progress };
+  }
+  if (input?.op === "resume") {
+    if (typeof input.draft !== "string" || !/^candidate-[0-9a-f]{64}$/.test(input.draft)) {
+      throw failure(400, "Select a saved training run.");
+    }
+    return { op: "resume", draft: input.draft, ...progress };
   }
   if (input?.op === "answer" && validId(input.model) && typeof input.question === "string" &&
       input.question.trim() && input.question.length <= 2000) {
@@ -38,13 +51,13 @@ export function hostWorkshop() {
     try {
       const result = await new Promise((resolve, reject) => {
         const child = execFile("python3", ["-B", worker], {
-          env, timeout: request.op === "build" ? 1_800_000 : 90_000, killSignal: "SIGKILL", maxBuffer: request.op === "list" ? 262144 : 65536
+          env, timeout: ["build", "resume"].includes(request.op) ? 1_800_000 : 90_000, killSignal: "SIGKILL", maxBuffer: request.op === "list" ? 262144 : 65536
         }, (error, stdout) => {
           let reply;
           try { reply = JSON.parse(stdout); } catch { /* Handle startup failures and timeouts below. */ }
           if (typeof reply?.error === "string") return reject(failure(422, reply.error.slice(0, 300)));
           if (error || !reply) return reject(failure(503, error?.killed
-            ? "Local training host timed out. Refresh to check saved candidates."
+            ? "Local training host timed out. Refresh to check saved runs and candidates."
             : "The local training worker is unavailable. Check its Python environment."));
           resolve(reply);
         });

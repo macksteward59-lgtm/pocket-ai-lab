@@ -7,10 +7,10 @@ import math
 import os
 from pathlib import Path
 import re
-import shutil
 import stat
 import sys
-import tempfile
+
+import checkpoint
 
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -19,6 +19,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from train import evaluate
 
 RECIPE = "document-verification-lora-v1"
+TOTAL_STEPS = 24
+CHECKPOINT_INTERVAL = 4
+LORA = dict(r=4, lora_alpha=8, target_modules=["q_proj", "v_proj"], lora_dropout=0.0, bias="none", task_type="CAUSAL_LM")
+LEARNING_RATE = 0.003
 FILES = {"config.json": 65536, "tokenizer.json": 16 << 20, "model.safetensors": 720 << 20}
 # Independently keyed synthetic records. Accuracy is constrained yes/no next-token accuracy.
 TRAIN = (("north", "open", True), ("west", "closed", False), ("east", "open", True),
@@ -258,10 +262,119 @@ def build_id(recipe, versions, parents, name):
     return "candidate-" + hash_json([recipe, versions, parents, TRAIN, HOLDOUT, name])
 
 
+def through_step(request):
+    target = request.get("throughStep", TOTAL_STEPS)
+    if type(target) is not int or not 1 <= target <= TOTAL_STEPS:
+        raise Invalid("Choose a training stop between step 1 and 24.")
+    return target
+
+
+def draft_summary(manifest):
+    return {key: manifest[key] for key in ("id", "name", "parents", "completedSteps", "totalSteps")}
+
+
+def checkpoint_binding(ident, name, base, teacher, versions):
+    return dict(format=1, id=ident, name=name, parents={"base":base["id"], "teacher":teacher["id"]},
+                parentArtifacts={"base":base["artifactSHA256"], "teacher":teacher["artifactSHA256"]},
+                recipe=RECIPE, runtimeVersions=versions, trainingSHA256=hash_json(TRAIN),
+                evaluationSHA256=hash_json(HOLDOUT), totalSteps=TOTAL_STEPS,
+                optimizer="AdamW", learningRate=LEARNING_RATE, lora=LORA)
+
+
+def checked_draft(path, records, versions=None, with_state=False):
+    try:
+        manifest, tensors = checkpoint.read(path, with_state)
+    except checkpoint.InvalidCheckpoint as exc:
+        raise Invalid(str(exc)) from exc
+    try:
+        name = check_name(manifest["name"])
+        parents = manifest["parents"]
+        base = find_record(records, parents["base"])[0]
+        teacher = find_record(records, parents["teacher"])[0]
+        runtime = manifest["runtimeVersions"]
+        ident = build_id(RECIPE, runtime, parents, name)
+        expected = checkpoint_binding(ident, name, base, teacher, runtime)
+        if (not isinstance(runtime, list) or len(runtime) != 4
+                or not all(isinstance(v, str) and 0 < len(v) <= 128 for v in runtime)
+                or path.name != ident + ".safetensors"
+                or set(manifest) != set(expected) | {"completedSteps", "teacherSignalSHA256"}
+                or any(manifest[key] != value for key, value in expected.items())
+                or type(manifest["completedSteps"]) is not int or not 1 <= manifest["completedSteps"] <= TOTAL_STEPS
+                or not re.fullmatch(r"[0-9a-f]{64}", manifest["teacherSignalSHA256"])):
+            raise ValueError("incompatible manifest")
+        if versions is not None and versions != runtime:
+            raise Invalid("The checkpoint requires its original CPU training runtime versions.")
+        return manifest, tensors
+    except (KeyError, TypeError, ValueError, RecursionError) as exc:
+        if isinstance(exc, Invalid):
+            raise
+        raise Invalid("The checkpoint does not match its parents or training recipe.") from exc
+
+
+def pending_files(directory):
+    files = []
+    for path in directory.iterdir():
+        if re.fullmatch(r"candidate-[0-9a-f]{64}\.safetensors", path.name):
+            files.append(path)
+            if len(files) > checkpoint.MAX_DRAFTS:
+                raise Invalid("The training workspace exceeds its draft limit.")
+    return files
+
+
+def list_drafts(root, records):
+    if not os.path.lexists(root / "drafts"):
+        return []
+    drafts = []
+    for path in sorted(pending_files(parent_directory(root, "drafts"))):
+        if path.stem in records:  # A process may have died after publishing a complete candidate.
+            checkpoint.remove(path)
+            continue
+        try:
+            manifest, _ = checked_draft(path, records)
+            drafts.append(draft_summary(manifest))
+        except (Invalid, checkpoint.InvalidCheckpoint):
+            continue
+    return drafts
+
+
+def clear_publication_stage(stage):
+    # This slot is underneath the worker-marked directory. Unexpected content
+    # requires operator attention; never recursively delete a shared location.
+    if not os.path.lexists(stage):
+        return
+    if stage.is_symlink() or not stage.is_dir():
+        raise Invalid("The worker publication slot contains an unexpected entry.")
+    files = list(stage.iterdir())
+    if any(entry.name not in (*FILES, "workshop.json") or not stat.S_ISREG(entry.lstat().st_mode)
+           for entry in files):
+        raise Invalid("The worker publication slot contains unrecognized files.")
+    for file in files:
+        file.unlink()
+    stage.rmdir()
+
+
+def publication_stage(target):
+    owned = parent_directory(target, ".workshop-publish-v1", create=True)
+    marker = owned / ".owned-by-model-workshop"
+    if not os.path.lexists(marker):
+        if any(owned.iterdir()):
+            raise Invalid("The worker publication directory is already occupied.")
+        with marker.open("xb"):
+            pass
+    if not stat.S_ISREG(marker.lstat().st_mode) or marker.stat().st_size != 0:
+        raise Invalid("The worker publication directory has an invalid ownership marker.")
+    stage = owned / "stage"
+    clear_publication_stage(stage)
+    stage.mkdir(mode=0o700)
+    checkpoint.fsync_dir(owned)
+    return stage
+
+
 def build(root, records, request, versions):
     import torch
     from peft import get_peft_model, LoraConfig
     from safetensors.torch import save_file
+    stop = through_step(request)
     base_record = find_record(records, request.get("base"))
     teacher_record = find_record(records, request.get("teacher"))
     base, teacher = base_record[0], teacher_record[0]
@@ -272,11 +385,30 @@ def build(root, records, request, versions):
     ident = build_id(RECIPE, versions, parents, name)
     if ident in records:
         return load_report(records[ident][1])
-    if len(records) >= 128:
-        raise Invalid("The local catalog is full. Archive a model before starting another build.")
     target = parent_directory(root, "candidates", create=True)
     if (target / ident).exists():
         raise Invalid("The existing candidate failed its integrity check.")
+    draft_dir = parent_directory(root, "drafts", create=True)
+    checkpoint.fsync_dir(root)
+    draft_path = draft_dir / (ident + ".safetensors")
+    start = 0
+    saved_state = None
+    binding = checkpoint_binding(ident, name, base, teacher, versions)
+    reserved = set()
+    for path in pending_files(draft_dir):
+        if path.stem in records:
+            checkpoint.remove(path)
+        else:
+            reserved.add(path.stem)
+    if ident not in reserved and len(records) + len(reserved) >= 128:
+        raise Invalid("The catalog slots are occupied or reserved for pending drafts. Archive a model before building.")
+    if len(records) >= 128:
+        raise Invalid("The local catalog is full. Archive a model to finish this draft.")
+    if os.path.lexists(draft_path):
+        previous, saved_state = checked_draft(draft_path, records, versions, with_state=True)
+        start = previous["completedSteps"]
+    elif len(reserved) >= checkpoint.MAX_DRAFTS:
+        raise Invalid("Finish or archive an existing draft before starting another training run.")
     teacher_net, teacher_tok, _ = load_model(teacher_record)
     verified = []
     with torch.no_grad():
@@ -288,24 +420,39 @@ def build(root, records, request, versions):
     if {row[2] for row, _ in verified} != {True, False}:
         raise Invalid("The teacher must produce confident, correct examples for both document labels.")
     del teacher_net
+    binding["teacherSignalSHA256"] = hash_json([(row, prob.tolist()) for row, prob in verified])
+    if saved_state is not None and previous["teacherSignalSHA256"] != binding["teacherSignalSHA256"]:
+        raise Invalid("The teacher signal differs from the saved checkpoint.")
     base_net, base_tok, data = load_model(base_record)
     initial_targets = adapter_target_digest(base_net)
     scores = {"base": grade(base_net, base_tok), "teacher": teacher_score}
-    lora = get_peft_model(base_net, LoraConfig(r=4, lora_alpha=8, target_modules=["q_proj", "v_proj"],
-                                               lora_dropout=0.0, bias="none", task_type="CAUSAL_LM"))
+    lora = get_peft_model(base_net, LoraConfig(**LORA))
     lora.train()
-    optimizer = torch.optim.AdamW((p for p in lora.parameters() if p.requires_grad), lr=0.003)
-    for step in range(24):
+    optimizer = torch.optim.AdamW((p for p in lora.parameters() if p.requires_grad), lr=LEARNING_RATE)
+    if saved_state is not None:
+        try:
+            checkpoint.restore(saved_state, lora, optimizer, start)
+        except checkpoint.InvalidCheckpoint as exc:
+            raise Invalid(str(exc)) from exc
+    if start >= stop and stop < TOTAL_STEPS:
+        return {"draft": draft_summary(previous)}
+    for step in range(start, stop):
         row, soft_target = verified[step % len(verified)]
         scores2 = logits(lora, base_tok, prompt(row)).log_softmax(0)
         loss = -(soft_target * scores2).sum()
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        done = step + 1
+        if done % CHECKPOINT_INTERVAL == 0 or done == stop:
+            manifest = {**binding, "completedSteps": done}
+            checkpoint.save(draft_path, manifest, lora, optimizer)
+    if stop < TOTAL_STEPS:
+        return {"draft": draft_summary(manifest)}
     model = lora.merge_and_unload(safe_merge=True).eval()
     if adapter_target_digest(model) == initial_targets:
         raise Invalid("The teacher signal produced no change to the base weights.")
-    stage = Path(tempfile.mkdtemp(prefix=".stage-", dir=target))
+    stage = publication_stage(target)
     try:
         for file, raw in data.items():
             (stage / file).write_bytes(raw)
@@ -319,13 +466,20 @@ def build(root, records, request, versions):
         frozen, tok, _ = load_model((item, stage))
         scores["candidate"] = grade(frozen, tok)
         report = dict(candidate=item, scores=scores, verifiedExamples=len(verified), trainingExamples=len(TRAIN),
-                      recipe=RECIPE, steps=24, comparison="constrained yes/no", runtimeVersions=versions,
+                      recipe=RECIPE, steps=TOTAL_STEPS, comparison="constrained yes/no", runtimeVersions=versions,
                       trainingSHA256=hash_json(TRAIN), evaluationSHA256=hash_json(HOLDOUT))
         (stage / "workshop.json").write_text(json.dumps(report, allow_nan=False))
+        for file in stage.iterdir():
+            with file.open("rb") as handle:
+                os.fsync(handle.fileno())
+        checkpoint.fsync_dir(stage)
         stage.rename(target / ident)
+        checkpoint.fsync_dir(stage.parent)
+        checkpoint.fsync_dir(target)
+        checkpoint.remove(draft_path)
         return report
     finally:
-        shutil.rmtree(stage, ignore_errors=True)
+        clear_publication_stage(stage)
 
 
 def run(request):
@@ -342,8 +496,26 @@ def run(request):
         records = catalog(root)
         operation = request.get("op")
         if operation == "list":
-            return {"models": [item for item, _ in records.values()]}
+            reply = {"models": [item for item, _ in records.values()]}
+            drafts = list_drafts(root, records)
+            if drafts:
+                reply["drafts"] = drafts
+            return reply
         versions = dependencies()
+        if operation == "resume":
+            stop = through_step(request)
+            ident = request.get("draft")
+            if not isinstance(ident, str) or not re.fullmatch(r"candidate-[0-9a-f]{64}", ident):
+                raise Invalid("Choose a saved training draft.")
+            if ident in records:
+                return load_report(records[ident][1])
+            if not os.path.lexists(root / "drafts"):
+                raise Invalid("The selected training draft is unavailable.")
+            path = parent_directory(root, "drafts") / (ident + ".safetensors")
+            if not os.path.lexists(path):
+                raise Invalid("The selected training draft is unavailable.")
+            manifest, _ = checked_draft(path, records, versions)
+            return build(root, records, {**manifest["parents"], "name": manifest["name"], "throughStep": stop}, versions)
         if operation == "build":
             return build(root, records, request, versions)
         if operation == "answer":
@@ -370,7 +542,7 @@ def main():
         request = json.loads(raw)
         with contextlib.redirect_stdout(sys.stderr):
             reply = run(request)
-    except Invalid as exc:
+    except (Invalid, checkpoint.InvalidCheckpoint) as exc:
         reply = {"error": str(exc)}
     except Exception:
         reply = {"error": "The CPU worker could not read or process this local checkpoint."}

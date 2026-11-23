@@ -51,6 +51,7 @@
 #composer.reader-mode .privacy-hint,#composer.reader-mode #model-pill{display:none}
 
 #models-view [hidden],#chat-reader-context[hidden],#chat-reader-context [hidden]{display:none}
+#models-view { overflow-y: auto; overscroll-behavior: contain; }
 
 #recovery-view { overflow-y: auto; overscroll-behavior: contain; }
 #recovery-view [hidden] { display: none; }

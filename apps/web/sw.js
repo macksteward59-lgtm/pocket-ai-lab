@@ -1,4 +1,4 @@
-const RELEASE = 14;
+const RELEASE = 15;
 const SHELL = [
   "/", "/styles.css", "/app.js",
   "/recovery/ui.js", "/recovery/verify.js",
