@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { createPublicKey, randomUUID, verify } from "node:crypto";
+import { createHash, createPublicKey, randomUUID, verify } from "node:crypto";
 import { once } from "node:events";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -87,6 +87,13 @@ async function reviewFromChat(page) {
   const child = await page.locator("#reader-use").inputValue();
   assert.notEqual(child, base);
   assert.notEqual(child, teacher);
+  const download = page.waitForEvent("download");
+  await page.locator("#reader-export").click();
+  const { workshop, ...weights } = JSON.parse(await readFile(await (await download).path(), "utf8"));
+  const childHash = createHash("sha256").update(JSON.stringify(weights)).digest("hex");
+  assert.equal(childHash, workshop.weightsSHA256);
+  assert.equal(workshop.run.base.id, base);
+  assert.equal(workshop.run.teacher.id, teacher);
   await page.locator("#reader-question").fill(question);
   await page.locator("#reader-sentences").fill(source);
   await page.locator("#reader-chat").click();
@@ -106,7 +113,7 @@ async function reviewFromChat(page) {
   assert.equal(list.status, 200);
   assert.deepEqual(list.body.tasks, [], "opening a review draft must not create the task");
   await page.locator("#recovery-title").fill(title);
-  return { base, teacher, child };
+  return { modelIds: { base, teacher, child }, weightHashes: { base: workshop.run.base.hash, teacher: workshop.run.teacher.hash, child: childHash } };
 }
 
 // Use the browser's own session cookie and origin on every request, just as the UI does.
@@ -185,7 +192,7 @@ for (const engine of [chromium, webkit]) {
       const original = await browser.newContext(mobile);
       const first = await original.newPage();
       await signIn(first, url, "review-owner", "register");
-      const readerWeights = await reviewFromChat(first);
+      const reader = await reviewFromChat(first);
       await first.locator("#recovery-create").click();
       await first.locator("#recovery-run:enabled").waitFor();
       const id = await first.locator("#recovery-details").getAttribute("data-task-id");
@@ -312,7 +319,7 @@ for (const engine of [chromium, webkit]) {
         await saveAcceptance(engine.name(), browser.version(), corrected, key.body.key, {
           restarts, successfulRunReplyLost: true, concurrentRetries: retries.length,
           executionRows: attempts.length, crossAccount, peerSignOutClearedPrivateView: true,
-          readerWeights, readerDraftOpenedBeforeTaskCreation: true
+          reader, readerDraftOpenedBeforeTaskCreation: true
         });
       } finally { db.close(); }
       t.diagnostic("Three host restarts; one committed execution; two run retries; three cross-account denials; signed correction recovered.");
