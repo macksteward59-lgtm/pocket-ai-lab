@@ -77,7 +77,8 @@ function selectChatReader(reader, question, passage) {
   $("composer").classList.toggle("reader-mode", Boolean(reader));
   $("chat-reader-context").hidden = !reader;
   const host = reader?.location === "host";
-  $("chat-reader-label").textContent = reader ? reader.label + (host ? " · local training host" : " · local document reader") : "";
+  $("chat-reader-label").textContent = reader ? reader.label + (host ? " · local training host" : " · local document reader") +
+    (reader.importedFamily ? " · imported model family" : "") : "";
   $("chat-source-label").hidden = host;
   $("chat-reader-source").hidden = host;
   $("chat-reader-status").textContent = "";
@@ -97,7 +98,11 @@ function readerLineage(reader) {
   function parent(role, ref) {
     return role + ": " + ref.label + "\n" + role + " ID: " + ref.id + "\n" + role + " weights: " + ref.hash;
   }
-  const lines = [parent("Base", run.base)];
+  const lines = [];
+  if (reader.importedFamily) {
+    lines.push("Imported model family. The file declares the " + run.recipe + " recipe and these parents. Historical training and authorship are unverified.");
+  }
+  lines.push(parent("Base", run.base));
   if (run.teacher) lines.push(parent("Teacher", run.teacher));
   if (run.second) lines.push(parent("Second", run.second), "Second model share: " + run.rightPercent + "%");
   if (Number.isInteger(run.editedParameters)) lines.push("Manually changed parameters: " + run.editedParameters);
@@ -179,7 +184,7 @@ async function sendReaderMessage(text, reader) {
     if ($("prompt").value === text) $("prompt").value = "";
     const output = appendMessage("assistant", result.answer, reader.label + (reader.location === "host" ? " · LOCAL TRAINING HOST" : " · LOCAL DOCUMENT READER"));
     offerReaderMemory(output, reader, result);
-    if (Number.isInteger(reader.run?.editedParameters)) {
+    if (reader.importedFamily || Number.isInteger(reader.run?.editedParameters)) {
       const lineage = memoryElement("details", "reader-lineage");
       lineage.append(memoryElement("summary", "", "Parent models"), memoryElement("p", "", readerLineage(reader)));
       output.after(lineage);

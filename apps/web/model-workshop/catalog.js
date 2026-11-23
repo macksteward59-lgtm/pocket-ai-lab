@@ -87,3 +87,79 @@ export function insertReader(db, record) {
     transaction.onabort = () => reject(Error("Could not save the reader in this browser. Check available storage."));
   });
 }
+
+const parentRoles = ["base", "teacher", "second"];
+
+function runIdentity(run) {
+  if (run == null) return null;
+  // The recipe and ancestry identify a build. These measurements can vary by engine.
+  const { scores, verifiedPairs, ...identity } = run;
+  for (const role of parentRoles) {
+    if (identity[role]) {
+      const { label, ...reference } = identity[role];
+      identity[role] = reference;
+    }
+  }
+  return identity;
+}
+
+function matchesFamilyRecord(local, imported) {
+  return local.id === imported.id && local.hash === imported.hash &&
+    sameJson(local.weights, imported.weights) && sameJson(runIdentity(local.run), runIdentity(imported.run));
+}
+
+// inspectFamily supplies the verified ancestry in parent-first order.
+export function insertFamily(db, records, bundledReaders = []) {
+  return new Promise((resolve, reject) => {
+    const incoming = structuredClone(records);
+    const bundled = new Map(bundledReaders.map(reader => [reader.id, reader]));
+    const resolved = new Map();
+    const result = { added: 0, existing: 0 };
+    const tx = db.transaction("readers", "readwrite");
+    const store = tx.objectStore("readers");
+    let index = 0, failure;
+    tx.oncomplete = () => resolve(result);
+    tx.onabort = () => reject(failure ?? Error("Could not save the reader family in this browser. Check available storage."));
+
+    // Issue each new request from an active request callback. The same lock covers
+    // the final conflict check and all writes, including concurrent imports in other tabs.
+    function next() {
+      if (index === incoming.length) return;
+      const record = incoming[index++];
+      const lookup = store.get(record.id);
+      lookup.onsuccess = () => {
+        try {
+          const stored = lookup.result;
+          const builtin = bundled.get(record.id);
+          for (const local of [stored, builtin]) {
+            if (local !== undefined && !matchesFamilyRecord(local, record)) {
+              throw Error("Reader family conflicts with an existing catalog entry.");
+            }
+          }
+          const local = stored ?? builtin;
+          if (local) {
+            resolved.set(record.id, local);
+            result.existing++;
+          } else {
+            if (record.run) record.importedFamily = true;
+            for (const role of parentRoles) {
+              const ref = record.run?.[role];
+              if (!ref) continue;
+              const parent = resolved.get(ref.id);
+              if (!parent || parent.hash !== ref.hash) throw Error("Reader family contains an unresolved parent.");
+              ref.label = parent.name + " · " + parent.hash.slice(0, 8);
+            }
+            store.add(record);
+            resolved.set(record.id, record);
+            result.added++;
+          }
+          next();
+        } catch (error) {
+          failure = error;
+          tx.abort();
+        }
+      };
+    }
+    next();
+  });
+}

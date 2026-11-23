@@ -1,7 +1,8 @@
 import { hostRequest, hostModel } from "./host.js";
 import { evaluate, readPassage, readWeights, recipe, train } from "./reader.js";
-import { asset, digest, exportReader, importReader, insertReader, modelRecord, openCatalog, savedReaders, sources } from "./catalog.js";
+import { asset, digest, exportReader, importReader, insertFamily, insertReader, modelRecord, openCatalog, savedReaders, sources } from "./catalog.js";
 import { blendReaders, reviewEdit } from "./edit.js";
+import { exportFamily, FAMILY_MAX_BYTES, inspectFamily, trainingBuildId } from "./family.js";
 
 const field = name => document.getElementById("reader-" + name);
 const status = field("status"), base = field("base"), teacher = field("teacher"), use = field("use");
@@ -14,6 +15,9 @@ const catalog = () => hostMode() ? hostModels : models;
 const method = field("method"), editor = field("editor"), percent = field("percent");
 const parameter = field("parameter"), parameterValue = field("value");
 const parameterPaths = new Map();
+const workshop = document.getElementById("models-view");
+const familyFile = field("family-file"), familyPreview = field("family-preview");
+let familyDraft, familyGeneration = 0;
 let typedValue = false, validDraft = false;
 const buildMethod = () => hostMode() ? "train" : method.value;
 let editorSeed = null, originalText = "", staleEditor = false;
@@ -22,17 +26,19 @@ let bundledReaders = [];
 let initialized = false;
 const label = entry => entry.name + " · " + entry.hash.slice(0, 8);
 
-function runOrigin(run) {
-  if (run.teacher) return "Built from " + run.base.label + " with " + run.teacher.label + " as teacher.";
-  if (run.second) return "Combined " + run.base.label + " (" + (100 - run.rightPercent) + "%) and " +
-    run.second.label + " (" + run.rightPercent + "%).";
-  return "Edited from " + run.base.label + ".";
+function runOrigin(run, parentName = ref => ref.label) {
+  if (run.teacher) return "Built from " + parentName(run.base) + " with " + parentName(run.teacher) + " as teacher.";
+  if (run.second) return "Combined " + parentName(run.base) + " (" + (100 - run.rightPercent) + "%) and " +
+    parentName(run.second) + " (" + run.rightPercent + "%).";
+  return "Edited from " + parentName(run.base) + ".";
 }
 
 function updateOrigin() {
   const entry = catalog().get(use.value);
+  const fromFamily = entry?.importedFamily && entry.run;
   field("origin").textContent = entry?.run
-    ? runOrigin(entry.run) + " Held-out score " +
+    ? (fromFamily ? "Imported model family. The file declares the " + entry.run.recipe + " recipe and these parents. " : "") +
+      runOrigin(entry.run) + (fromFamily ? " Historical training and authorship are unverified. Locally measured score " : " Held-out score ") +
       entry.run.scores.candidate.correct + "/" + entry.run.scores.candidate.total + "."
     : entry?.location === "host" ? (entry.parents ? "Base " + entry.parents.base + " · Teacher " + entry.parents.teacher : "Host-installed language model.")
     : entry?.origin || (entry ? "Imported document reader." : "");
@@ -181,6 +187,9 @@ function busy(active) {
   for (const node of [use, field("answer"), field("chat")]) node.disabled = active || !catalog().size;
   field("import").disabled = active || !db || hostMode();
   field("export").disabled = active || !models.size || hostMode();
+  familyFile.disabled = field("import").disabled;
+  field("family-export").disabled = field("export").disabled;
+  field("family-confirm").disabled = active || !familyDraft || hostMode();
   document.getElementById("host-refresh").disabled = active;
   pause.disabled = active || !hostMode() || hostModels.size < 2;
   drafts.disabled = resume.disabled = active || !hostMode() || !hostDrafts.size;
@@ -189,6 +198,7 @@ async function refreshMode() {
   invalidate();
   const host = hostMode();
   field("import-group").hidden = host;
+  field("family-group").hidden = field("family-export").hidden = host;
   field("source-label").hidden = host;
   field("sentences").disabled = host;
   field("export").hidden = host;
@@ -311,6 +321,127 @@ field("import").addEventListener("change", async event => {
   finally { event.target.value = ""; busy(false); }
 });
 
+function clearFamilyPreview() {
+  familyGeneration++;
+  familyDraft = undefined;
+  familyFile.value = "";
+  if (!familyPreview.hidden) status.textContent = "";
+  familyPreview.hidden = true;
+  familyPreview.removeAttribute("aria-busy");
+  field("family-summary").textContent = "";
+  field("family-members").replaceChildren();
+  field("family-integrity").hidden = true;
+  field("family-differences").hidden = true;
+  field("family-difference-list").replaceChildren();
+  field("family-confirm").disabled = true;
+}
+
+// A later choice must invalidate both the visible confirmation and any validation still in flight.
+for (const type of ["input", "change", "submit", "click"]) {
+  workshop.addEventListener(type, event => {
+    if (familyPreview.hidden || familyPreview.contains(event.target) || event.target === familyFile) return;
+    if (type !== "click" || event.target.closest("button")) clearFamilyPreview();
+  }, true);
+}
+new MutationObserver(() => {
+  if (workshop.classList.contains("hidden")) clearFamilyPreview();
+}).observe(workshop, { attributes: true, attributeFilter: ["class"] });
+window.addEventListener("pagehide", clearFamilyPreview);
+
+function showFamilyPreview(family, local) {
+  const names = new Map(family.records.map(record => [record.id, record.name]));
+  for (const record of local) {
+    if (names.has(record.id)) names.set(record.id, record.name);
+  }
+  const count = family.records.length;
+  const identify = id => names.get(id) + " (" + id.replace(/^build-/, "").slice(0, 12) + ")";
+  field("family-summary").textContent = names.get(family.root) + " · " + count + (count === 1 ? " model" : " models");
+  field("family-members").replaceChildren(...family.records.map(record => {
+    const item = document.createElement("li");
+    const role = record.id === family.root ? "Selected reader" : "Ancestor";
+    const origin = record.run ? runOrigin(record.run, ref => identify(ref.id)) : "Starting weights.";
+    item.textContent = role + " · " + identify(record.id) + " · " + origin;
+    return item;
+  }));
+  familyPreview.removeAttribute("aria-busy");
+  field("family-integrity").hidden = false;
+  const measurement = {
+    verifiedPairs: "verified teacher examples",
+    "scores.base.correct": "correct base answers", "scores.second.correct": "correct second-parent answers",
+    "scores.teacher.correct": "correct teacher answers", "scores.candidate.correct": "correct candidate answers"
+  };
+  field("family-difference-list").replaceChildren(...family.differences.map(({ id, field, reported, local }) => {
+    const item = document.createElement("li");
+    item.dataset.modelId = id;
+    item.dataset.field = field;
+    item.textContent = identify(id) + " · " + (measurement[field] || field) +
+      " · file reported " + reported + " · locally measured " + local;
+    return item;
+  }));
+  field("family-differences").hidden = !family.differences.length;
+  field("family-confirm").disabled = false;
+  status.textContent = "Family ready to import. Review the models before confirming.";
+}
+
+familyFile.addEventListener("click", () => {
+  if (!familyPreview.hidden) clearFamilyPreview();
+});
+familyFile.addEventListener("change", async () => {
+  const file = familyFile.files[0];
+  clearFamilyPreview();
+  if (!file || familyFile.disabled || hostMode()) return;
+  invalidate();
+  const request = familyGeneration;
+  familyPreview.hidden = false;
+  familyPreview.setAttribute("aria-busy", "true");
+  field("family-summary").textContent = "Checking model family…";
+  try {
+    if (file.size > FAMILY_MAX_BYTES) throw Error("Choose a model family file no larger than 512 KiB.");
+    let raw;
+    try { raw = JSON.parse(await file.text()); }
+    catch { throw Error("Choose a readable model family JSON file."); }
+    if (request !== familyGeneration) return;
+    const [training, evaluation, saved] = await Promise.all([asset("training"), asset("evaluation"), savedReaders(db)]);
+    if (request !== familyGeneration) return;
+    const family = await inspectFamily(raw, { training, evaluation });
+    if (request !== familyGeneration) return;
+    familyDraft = family;
+    showFamilyPreview(family, [...bundledReaders, ...saved]);
+  } catch (error) {
+    if (request !== familyGeneration) return;
+    clearFamilyPreview();
+    status.textContent = "Family import failed. " + error.message;
+  }
+});
+field("family-cancel").addEventListener("click", () => {
+  clearFamilyPreview();
+  status.textContent = "Family import canceled.";
+  familyFile.focus();
+});
+field("family-confirm").addEventListener("click", async () => {
+  if (!familyDraft || field("family-confirm").disabled || hostMode()) return;
+  const family = familyDraft;
+  clearFamilyPreview();
+  const request = familyGeneration;
+  busy(true);
+  status.textContent = "Importing model family…";
+  try {
+    const { added, existing } = await insertFamily(db, family.records, bundledReaders);
+    await refreshSavedReaders();
+    if (hostMode()) return;
+    listReaders();
+    if (request !== familyGeneration) {
+      if (status.textContent === "Importing model family…") status.textContent = "";
+      return;
+    }
+    use.value = family.root;
+    updateOrigin();
+    status.textContent = "Imported family " + models.get(family.root).name + ". " + added + " added, " + existing + " already available.";
+  } catch (error) {
+    if (request === familyGeneration) status.textContent = "Family import failed. " + error.message;
+  } finally { busy(false); }
+});
+
 function showComparison(scores, parent, tutor, record) {
   field("scores").replaceChildren(...Object.entries(scores).map(([role, score]) => {
     const item = document.createElement("li");
@@ -408,8 +539,7 @@ field("build").addEventListener("submit", async event => {
     const run = { recipe, base: ref(parent), teacher: ref(tutor), training: sources.training, evaluation: sources.evaluation,
       verifiedPairs: result.verifiedPairs, scores };
     // Identify the build independently of its display name and the weight digest.
-    const buildKey = [recipe, parent.id, tutor.id, run.training, run.evaluation, record.hash];
-    record.id = "build-" + await digest(new TextEncoder().encode(JSON.stringify(buildKey)));
+    record.id = await trainingBuildId(parent.id, tutor.id, record.hash);
     pending = { ...record, run };
     showComparison(scores, parent, tutor, record);
     field("save").disabled = false;
@@ -465,6 +595,7 @@ field("chat").addEventListener("click", () => {
   }
   const reader = {
     name: record.name, label: label(record), id: record.id, hash: record.hash, run: record.run,
+    importedFamily: record.importedFamily === true,
     async answer(question, passage) {
       const result = readPassage(record.weights, question, passage);
       const sourceHash = await digest(new TextEncoder().encode(JSON.stringify(result.sentences)));
@@ -473,13 +604,24 @@ field("chat").addEventListener("click", () => {
   };
   selectChatReader(reader, field("question").value, field("sentences").value);
 });
-field("export").addEventListener("click", () => {
-  const record = models.get(use.value);
-  const payload = exportReader(record);
-  const url = URL.createObjectURL(new Blob([JSON.stringify(payload) + "\n"], { type: "application/json" }));
+function downloadJson(contents, filename) {
+  const url = URL.createObjectURL(new Blob([contents], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "reader-" + record.hash.slice(0, 12) + ".json";
+  link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+field("export").addEventListener("click", () => {
+  const record = models.get(use.value);
+  downloadJson(JSON.stringify(exportReader(record)) + "\n", "reader-" + record.hash.slice(0, 12) + ".json");
+});
+field("family-export").addEventListener("click", () => {
+  if (hostMode() || field("family-export").disabled) return;
+  try {
+    const record = models.get(use.value);
+    const bundle = exportFamily(record.id, models);
+    downloadJson(JSON.stringify(bundle), "reader-family-" + record.id + ".json");
+    status.textContent = "Exported the model family for " + record.name + ".";
+  } catch (error) { status.textContent = "Family export failed. " + error.message; }
 });

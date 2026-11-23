@@ -8,7 +8,7 @@ The first usable application shell lives in `apps/web/`. It includes a responsiv
 
 ### Model workshop
 
-Open **Model workshop** to edit a copy of a document reader, combine two compatible readers by percentage, or train a child with a teacher. Compare the candidate with its parents before saving, then select **Use in Chat**. A reply can become an editable Memory draft. Readers work in the browser. With two compatible language-model snapshots on the local CPU host, you can pause training, reopen the workshop and resume from the saved optimizer state. [Workflow, recovered product decisions and release acceptance](docs/implementation/unified-model-workflow.md)
+Open **Model workshop** to edit a copy of a document reader, combine two compatible readers by percentage, or train a child with a teacher. Compare the candidate with its parents before saving, then select **Use in Chat**. A reply can become an editable Memory draft. Readers work in the browser. A family export lets you move the selected reader and its parents to another browser and continue there. With two compatible language-model snapshots on the local CPU host, you can pause training, reopen the workshop and resume from the saved optimizer state. [Workflow, recovered product decisions and release acceptance](docs/implementation/unified-model-workflow.md)
 
 ### Review tasks
 

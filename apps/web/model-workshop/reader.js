@@ -79,8 +79,7 @@ export function evaluate(model, documents) {
   return { correct, total };
 }
 
-export function train(base, teacher, training) {
-  const candidate = readWeights(base);
+export function verifiedTeacherPairs(teacher, training) {
   const pairs = [];
   let positives = 0;
   for (const { sentences, questions } of training) {
@@ -94,6 +93,12 @@ export function train(base, teacher, training) {
       }
     }
   }
+  return { pairs, positives };
+}
+
+export function train(base, teacher, training) {
+  const candidate = readWeights(base);
+  const { pairs, positives } = verifiedTeacherPairs(teacher, training);
   if (!positives || positives === pairs.length) throw Error("The teacher needs verified examples of both supported and missing evidence.");
   // Fixed seed and schedule so retrying the same build reproduces its result.
   let seed = 923;

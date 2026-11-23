@@ -181,6 +181,24 @@
           <button class="secondary-button" id="host-pause" type="submit" hidden disabled>Train to step 12 and pause</button>
           <p id="reader-status" role="status"></p>
         </form>
+        <section id="reader-family-group" class="memory-form">
+          <label for="reader-family-file">Import model family<input id="reader-family-file" type="file" accept=".json,application/json" aria-describedby="reader-family-help" disabled></label>
+          <small id="reader-family-help">Choose a workshop family file up to 512 KiB to review the reader and its parents.</small>
+          <section id="reader-family-preview" aria-label="Family import preview" hidden>
+            <h2 id="reader-family-summary"></h2>
+            <ul id="reader-family-members"></ul>
+            <p id="reader-family-integrity" hidden>The file declares each build’s parents and recipe. This browser checked the model IDs and weight hashes and measured the scores. Historical training and the publisher’s identity are unverified.</p>
+            <section id="reader-family-differences" hidden>
+              <h3>Differences in local measurements</h3>
+              <p>New readers use the counts measured in this browser. Existing readers keep their saved scores.</p>
+              <ul id="reader-family-difference-list"></ul>
+            </section>
+            <div class="reader-parameter-actions">
+              <button type="button" class="primary-button" id="reader-family-confirm" disabled>Import family</button>
+              <button type="button" class="secondary-button" id="reader-family-cancel">Cancel</button>
+            </div>
+          </section>
+        </section>
         <section id="host-runs" class="memory-form" hidden>
           <h2>Resume host training</h2>
           <label for="host-drafts">Saved training run<select id="host-drafts" disabled></select></label>
@@ -204,6 +222,7 @@
             <button class="primary-button" id="reader-answer" type="submit" disabled>Find evidence</button>
             <button class="secondary-button" id="reader-chat" type="button" disabled>Use in Chat</button>
             <button class="secondary-button" id="reader-export" type="button" disabled>Export weights</button>
+            <button class="secondary-button" id="reader-family-export" type="button" disabled>Export model family</button>
           </div>
           <p id="reader-output" role="status"></p>
         </form>

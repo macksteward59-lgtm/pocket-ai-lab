@@ -8,6 +8,7 @@ on:
       - apps/web/model-workshop/**
       - apps/web/test/model-workshop.test.mjs
       - apps/web/test/reader-edit.test.mjs
+      - apps/web/test/reader-family*.test.mjs
       - apps/web/test/workshop-route.test.mjs
       - apps/web/index.html
       - apps/web/app.js
@@ -37,10 +38,18 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run test:web
       - working-directory: tools/review-browser
+        env:
+          READER_FAMILY_EVIDENCE_DIR: ${{ runner.temp }}/reader-family-evidence
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           ./node_modules/.bin/playwright install --with-deps chromium webkit
-          node --import tsx --test model-workshop.mjs reader-editor.mjs
+          node --import tsx --test model-workshop.mjs reader-editor.mjs reader-family.mjs
+      - name: Preserve the tested reader families
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: reader-family-transfer-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/reader-family-evidence/
   host-language-model:
     runs-on: ubuntu-24.04
     timeout-minutes: 16
