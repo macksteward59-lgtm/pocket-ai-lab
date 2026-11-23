@@ -109,7 +109,8 @@ def catalog(root):
                         continue
                     report = load_report(path)
                     item = report["candidate"]
-                    if item["id"] != path.name or item["artifactSHA256"] != artifact or item["weightsSHA256"] != weights:
+                    if (item["id"] != path.name or item["artifactSHA256"] != artifact or item["weightsSHA256"] != weights
+                            or item["id"] != build_id(report["recipe"], report["runtimeVersions"], item["parents"], item["name"])):
                         continue
                 item.update(artifactSHA256=artifact, weightsSHA256=weights)
                 records.setdefault(item["id"], (item, path))
@@ -253,6 +254,10 @@ def adapter_target_digest(model):
     return digest.hexdigest()
 
 
+def build_id(recipe, versions, parents, name):
+    return "candidate-" + hash_json([recipe, versions, parents, TRAIN, HOLDOUT, name])
+
+
 def build(root, records, request, versions):
     import torch
     from peft import get_peft_model, LoraConfig
@@ -264,10 +269,11 @@ def build(root, records, request, versions):
         raise Invalid("Choose two parents with different weights.")
     name = check_name(request.get("name"))
     parents = dict(base=base["id"], teacher=teacher["id"])
-    key = hash_json([RECIPE, versions, parents, TRAIN, HOLDOUT, name])
-    ident = "candidate-" + key
+    ident = build_id(RECIPE, versions, parents, name)
     if ident in records:
         return load_report(records[ident][1])
+    if len(records) >= 128:
+        raise Invalid("The local catalog is full. Archive a model before starting another build.")
     target = parent_directory(root, "candidates", create=True)
     if (target / ident).exists():
         raise Invalid("The existing candidate failed its integrity check.")

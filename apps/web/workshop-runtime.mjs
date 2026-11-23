@@ -38,7 +38,7 @@ export function hostWorkshop() {
     try {
       const result = await new Promise((resolve, reject) => {
         const child = execFile("python3", ["-B", worker], {
-          env, timeout: request.op === "build" ? 1_800_000 : 90_000, killSignal: "SIGKILL", maxBuffer: 65536
+          env, timeout: request.op === "build" ? 1_800_000 : 90_000, killSignal: "SIGKILL", maxBuffer: request.op === "list" ? 262144 : 65536
         }, (error, stdout) => {
           let reply;
           try { reply = JSON.parse(stdout); } catch { /* Handle startup failures and timeouts below. */ }

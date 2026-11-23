@@ -103,6 +103,13 @@ class WorkerTests(unittest.TestCase):
             reply = subprocess.run([sys.executable, str(Path(worker.__file__))],
                                    input=json.dumps({"op":"list"}), text=True, capture_output=True, check=True)
             self.assertEqual(len(json.loads(reply.stdout)["models"]), 4)
+            manifest = root / "candidates" / student["id"] / "workshop.json"
+            original = manifest.read_bytes()
+            altered = json.loads(original)
+            altered["candidate"]["parents"]["base"] = teacher["id"]
+            manifest.write_text(json.dumps(altered))
+            self.assertNotIn(student["id"], [m["id"] for m in worker.run({"op":"list"})["models"]])
+            manifest.write_bytes(original)
             # Simulate a partially overwritten checkpoint. Corrupt data never becomes a new parent.
             (root / "candidates" / student["id"] / "tokenizer.json").write_text("{}")
             self.assertNotIn(student["id"], [m["id"] for m in worker.run({"op":"list"})["models"]])

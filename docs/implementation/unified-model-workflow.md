@@ -34,6 +34,26 @@ The **owner direction** rows summarize the available project conversations. **En
 | Owner direction. Keep the six-layer/M01–M42 capability inventory, evaluation, threat modeling and human-reviewed reporting in the product plan. | The master checklist records recovered module identities and gaps in the original mapping. Existing evaluation work covers evidence comparison and research fixtures. [Master checklist](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/requirements/POCKET_AI_LAB_MASTER_REQUIREMENTS_CHECKLIST.md) | Trace authorized defensive evaluation to its scope, rubric, evidence and reviewer. Workshop model choice alone grants no tool access. |
 | Research proposals. G.I.R.L., geometric representations, compact agent communication and multi-perspective reasoning require separate qualification. | Representation contracts and same-model constraints are documented independently of the training UI. [G.I.R.L. integration record](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/coordination/GIRL_GEOMETRIC_LATENT_INTEGRATION_2026-11-19.md) · [Compatibility draft](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/235) | Show a recipient using a representation successfully against blinded controls on a compatible model/runtime. Keep unsuccessful experiments in the record. |
 
+### Sources behind the trace
+
+These are dated summaries of accessible messages, retained without private conversation links. The coordination handoff carries the longer recovered history.
+
+| Owner message (UTC) | Decision carried forward |
+| --- | --- |
+| Nov 1, 15:48 | One app with a shared thread and selectable Pocket or Grok models. A proposed readiness contract later distinguished a registered model from successful generation. |
+| Nov 16, 22:06 | One mobile-first platform for local, private and authorized external models, persistent memory, governed work and evidence. |
+| Nov 20, 01:16 and 19:49 | Integrate the components as one project. Use larger cloud models per task while preserving local work. |
+| Nov 21, 18:53 | Continue toward a working ecosystem that takes one objective through to a result. |
+| Nov 23, 01:48 | Keep existing models as options, build on partial checkpoints, and create a new model using two imports. The base/teacher arrangement was the subsequent engineering proposal. |
+
+The plug-and-play discussion also covered using completed PentestGPT session events as evidence. That importer was proposed in chat. It has no implemented entry in this workshop. The model selector chooses inference or training artifacts. Tool registration, permissions and execution have separate contracts. [Director Tool Workshop](director-tool-workshop.md)
+
+## Evidence for the main-targeted candidate
+
+The earlier workshop was stacked on the document-research branch. [PR #296](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/296) brings its runtime files, pinned datasets, model artifacts and regression tests together with the Chat, Memory and local-host paths in a review targeting `main`. The [browser and CPU acceptance run](https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/45100540298) exercised both model types in Chromium and WebKit. The browser reader went from 14/16 to 15/16 in the selected parent order. On the tiny causal-model fixture, base, teacher and child scored 2/4, 4/4 and 2/4. Changed weights, real generation and reusable lineage were observed. A predictive gain on the language-model task remains unproven.
+
+The integration branch and its base each produced the same 21 TypeScript diagnostics in the existing autonomy tests, including missing East lifecycle modules. The repository-wide build and consumer checks must pass on the release commit before it is called integrated. The owner’s physical phone, larger third-party checkpoints and any paid or hosted provider were outside these checks.
+
 ## Releasing the integrated version
 
 Use the repository-wide matrix for individual requirements, including the areas outside the model workflow. Relevant rows include PAL-00-001 through PAL-00-010 for the unified product, PAL-06-013 through PAL-06-023 for routing and model lifecycle, PAL-07-013 for physical-device acceptance, PAL-09-006/012/013 for memory and training, and PAL-25 for the definition of done. The source inventory covers the available conversations and handoffs. Missing original descriptions, private-chat gaps and research proposals must retain their existing status. [Requirement traceability](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/docs/requirements/POCKET_AI_LAB_REQUIREMENTS_TRACEABILITY.md) · [Current coordination](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/coordination/CLOUD_AGENT_HANDOFF.md)
