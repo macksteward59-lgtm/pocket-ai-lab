@@ -103,3 +103,7 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 - Repair operations require independent authorization.
 
 See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` and `docs/implementation/consumer-prototype-acceptance.md` for the architecture and measurable product acceptance criteria.
+
+## Project decisions and release evidence
+
+The owner’s next prototype milestone is to sign in, start and interrupt a task, resume it once under the same account, and independently verify the result inside the app. The product handoff records which parts have been demonstrated, where each test ran, and what still needs to pass before physical-device testing or a hardware purchase. [Kay and Pocket AI Lab chat cross-reference](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/coordination/POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md#kay-and-pocket-ai-lab-chat-cross-reference)
