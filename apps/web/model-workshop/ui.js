@@ -294,13 +294,15 @@ function loadDraftEditor(draft, catalog) {
 async function runDraftAction(action, task) {
   if (field("draft-" + action).disabled) return;
   const generation = ++draftGeneration;
-  const current = () => generation === draftGeneration && !hostMode() && !workshopBusy && !workshop.classList.contains("hidden");
+  const selected = draftPicker.value;
+  const current = () => generation === draftGeneration && !hostMode() && !workshopBusy &&
+    !workshop.classList.contains("hidden") && (action !== "resume" || selected === draftPicker.value);
   draftWorking = true;
   setDraftButtons();
   let store;
   try {
     store = await openDraftStore();
-    if (current()) await task(store, current);
+    if (current()) await task(store, current, selected);
   } catch (error) {
     if (current()) draftStatus.textContent = error.message;
   } finally {
@@ -328,12 +330,13 @@ field("draft-save").addEventListener("click", () => runDraftAction("save", async
   if (current()) draftStatus.textContent = listed ? "Draft saved in this browser." : "Draft saved. Refresh drafts to see it in the list.";
 }));
 
-field("draft-resume").addEventListener("click", () => runDraftAction("resume", async (store, current) => {
-  const [record, saved] = await Promise.all([getDraft(store, draftPicker.value), savedReaders(db)]);
+field("draft-resume").addEventListener("click", () => runDraftAction("resume", async (store, current, selected) => {
+  const [record, saved] = await Promise.all([getDraft(store, selected), savedReaders(db)]);
   if (!current()) return;
   if (!record) {
+    draftStatus.textContent = "This editing draft is no longer in this browser.";
     await refreshDraftList();
-    throw Error("This editing draft is no longer in this browser.");
+    return;
   }
   const parents = new Map([...bundledReaders, ...saved].map(parent => [parent.id, parent]));
   const draft = await restoreDraft(record, parents);
