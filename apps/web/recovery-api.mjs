@@ -24,7 +24,9 @@ export function recoveryApi(staticRoot) {
       if (!path.isAbsolute(directory)) throw new Error("Invalid recovery directory");
       const real = resolvedLocation(path.resolve(directory));
       const web = realpathSync(staticRoot);
-      if (real === web || real.startsWith(web + path.sep) || web.startsWith(real + path.sep) || real === path.parse(real).root) {
+      const requested = path.resolve(directory);
+      if (requested === staticRoot || requested.startsWith(staticRoot + path.sep) ||
+          real === web || real.startsWith(web + path.sep) || web.startsWith(real + path.sep) || real === path.parse(real).root) {
         throw new Error("Recovery storage needs a private directory outside the web root.");
       }
       opened = import("./recovery/store.mjs").then(({ openRecoveryStore }) => openRecoveryStore(directory));

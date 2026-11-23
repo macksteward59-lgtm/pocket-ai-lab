@@ -15,6 +15,7 @@ on:
       - apps/web/sw.js
       - tools/review-browser/account-recovery.mjs
       - tools/review-browser/package*.json
+      - tools/verify-review-task.mjs
       - .github/workflows/account-recovery.yml
 permissions:
   contents: read
@@ -34,7 +35,22 @@ jobs:
         run: npm run test:web
       - name: Recover the signed review in mobile Chromium and WebKit
         working-directory: tools/review-browser
+        env:
+          RECOVERY_EVIDENCE_DIR: ${{ runner.temp }}/pocket-review-evidence
+          RECOVERY_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           ./node_modules/.bin/playwright install --with-deps chromium webkit
           node --import tsx --test account-recovery.mjs
+      - name: Archive the verified synthetic reviews and public keys
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signed-recovery-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/pocket-review-evidence/chromium/signed-review.json
+            ${{ runner.temp }}/pocket-review-evidence/chromium/public-key.json
+            ${{ runner.temp }}/pocket-review-evidence/chromium/acceptance.json
+            ${{ runner.temp }}/pocket-review-evidence/webkit/signed-review.json
+            ${{ runner.temp }}/pocket-review-evidence/webkit/public-key.json
+            ${{ runner.temp }}/pocket-review-evidence/webkit/acceptance.json

@@ -26,6 +26,11 @@ export async function verifyReviewEvidence(evidence, publicKey, expected) {
   const verified = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, signature,
     new TextEncoder().encode(JSON.stringify(record)));
   if (!verified) throw new Error("The evidence signature did not verify.");
+  for (const field of ["title", "source", "quote"]) {
+    if (Object.hasOwn(expected, field) && expected[field] !== record[field]) {
+      throw new Error("The displayed task differs from its signed evidence.");
+    }
+  }
 
   if (typeof record.title !== "string" || !record.title.trim() || typeof record.source !== "string" ||
       typeof record.quote !== "string" || !record.quote.trim() || !Number.isSafeInteger(record.offset) ||

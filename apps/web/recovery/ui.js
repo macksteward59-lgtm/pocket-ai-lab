@@ -5,6 +5,7 @@ const nav = document.querySelector('[data-view="recovery"]');
 const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("pocket-review-session") : null;
 let owner = null;
 let selected = null;
+let verifiedSelection = null;
 let operation = null;
 let pendingCreate = null;
 let pendingCorrection = null;
@@ -16,6 +17,7 @@ function status(text) {
 
 function clearDetail() {
   selected = null;
+  verifiedSelection = null;
   pendingCorrection = null;
   field("details").hidden = true;
   field("details").removeAttribute("data-task-id");
@@ -55,6 +57,7 @@ function disableControls(disabled) {
   for (const control of field("view").querySelectorAll("button, input, textarea")) {
     if (control !== field("logout")) control.disabled = disabled;
   }
+  field("export").disabled = disabled || !verifiedSelection;
 }
 
 async function perform(work) {
@@ -259,14 +262,15 @@ field("correction-form").addEventListener("submit", event => {
 });
 
 field("verify").addEventListener("click", () => perform(async ticket => {
+  verifiedSelection = null;
   field("verdict").textContent = "Verifying…";
   try {
     const {key} = await request(ticket, "publicKey");
-    const verified = await verifyReviewEvidence(selected.evidence, key, {taskId: selected.id, owner});
+    await verifyReviewEvidence(selected.evidence, key, {
+      taskId: selected.id, owner, title: selected.title, source: selected.source, quote: selected.quote
+    });
     requireCurrent(ticket);
-    if (verified.title !== selected.title || verified.source !== selected.source || verified.quote !== selected.quote) {
-      throw new Error("The displayed review differs from its signed evidence.");
-    }
+    verifiedSelection = selected;
     field("verdict").textContent = "Evidence verified. The signature, excerpt and recorded corrections match.";
   } catch (error) {
     requireCurrent(ticket);
@@ -287,7 +291,9 @@ function downloadJson(name, data) {
 }
 
 field("export").addEventListener("click", () => {
-  if (owner && selected?.evidence) downloadJson("review-" + selected.id + ".json", selected.evidence);
+  if (owner && selected && verifiedSelection === selected) {
+    downloadJson("review-" + selected.id + ".json", selected.evidence);
+  }
 });
 field("key").addEventListener("click", () => perform(async ticket => {
   const {key} = await request(ticket, "publicKey");

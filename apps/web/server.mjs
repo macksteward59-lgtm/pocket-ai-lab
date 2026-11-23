@@ -1,7 +1,7 @@
 import http from "node:http";
 import { hostWorkshop } from "./workshop-runtime.mjs";
 import { recoveryApi } from "./recovery-api.mjs";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openMemoryManager } from "./memoryRuntime.ts";
@@ -565,7 +565,9 @@ export function createServer() {
       const resolved = path.resolve(root, requested);
       if (!resolved.startsWith(root + path.sep)) return json(res, 403, { error: "Forbidden." });
       try {
-        const content = await readFile(resolved);
+        const target = await realpath(resolved);
+        if (!target.startsWith(root + path.sep)) return json(res, 403, { error: "Forbidden." });
+        const content = await readFile(target);
         res.writeHead(200, {
           "content-type": mime[path.extname(resolved)] || "application/octet-stream",
           "cache-control": resolved.endsWith("index.html") ? "no-cache" : "public, max-age=3600"

@@ -10,6 +10,10 @@ The first usable application shell lives in `apps/web/`. It includes a responsiv
 
 Choose a base model and a teacher, train a separate candidate, compare the three results, then select **Use in Chat**. A reply can become an editable Memory draft. Document readers run in the browser. Compatible language-model checkpoints use the optional local CPU training host. [Workflow, recovered product decisions and release acceptance](docs/implementation/unified-model-workflow.md)
 
+### Review tasks
+
+Open **Review tasks** to create a local account and save an excerpt from a passage. After closing the app or restarting the host, sign back in, resume the task and verify the signed excerpt. You can add a correction and export both the updated receipt and the host’s public verification key. [Recovery walkthrough and evidence](docs/implementation/account-owned-review.md)
+
 ### Run locally
 
 Requires Node.js 22 or newer.
