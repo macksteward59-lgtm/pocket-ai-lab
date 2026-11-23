@@ -1,0 +1,62 @@
+[
+  {
+    "family": "chromium-to-webkit",
+    "base": {
+      "id": "build-d7d7f1178f1afc5f6adcfbcd326eb2bc0fcd3636995b1f19601fc0021843b8ed",
+      "hash": "5d00c0a4e71e79ce4bb230461fc2db7408e79260937121c7c7c705b3850f637b"
+    },
+    "second": {
+      "id": "build-c71ea866194fe22a1d23149b5bb8ba08d0f844a4889b64889edaa45086bf1aa0",
+      "hash": "4288c1d9f1823a2f18dd9329bb99ffa0acc10659b5e654694a38578efa566ee8"
+    },
+    "draft": "draft-29cd04babd84a4564a90acc9088b85b6d376d76abb9742be4088169e1aa213a1",
+    "rightPercent": 40,
+    "child": "build-01a3d1e653d47b74ecbe950ff1661d63e4b442587b149d00f5f46fb97265a5f6",
+    "childWeights": "d8869979169d079a5220f3acc947b97164f3a665c0d0b991610107ba9983d9cc",
+    "editedParameters": 1,
+    "scores": {
+      "base": {
+        "correct": 15,
+        "total": 16
+      },
+      "second": {
+        "correct": 15,
+        "total": 16
+      },
+      "candidate": {
+        "correct": 14,
+        "total": 16
+      }
+    }
+  },
+  {
+    "family": "webkit-to-chromium",
+    "base": {
+      "id": "build-73dbf00ffe6cd746592d2a0d16f32420a4e4a192815bf2b1db55e9e3552f8e0f",
+      "hash": "a488269e1ea6c01325cc70d08b47cd60e8730779501f513b0ae186e0cbe67759"
+    },
+    "second": {
+      "id": "build-9cded4f540e30fd94dc6aa3e702940a8adb12995442ac2350d7b5d6e42ad5573",
+      "hash": "1a66e9282701a4c7ddccf1e7162a616ca1cd5355400fb4fcb469c377a05f975c"
+    },
+    "draft": "draft-862d52cd602dab1f366147e473ee2c0de318723b0ed4749cf66722ae8dced0a6",
+    "rightPercent": 40,
+    "child": "build-e0673e497fd1fa6ea2f06f29f17cfbc733f1fc369d730b412257d7ec4d26a3b2",
+    "childWeights": "5904649d93c6b7c109c2db91ce42c840e4953c9e30f4b2f11a973eb4be56921c",
+    "editedParameters": 1,
+    "scores": {
+      "base": {
+        "correct": 15,
+        "total": 16
+      },
+      "second": {
+        "correct": 15,
+        "total": 16
+      },
+      "candidate": {
+        "correct": 14,
+        "total": 16
+      }
+    }
+  }
+]

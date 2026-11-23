@@ -206,6 +206,8 @@ On November 23, the [browser workshop](https://github.com/macksteward59-lgtm/poc
 
 At `d74e589`, the browser workshop can also compare a saved reader with its immediate parents on the owner’s typed passage or a local labeled set. The owner chooses which result and source to take to Chat. [Workflow and limits](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/d74e589cc403d1affb7605388ffb7fe35db68039/docs/implementation/unified-model-workflow.md#compare-the-saved-child-and-its-parents-on-your-own-examples) · [Mobile test records](../../coordination/evidence/portable-reader-families-2026-11-23/README.md#compare-the-child-and-its-parents-in-the-app).
 
+The browser editor can save incomplete single-parent edits and two-parent blends, restore their exact parent identities after an offline restart, and publish a separate child after comparison. [Workshop instructions](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/9863916f56530f0bf2670a6b152042aaf68e177d/docs/implementation/unified-model-workflow.md#resume-an-unfinished-reader-edit-or-blend) · [Evidence](../../coordination/evidence/reader-editor-drafts-2026-11-23/README.md).
+
 ### 6.1 Registry and provider adapters
 - [ ] Maintain a model registry independent of agent definitions.
 - [ ] Record model identity, version, format, source, checksum, license metadata, capabilities, context limits, quantization, hardware requirements, and availability.

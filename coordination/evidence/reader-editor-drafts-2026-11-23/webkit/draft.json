@@ -1,0 +1,56 @@
+{
+  "format": "pocket-reader-draft-evidence-v1",
+  "passed": true,
+  "engine": "webkit",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "rawDraft": "draft-7333e6947420ece0f63a1337624b19cbdeb1ce1f10bf168f43be2af460c7f2f0",
+  "pendingDraft": "draft-487240205ca9d6875aecb9fb03f5681247de58e20abde8bde1a0d91b031aa8d9",
+  "concurrentDraftSaves": 2,
+  "distinctDrafts": 2,
+  "parents": {
+    "base": {
+      "id": "d125bb1d578eaa0ad330040d439433a8305a5a4df473362cd61fb87bf748f774",
+      "hash": "d125bb1d578eaa0ad330040d439433a8305a5a4df473362cd61fb87bf748f774"
+    },
+    "second": {
+      "id": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+      "hash": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812"
+    }
+  },
+  "rightPercent": 35,
+  "child": "build-82f54ef02eff54e19268a744408b92ad19c5c6d42d02504392fb29156df948b7",
+  "recipe": "reader-linear-blend-v1",
+  "childWeightsSHA256": "12d0eb1a76cd38f9853b251e84e3357459a602b74ca383575144ad9c4f2143f9",
+  "editedParameters": 1,
+  "reopenedWithoutServer": true,
+  "restoredUnfinishedJSON": true,
+  "restoredUnappliedNumber": true,
+  "identicalConcurrentSavesDeduplicated": true,
+  "sameNameSnapshotsStayedDistinct": true,
+  "cancelledDirtyReplacement": true,
+  "cancelledSetupOnlyReplacement": true,
+  "cancelledAfterPeerDeletedSnapshot": true,
+  "damagedDraftDeletionPreservedOtherDraft": true,
+  "unpublishedUntilExplicitSave": true,
+  "parentsUnchanged": true,
+  "parameter": "biases.2",
+  "excludedConversation": true,
+  "excludedDraftsFromReadersAndExports": true,
+  "scores": {
+    "base": {
+      "correct": 14,
+      "total": 16
+    },
+    "second": {
+      "correct": 15,
+      "total": 16
+    },
+    "candidate": {
+      "correct": 15,
+      "total": 16
+    }
+  }
+}
