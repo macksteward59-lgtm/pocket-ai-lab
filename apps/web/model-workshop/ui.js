@@ -1,6 +1,7 @@
 import { hostRequest, hostModel } from "./host.js";
-import { evaluate, readPassage, recipe, train } from "./reader.js";
+import { evaluate, readPassage, readWeights, recipe, train } from "./reader.js";
 import { asset, digest, insertReader, modelRecord, openCatalog, savedReaders, sources } from "./catalog.js";
+import { blendReaders, reviewEdit } from "./edit.js";
 
 const field = name => document.getElementById("reader-" + name);
 const status = field("status"), base = field("base"), teacher = field("teacher"), use = field("use");
@@ -10,14 +11,27 @@ const pause = document.getElementById("host-pause"), resume = document.getElemen
 const drafts = document.getElementById("host-drafts"), draftInfo = document.getElementById("host-draft-info");
 const hostMode = () => engine.value === "host";
 const catalog = () => hostMode() ? hostModels : models;
+const method = field("method"), editor = field("editor"), percent = field("percent");
+const parameter = field("parameter"), parameterValue = field("value");
+const parameterPaths = new Map();
+let typedValue = false, validDraft = false;
+const buildMethod = () => hostMode() ? "train" : method.value;
+let editorSeed = null, originalText = "", staleEditor = false;
 let db, pending;
 let initialized = false;
 const label = entry => entry.name + " · " + entry.hash.slice(0, 8);
 
+function runOrigin(run) {
+  if (run.teacher) return "Built from " + run.base.label + " with " + run.teacher.label + " as teacher.";
+  if (run.second) return "Combined " + run.base.label + " (" + (100 - run.rightPercent) + "%) and " +
+    run.second.label + " (" + run.rightPercent + "%).";
+  return "Edited from " + run.base.label + ".";
+}
+
 function updateOrigin() {
   const entry = catalog().get(use.value);
   field("origin").textContent = entry?.run
-    ? "Built from " + entry.run.base.label + " with " + entry.run.teacher.label + " as teacher. Held-out score " +
+    ? runOrigin(entry.run) + " Held-out score " +
       entry.run.scores.candidate.correct + "/" + entry.run.scores.candidate.total + "."
     : entry?.location === "host" ? (entry.parents ? "Base " + entry.parents.base + " · Teacher " + entry.parents.teacher : "Host-installed language model.")
     : entry?.origin || (entry ? "Imported document reader." : "");
@@ -33,8 +47,96 @@ function listReaders() {
 }
 function invalidate() {
   pending = undefined;
+  field("save").disabled = true;
+  field("edit-summary").hidden = true;
   field("comparison").hidden = true;
   status.textContent = "";
+}
+
+function indexParameters(weights) {
+  function add(path, name) {
+    const key = path.join(".");
+    parameterPaths.set(key, path);
+    parameter.add(new Option(name, key));
+  }
+  add(["intercept"], "Output bias (intercept)");
+  weights.weights.forEach((row, unit) => {
+    const label = "Hidden unit " + (unit + 1);
+    add(["biases", unit], label + " · bias");
+    add(["output", unit], label + " · output weight");
+    weights.features.forEach((feature, featureIndex) => {
+      add(["weights", unit, featureIndex], label + " · " + feature.replaceAll("_", " "));
+    });
+  });
+}
+
+function syncParameter() {
+  typedValue = false;
+  try {
+    const weights = readWeights(JSON.parse(editor.value));
+    if (!parameterPaths.size) indexParameters(weights);
+    const path = parameterPaths.get(parameter.value);
+    parameterValue.value = String(path.reduce((value, key) => value[key], weights));
+    validDraft = true;
+    field("value-status").textContent = "";
+  } catch {
+    validDraft = false;
+    parameterValue.value = "";
+    field("value-status").textContent = "Fix the candidate weights in the advanced editor to select a parameter.";
+  }
+}
+
+function parameterHint() {
+  const value = parameterValue.valueAsNumber;
+  return Number.isFinite(value) && Math.abs(value) <= 1e6
+    ? "Apply the value to your copy before comparing."
+    : "Enter a finite number between −1,000,000 and 1,000,000.";
+}
+
+function prepareEditor(replaceEdits = false) {
+  const kind = buildMethod();
+  if (kind === "train") return;
+  const left = models.get(base.value), right = kind === "blend" ? models.get(teacher.value) : null;
+  const share = percent.valueAsNumber;
+  const seed = JSON.stringify([kind, base.value, right?.id, right ? share : null]);
+  const hint = field("editor-hint");
+  if (kind === "blend" && (!Number.isInteger(share) || share < 1 || share > 99 || !right || right.hash === left?.hash)) {
+    staleEditor = true;
+    hint.textContent = "Choose distinct parent weights and a whole-number share from 1 to 99%.";
+    return;
+  }
+  if (!left) {
+    staleEditor = true;
+    hint.textContent = "Choose a base reader.";
+    return;
+  }
+  if (seed !== editorSeed && editor.value !== originalText && !replaceEdits) {
+    staleEditor = true;
+    hint.textContent = "The selection changed. Load the selected weights to replace your edits, or return to the previous selection.";
+    return;
+  }
+  if (seed !== editorSeed || replaceEdits) {
+    const weights = right ? blendReaders(left.weights, right.weights, share) : left.weights;
+    originalText = JSON.stringify(weights, null, 2);
+    editor.value = originalText;
+    editorSeed = seed;
+    syncParameter();
+  }
+  staleEditor = false;
+  hint.textContent = right
+    ? "Starting weights use " + (100 - share) + "% of the base and " + share + "% of the second reader. You can also edit the values."
+    : "Change the parameter values in this copy, then compare it with the base reader.";
+}
+
+function showMethod() {
+  const kind = buildMethod();
+  field("method-group").hidden = hostMode();
+  field("teacher-group").hidden = kind === "edit";
+  field("teacher-label").textContent = kind === "blend" ? "Second model" : "Teacher model";
+  field("percent-group").hidden = kind !== "blend";
+  field("editor-group").hidden = kind === "train";
+  field("train").textContent = hostMode() ? "Train and save checkpoint" : kind === "train" ? "Train candidate" : "Compare candidate";
+  prepareEditor();
 }
 function hostParent(id) {
   return hostModels.get(id) || { id, name: id };
@@ -54,8 +156,24 @@ function listDrafts(selected = drafts.value) {
   updateDraftInfo();
 }
 function busy(active) {
-  engine.disabled = active;
-  for (const node of [base, teacher, field("name"), field("train")]) node.disabled = active || catalog().size < 2;
+  const kind = buildMethod();
+  const changingValue = kind !== "train" && typedValue;
+  engine.disabled = active || changingValue;
+  const available = catalog().size >= (kind === "edit" ? 1 : 2);
+  method.disabled = active || changingValue || hostMode() || !models.size;
+  base.disabled = active || changingValue || !available;
+  field("name").disabled = active || !available;
+  teacher.disabled = active || changingValue || !available || kind === "edit";
+  percent.disabled = active || changingValue || kind !== "blend";
+  editor.disabled = active || kind === "train" || !available || staleEditor;
+  editor.readOnly = changingValue;
+  parameterValue.disabled = editor.disabled || !validDraft;
+  parameter.disabled = parameterValue.disabled || changingValue;
+  field("apply").disabled = parameterValue.disabled || !changingValue;
+  field("value-cancel").hidden = !changingValue;
+  field("value-cancel").disabled = active;
+  field("editor-reset").disabled = active || changingValue || kind === "train" || !available;
+  field("train").disabled = active || !available || changingValue || (kind !== "train" && staleEditor);
   for (const node of [use, field("answer"), field("chat")]) node.disabled = active || !catalog().size;
   field("import").disabled = active || !db || hostMode();
   field("export").disabled = active || !models.size || hostMode();
@@ -76,7 +194,7 @@ async function refreshMode() {
   document.getElementById("host-runs").hidden = !host;
   field("question").maxLength = host ? 2000 : 500;
   field("answer").textContent = host ? "Generate answer" : "Find evidence";
-  field("train").textContent = host ? "Train and save checkpoint" : "Train candidate";
+  showMethod();
   field("save").hidden = host;
   busy(true);
   try {
@@ -101,6 +219,7 @@ async function refreshMode() {
       base.selectedIndex = host ? 0 : 1;
       teacher.selectedIndex = host ? 1 : 0;
     }
+    showMethod();
   } catch (error) { status.textContent = error.message; }
   finally { busy(false); }
 }
@@ -119,7 +238,43 @@ async function initialize() {
 document.querySelector('[data-view="models"]').addEventListener("click", () => {
   if (!hostMode() && !initialized && !engine.disabled) refreshMode();
 });
-for (const node of [base, teacher, field("name")]) node.addEventListener("input", invalidate);
+method.addEventListener("change", () => { invalidate(); showMethod(); busy(false); });
+for (const node of [base, teacher, percent]) {
+  node.addEventListener("input", () => { invalidate(); prepareEditor(); busy(false); });
+}
+field("name").addEventListener("input", invalidate);
+editor.addEventListener("input", () => { invalidate(); syncParameter(); busy(false); });
+parameter.addEventListener("change", syncParameter);
+parameterValue.addEventListener("input", () => {
+  invalidate();
+  typedValue = true;
+  field("value-status").textContent = parameterHint();
+  busy(false);
+});
+field("apply").addEventListener("click", () => {
+  if (field("apply").disabled) return;
+  const value = parameterValue.valueAsNumber;
+  if (!Number.isFinite(value) || Math.abs(value) > 1e6) {
+    field("value-status").textContent = parameterHint();
+    return;
+  }
+  try {
+    // Read the current advanced draft so other manually edited values survive.
+    const weights = readWeights(JSON.parse(editor.value));
+    const path = parameterPaths.get(parameter.value);
+    const container = path.slice(0, -1).reduce((object, key) => object[key], weights);
+    container[path.at(-1)] = value;
+    editor.value = JSON.stringify(weights, null, 2);
+    invalidate();
+    syncParameter();
+    field("value-status").textContent = "Value applied to the candidate copy.";
+    busy(false);
+  } catch (error) {
+    field("value-status").textContent = error.message || "The parameter could not be applied.";
+  }
+});
+field("value-cancel").addEventListener("click", () => { syncParameter(); busy(false); });
+field("editor-reset").addEventListener("click", () => { invalidate(); prepareEditor(true); busy(false); });
 use.addEventListener("change", updateOrigin);
 drafts.addEventListener("change", updateDraftInfo);
 
@@ -149,7 +304,7 @@ field("import").addEventListener("change", async event => {
 function showComparison(scores, parent, tutor, record) {
   field("scores").replaceChildren(...Object.entries(scores).map(([role, score]) => {
     const item = document.createElement("li");
-    const model = { base: parent, teacher: tutor, candidate: record }[role];
+    const model = { base: parent, second: tutor, teacher: tutor, candidate: record }[role];
     item.textContent = role + " · " + model.name + " · " + score.correct + "/" + score.total;
     return item;
   }));
@@ -199,12 +354,13 @@ field("build").addEventListener("submit", async event => {
   invalidate();
   const parent = catalog().get(base.value), tutor = catalog().get(teacher.value);
   const name = field("name").value.trim();
-  if (!name || parent.hash === tutor.hash) {
+  const kind = buildMethod();
+  if (!name || (kind !== "edit" && parent.hash === tutor.hash)) {
     status.textContent = !name ? "Give the new reader a name." : "Choose two readers with different weights.";
     return;
   }
   busy(true);
-  status.textContent = "Training from the selected base…";
+  status.textContent = kind === "train" ? "Training from the selected base…" : "Comparing candidate weights…";
   try {
     if (hostMode()) {
       const parents = { base: parent.id, teacher: tutor.id };
@@ -212,6 +368,24 @@ field("build").addEventListener("submit", async event => {
       if (event.submitter === pause) request.throughStep = 12;
       status.textContent = request.throughStep ? "Training to step 12 on the local host…" : "Training on the local host…";
       showHostResult(await hostRequest(request), parents);
+      return;
+    }
+    if (kind !== "train") {
+      let weights;
+      try { weights = JSON.parse(editor.value); }
+      catch { throw Error("Enter valid JSON for the candidate weights."); }
+      const record = await reviewEdit({
+        base: parent, ...(kind === "blend" ? { second: tutor, rightPercent: percent.valueAsNumber } : {}),
+        weights, name, evaluation: await asset("evaluation"), evaluationHash: sources.evaluation
+      });
+      const count = record.run.editedParameters;
+      field("edit-summary").textContent = runOrigin(record.run) + " " + count + " manually changed parameter" +
+        (count === 1 ? "" : "s") + " compared with the " + (kind === "blend" ? "starting blend." : "base.");
+      field("edit-summary").hidden = false;
+      pending = record;
+      showComparison(record.run.scores, parent, tutor, record);
+      field("save").disabled = false;
+      status.textContent = "Comparison ready. Review the scores and save to keep this candidate.";
       return;
     }
     const result = train(parent.weights, tutor.weights, await asset("training"));
@@ -241,6 +415,7 @@ field("save").addEventListener("click", async () => {
   busy(true);
   try {
     const saved = await insertReader(db, pending);
+    if (buildMethod() !== "train") originalText = editor.value;
     models.set(saved.id, saved);
     listReaders();
     use.value = saved.id;

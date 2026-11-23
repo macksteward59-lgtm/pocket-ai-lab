@@ -52,6 +52,15 @@
 
 #models-view [hidden],#chat-reader-context[hidden],#chat-reader-context [hidden]{display:none}
 #models-view { overflow-y: auto; overscroll-behavior: contain; }
+#reader-editor { font-family: ui-monospace, monospace; resize: vertical; }
+.reader-parameter-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#reader-value-status:empty { display: none; }
+@media (max-width: 760px) {
+  #reader-parameter, #reader-value, #reader-editor { font-size: 16px; }
+}
+.reader-lineage { overflow-wrap: anywhere; font-size: 12px; color: var(--muted); }
+.reader-lineage summary { cursor: pointer; }
+.reader-lineage p { white-space: pre-wrap; }
 
 #recovery-view { overflow-y: auto; overscroll-behavior: contain; }
 #recovery-view [hidden] { display: none; }

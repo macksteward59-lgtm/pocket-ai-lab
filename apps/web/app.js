@@ -91,6 +91,19 @@ function selectChatReader(reader, question, passage) {
 $("chat-choose-reader").addEventListener("click", () => document.querySelector('[data-view="models"]').click());
 $("chat-use-default").addEventListener("click", () => selectChatReader(null));
 
+function readerLineage(reader) {
+  const run = reader.run;
+  if (!run) return reader.parents ? "Base ID: " + reader.parents.base + "\nTeacher ID: " + reader.parents.teacher : "";
+  function parent(role, ref) {
+    return role + ": " + ref.label + "\n" + role + " ID: " + ref.id + "\n" + role + " weights: " + ref.hash;
+  }
+  const lines = [parent("Base", run.base)];
+  if (run.teacher) lines.push(parent("Teacher", run.teacher));
+  if (run.second) lines.push(parent("Second", run.second), "Second model share: " + run.rightPercent + "%");
+  if (Number.isInteger(run.editedParameters)) lines.push("Manually changed parameters: " + run.editedParameters);
+  return lines.join("\n");
+}
+
 function offerReaderMemory(output, reader, result) {
   const review = memoryElement("button", "secondary-button reader-review", "Review in Memory");
   review.type = "button";
@@ -101,11 +114,9 @@ function offerReaderMemory(output, reader, result) {
       notice.textContent = "A Memory draft is open. Save or clear it before preparing another.";
       return;
     }
-    const lineage = reader.run
-      ? "\nBase weights: " + reader.run.base.hash + "\nTeacher weights: " + reader.run.teacher.hash :
-      reader.parents ? "\nBase ID: " + reader.parents.base + "\nTeacher ID: " + reader.parents.teacher : "";
+    const lineage = readerLineage(reader);
     $("memory-content").value = "Question: " + result.question + "\nModel output: " + result.answer +
-      "\nModel: " + reader.name + "\nModel ID: " + reader.id + lineage;
+      "\nModel: " + reader.name + "\nModel ID: " + reader.id + (lineage ? "\n" + lineage : "");
     $("memory-source").value = reader.location === "host"
       ? "Prompt SHA-256 " + result.sourceHash + " · host model SHA-256 " + reader.hash
       : "Passage SHA-256 " + result.sourceHash + " · " +
@@ -168,6 +179,11 @@ async function sendReaderMessage(text, reader) {
     if ($("prompt").value === text) $("prompt").value = "";
     const output = appendMessage("assistant", result.answer, reader.label + (reader.location === "host" ? " · LOCAL TRAINING HOST" : " · LOCAL DOCUMENT READER"));
     offerReaderMemory(output, reader, result);
+    if (Number.isInteger(reader.run?.editedParameters)) {
+      const lineage = memoryElement("details", "reader-lineage");
+      lineage.append(memoryElement("summary", "", "Parent models"), memoryElement("p", "", readerLineage(reader)));
+      output.after(lineage);
+    }
     if (reviewGeneration === reviewAccountGeneration) offerSourceReview(output, reader, result, passage, text);
     output.scrollIntoView({ block: "nearest" });
   } catch (error) {

@@ -140,7 +140,7 @@
         </div>
       </section>
       <section class="view secondary-view hidden" id="models-view">
-        <div class="section-heading"><h1>Model workshop</h1><p>Choose a base and a teacher. Compare their scores with the model you train.</p></div>
+        <div class="section-heading"><h1>Model workshop</h1><p>Train a model, edit a reader, or combine two readers. Compare the results before saving a candidate.</p></div>
         <div class="memory-form">
           <label>Training location<select id="workshop-engine">
             <option value="browser">This browser · document readers</option>
@@ -152,9 +152,29 @@
           <button id="host-refresh" type="button" class="secondary-button" hidden>Refresh host models</button>
         </div>
         <form id="reader-build" class="memory-form">
+          <label id="reader-method-group">Build method<select id="reader-method" disabled>
+            <option value="train">Train with a teacher</option>
+            <option value="edit">Edit a copy of one reader</option>
+            <option value="blend">Combine two readers’ weights</option>
+          </select></label>
           <div class="memory-fields">
             <label>Base model<select id="reader-base" required disabled></select></label>
-            <label>Teacher model<select id="reader-teacher" required disabled></select></label>
+            <label id="reader-teacher-group"><span id="reader-teacher-label">Teacher model</span><select id="reader-teacher" required disabled></select></label>
+          </div>
+          <label id="reader-percent-group" hidden>Second model’s share (%)<input id="reader-percent" type="number" min="1" max="99" step="1" value="50" disabled></label>
+          <div id="reader-editor-group" class="memory-editor" hidden>
+            <div class="memory-fields">
+              <label>Parameter<select id="reader-parameter" disabled></select></label>
+              <label>Value<input id="reader-value" type="number" min="-1000000" max="1000000" step="any" disabled></label>
+            </div>
+            <div class="reader-parameter-actions">
+              <button id="reader-apply" class="secondary-button" type="button" disabled>Apply to copy</button>
+              <button id="reader-value-cancel" class="secondary-button" type="button" hidden>Discard typed value</button>
+            </div>
+            <p id="reader-value-status" role="status"></p>
+            <label>Advanced · candidate weights (JSON)<textarea id="reader-editor" rows="6" maxlength="65536" spellcheck="false" disabled></textarea></label>
+            <p id="reader-editor-hint" role="status"></p>
+            <div><button id="reader-editor-reset" class="secondary-button" type="button" disabled>Load selected weights</button></div>
           </div>
           <label>Candidate name<input id="reader-name" maxlength="64" required placeholder="e.g. Research model v2"></label>
           <button class="primary-button" id="reader-train" type="submit" disabled>Train candidate</button>
@@ -169,7 +189,8 @@
         </section>
         <section id="reader-comparison" hidden>
           <h2>Held-out comparison</h2>
-          <p>Compare the three scores on the same held-out questions.</p>
+          <p>Each model answers the same held-out questions.</p>
+          <p id="reader-edit-summary" hidden></p>
           <ul id="reader-scores"></ul>
           <button class="secondary-button" id="reader-save" type="button">Save candidate to my readers</button>
         </section>

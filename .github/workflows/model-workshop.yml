@@ -7,6 +7,7 @@ on:
     paths:
       - apps/web/model-workshop/**
       - apps/web/test/model-workshop.test.mjs
+      - apps/web/test/reader-edit.test.mjs
       - apps/web/test/workshop-route.test.mjs
       - apps/web/index.html
       - apps/web/app.js
@@ -39,7 +40,7 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           ./node_modules/.bin/playwright install --with-deps chromium webkit
-          node --import tsx --test model-workshop.mjs
+          node --import tsx --test model-workshop.mjs reader-editor.mjs
   host-language-model:
     runs-on: ubuntu-24.04
     timeout-minutes: 16
