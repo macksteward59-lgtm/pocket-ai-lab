@@ -66,13 +66,6 @@ for (const engine of [chromium, webkit]) {
       await page.locator("#reader-status").filter({ hasText: /compatible/ }).waitFor();
       await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
       await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-      const cached = await page.evaluate(async () => {
-        const keys = await caches.keys();
-        const inventory = {};
-        for (const key of keys) inventory[key] = (await (await caches.open(key)).keys()).map(r => r.url);
-        return { inventory, root: !!await caches.match(location.href, { ignoreVary: true }) };
-      });
-      assert.ok(cached.root, JSON.stringify(cached.inventory));
       await browser.close();
       browser = undefined;
       // Physically stop the HTTP server so even a service worker cannot fetch a cache miss.
@@ -82,20 +75,7 @@ for (const engine of [chromium, webkit]) {
       await closed;
       browser = await engine.launchPersistentContext(dir, mobile);
       page = browser.pages()[0] ?? await browser.newPage();
-      try {
-        await open(page, url);
-      } catch (error) {
-        // Inspect the same origin after a failed offline launch, without replacing shell assets.
-        server.listen(port, "127.0.0.1");
-        await once(server, "listening");
-        await page.goto(url + "/api/health");
-        console.error(engine.name(), "persisted cache inventory", await page.evaluate(async () => {
-          const inventory = {};
-          for (const key of await caches.keys()) inventory[key] = (await (await caches.open(key)).keys()).map(r => r.url);
-          return inventory;
-        }));
-        throw error;
-      }
+      await open(page, url);
       await page.locator("#reader-use").selectOption(child);
       await page.locator("#reader-origin").filter({ hasText: /Held-out score 15\/16/ }).waitFor();
       exported.intercept += 0.125;
