@@ -1,6 +1,6 @@
 import { hostRequest, hostModel } from "./host.js";
 import { evaluate, readPassage, readWeights, recipe, train } from "./reader.js";
-import { asset, digest, insertReader, modelRecord, openCatalog, savedReaders, sources } from "./catalog.js";
+import { asset, digest, exportReader, importReader, insertReader, modelRecord, openCatalog, savedReaders, sources } from "./catalog.js";
 import { blendReaders, reviewEdit } from "./edit.js";
 
 const field = name => document.getElementById("reader-" + name);
@@ -18,6 +18,7 @@ let typedValue = false, validDraft = false;
 const buildMethod = () => hostMode() ? "train" : method.value;
 let editorSeed = null, originalText = "", staleEditor = false;
 let db, pending;
+let bundledReaders = [];
 let initialized = false;
 const label = entry => entry.name + " · " + entry.hash.slice(0, 8);
 
@@ -40,7 +41,10 @@ function updateOrigin() {
 function listReaders() {
   for (const select of [base, teacher, use]) {
     const selected = select.value;
-    select.replaceChildren(...Array.from(catalog().values(), record => new Option(label(record), record.id)));
+    select.replaceChildren(...Array.from(catalog().values(), record => {
+      const build = record.run ? " · build " + record.id.slice(6, 18) : "";
+      return new Option(label(record) + build, record.id);
+    }));
     if (catalog().has(selected)) select.value = selected;
   }
   updateOrigin();
@@ -225,13 +229,18 @@ async function refreshMode() {
 }
 engine.addEventListener("change", refreshMode);
 document.getElementById("host-refresh").addEventListener("click", refreshMode);
+async function refreshSavedReaders() {
+  const saved = await savedReaders(db);
+  models.clear();
+  for (const entry of [...bundledReaders, ...saved]) models.set(entry.id, entry);
+}
 async function initialize() {
   status.textContent = "Loading readers…";
   const [hard, soft] = await Promise.all([asset("hard"), asset("soft")]);
   db = await openCatalog();
   const builtin = await Promise.all([modelRecord(hard, "Hard-label reader"), modelRecord(soft, "Soft-label reader")]);
-  for (const entry of builtin) models.set(entry.id, { ...entry, origin: "Distillation pilot · bundled reader" });
-  for (const entry of await savedReaders(db)) models.set(entry.id, entry);
+  bundledReaders = builtin.map(entry => ({ ...entry, origin: "Distillation pilot · bundled reader" }));
+  await refreshSavedReaders();
   initialized = true;
   status.textContent = "";
 }
@@ -289,9 +298,10 @@ field("import").addEventListener("change", async event => {
     try { raw = JSON.parse(await file.text()); }
     catch { throw Error("The selected file could not be read as JSON."); }
     const name = file.name.replace(/\.json$/i, "").slice(0, 64) || "Imported reader";
-    const record = await modelRecord(raw, name);
-    const found = [...models.values()].find(entry => entry.hash === record.hash);
-    const entry = found ?? await insertReader(db, record);
+    await refreshSavedReaders();
+    const record = await importReader(raw, name, models);
+    const found = models.has(record.id);
+    const entry = found ? record : await insertReader(db, record);
     models.set(entry.id, entry);
     listReaders();
     use.value = entry.id;
@@ -465,7 +475,7 @@ field("chat").addEventListener("click", () => {
 });
 field("export").addEventListener("click", () => {
   const record = models.get(use.value);
-  const payload = { ...record.weights, workshop: { name: record.name, weightsSHA256: record.hash, run: record.run ?? null } };
+  const payload = exportReader(record);
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload) + "\n"], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;

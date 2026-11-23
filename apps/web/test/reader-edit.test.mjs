@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { modelRecord, sources } from "../model-workshop/catalog.js";
+import { exportReader, importReader, modelRecord, sources } from "../model-workshop/catalog.js";
 import { blendReaders, reviewEdit } from "../model-workshop/edit.js";
 import { evaluate } from "../model-workshop/reader.js";
 
@@ -88,6 +88,50 @@ test("lineage binds ordered parent identities, recipe, mix, evaluation and final
   assert.equal(new Set([child, ...variants].map(r => r.id)).size, variants.length + 1);
   await assert.rejects(review({ ...config, evaluation: differentCorpus }), /evaluation differs/);
   await assert.rejects(review({ ...config, base: { ...base, weights: second.weights } }), /recorded hash differs/);
+});
+
+test("import restores the selected local build when identical weights have different parents", async () => {
+  const weights = blendReaders(base.weights, second.weights, 50);
+  const first = await review({ base: second, second: base, rightPercent: 50, weights });
+  const next = await review({ second, rightPercent: 50, weights });
+  assert.equal(first.hash, next.hash);
+  assert.notEqual(first.id, next.id);
+  const catalog = new Map([first, next].map(record => [record.id, record]));
+  const uploaded = structuredClone(exportReader(next));
+  assert.equal(uploaded.workshop.id, next.id);
+  uploaded.workshop.name = "Foreign display name";
+  const restore = raw => importReader(raw, "Uploaded reader", catalog);
+  for (const source of [uploaded, exportReader(first)]) {
+    const selected = await restore(source);
+    assert.equal(selected, catalog.get(source.workshop.id));
+    assert.equal(selected.run.base.label, source.workshop.run.base.label);
+    assert.equal(selected.run.second.label, source.workshop.run.second.label);
+  }
+  const legacy = structuredClone(uploaded);
+  delete legacy.workshop.id;
+  legacy.workshop.run = Object.fromEntries(Object.entries(legacy.workshop.run).reverse());
+  assert.equal(await restore(legacy), next);
+
+  const foreign = { ...uploaded.workshop, id: "unknown-local-build" };
+  const wrongRun = { ...uploaded.workshop, id: first.id };
+  const wrongScore = structuredClone(uploaded.workshop);
+  wrongScore.run.scores.candidate.correct++;
+  const wrongHash = { ...uploaded.workshop, weightsSHA256: base.hash };
+  const missingRun = { ...uploaded.workshop, run: null };
+  const partialLegacy = { weightsSHA256: next.hash, run: { base: next.run.base } };
+  const canonical = await modelRecord(weights, "Uploaded reader");
+  for (const workshop of [undefined, foreign, wrongRun, wrongScore, wrongHash, missingRun, partialLegacy]) {
+    assert.deepEqual(await restore({ ...weights, workshop }), canonical);
+  }
+  const changed = { ...uploaded, intercept: uploaded.intercept + 1 };
+  assert.deepEqual(await restore(changed), await modelRecord(changed, "Uploaded reader"));
+  const reassigned = { ...next, id: "another-local-id-for-the-same-run" };
+  catalog.set(reassigned.id, reassigned);
+  assert.deepEqual(await restore(legacy), canonical);
+  catalog.set(canonical.id, canonical);
+  assert.equal(await restore({ ...weights, workshop: foreign }), canonical);
+  assert.equal(await restore(exportReader(canonical)), canonical);
+  assert.equal(await restore(uploaded), next);
 });
 
 test("invalid, sparse, ambiguous or unchanged builds cannot produce candidates", async () => {

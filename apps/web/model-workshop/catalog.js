@@ -23,6 +23,40 @@ export async function modelRecord(raw, name) {
   const hash = await digest(new TextEncoder().encode(JSON.stringify(weights)));
   return { id: hash, hash, name, weights };
 }
+
+export function exportReader(record) {
+  return { ...record.weights, workshop: {
+    id: record.id, name: record.name, weightsSHA256: record.hash, run: record.run ?? null
+  } };
+}
+
+function sameJson(left, right) {
+  if (left === right) return true;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object" ||
+      Array.isArray(left) !== Array.isArray(right)) return false;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length &&
+    keys.every(key => Object.hasOwn(right, key) && sameJson(left[key], right[key]));
+}
+
+export async function importReader(raw, name, catalog) {
+  const plain = await modelRecord(raw, name);
+  const info = raw.workshop;
+  if (info?.weightsSHA256 === plain.hash) {
+    if (Object.hasOwn(info, "id")) {
+      const local = catalog.get(info.id);
+      if (local?.hash === plain.hash && sameJson(local.run ?? null, info.run ?? null)) return local;
+    } else if (info.run) {
+      // Earlier exports identified a build only by its complete run and its weights.
+      const matches = [...catalog.values()].filter(local =>
+        local.hash === plain.hash && local.run && sameJson(local.run, info.run));
+      if (matches.length === 1) return matches[0];
+    }
+  }
+  // An unknown declaration cannot give a plain weight file a local build's history.
+  return catalog.get(plain.id) ?? plain;
+}
+
 export function openCatalog() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("pocket-ai-lab-document-readers", 1);

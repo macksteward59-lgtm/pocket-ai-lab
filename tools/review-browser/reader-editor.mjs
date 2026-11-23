@@ -27,17 +27,22 @@ async function exportReader(page, id) {
   const download = page.waitForEvent("download");
   await page.locator("#reader-export").click();
   const { workshop, ...weights } = JSON.parse(await readFile(await (await download).path(), "utf8"));
+  assert.equal(workshop.id, id);
   assert.equal(sha256(JSON.stringify(weights)), workshop.weightsSHA256);
   return { id, weights, workshop };
+}
+
+async function uploadReader(page, name, payload) {
+  await page.locator("#reader-import").setInputFiles({
+    name: name + ".json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(payload))
+  });
 }
 
 async function importParent(page, file, name, offset) {
   const weights = JSON.parse(await fixture(file));
   // Distinct, valid import files keep the bundled copies in the catalog for comparison.
   weights.intercept += offset;
-  await page.locator("#reader-import").setInputFiles({
-    name: name + ".json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(weights))
-  });
+  await uploadReader(page, name, weights);
   await page.locator("#reader-status").filter({ hasText: "Imported: " + name }).waitFor();
   const id = await page.locator("#reader-use").inputValue();
   const result = await exportReader(page, id);
@@ -180,6 +185,19 @@ for (const engine of [chromium, webkit]) {
       assert.deepEqual(await storedIds(page), [...imports, single.id].sort());
 
       await method.selectOption("blend");
+      // Reversing the parents and the percentage gives the same weights with a distinct build history.
+      await base.selectOption(right.id);
+      await page.locator("#reader-teacher").selectOption(left.id);
+      await page.locator("#reader-percent").fill("65");
+      const siblingName = "Pocket reversed parents";
+      await name.fill(siblingName);
+      await compare(page, { base: { name: right.workshop.name, weights: right.weights }, second: parent,
+        candidate: { name: siblingName, weights: JSON.parse(await editor.inputValue()) } }, corpus);
+      const sibling = await save(page);
+      assert.deepEqual(sibling.workshop.run.base, ref(right));
+      assert.deepEqual(sibling.workshop.run.second, ref(left));
+      assert.equal(sibling.workshop.run.rightPercent, 65);
+      await base.selectOption(left.id);
       await page.locator("#reader-teacher").selectOption(right.id);
       await page.locator("#reader-percent").fill("35");
       const blendName = "Pocket mixed reader", preview = JSON.parse(await editor.inputValue());
@@ -190,7 +208,7 @@ for (const engine of [chromium, webkit]) {
         candidate: { name: blendName, weights: preview }
       }, corpus);
       await page.locator("#reader-edit-summary").filter({ hasText: "0 manually changed parameters" }).waitFor();
-      assert.deepEqual(await storedIds(page), [...imports, single.id].sort());
+      assert.deepEqual(await storedIds(page), [...imports, single.id, sibling.id].sort());
       const blend = await save(page);
       assert.equal(blend.workshop.name, blendName);
       assertBlendWeights(blend.weights, left.weights, right.weights);
@@ -199,11 +217,27 @@ for (const engine of [chromium, webkit]) {
         recipe: "reader-linear-blend-v1", base: ref(left), second: ref(right), rightPercent: 35,
         editedParameters: 0, evaluation: sha256(evaluationText), scores: blendScores
       });
-      const savedIds = [...imports, single.id, blend.id].sort();
-      assert.equal(new Set(savedIds).size, 4);
+      assert.deepEqual(blend.weights, sibling.weights);
+      assert.equal(blend.workshop.weightsSHA256, sibling.workshop.weightsSHA256);
+      assert.notEqual(blend.id, sibling.id);
+      const builtIds = [...imports, single.id, sibling.id, blend.id].sort();
+      assert.deepEqual(await storedIds(page), builtIds);
+      await uploadReader(page, "Pocket weights only", blend.weights);
+      await page.locator("#reader-status").filter({ hasText: "Imported: Pocket weights only" }).waitFor();
+      const bareId = await page.locator("#reader-use").inputValue();
+      assert.equal(bareId, blend.workshop.weightsSHA256);
+      const bare = await exportReader(page, bareId);
+      assert.equal(bare.workshop.run, null);
+      assert.deepEqual(bare.weights, blend.weights);
+      const savedIds = [...builtIds, bareId].sort();
+      assert.equal(new Set(savedIds).size, 6);
+      for (const source of [left, right, single, sibling]) assert.deepEqual(await exportReader(page, source.id), source);
+      await uploadReader(page, "Round trip", { ...blend.weights, workshop: blend.workshop });
+      await page.locator("#reader-status").filter({ hasText: "Already available: " + blendName }).waitFor();
+      assert.equal(await page.locator("#reader-use").inputValue(), blend.id);
+      const origin = await page.locator("#reader-origin").innerText();
+      assert.ok(origin.includes(ref(left).label + " (65%)") && origin.includes(ref(right).label + " (35%)"));
       assert.deepEqual(await storedIds(page), savedIds);
-      for (const source of [left, right, single]) assert.deepEqual(await exportReader(page, source.id), source);
-      await page.locator("#reader-use").selectOption(blend.id);
       const question = corpus[0].questions[0][0], answer = corpus[0].sentences[0];
       const passage = corpus[0].sentences.join("\n");
       await page.locator("#reader-question").fill(question);
