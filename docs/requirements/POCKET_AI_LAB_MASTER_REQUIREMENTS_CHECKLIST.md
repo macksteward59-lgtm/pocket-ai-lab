@@ -204,6 +204,8 @@ The owner’s November 22 clarification adds model creation to the existing sele
 
 On November 23, the [browser workshop](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/d38a1ed1dac9313c138460077c7504221716776e/docs/implementation/unified-model-workflow.md#move-a-child-and-its-parents-to-another-browser) added previews and atomic import for a selected v1 reader and its ancestors. The receiving browser checks identities, parent roles, pinned corpora and local measurements before saving. In both directions between Chromium and WebKit the owner could reuse the recovered child offline. [Importable examples and observed results](../../coordination/evidence/portable-reader-families-2026-11-23/README.md)
 
+At `d74e589`, the browser workshop can also compare a saved reader with its immediate parents on the owner’s typed passage or a local labeled set. The owner chooses which result and source to take to Chat. [Workflow and limits](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/d74e589cc403d1affb7605388ffb7fe35db68039/docs/implementation/unified-model-workflow.md#compare-the-saved-child-and-its-parents-on-your-own-examples) · [Mobile test records](../../coordination/evidence/portable-reader-families-2026-11-23/README.md#compare-the-child-and-its-parents-in-the-app).
+
 ### 6.1 Registry and provider adapters
 - [ ] Maintain a model registry independent of agent definitions.
 - [ ] Record model identity, version, format, source, checksum, license metadata, capabilities, context limits, quantization, hardware requirements, and availability.
