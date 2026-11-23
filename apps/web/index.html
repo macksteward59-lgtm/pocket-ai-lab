@@ -165,7 +165,7 @@
           <div id="reader-editor-group" class="memory-editor" hidden>
             <div class="memory-fields">
               <label>Parameter<select id="reader-parameter" disabled></select></label>
-              <label>Value<input id="reader-value" type="number" min="-1000000" max="1000000" step="any" disabled></label>
+              <label>Value<input id="reader-value" type="text" inputmode="decimal" maxlength="128" autocomplete="off" spellcheck="false" disabled></label>
             </div>
             <div class="reader-parameter-actions">
               <button id="reader-apply" class="secondary-button" type="button" disabled>Apply to copy</button>
@@ -181,6 +181,18 @@
           <button class="secondary-button" id="host-pause" type="submit" hidden disabled>Train to step 12 and pause</button>
           <p id="reader-status" role="status"></p>
         </form>
+        <section id="reader-draft-panel" class="memory-form" hidden>
+          <h2>Reader editing drafts</h2>
+          <small>Keep unfinished reader edits in this browser. Resume a draft to compare it and save a runnable candidate.</small>
+          <button type="button" class="secondary-button" id="reader-draft-save" hidden disabled>Save editing draft</button>
+          <label>Saved editing drafts<select id="reader-drafts" disabled></select></label>
+          <div class="reader-parameter-actions">
+            <button type="button" class="secondary-button" id="reader-draft-resume" disabled>Resume editing draft</button>
+            <button type="button" class="secondary-button" id="reader-draft-delete" disabled>Delete draft</button>
+            <button type="button" class="secondary-button" id="reader-draft-refresh" disabled>Refresh drafts</button>
+          </div>
+          <p id="reader-draft-status" role="status"></p>
+        </section>
         <section id="reader-family-group" class="memory-form">
           <label for="reader-family-file">Import model family<input id="reader-family-file" type="file" accept=".json,application/json" aria-describedby="reader-family-help" disabled></label>
           <small id="reader-family-help">Choose a workshop family file up to 512 KiB to review the reader and its parents.</small>

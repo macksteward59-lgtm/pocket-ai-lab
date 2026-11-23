@@ -4,6 +4,8 @@ import { asset, digest, exportReader, importReader, insertFamily, insertReader, 
 import { blendReaders, reviewEdit } from "./edit.js";
 import { exportFamily, FAMILY_MAX_BYTES, inspectFamily, trainingBuildId } from "./family.js";
 import { compareReaders, MAX_COMPARISON_BYTES } from "./compare.js";
+import { createDraft, restoreDraft } from "./draft.js";
+import { openDraftStore, listDrafts as listEditingDrafts, getDraft, saveDraft, deleteDraft } from "./draft-store.js";
 
 const field = name => document.getElementById("reader-" + name);
 const status = field("status"), base = field("base"), teacher = field("teacher"), use = field("use");
@@ -16,6 +18,9 @@ const catalog = () => hostMode() ? hostModels : models;
 const method = field("method"), editor = field("editor"), percent = field("percent");
 const parameter = field("parameter"), parameterValue = field("value");
 const parameterPaths = new Map();
+const draftPicker = field("drafts"), draftStatus = field("draft-status");
+let workshopBusy = false, draftWorking = false, draftGeneration = 0, draftListGeneration = 0;
+let lastSavedEditor = null;
 const workshop = document.getElementById("models-view");
 const familyFile = field("family-file"), familyPreview = field("family-preview");
 let familyDraft, familyGeneration = 0;
@@ -28,6 +33,10 @@ let db, pending;
 let bundledReaders = [];
 let initialized = false;
 const label = entry => entry.name + " · " + entry.hash.slice(0, 8);
+function readerOption(record) {
+  const build = record.run ? " · build " + record.id.slice(6, 18) : "";
+  return new Option(label(record) + build, record.id);
+}
 
 function runOrigin(run, parentName = ref => ref.label) {
   if (run.teacher) return "Built from " + parentName(run.base) + " with " + parentName(run.teacher) + " as teacher.";
@@ -51,10 +60,7 @@ function updateOrigin() {
 function listReaders() {
   for (const select of [base, teacher, use]) {
     const selected = select.value;
-    select.replaceChildren(...Array.from(catalog().values(), record => {
-      const build = record.run ? " · build " + record.id.slice(6, 18) : "";
-      return new Option(label(record) + build, record.id);
-    }));
+    select.replaceChildren(...Array.from(catalog().values(), readerOption));
     if (catalog().has(selected)) select.value = selected;
   }
   updateOrigin();
@@ -90,6 +96,7 @@ function syncParameter() {
   try {
     const weights = readWeights(JSON.parse(editor.value));
     if (!parameterPaths.size) indexParameters(weights);
+    if (!parameterPaths.has(parameter.value)) parameter.value = "intercept";
     const path = parameterPaths.get(parameter.value);
     parameterValue.value = String(path.reduce((value, key) => value[key], weights));
     validDraft = true;
@@ -102,10 +109,14 @@ function syncParameter() {
 }
 
 function parameterHint() {
-  const value = parameterValue.valueAsNumber;
+  const value = numericParameter();
   return Number.isFinite(value) && Math.abs(value) <= 1e6
     ? "Apply the value to your copy before comparing."
     : "Enter a finite number between −1,000,000 and 1,000,000.";
+}
+function numericParameter() {
+  const text = parameterValue.value.trim();
+  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text) ? Number(text) : NaN;
 }
 
 function prepareEditor(replaceEdits = false) {
@@ -143,7 +154,7 @@ function prepareEditor(replaceEdits = false) {
     : "Change the parameter values in this copy, then compare it with the base reader.";
 }
 
-function showMethod() {
+function showMethod(replaceEdits = false) {
   const kind = buildMethod();
   field("method-group").hidden = hostMode();
   field("teacher-group").hidden = kind === "edit";
@@ -151,7 +162,12 @@ function showMethod() {
   field("percent-group").hidden = kind !== "blend";
   field("editor-group").hidden = kind === "train";
   field("train").textContent = hostMode() ? "Train and save checkpoint" : kind === "train" ? "Train candidate" : "Compare candidate";
-  prepareEditor();
+  prepareEditor(replaceEdits);
+  const panel = field("draft-panel");
+  const showDrafts = !hostMode() && initialized;
+  if (panel.hidden && showDrafts) refreshDraftList();
+  panel.hidden = !showDrafts;
+  field("draft-save").hidden = kind === "train";
 }
 function hostParent(id) {
   return hostModels.get(id) || { id, name: id };
@@ -170,7 +186,186 @@ function listDrafts(selected = drafts.value) {
   if (!hostDrafts.size) drafts.add(new Option("No saved runs", ""));
   updateDraftInfo();
 }
+
+function setDraftButtons() {
+  const unavailable = workshopBusy || !initialized || hostMode();
+  draftPicker.disabled = unavailable || !draftPicker.value;
+  field("draft-refresh").disabled = unavailable || draftWorking;
+  field("draft-resume").disabled = field("draft-delete").disabled = draftPicker.disabled || draftWorking;
+  field("draft-save").disabled = unavailable || draftWorking || buildMethod() === "train" || staleEditor || !editorSeed;
+}
+
+function cancelDraftAction() {
+  draftGeneration++;
+  if (draftWorking) draftStatus.textContent = "";
+  draftWorking = false;
+  setDraftButtons();
+}
+
+async function refreshDraftList(preferred, stillCurrent = () => true) {
+  const generation = ++draftListGeneration;
+  let store;
+  try {
+    store = await openDraftStore();
+    const rows = await listEditingDrafts(store);
+    if (generation !== draftListGeneration || hostMode()) return;
+    const selected = preferred && stillCurrent() ? preferred : draftPicker.value;
+    const options = rows.map(row => new Option((row.name.trim() || "Untitled reader draft") +
+      " · " + row.id.slice(6, 18), row.id));
+    draftPicker.replaceChildren(...options);
+    if (!options.length) draftPicker.add(new Option("No saved editing drafts", ""));
+    if (rows.some(row => row.id === selected)) draftPicker.value = selected;
+    setDraftButtons();
+  } catch (error) {
+    if (generation === draftListGeneration && !hostMode()) {
+      draftStatus.textContent = error.message + " Choose Refresh drafts to retry.";
+    }
+    return false;
+  } finally { store?.close(); }
+  return true;
+}
+
+function currentDraftForm() {
+  const key = select => {
+    const record = models.get(select.value);
+    return record ? { id: record.id, hash: record.hash } : null;
+  };
+  const blend = buildMethod() === "blend";
+  return {
+    method: buildMethod(), base: key(base), second: blend ? key(teacher) : null,
+    rightPercent: blend ? percent.valueAsNumber : null, name: field("name").value, editorText: editor.value,
+    parameterKey: parameter.value, parameterText: parameterValue.value, parameterPending: typedValue
+  };
+}
+
+async function savedEditorIsAvailable(store, catalog) {
+  const saved = lastSavedEditor;
+  if (!saved || JSON.stringify(currentDraftForm()) !== saved.signature) return false;
+  if (saved.modelId) return catalog.has(saved.modelId);
+  try {
+    const record = await getDraft(store, saved.draftId);
+    return !!record && (await restoreDraft(record, catalog)).id === saved.draftId;
+  } catch {
+    // Damaged or deleted snapshots leave the editor as the only usable copy.
+    return false;
+  }
+}
+
+function shouldReplaceEditor(draft, recoverable) {
+  const form = currentDraftForm();
+  const same = Object.keys(form).every(key => JSON.stringify(form[key]) === JSON.stringify(draft[key]));
+  if (same || recoverable) return true;
+  const customSetup = (kind, left, right, share) => left !== bundledReaders[1]?.id ||
+    (kind === "blend" && (right !== bundledReaders[0]?.id || share !== 50));
+  const selectedSetup = buildMethod() !== "train" && customSetup(form.method, form.base?.id, form.second?.id, form.rightPercent);
+  const dirty = selectedSetup || (editorSeed && customSetup(...JSON.parse(editorSeed))) || editor.value !== originalText ||
+    typedValue || form.name.length > 0 || (parameter.value && parameter.value !== "intercept");
+  return !dirty || window.confirm("Replace your unsaved reader edits with this editing draft?");
+}
+
+function loadDraftEditor(draft, catalog) {
+  for (const ref of [draft.base, draft.second].filter(Boolean)) {
+    const parent = catalog.get(ref.id);
+    if (!models.has(parent.id)) {
+      for (const select of [base, teacher, use]) select.add(readerOption(parent));
+    }
+    models.set(parent.id, parent);
+  }
+  invalidate();
+  method.value = draft.method;
+  base.value = draft.base.id;
+  if (draft.second) {
+    teacher.value = draft.second.id;
+    percent.value = String(draft.rightPercent);
+  }
+  // First reconstruct the true seed so switching parents continues protecting the restored edits.
+  showMethod(true);
+  field("name").value = draft.name;
+  editor.value = draft.editorText;
+  syncParameter();
+  parameter.value = draft.parameterKey;
+  parameterValue.value = draft.parameterText;
+  typedValue = draft.parameterPending;
+  if (typedValue) field("value-status").textContent = parameterHint();
+  lastSavedEditor = { signature: JSON.stringify(currentDraftForm()), draftId: draft.id };
+  busy(false);
+}
+
+async function runDraftAction(action, task) {
+  if (field("draft-" + action).disabled) return;
+  const generation = ++draftGeneration;
+  const current = () => generation === draftGeneration && !hostMode() && !workshopBusy && !workshop.classList.contains("hidden");
+  draftWorking = true;
+  setDraftButtons();
+  let store;
+  try {
+    store = await openDraftStore();
+    if (current()) await task(store, current);
+  } catch (error) {
+    if (current()) draftStatus.textContent = error.message;
+  } finally {
+    store?.close();
+    if (generation === draftGeneration) {
+      draftWorking = false;
+      setDraftButtons();
+    }
+  }
+}
+
+field("draft-save").addEventListener("click", () => runDraftAction("save", async (store, current) => {
+  const form = currentDraftForm();
+  const seed = JSON.stringify([form.method, form.base?.id, form.second?.id, form.rightPercent]);
+  if (staleEditor || seed !== editorSeed) throw Error("Return to the original parents or load the selected weights before saving this draft.");
+  const saved = await savedReaders(db);
+  if (!current()) return;
+  const parents = new Map([...bundledReaders, ...saved].map(parent => [parent.id, parent]));
+  const draft = await createDraft(form, parents);
+  if (!current()) return;
+  await saveDraft(store, draft);
+  if (!current()) return;
+  lastSavedEditor = { signature: JSON.stringify(form), draftId: draft.id };
+  const listed = await refreshDraftList(draft.id, current);
+  if (current()) draftStatus.textContent = listed ? "Draft saved in this browser." : "Draft saved. Refresh drafts to see it in the list.";
+}));
+
+field("draft-resume").addEventListener("click", () => runDraftAction("resume", async (store, current) => {
+  const [record, saved] = await Promise.all([getDraft(store, draftPicker.value), savedReaders(db)]);
+  if (!current()) return;
+  if (!record) {
+    await refreshDraftList();
+    throw Error("This editing draft is no longer in this browser.");
+  }
+  const parents = new Map([...bundledReaders, ...saved].map(parent => [parent.id, parent]));
+  const draft = await restoreDraft(record, parents);
+  if (!current()) return;
+  const recoverable = await savedEditorIsAvailable(store, parents);
+  if (!current() || !shouldReplaceEditor(draft, recoverable)) return;
+  loadDraftEditor(draft, parents);
+  draftStatus.textContent = "Editing draft resumed. Compare the candidate when your edits are ready.";
+}));
+
+field("draft-delete").addEventListener("click", () => {
+  const selected = draftPicker.selectedOptions[0];
+  if (!selected || !window.confirm("Delete the editing draft “" + selected.text + "” from this browser?")) return;
+  runDraftAction("delete", async (store, current) => {
+    await deleteDraft(store, selected.value);
+    if (lastSavedEditor?.draftId === selected.value) lastSavedEditor = null;
+    if (!current()) return;
+    await refreshDraftList();
+    if (current()) draftStatus.textContent = "Editing draft deleted.";
+  });
+});
+field("draft-refresh").addEventListener("click", () => refreshDraftList());
+draftPicker.addEventListener("change", setDraftButtons);
+for (const type of ["input", "change", "click"]) {
+  workshop.addEventListener(type, event => {
+    if (draftWorking && (type !== "click" || event.target.closest("button"))) cancelDraftAction();
+  }, true);
+}
+
 function busy(active) {
+  workshopBusy = active;
+  if (active) cancelDraftAction();
   const kind = buildMethod();
   const changingValue = kind !== "train" && typedValue;
   engine.disabled = active || changingValue;
@@ -199,6 +394,7 @@ function busy(active) {
   document.getElementById("host-refresh").disabled = active;
   pause.disabled = active || !hostMode() || hostModels.size < 2;
   drafts.disabled = resume.disabled = active || !hostMode() || !hostDrafts.size;
+  setDraftButtons();
 }
 async function refreshMode() {
   invalidate();
@@ -279,7 +475,7 @@ parameterValue.addEventListener("input", () => {
 });
 field("apply").addEventListener("click", () => {
   if (field("apply").disabled) return;
-  const value = parameterValue.valueAsNumber;
+  const value = numericParameter();
   if (!Number.isFinite(value) || Math.abs(value) > 1e6) {
     field("value-status").textContent = parameterHint();
     return;
@@ -352,12 +548,14 @@ for (const type of ["input", "change", "submit", "click"]) {
 }
 new MutationObserver(() => {
   if (workshop.classList.contains("hidden")) {
+    cancelDraftAction();
     clearFamilyPreview();
     clearAnswerComparison();
   }
 }).observe(workshop, { attributes: true, attributeFilter: ["class"] });
 window.addEventListener("pagehide", clearFamilyPreview);
 window.addEventListener("pagehide", clearAnswerComparison);
+window.addEventListener("pagehide", cancelDraftAction);
 
 function showFamilyPreview(family, local) {
   const names = new Map(family.records.map(record => [record.id, record.name]));
@@ -566,7 +764,10 @@ field("save").addEventListener("click", async () => {
   busy(true);
   try {
     const saved = await insertReader(db, pending);
-    if (buildMethod() !== "train") originalText = editor.value;
+    if (buildMethod() !== "train") {
+      originalText = editor.value;
+      lastSavedEditor = { signature: JSON.stringify(currentDraftForm()), modelId: saved.id };
+    }
     models.set(saved.id, saved);
     listReaders();
     use.value = saved.id;

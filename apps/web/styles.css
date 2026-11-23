@@ -55,6 +55,8 @@
 #reader-editor { font-family: ui-monospace, monospace; resize: vertical; }
 .reader-parameter-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #reader-value-status:empty { display: none; }
+#reader-draft-panel { min-width: 0; overflow-wrap: anywhere; }
+#reader-draft-status:empty { display: none; }
 #reader-family-preview { overflow-wrap: anywhere; }
 #reader-family-members { padding-inline-start: 1.5em; }
 #reader-try .memory-actions { flex-wrap: wrap; }
