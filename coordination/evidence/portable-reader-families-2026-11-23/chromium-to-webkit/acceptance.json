@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "source": {
+    "engine": "chromium",
+    "version": "143.0.7499.4"
+  },
+  "destination": {
+    "engine": "webkit",
+    "version": "26.0"
+  },
+  "familyRoot": "build-d7d7f1178f1afc5f6adcfbcd326eb2bc0fcd3636995b1f19601fc0021843b8ed",
+  "fileSHA256": "392cc64129da6f688cafc643c4ef6528e847c91474e8b02cfab6dd0d79d9a63d",
+  "familyModels": 4,
+  "concurrentImports": {
+    "full": {
+      "added": 1,
+      "existing": 3
+    },
+    "ancestor": {
+      "added": 2,
+      "existing": 1
+    }
+  },
+  "replay": {
+    "added": 0,
+    "existing": 4
+  },
+  "lateConflictRolledBack": true,
+  "reportedMeasurementComparison": {
+    "reader": "build-c71ea866194fe22a1d23149b5bb8ba08d0f844a4889b64889edaa45086bf1aa0",
+    "field": "scores.candidate.correct",
+    "reported": 14,
+    "local": 15,
+    "total": 16
+  },
+  "importedHistoryDisclosedInChat": true,
+  "offlineReExportSHA256": "392cc64129da6f688cafc643c4ef6528e847c91474e8b02cfab6dd0d79d9a63d",
+  "offlineChatAnswer": "Values in a JSON array have a defined order.",
+  "offlineDescendant": "build-c989e592dbf7dcab494b9ef2ac554647491251b16e6a4e6e7c114cd957054e5d",
+  "offlineDescendantBase": "build-d7d7f1178f1afc5f6adcfbcd326eb2bc0fcd3636995b1f19601fc0021843b8ed"
+}
