@@ -1,0 +1,226 @@
+{
+  "sourceCommit": "ea8f168553879a029e8a225eed75d8be65efe117",
+  "questionCommit": "45d0a5da5a3faa736189d4696fe59d5f6e6c0bdd",
+  "questionFile": "coordination/evidence/public-source-distillation-2026-11-22/transfer-questions.json",
+  "questionSHA256": "b2ac6e95e0805575e15ad3e24d4189202d1786f01488d2b04a114d11c846c2aa",
+  "runtime": "v24.22.3",
+  "entryPoint": "apps/web/model-workshop/reader.js#readPassage",
+  "recipe": "reader-linear-blend-v1",
+  "rightPercent": 35,
+  "modelIds": {
+    "base": {
+      "id": "d125bb1d578eaa0ad330040d439433a8305a5a4df473362cd61fb87bf748f774",
+      "weightsSHA256": "d125bb1d578eaa0ad330040d439433a8305a5a4df473362cd61fb87bf748f774"
+    },
+    "second": {
+      "id": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+      "weightsSHA256": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812"
+    },
+    "candidate": {
+      "id": "build-c55cb909a5abb3c80cb405a24b486c950081153aa9bf3caac1a37793bc768149",
+      "weightsSHA256": "ccf37a48155f562161f8de3a1fff9dea1c73bff50d3cfe875f222b3daaacfbda"
+    }
+  },
+  "inAppComparison": {
+    "base": {
+      "correct": 14,
+      "total": 16
+    },
+    "second": {
+      "correct": 15,
+      "total": 16
+    },
+    "candidate": {
+      "correct": 15,
+      "total": 16
+    }
+  },
+  "scores": {
+    "base": {
+      "correct": 11,
+      "total": 16,
+      "supportedCorrect": 3,
+      "supportedTotal": 8,
+      "correctAbstentions": 8,
+      "unanswerableTotal": 8
+    },
+    "second": {
+      "correct": 14,
+      "total": 16,
+      "supportedCorrect": 7,
+      "supportedTotal": 8,
+      "correctAbstentions": 7,
+      "unanswerableTotal": 8
+    },
+    "candidate": {
+      "correct": 12,
+      "total": 16,
+      "supportedCorrect": 5,
+      "supportedTotal": 8,
+      "correctAbstentions": 7,
+      "unanswerableTotal": 8
+    }
+  },
+  "rows": [
+    {
+      "source": "NASA-MARS",
+      "question": "What are the names of the Martian moons?",
+      "gold": 0,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "NASA-MARS",
+      "question": "How many trips around Mars does Phobos make per day?",
+      "gold": 1,
+      "selections": {
+        "base": -1,
+        "second": 1,
+        "candidate": 1
+      }
+    },
+    {
+      "source": "NASA-MARS",
+      "question": "How many times per day does Deimos orbit Mars?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "NASA-MARS",
+      "question": "Which moon has the greater surface gravity?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "How many grams does a nickel weigh?",
+      "gold": 0,
+      "selections": {
+        "base": -1,
+        "second": 0,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "What is the diameter of the five-cent coin in millimeters?",
+      "gold": 1,
+      "selections": {
+        "base": -1,
+        "second": 1,
+        "candidate": 1
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "What is the thickness of a nickel in millimeters?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": 1,
+        "candidate": 1
+      }
+    },
+    {
+      "source": "US-MINT-NICKEL",
+      "question": "Which metal accounts for most of the coin's mass?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "How many squares make up the virtual board?",
+      "gold": 0,
+      "selections": {
+        "base": -1,
+        "second": 0,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "How are the light and dark squares arranged?",
+      "gold": 1,
+      "selections": {
+        "base": 1,
+        "second": 1,
+        "candidate": 1
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "Which color is assigned to the player who moves first?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "FIDE-BOARD",
+      "question": "How wide is a square on a player's screen?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "What symbol represents the SI unit of time?",
+      "gold": 0,
+      "selections": {
+        "base": 0,
+        "second": 0,
+        "candidate": 0
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "What numerical frequency in hertz is used for the cesium-133 transition?",
+      "gold": 1,
+      "selections": {
+        "base": 1,
+        "second": 1,
+        "candidate": 1
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "What was the measured frequency error of this particular clock?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    },
+    {
+      "source": "NIST-TIME",
+      "question": "Which laboratory first built a cesium clock?",
+      "gold": -1,
+      "selections": {
+        "base": -1,
+        "second": -1,
+        "candidate": -1
+      }
+    }
+  ]
+}
