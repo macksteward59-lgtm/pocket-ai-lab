@@ -1,0 +1,38 @@
+name: Owned runtime prevention
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/desktop/prevention-demo/**'
+      - '.github/workflows/owned-runtime-prevention.yml'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prevention:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check positive and negative cases
+        run: node --test scripts/desktop/prevention-demo/prevention.test.mjs
+      - name: Exercise the desktop entry point
+        run: npm run --silent demo:prevention -- prevention-evidence
+      - name: Verify saved evidence in a fresh process
+        run: node scripts/desktop/prevention-demo/verify.mjs prevention-evidence
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prevention-evidence-${{ matrix.os }}
+          path: prevention-evidence/
+          if-no-files-found: error
