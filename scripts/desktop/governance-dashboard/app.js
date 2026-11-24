@@ -74,13 +74,32 @@ document.getElementById("upload").addEventListener("change", async event => {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   const name = file.name.toLowerCase();
+  const content = await file.text();
+  if (event.target.files[0] !== file) return;
   if (name.endsWith(".csv")) document.getElementById("source-format").value = "nessus";
-  else if (name.endsWith(".json")) document.getElementById("source-format").value = "zap";
-  else if (name.endsWith(".xml")) document.getElementById("source-format").value = name.includes("zap") ? "zap" : "burp";
-  document.getElementById("content").value = await file.text();
+  else if (name.endsWith(".json")) {
+    const format = document.getElementById("source-format");
+    try {
+      const report = JSON.parse(content);
+      format.value = report && typeof report === "object" && "SchemaVersion" in report ? "trivy" : "zap";
+    } catch {
+      if (format.value !== "trivy") format.value = "zap";
+    }
+  } else if (name.endsWith(".xml")) document.getElementById("source-format").value = name.includes("zap") ? "zap" : "burp";
+  document.getElementById("content").value = content;
 });
 
 function renderResult(body) {
+  if (body.source_format === "trivy") {
+    const lines = [`Dependency findings in this report: ${body.findings.length}`];
+    for (const item of body.findings) {
+      lines.push("", item.target + (item.package_path ? " · " + item.package_path : ""),
+        `${item.package} ${item.installed_version} (${item.ecosystem || "unspecified ecosystem"})`,
+        `${item.advisory} · ${item.severity || "severity unknown"} · Fix: ${item.fixed_version || "not reported"}`);
+    }
+    show(resultNode, lines.join("\n"));
+    return;
+  }
   const findings = body.review_package ? body.review_package.findings || [] : [];
   const violations = body.boundary_violations || [];
   const lines = [
@@ -114,19 +133,32 @@ function renderResult(body) {
   show(resultNode, lines.join("\n"));
 }
 
+let reviewRequest = 0;
 form.addEventListener("submit", async event => {
   event.preventDefault();
+  const currentRequest = ++reviewRequest;
+  latest = null;
+  downloadJson.disabled = true;
+  downloadMarkdown.disabled = true;
+  show(resultNode, "Reviewing…");
   const payload = {
     source_format: document.getElementById("source-format").value,
     content: document.getElementById("content").value
   };
   try {
-    const response = await fetch("/api/v1/governance/review", {
+    const isTrivy = payload.source_format === "trivy";
+    const url = isTrivy ? "/api/v1/governance/dependencies/trivy" : "/api/v1/governance/review";
+    const response = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(isTrivy ? { content: payload.content } : payload)
     });
     const body = await response.json();
+    if (currentRequest !== reviewRequest) return;
+    if (!response.ok) {
+      show(resultNode, body.error || "The export could not be reviewed.");
+      return;
+    }
     if (body.authorized !== false || (body.review_package && body.review_package.authorized !== false)) {
       show(resultNode, "Refusing a response that does not keep authorized false.");
       latest = null;
@@ -134,12 +166,12 @@ form.addEventListener("submit", async event => {
       downloadMarkdown.disabled = true;
       return;
     }
+    renderResult(body);
     latest = body;
     downloadJson.disabled = false;
     downloadMarkdown.disabled = !body.evidence_markdown;
-    renderResult(body);
   } catch (error) {
-    show(resultNode, "The local review request failed.");
+    if (currentRequest === reviewRequest) show(resultNode, "The local review request failed.");
   }
 });
 
