@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-Read-only review of Pocket AI Lab main at `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873`, PR #302 (`codex/owned-runtime-prevention`, head `1d4dd0bd37d9541aa1dfb4931343a0d578b0e216)), its workflow, fixture runner, offline verifier, and regression tests. No candidate code was executed in this cycle.
+Read-only review of Pocket AI Lab main at `fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873`, PR #302 (`codex/owned-runtime-prevention`, head `1d4dd0bd37d9541aa1dfb4931343a0d578b0e216), its workflow, fixture runner, offline verifier, and regression tests. No candidate code was executed in this cycle.
 
 PR #302's hosted governance-sidecar run #45396979207 passed. The workflow tests an owned Node fixture on Ubuntu and Windows, verifies a saved evidence bundle in a second process, and uploads the bundle. It is still a draft; no review is recorded.
 
