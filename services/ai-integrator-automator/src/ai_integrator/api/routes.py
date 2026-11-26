@@ -8,7 +8,8 @@ from collections import deque
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ai_integrator.api.dependencies import get_orchestrator
 from ai_integrator.application.allowlist_store import read_allowlist, write_allowlist
@@ -19,6 +20,7 @@ from ai_integrator.application.report import render_review_markdown
 from ai_integrator.application.services import PolicyReviewOrchestrator, ReviewEnvelope
 from ai_integrator.application.source_parser import StaticContextExtractor
 from ai_integrator.application.static_analyzer import analyze_source
+from ai_integrator.application.trivy_triage import TrivyReview, review_trivy
 
 router = APIRouter()
 _RECENT: deque[dict] = deque(maxlen=20)
@@ -29,6 +31,12 @@ class ReviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_format: Literal["burp", "nessus", "zap"]
+    content: str = Field(max_length=2_000_000)
+
+
+class TrivyImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     content: str = Field(max_length=2_000_000)
 
 
@@ -61,6 +69,17 @@ def review(body: ReviewRequest, orchestrator: PolicyReviewOrchestrator = Depends
     payload = _public_envelope(envelope)
     _RECENT.append(payload)
     return payload
+
+
+@router.post("/api/v1/governance/dependencies/trivy", response_model=TrivyReview)
+def import_trivy(body: TrivyImportRequest):
+    try:
+        return review_trivy(body.content)
+    except ValidationError:
+        return JSONResponse(status_code=422, content={
+            "authorized": False,
+            "error": "Expected a Trivy v2 JSON report with Results and valid dependency findings.",
+        })
 
 
 @router.get("/api/v1/governance/reviews")

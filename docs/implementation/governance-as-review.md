@@ -29,6 +29,14 @@ Ctrl-C sends SIGTERM to the children this launcher started.
 
 The dashboard can paste or upload a Burp XML, Nessus CSV, or ZAP export, edit the local allowlist, and download the review JSON and the Markdown report. The allowlist is stored under `.governance/`, which is gitignored.
 
+## Review a saved Trivy dependency report
+
+In the governance dashboard, select **Trivy dependency report (JSON)**, upload or paste a saved Trivy v2 JSON report, and choose **Review locally**. **Download review JSON** saves the current draft. Each import replaces the displayed draft. An invalid import disables the download. These drafts stay out of the shared recent scanner reviews.
+
+The loopback endpoint `POST /api/v1/governance/dependencies/trivy` accepts a JSON object with a `content` string (up to 2,000,000 characters). The report must have `SchemaVersion: 2` and a `Results` array. Each dependency finding retains the target, ecosystem, installed path when supplied, package, installed version, advisory ID, severity and reported fix. A missing fix appears as null. Exact duplicate observations collapse. Different lockfiles or fixes stay distinct. An empty findings list means the submitted results contained no dependency findings. Other Trivy result categories are outside this importer.
+
+The import reads a supplied report and returns a stateless review draft. It makes no scanner, GitHub or package-manager calls. The draft carries `authorized: false`, `executes: false` and `requires_human_approval: true`. See the [repository review](../research/dependency-review-donors.md) for the donor comparison.
+
 ## Sidecar by itself
 
 ```bash
