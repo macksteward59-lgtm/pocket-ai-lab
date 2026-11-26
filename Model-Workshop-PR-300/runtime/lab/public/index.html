@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pocket AI Lab</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d1a16;
+      --muted: #5e584f;
+      --line: #d9d0c3;
+      --paper: #f6f1e8;
+      --card: #fffaf3;
+      --warn: #8a3d12;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 17px/1.5 "Iowan Old Style", Palatino, Georgia, serif;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 8px; }
+    h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+    p { margin: 0 0 12px; }
+    .banner {
+      border: 1px solid var(--warn);
+      color: var(--warn);
+      background: #fff7f2;
+      padding: 12px 14px;
+      margin: 18px 0 22px;
+    }
+    form, article, li {
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    form { padding: 16px; display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; font-size: 0.95rem; }
+    input, textarea, button {
+      font: inherit;
+      color: inherit;
+    }
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: white;
+      padding: 10px 12px;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    button.secondary { background: transparent; color: var(--ink); }
+    button:disabled { opacity: 0.55; cursor: wait; }
+    #status { min-height: 1.4em; color: var(--muted); }
+    ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    li { padding: 12px 14px; }
+    .who { font-variant: small-caps; letter-spacing: 0.04em; color: var(--muted); }
+    .error { color: var(--warn); }
+    article { padding: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Pocket AI Lab</h1>
+    <p>Local harness for a llama-server on this machine. The product shell is a separate app. This page only runs the local model through the agent roles.</p>
+    <p class="banner" id="disclaimer">These are untrusted model proposals. They are not permission, approval, or an APEX receipt.</p>
+    <form id="lab">
+      <label>Llama server
+        <input id="baseUrl" name="baseUrl" value="http://127.0.0.1:8080" autocomplete="off">
+      </label>
+      <label>Objective
+        <textarea id="objective" name="objective" placeholder="What should the agents examine?"></textarea>
+      </label>
+      <div class="row">
+        <button type="button" class="secondary" id="check">Check server</button>
+        <button type="submit" id="run">Run lab</button>
+        <button type="button" class="secondary" id="stop" disabled>Stop</button>
+      </div>
+      <p id="status" role="status"></p>
+    </form>
+    <h2>Transcript</h2>
+    <ol id="transcript"></ol>
+    <h2>Director completion</h2>
+    <article id="result"><p>No run yet. A completion appears only if the director model returns one.</p></article>
+  </main>
+  <script>
+    const status = document.querySelector("#status");
+    const transcript = document.querySelector("#transcript");
+    const result = document.querySelector("#result");
+    const runButton = document.querySelector("#run");
+    const stopButton = document.querySelector("#stop");
+    let controller = null;
+
+    function setStatus(text) { status.textContent = text; }
+
+    document.querySelector("#check").addEventListener("click", async () => {
+      setStatus("Checking llama-server…");
+      try {
+        const baseUrl = document.querySelector("#baseUrl").value;
+        const response = await fetch("/api/health?baseUrl=" + encodeURIComponent(baseUrl));
+        const body = await response.json();
+        setStatus(response.ok ? "llama-server is ready at " + body.baseUrl : (body.error || "Health check failed."));
+      } catch (error) {
+        setStatus(error.message || "Health check failed.");
+      }
+    });
+
+    document.querySelector("#stop").addEventListener("click", () => controller?.abort());
+
+    document.querySelector("#lab").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      controller?.abort();
+      controller = new AbortController();
+      transcript.replaceChildren();
+      status.classList.remove("error");
+      result.textContent = "Running. Nothing is authorized while this is in progress.";
+      runButton.disabled = true;
+      stopButton.disabled = false;
+      setStatus("Starting the agent cycle…");
+      try {
+        const response = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            objective: document.querySelector("#objective").value,
+            baseUrl: document.querySelector("#baseUrl").value
+          }),
+          signal: controller.signal
+        });
+        if (!response.ok || !response.body) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error || "The lab could not start.");
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          let split;
+          while ((split = buffer.indexOf("\n\n")) >= 0) {
+            const block = buffer.slice(0, split);
+            buffer = buffer.slice(split + 2);
+            const line = block.split("\n").find((entry) => entry.startsWith("data: "));
+            if (!line) continue;
+            applyEvent(JSON.parse(line.slice(6)));
+          }
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") setStatus(error.message || "The lab run failed.");
+      } finally {
+        runButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    });
+
+    function renderPayload(payload) {
+      const box = document.createElement("div");
+      if (!payload || typeof payload !== "object") {
+        box.textContent = String(payload ?? "");
+        return box;
+      }
+      for (const [key, value] of Object.entries(payload)) {
+        const line = document.createElement("p");
+        const label = document.createElement("strong");
+        label.textContent = key + ": ";
+        const shown = Array.isArray(value) ? value.join(", ") : String(value);
+        line.append(label, document.createTextNode(shown));
+        box.append(line);
+      }
+      return box;
+    }
+
+    function applyEvent(event) {
+      if (event.type === "stage") setStatus("Stage: " + event.stage);
+      if (event.type === "message") {
+        const item = document.createElement("li");
+        const who = document.createElement("div");
+        who.className = "who";
+        who.textContent = event.message.role + " · " + event.message.stage;
+        item.append(who, renderPayload(event.message.payload));
+        transcript.append(item);
+      }
+      if (event.type === "error") {
+        setStatus(event.message);
+        status.classList.add("error");
+      }
+      if (event.type === "done") {
+        const done = event.result;
+        const synthesis = done.synthesis
+          ? done.synthesis
+          : "No director completion was produced. Earlier messages above are the only model output.";
+        result.textContent = synthesis + " Engine consensus flag: " + String(done.engineConsensus) + ". Authorized: false. " + done.disclaimer;
+        if (!done.error) setStatus(done.messages.length + " model messages. Memory stays unverified.");
+      }
+    }
+  </script>
+</body>
+</html>

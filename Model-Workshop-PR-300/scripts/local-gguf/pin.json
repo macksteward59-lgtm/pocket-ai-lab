@@ -1,0 +1,12 @@
+{
+  "id": "smollm2-135m-instruct-q4_k_m",
+  "filename": "SmolLM2-135M-Instruct-Q4_K_M.gguf",
+  "repo": "bartowski/SmolLM2-135M-Instruct-GGUF",
+  "revision": "09816acd5d99df7be770d85ea30822623dab342c",
+  "sourceUrl": "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/09816acd5d99df7be770d85ea30822623dab342c/SmolLM2-135M-Instruct-Q4_K_M.gguf",
+  "sha256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+  "bytes": 105454432,
+  "license": "apache-2.0",
+  "baseModel": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "purpose": "loopback smoke test only; not hardware acceptance and not an authorization receipt"
+}

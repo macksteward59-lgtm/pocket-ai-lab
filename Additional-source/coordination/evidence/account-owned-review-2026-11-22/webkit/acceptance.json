@@ -1,0 +1,43 @@
+{
+  "scope": "Synthetic exact-excerpt task on a loopback host in a mobile browser viewport",
+  "engine": "webkit",
+  "browserVersion": "26.0",
+  "nodeVersion": "v24.22.3",
+  "checkoutCommit": "ca74eab78b52c0bb4bd90fb7ab12034d27bbadc3",
+  "sourceHead": "4f22e724297f8a59d7a3a12469722e8a113b6197",
+  "workflowRunId": "45104813170",
+  "verified": true,
+  "taskId": "f09392dd-724c-4bd5-aace-22ba93540b18",
+  "attemptId": "1816c8fc-51cd-4ef4-a058-7ccb182b7627",
+  "restarts": 3,
+  "successfulRunReplyLost": true,
+  "concurrentRetries": 2,
+  "executionRows": 1,
+  "crossAccount": {
+    "get": 404,
+    "run": 404,
+    "correct": 404
+  },
+  "peerSignOutClearedPrivateView": true,
+  "reader": {
+    "modelIds": {
+      "base": "d125bb1d578eaa0ad330040d439433a8305a5a4df473362cd61fb87bf748f774",
+      "teacher": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+      "child": "build-389153de5f619f900e267405e81fa65391184ac7113add4409b9b889602042c1"
+    },
+    "weightHashes": {
+      "base": "d125bb1d578eaa0ad330040d439433a8305a5a4df473362cd61fb87bf748f774",
+      "teacher": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+      "child": "f298026898e98e357caad6a4541377a7993b42c4ac1b1ad6050b951d346c45b1"
+    }
+  },
+  "readerDraftOpenedBeforeTaskCreation": true,
+  "cli": {
+    "verified": true,
+    "owner": "review-owner",
+    "taskId": "f09392dd-724c-4bd5-aace-22ba93540b18",
+    "attemptId": "1816c8fc-51cd-4ef4-a058-7ccb182b7627",
+    "executionCount": 1,
+    "corrections": 1
+  }
+}

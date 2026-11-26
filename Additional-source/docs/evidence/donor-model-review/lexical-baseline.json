@@ -1,0 +1,70 @@
+{
+  "type": "retrospective keyword baseline, development cases",
+  "sourceCommit": "996d8ed1fc600e828f996ca59b506816e7a52c55",
+  "questionsCommit": "83e3891d2c1f58d334c264e0f029fb7b94e62868",
+  "method": "BM25 over title plus finding, ASCII alphanumeric lowercase tokens, distinct query tokens, no stopword removal or stemming, k1=1.2, b=0.75, ties sorted by ID. One query per question, no answer options indexed or used.",
+  "rows": [
+    {
+      "question": "personal-team",
+      "target": "APPLE-TEAM",
+      "rank": 1,
+      "firstThree": [
+        "APPLE-TEAM",
+        "W3C-QUOTE",
+        "ACL-ABSTAIN"
+      ]
+    },
+    {
+      "question": "cloud-budget",
+      "target": "CF-QUOTA",
+      "rank": 1,
+      "firstThree": [
+        "CF-QUOTA",
+        "CF-BIND",
+        "W3C-PROV"
+      ]
+    },
+    {
+      "question": "cloud-call",
+      "target": "CF-BIND",
+      "rank": 1,
+      "firstThree": [
+        "CF-BIND",
+        "ACL-ABSTAIN",
+        "CF-QUOTA"
+      ]
+    },
+    {
+      "question": "quote-context",
+      "target": "W3C-QUOTE",
+      "rank": 1,
+      "firstThree": [
+        "W3C-QUOTE",
+        "ACL-CITE",
+        "CF-BIND"
+      ]
+    },
+    {
+      "question": "answer-quality",
+      "target": "ACL-CITE",
+      "rank": 1,
+      "firstThree": [
+        "ACL-CITE",
+        "ACL-ABSTAIN",
+        "CF-BIND"
+      ]
+    },
+    {
+      "question": "source-revisions",
+      "target": "W3C-PROV",
+      "rank": 4,
+      "firstThree": [
+        "ACL-ABSTAIN",
+        "CF-BIND",
+        "CF-QUOTA"
+      ]
+    }
+  ],
+  "top1": 5,
+  "top3": 5
+}

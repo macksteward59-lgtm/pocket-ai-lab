@@ -1,0 +1,11 @@
+{
+  "inferencePerformed": false,
+  "manifestSHA256": "95acbcd4237899a2234fd9c16f5e86823cec1595e6922c96cb54851d15432992",
+  "metadataSHA256": "d06728f38fa4dd2eded245d7ae0d490ebc9c139968a4e5e960abaf2cc020d879",
+  "modelBytes": 105454432,
+  "modelSHA256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+  "note": "Exact prompt bytes copied from the precommitted manifest after model and metadata checks.",
+  "promptCount": 72,
+  "reportKind": "recipient-format-preparation",
+  "templateExecutionPerformed": false
+}

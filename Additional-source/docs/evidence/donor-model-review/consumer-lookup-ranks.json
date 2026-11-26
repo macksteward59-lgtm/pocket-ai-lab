@@ -1,0 +1,76 @@
+{
+  "type": "Retrospective ranking on six previously used documentation questions",
+  "implementationCommit": "35a340aba8dbe4aaa85f5036f1a1da96bfb89a66",
+  "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+  "questionsCommit": "83e3891d2c1f58d334c264e0f029fb7b94e62868",
+  "method": "Each original question was sent verbatim to the local app search function. Returned IDs are in search order. Earlier ranks come from lexical-baseline.json. The revised topics and search implementation were developed with knowledge of these questions.",
+  "rows": [
+    {
+      "question": "personal-team",
+      "target": "APPLE-TEAM",
+      "previousRank": 1,
+      "rank": 1,
+      "returned": [
+        "APPLE-TEAM",
+        "W3C-QUOTE",
+        "APPLE-DEVICE"
+      ]
+    },
+    {
+      "question": "cloud-budget",
+      "target": "CF-QUOTA",
+      "previousRank": 1,
+      "rank": 1,
+      "returned": [
+        "CF-QUOTA",
+        "CF-BIND",
+        "W3C-QUOTE",
+        "APPLE-TEAM"
+      ]
+    },
+    {
+      "question": "cloud-call",
+      "target": "CF-BIND",
+      "previousRank": 1,
+      "rank": 1,
+      "returned": [
+        "CF-BIND",
+        "CF-QUOTA",
+        "ACL-CITE",
+        "W3C-QUOTE",
+        "APPLE-DEVICE"
+      ]
+    },
+    {
+      "question": "quote-context",
+      "target": "W3C-QUOTE",
+      "previousRank": 1,
+      "rank": 1,
+      "returned": [
+        "W3C-QUOTE",
+        "ACL-CITE",
+        "ACL-ABSTAIN"
+      ]
+    },
+    {
+      "question": "answer-quality",
+      "target": "ACL-CITE",
+      "previousRank": 1,
+      "rank": 1,
+      "returned": [
+        "ACL-CITE",
+        "NATIVE-EXACT-ANSWER"
+      ]
+    },
+    {
+      "question": "source-revisions",
+      "target": "W3C-PROV",
+      "previousRank": 4,
+      "rank": 1,
+      "returned": [
+        "W3C-PROV",
+        "ACL-CITE"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+name: Source answer CLI CI
+
+on:
+  pull_request:
+    paths:
+      - "tools/source-answers/**"
+      - "tools/passage-check/extractive.py"
+      - "tools/passage-check/server.py"
+      - "tools/openclaw-review/review.py"
+      - "apps/web/project-sources.mjs"
+      - "docs/research/project-sources.json"
+      - ".github/workflows/source-answer-cli-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-answer-cli:
+    name: CLI and SQLite retrieval (no model)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Run CLI regressions with real Node SQLite
+        run: python3 -m unittest discover -s tools/source-answers -p 'test_*.py' -v
+
+  live-source:
+    name: Verify a cited answer with the pinned model
+    if: contains(github.event.pull_request.body, '[verify-source-model]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify exact scope with a missing source, an unrelated source and a real answer
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/source-check"
+          mkdir -p "$work/results"
+          question='What is the published free Workers AI allocation per day?'
+          cli=tools/source-answers/answer.py
+          python3 "$cli" --question "$question" --source-id CF-QUOTA-MISSING > "$work/results/missing.json"
+          python3 "$cli" --question "neurons" --source-id APPLE-TEAM > "$work/results/unrelated.json"
+          for file in "$work/results/missing.json" "$work/results/unrelated.json"; do
+            jq -e '.status == "no_candidates" and .answer == "UNKNOWN" and (.retrieved | length == 0) and (has("requestID") | not)' "$file"
+          done
+          curl -fsSL --retry 2 --max-time 300 -o "$work/server.tgz" \
+            https://github.com/ggml-org/llama.cpp/releases/download/b12608/llama-b12608-bin-ubuntu-x64.tar.gz
+          echo "437a78088609f8faac6eddb8654614a0bafd761d3e9803b304c1b623074f599c  $work/server.tgz" | sha256sum --check
+          tar xzf "$work/server.tgz" -C "$work"
+          curl -fsSL --retry 2 --max-time 300 -o "$work/model.gguf" \
+            'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true'
+          python3 "$cli" --gguf "$work/model.gguf" --llama-server "$work/llama-b12608/llama-server" \
+            --source-id CF-QUOTA --question "$question" > "$work/results/answer.json"
+          jq -e '.status == "quote_proposed" and .source == "CF-QUOTA" and .requestedSourceID == .source and
+            (.retrieved | map(.id)) == ["CF-QUOTA"] and (.answer | contains("10,000 neurons")) and
+            (.requestID | length > 0) and .semanticSupportVerified == false' "$work/results/answer.json"
+      - name: Compare quote proposals with an additional support assessment
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/source-check"
+          python3 tools/source-answers/compare_support.py --gguf "$work/model.gguf" \
+            --llama-server "$work/llama-b12608/llama-server" > "$work/results/support-pairs.json"
+          jq -e '(.rows | length) == 12 and .counts.answerable.total == 6 and .counts.unanswerable.total == 6' \
+            "$work/results/support-pairs.json"
+          jq '.counts' "$work/results/support-pairs.json" >> "$GITHUB_STEP_SUMMARY"
+          if ! jq -e '.allAssessedPassed' "$work/results/support-pairs.json" > /dev/null; then
+            echo "::warning::The opt-in assessment missed the acceptance target. See the individual answers."
+          fi
+          python3 tools/source-answers/compare_support.py --fixture transfer --gguf "$work/model.gguf" \
+            --llama-server "$work/llama-b12608/llama-server" > "$work/results/support-transfer.json"
+          jq -e '(.rows | length) == 8 and .counts.answerable.total == 4 and .counts.unanswerable.total == 4' \
+            "$work/results/support-transfer.json"
+          jq '.counts' "$work/results/support-transfer.json" >> "$GITHUB_STEP_SUMMARY"
+          if ! jq -e '.allAssessedPassed' "$work/results/support-transfer.json" > /dev/null; then
+            echo "::warning::The opt-in assessment missed its transfer target. See the individual answers."
+          fi
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scoped-source-answers
+          path: ${{ runner.temp }}/source-check/results/
+          retention-days: 14

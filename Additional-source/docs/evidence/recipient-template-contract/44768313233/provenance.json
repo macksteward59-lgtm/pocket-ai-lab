@@ -1,0 +1,22 @@
+{
+  "files": {
+    "llama-cpp-pin.json": {
+      "bytes": 458,
+      "sha256": "25a9710f607cb8e748c84147628e37f2efff7b05049fccd36e161011a7822d24"
+    },
+    "metadata.json": {
+      "bytes": 3847,
+      "sha256": "d06728f38fa4dd2eded245d7ae0d490ebc9c139968a4e5e960abaf2cc020d879"
+    },
+    "model-pin.json": {
+      "bytes": 662,
+      "sha256": "55427bd97262f5390f4b7614eed9cb7e4784eeda11dd576dabad7bf9b5b86071"
+    }
+  },
+  "githubRepository": "macksteward59-lgtm/pocket-ai-lab",
+  "githubRunAttempt": "1",
+  "githubRunId": "44768313233",
+  "githubSHA": "2b4fa78a666d6e3c226483380f4c2b6c1efccfd3",
+  "kind": "pinned-gguf-metadata-only",
+  "realModelExecution": false
+}

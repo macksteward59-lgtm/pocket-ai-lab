@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pocket-ai-lab-preview",
+  "main": "worker.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [{ "name": "ANALYSIS_STATE", "class_name": "DocumentAnalysisState" }]
+  },
+  "migrations": [{ "tag": "document-analysis-v1", "new_sqlite_classes": ["DocumentAnalysisState"] }]
+}

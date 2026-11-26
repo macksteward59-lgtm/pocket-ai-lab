@@ -1,0 +1,22 @@
+# Coordination Board
+
+Ownership is tracked here. A collaborator must push a claim before changing implementation files. Status values for claimed work: `claimed`, `in-progress`, `in-review`, or `done`.
+
+| Owner | Area/files | Branch | Status (claimed/in-progress/in-review/done) | Updated (UTC) | Notes |
+|---|---|---|---|---|---|
+| ChatGPT | Gate 0.1 agent engine: typed immutable messages, fail-closed provider injection, resource-aware routing, cumulative deliberation history, and regression tests | `codex/gate-0-1-final` | done | 2026-11-02 09:36 | Merged to `main` as `752f497e6d5198d7b3bb191d2aa58e56687ce923` via PR #9. Full CI passed; Vitest upgraded to 5.0.5 and npm audit reported 0 vulnerabilities. Original PR #1 and superseded PR #8 closed; original branches preserved. |
+| Grok Bot | llama.cpp InferenceProvider adapter and loopback harness (`runtime/adapters/llama-cpp/`, `runtime/lab/`) | `grok/llamacpp-inference-provider` | done | 2026-11-02 09:26 | Merged to `main` as `00d1d7bd41b464af518bbffa9a9ba7ea97c68ea8` via PR #5. Implements today's `InferenceProvider` (`text`) and also returns PR #1 stage `payload`. |
+| ChatGPT | Cursor collaboration plugin: `plugins/cursor-collaboration/` | `codex/cursor-collaboration-bridge` | done | 2026-11-02 09:36 | Merged to `main` as `3072c6910766d4638b021f0b9f6f39a2ca9718cc` via PR #2. Grok's review findings fixed; identity, log-injection, retry, origin-validation, and claim-row regression tests pass. |
+| ChatGPT | Consumer prototype foundation: responsive web/PWA shell, local chat proxy, live Agent Team panel, streamed stage transcript, and stop controls | `codex/consumer-agent-team-ui` | done | 2026-11-02 09:36 | Merged to `main` as `8ea572a818f5f5007d454b0fa99dd1f22be11924` via PR #7. Full web/runtime/Gate 0.1/build CI passed. Grok's consumer fixes are complete; no overlap. |
+| Grok Bot | Memory persistence hardening (`packages/intelligence/memory/` only) | `grok/memory-persistence-hardening` | done | 2026-11-02 09:36 | Merged on `main`; PR #9 additionally restricts POSIX memory directory/file modes to 0700/0600 and adds a permission regression test. Store remains checksummed plaintext, not encrypted at rest. |
+| Grok Bot | Consumer workspace defects and chat provider integration | `grok/consumer-workspace-finish` | done | 2026-11-02 09:52 | On `main` at `225e633a4cc647de0bf633427a61b5ca915eb71b`; GitHub Actions passed. |
+| ChatGPT | MemoryManager read/delete API and serialized mutation safety | `codex/memory-api` | done | 2026-11-02 09:39 | Merged to `main` as `c5ec6ae2a23a96cdb7f5c89b8eda220aa1f10660` via PR #10. Defensive list, persistent delete, copy-on-write serialized mutations, UUID IDs, and default-unverified writes. Full CI passed. |
+| ChatGPT | Consumer Memory screen and explicit memory API/UI integration | `codex/consumer-memory-ui` | done | 2026-11-02 11:48 | Merged PR #11 to `main` as `dbe5038563d96c86f81e65de96276c39021ce023`. Three workflows passed; 137 tests passed, 1 live-model test skipped; build passed; npm audit 0 vulnerabilities. Explicit save/list/delete only; new records unverified; no auto-save; no encryption claim. |
+| Grok Bot | East platform functions: `src/east/` only | `grok/east-platform-functions` | done | 2026-11-02 11:32 | On `main` at `ec9d9d5c34292707f47733074467502036af899f`. Platform functions call injected InferenceProvider/Orchestrator; `commitTaskEvidence` always returns false. East/APEX integration remains separate. |
+| ChatGPT | Consumer memory edit API/UI: `packages/intelligence/memory/MemoryManager.ts`, memory tests, `apps/web/server.mjs`, `apps/web/app.js`, web tests and consumer docs | `codex/memory-edit-controls` | done | 2026-11-02 12:12 | PR #12 merged to `main` as `8acc6beaf10874d235272520fbbf5b2fc036a06b`. Pocket AI Lab CI, Consumer prototype CI, and Cursor plugin CI all passed. Explicit edit preserves ID/createdAt, updates content/source, and resets verification to false; no auto-save or model-driven verification. Plaintext-at-rest limitation remains. |
+
+## Unclaimed work
+
+- **East/APEX integration** — preserve exact-scope approvals, per-edge authorization, evidence, and independent repair authorization.
+- **iOS LlamaEngine** — replace placeholder behavior with real local inference and lifecycle handling.
+- **Consumer app backend/deployment** — authenticated secrets, provider adapters, secure storage, rate limits, telemetry, release pipeline, and production operations.

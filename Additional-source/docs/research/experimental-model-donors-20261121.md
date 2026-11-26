@@ -1,0 +1,49 @@
+# Experimental model and source-code review
+
+Reviewed November 21, 2026 for Pocket AI Lab. The [earlier selection study](model-selection-20261120.md) covers general-purpose generators. This review addresses four specific jobs the generator alone cannot reliably cover. On the prior [source-reading trial](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/252), Qwen2.5-1.5B produced the right answer and citation on two of six supplied passages and abstained on all six withheld passages.
+
+## Source checking — Horizon Labs Hallucination Guard Small
+
+The 141M classifier receives the source first and a proposed claim second. The publisher supplies an ONNX export, two class labels and a support-score threshold. Its model and reference repository specify Apache-2.0. The model card also reports stronger English claim-verification results for some alternative checkers. [Model card and tokenizer](https://huggingface.co/Horizon-Labs/hallucination-guard-small/tree/de08e58e536cf1c7285568dc3380ca9281362c58) · [Evaluation donor](https://github.com/horizon-ai-labs/agent-io-guards/blob/5c16bfe950e6e11a98f539c9dfaa95dab33d1bd0/ground/evaluate_ground.py) · [Code license](https://github.com/horizon-ai-labs/agent-io-guards/blob/5c16bfe950e6e11a98f539c9dfaa95dab33d1bd0/LICENSE)
+
+I tested the publisher's 268,409,234-byte quantized ONNX file on Linux x86-64 CPU with ONNX Runtime 1.24.4 and tokenizers 0.22.2. Both artifact and tokenizer hashes matched. The 24 new claims, existing eight passages, class mapping and 0.5 threshold were publicly fixed before inference. Each source had a supported paraphrase, a contradiction and a claim for which it supplied insufficient evidence.
+
+| Condition | Correct decisions | Errors |
+| --- | ---: | ---: |
+| Supported paraphrase | 5/8 | 3 rejected |
+| Contradiction | 8/8 | 0 accepted |
+| Information absent from source | 8/8 | 0 accepted |
+
+It missed the seven-day profile, ten-thousand-neuron allowance and distinct provenance relationships. All 24 calls returned. The predeclared 7/8 supported-answer threshold failed. The source/claim pairing and evaluation method are worth reusing for an advisory reviewer. A sole approval decision would discard valid statements. The native app uses llama.cpp for text generation; this classifier needs its own tested ONNX inference path for device use. [Frozen claims and artifact hashes](../evidence/donor-model-review/grounding-pilot-protocol.json) · [Raw scores and environment](../evidence/donor-model-review/grounding-pilot-results.json)
+
+## Source search — Google EmbeddingGemma 2
+
+Google released the 740M multimodal embedding model on October 6 and published a technical report on November 17. A text query can rank both written passages and images, so an iPhone user could find the screenshot documenting a decision as well as the note summarizing it. The developer notebook demonstrates encoding different modalities and comparing their embeddings. This is the first model to try for mixed-media lookup. Keep a source ID or image/page locator attached to each candidate throughout ranking. [Launch and model license](https://developers.googleblog.com/embeddinggemma-2-the-developer-guide/) · [Technical report](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2-technical-report/) · [Pinned notebook](https://github.com/google-gemma/docs/blob/9db9d497e046d34c68925f80a0672b3d1fe690dd/docs/notebooks/embeddinggemma-multimodal.ipynb) · [Notebook repository license](https://github.com/google-gemma/docs/blob/9db9d497e046d34c68925f80a0672b3d1fe690dd/LICENSE)
+
+The model and notebook repository specify Apache-2.0. The pinned publisher safetensors artifact is 1,488,915,288 bytes, SHA-256 `197a32965d4b1105faf060417baa899e193fb73cd401f42ec9295234d5553d79`. That is the reference checkpoint. Google's edge pipeline uses separate LiteRT bundles and embeds preprocessing. A device trial needs the exact bundle, preprocessing version and peak app memory. [Weights, tokenizer and configuration](https://huggingface.co/google/embeddinggemma-2/tree/f9972ac22e696a105c482202646979e33e4b5a1e) · [Google edge integration](https://developers.googleblog.com/google-ai-edge-with-embeddinggemma-2/)
+
+I ran a retrospective text-only BM25 baseline on our eight source notes and six existing documentation questions. The correct note ranked first on five questions and fourth on the provenance question. A matched test on unseen paraphrases and screenshots will tell us more than replaying those six. Compare top-three source recall, wrong-source rate, lookup latency and peak memory. The embedding model itself has not run in Pocket AI Lab. [Keyword baseline, questions and ranks](../evidence/donor-model-review/lexical-baseline.json)
+
+## Structured evidence exchange — IBM Granite 4.1 3B LLMON Preview
+
+IBM released this experimental checkpoint November 12. It was tuned to handle an explicit text markup for structured context. The narrow donor is its JSON converter: records can carry field names, source IDs and provenance across components. This is also a candidate text baseline for future G.I.R.L. comparisons. Receiving a structured record does not establish that a model understood it. [Announcement](https://huggingface.co/blog/ibm-granite/llmon-an-llm-native-markup-language-now-in-granite) · [Pinned converter](https://github.com/generative-computing/llmon/blob/0b0d7bd8b77f32c52050a037c3d3608788ba506d/llmon/lang/json/llmon_converters.py) · [Converter license](https://github.com/generative-computing/llmon/blob/0b0d7bd8b77f32c52050a037c3d3608788ba506d/LICENSE)
+
+I ran the unmodified upstream converter on all eight project source records. After the JSON → LLMON → JSON round trip, all fields and values matched on 8/8. Combined UTF-8 size was 3,965 bytes for compact JSON and 5,525 bytes for the LLMON encoding. Only parsing was tested; there was no Granite inference or token-count measurement. Use the converter in a read-only interchange experiment before changing the application's data format. The Apache-2.0 preview's publisher safetensors file is 7,319,517,272 bytes, SHA-256 `1b3bca7852237cd0d23d0b71c3e809231568425f66ce4005b3cdad1e992af3dc`. This artifact exceeds the project's recorded 4 GiB pool estimate. A quantized candidate would need its own compatibility and template checks. [Weights, tokenizer and template](https://huggingface.co/ibm-granite/granite-4.1-3b-llmon-preview/tree/55a14cac002854bb64c7f465c30da29209b170c8) · [Round-trip evidence](../evidence/donor-model-review/llmon-roundtrip.json)
+
+## Page-level evidence — NVIDIA Nemotron 3.5 Parse
+
+The model card dates the initial release to October 17 and a speculative-decoding update to November 4. It extracts page text, layout, tables and boxes. The useful code for our prototype is the mapping between the model canvas and original image coordinates, so the owner could tap a citation and see where it came from. Test page identity, scaling and rotation against known boxes before considering a full parser integration. [Model card](https://huggingface.co/nvidia/Nemotron-3.5-Parse) · [Pinned coordinate functions](https://huggingface.co/nvidia/Nemotron-3.5-Parse/blob/ea2e1fe486bea3e7d0d505df9bafa4ad562407a0/nemotron_parse/engine/geometry.py)
+
+The weights and inspected geometry module use OpenMDW-1.1; the tokenizer has separate MIT attribution and the repository includes third-party notices. The publisher's main safetensors file is 2,523,266,640 bytes, SHA-256 `81dd7609c589f3694ce75520c25af5010953231358de6aec4d03e8c6aac787e9`. Hosted or workstation processing is a candidate for opt-in documents. The model and geometry path remain untested in this project. [Pinned release files](https://huggingface.co/nvidia/Nemotron-3.5-Parse/tree/ea2e1fe486bea3e7d0d505df9bafa4ad562407a0) · [License](https://huggingface.co/nvidia/Nemotron-3.5-Parse/blob/ea2e1fe486bea3e7d0d505df9bafa4ad562407a0/LICENSE) · [Third-party notices](https://huggingface.co/nvidia/Nemotron-3.5-Parse/blob/ea2e1fe486bea3e7d0d505df9bafa4ad562407a0/THIRD_PARTY_NOTICES.md)
+
+## YouTube watchlist
+
+Titles and channel ownership were checked against YouTube metadata. The links illustrate product behavior and engineering approaches. Model suitability and licensing above come from the upstream releases.
+
+- Liquid AI's [LFM3-Omni-2B multilingual audiovisual Q&A demo](https://www.youtube.com/watch?v=4uAuQsYWd-U) is the closest match for the companion receiving a spoken question about what its camera sees. It is one of the publisher's embedded launch demos. The separate [Omni weights](https://huggingface.co/LiquidAI/LFM3-Omni-2B/tree/c01718a568e53ae936e6b5e1ff5ab2de7d7f388b) use the [LFM Open License v1.0](https://huggingface.co/LiquidAI/LFM3-Omni-2B/blob/c01718a568e53ae936e6b5e1ff5ab2de7d7f388b/LICENSE). This is an exploratory companion lead. [Publisher overview](https://www.liquid.ai/blog/lfm3)
+- NVIDIA Developer's [document-to-cited-answer walkthrough](https://www.youtube.com/watch?v=RzWXAI69G90) shows the overall document workflow. The February 2026 tutorial predates the October 3.5 Parse weights.
+- Google for Developers' [EmbeddingGemma introduction](https://www.youtube.com/watch?v=Xu1X-J-r5Xk) includes a website-embedding example at 2:54. The video covers the original model. The October release and November report above are the sources for EmbeddingGemma 2.
+
+## Adoption order
+
+Try screenshot-to-source search first with the notebook's cross-modal comparison and the project's existing source IDs. Keep the IBM converter available as a tested textual interchange candidate. Keep the classifier advisory and preserve its three false negatives for regression review. Reusing third-party code requires keeping its applicable license and attribution with the adapted files. The two executed trials ran on Linux CPU; phone performance, application integration and hosted model inference remain open.

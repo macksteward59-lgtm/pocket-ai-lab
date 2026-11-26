@@ -1,0 +1,10 @@
+{
+  "name": "pocket-ai-lab-cloudflare-website",
+  "private": true,
+  "scripts": {
+    "build": "python3 prepare.py",
+    "check": "wrangler deploy --dry-run",
+    "test": "python3 smoke_test.py"
+  },
+  "devDependencies": {"wrangler": "4.166.0"}
+}

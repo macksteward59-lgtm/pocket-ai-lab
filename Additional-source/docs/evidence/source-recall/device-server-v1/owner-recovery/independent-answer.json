@@ -1,0 +1,27 @@
+{
+  "question": "At what time does the daily free neuron allocation reset?",
+  "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+  "retrieved": [
+    {
+      "id": "CF-QUOTA",
+      "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "finding": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation."
+    },
+    {
+      "id": "APPLE-DEVICE",
+      "url": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
+      "finding": "Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured."
+    }
+  ],
+  "model": "qwen2.5-3b-instruct-q4_k_m",
+  "modelSHA256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+  "semanticSupportVerified": false,
+  "status": "quote_proposed",
+  "answer": "00:00 UTC",
+  "source": "CF-QUOTA",
+  "sourceURL": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+  "rawOutput": "00:00 UTC [A]",
+  "requestID": "chatcmpl-ZhxXg4ovRMgHSg6oLHstxAzvN0GEo2Xs",
+  "latencyMs": 2607,
+  "prompt": "Use only the supplied project-source summaries. Answer the question with the shortest exact phrase that gives the requested fact, followed by its passage label. If the passages do not give the requested fact, answer UNKNOWN. Return only that answer.\n\n[A] The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation.\n[B] Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured.\n\nQuestion: At what time does the daily free neuron allocation reset?"
+}

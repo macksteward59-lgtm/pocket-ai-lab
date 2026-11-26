@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "pocket-ai-coordination": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CURSOR_PLUGIN_ROOT}/server/index.mjs"],
+      "cwd": "${workspaceFolder}",
+      "env": { "POCKET_AI_REPO": "${workspaceFolder}" }
+    }
+  }
+}

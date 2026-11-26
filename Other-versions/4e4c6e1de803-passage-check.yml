@@ -1,0 +1,32 @@
+name: Source passage server proof
+on:
+  pull_request:
+    branches: [main, codex/source-register-handoff, codex/passage-device-server-proof]
+    paths:
+      - ios/PocketAILab/PassageChecks.json
+      - tools/passage-check/**
+      - tools/openclaw-review/run-linux.sh
+      - tools/openclaw-review/review.py
+      - .github/workflows/passage-check.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify the extractive citation constraint
+        run: python3 -m unittest discover -s tools/passage-check
+      - name: Run all three decoding modes against the frozen passage suites
+        run: bash tools/openclaw-review/run-linux.sh --compare-passages "$RUNNER_TEMP/passage-comparison"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: passage-comparison
+          path: ${{ runner.temp }}/passage-comparison
+          if-no-files-found: error

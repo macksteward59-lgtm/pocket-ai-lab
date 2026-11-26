@@ -1,0 +1,114 @@
+{
+  "apexReceipt": false,
+  "authorized": false,
+  "checkedOutSHA": "e5cf16b9b3af96ab0fe4832105538abd5d22c551",
+  "checkedOutTree": "6b6904d921fdaa084a4be74f7909f3932e9a4262",
+  "files": {
+    "audit.json": {
+      "bytes": 18027,
+      "sha256": "8a19fb38ba05a8eb21cc3be8fb908b8761cb110d388867dfa950c3ef8534ec21"
+    },
+    "build.log": {
+      "bytes": 119814,
+      "sha256": "2d271d9854045bec7ff77296f3e95c2cc3aed8e7251974e8e03df414948b0b10"
+    },
+    "contract-xctest.log": {
+      "bytes": 3683,
+      "sha256": "1a04f647f11b41ea4f822aedf9c7bce5bf4d89fef5a054cd235f557cd8b15e61"
+    },
+    "download.json": {
+      "bytes": 306,
+      "sha256": "03aa1f61a3bdea1fcc0e524de6efa44ccc95ba048db7e90528f8eeeb5afc8984"
+    },
+    "metadata.json": {
+      "bytes": 7981,
+      "sha256": "5a0d4af97a483efbd9dc22cab0ae27ffa6dcf481819d26d33688b5767566e3f1"
+    },
+    "model-pin.json": {
+      "bytes": 1459,
+      "sha256": "781ed3150b61610b25d47367adb8f68125108e0cb53471d9a00322829c1791b1"
+    },
+    "native-xctest.log": {
+      "bytes": 410582,
+      "sha256": "d1cecba755da49dcb651683fb9c608b5efe1418239bf0833387a9dacc100be09"
+    },
+    "prepared.json": {
+      "bytes": 1770,
+      "sha256": "da2b67509c1aed066f8758e173ad8c1f52586e2e455bf7e1775a500756377e03"
+    },
+    "profile.json": {
+      "bytes": 4960,
+      "sha256": "ad2a548fba3f040877d236b6642b101d8d7389993156f74819747357bd7d9818"
+    },
+    "prompts/001.txt": {
+      "bytes": 178,
+      "sha256": "bc99f8739bba9157a9330389c6bc705ae26489910c68bbb3b57b3143c378b275"
+    },
+    "prompts/002.txt": {
+      "bytes": 186,
+      "sha256": "5b5d445445ff69121c4ec11469526e3870511a9ae6b5efa9162e5bbc1aade94d"
+    },
+    "prompts/003.txt": {
+      "bytes": 212,
+      "sha256": "5c0441044fb49151f7119be408e5a572e0c136dc5d6cf819944a4e606d9747f8"
+    },
+    "prompts/004.txt": {
+      "bytes": 245,
+      "sha256": "1ab97ebce9bafa8af8049597849017c99c99c29c53eef147d685d6d7202274d3"
+    },
+    "prompts/005.txt": {
+      "bytes": 212,
+      "sha256": "b5493f4203f2e9c9cd02065daf78d7ae6ca5fcb9b37cb33565efbfc1e687954e"
+    },
+    "prompts/006.txt": {
+      "bytes": 244,
+      "sha256": "508827174c7db1cfe2d89e55f9f5a3fe0aa9d560ab76da0f79ef1acf7f5365b7"
+    },
+    "prompts/007.txt": {
+      "bytes": 244,
+      "sha256": "a626b3d00d79b09bb8ddf2e14491024dcfae3706c5f745d84405eaa536c1c66c"
+    },
+    "prompts/008.txt": {
+      "bytes": 296,
+      "sha256": "936ffa26b6b2396656241720b319eb72830f5c3859aa38fdc3e5b59886e3163f"
+    },
+    "runtime-pin.json": {
+      "bytes": 458,
+      "sha256": "25a9710f607cb8e748c84147628e37f2efff7b05049fccd36e161011a7822d24"
+    },
+    "tokenization-verified.json": {
+      "bytes": 7110,
+      "sha256": "01a232b8273f32ca9ada556f33a4339739a0de6c06afe0701e49f0d6220b7f13"
+    },
+    "tokenizer-stderr.log": {
+      "bytes": 10424,
+      "sha256": "52b8fb06349547ed649a1c06e03182a9b4817d31137ccf536843ae1128de1d1f"
+    },
+    "tokenizer.jsonl": {
+      "bytes": 16319,
+      "sha256": "c8402a1b3d51c9c1820e03e799c45c28e5f90d4e12ba1a560a8f234deccddb0f"
+    }
+  },
+  "githubRepository": "macksteward59-lgtm/pocket-ai-lab",
+  "githubRunAttempt": "1",
+  "githubRunId": "44870413700",
+  "githubSHA": "8b68ed490a705332d5c97aa2611256d7ee2aabd4",
+  "hardwareAcceptance": false,
+  "kind": "deepseek-local-development-qualification",
+  "limits": "Hosted Intel macOS CPU; eight precommitted development cases, not held-out general quality, reference/native inference parity, ExploitGym, learned GIE or physical iPhone acceptance.",
+  "machine": "x86_64",
+  "modelPromotion": false,
+  "platform": "macOS-15.7.9-x86_64-i386-64bit-Mach-O",
+  "schemaVersion": 1,
+  "sourceHead": "e5cf16b9b3af96ab0fe4832105538abd5d22c551",
+  "stepOutcomes": {
+    "build": "success",
+    "experiment": "success",
+    "fixtures": "success",
+    "integrity": "success",
+    "prepare": "success",
+    "quality": "failure",
+    "tokenizer": "success"
+  },
+  "trackedSourceUnchanged": true
+}

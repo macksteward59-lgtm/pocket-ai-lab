@@ -1,0 +1,24 @@
+{
+  "name": "pocket-ai-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pocket AI Lab — Hybrid offline-first multi-agent intelligence platform. Agents collaborate; APEX/East authorizes. Built on Director, East/e3, ExploitGym, and Grok Workspace.",
+  "scripts": {
+    "setup": "npm install",
+    "build": "tsc -p tsconfig.json",
+    "test": "echo 'Add vitest / playwright for intelligence + director'",
+    "start": "e3 workspace deploy . dev --from-source ./src/east/index.ts && e3 dataflow run . dev"
+  },
+  "dependencies": {
+    "@elaraai/east": "^1.0.96",
+    "@elaraai/e3": "^1.0.98",
+    "zod": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.5",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "reportKind": "pr234-fixed-run-independent-artifact-audit",
+  "schemaVersion": 1,
+  "consistencyAudit": "passed",
+  "nativeWorkflowAcceptance": "failed-chat-format-gate",
+  "sourceHead": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+  "checkoutSHA": "2fce444a03c5b74d836404d2022f6b39f921b692",
+  "sourceAndCheckoutTree": "44b48a0e9ef0b66cb14896ba3f2b4677132e4c57",
+  "runId": 44777249548,
+  "runAttempt": 1,
+  "nativeJobId": 136430313590,
+  "artifactId": 14650318847,
+  "artifactBytes": 105688,
+  "artifactSHA256": "e501207e0fe98bdc919b6103b4b61233fa95026bb851509254636d7d73d5a0ac",
+  "artifactMemberCount": 90,
+  "provenanceDigestEntriesVerified": 89,
+  "exactManifestPromptFilesVerified": 72,
+  "manifestSHA256": "95acbcd4237899a2234fd9c16f5e86823cec1595e6922c96cb54851d15432992",
+  "tokenizerRecordCount": 75,
+  "tokenCountRanges": {
+    "raw": {
+      "minimum": 65,
+      "maximum": 69
+    },
+    "chat": {
+      "minimum": 95,
+      "maximum": 99
+    }
+  },
+  "vocabulary": {
+    "recordType": "vocabulary",
+    "vocabularySize": 49152,
+    "effectiveAddBOS": false,
+    "effectiveAddEOS": false,
+    "bosTokenID": 1,
+    "eosTokenID": 2,
+    "templateByteCount": 368,
+    "templateUTF8Hex": "7b2520666f72206d65737361676520696e206d6573736167657320257d7b25206966206c6f6f702e666972737420616e64206d657373616765735b305d5b27726f6c65275d20213d202773797374656d2720257d7b7b20273c7c696d5f73746172747c3e73797374656d0a596f752061726520612068656c7066756c20414920617373697374616e74206e616d656420536d6f6c4c4d2c20747261696e65642062792048756767696e6720466163653c7c696d5f656e647c3e0a27207d7d7b2520656e64696620257d7b7b273c7c696d5f73746172747c3e27202b206d6573736167655b27726f6c65275d202b20270a27202b206d6573736167655b27636f6e74656e74275d202b20273c7c696d5f656e647c3e27202b20270a277d7d7b2520656e64666f7220257d7b25206966206164645f67656e65726174696f6e5f70726f6d707420257d7b7b20273c7c696d5f73746172747c3e617373697374616e740a27207d7d7b2520656e64696620257d",
+    "markers": [
+      {
+        "spelling": "<|im_start|>",
+        "tokenID": 1,
+        "attributes": 8,
+        "isEOG": false,
+        "isolatedAddSpecial": false,
+        "parseSpecialTrueTokenIDs": [
+          1
+        ],
+        "parseSpecialFalseTokenIDs": [
+          44,
+          108,
+          306,
+          79,
+          3738,
+          108,
+          46
+        ]
+      },
+      {
+        "spelling": "<|im_end|>",
+        "tokenID": 2,
+        "attributes": 8,
+        "isEOG": true,
+        "isolatedAddSpecial": false,
+        "parseSpecialTrueTokenIDs": [
+          2
+        ],
+        "parseSpecialFalseTokenIDs": [
+          44,
+          108,
+          306,
+          79,
+          486,
+          108,
+          46
+        ]
+      },
+      {
+        "spelling": "<|endoftext|>",
+        "tokenID": 0,
+        "attributes": 8,
+        "isEOG": true,
+        "isolatedAddSpecial": false,
+        "parseSpecialTrueTokenIDs": [
+          0
+        ],
+        "parseSpecialFalseTokenIDs": [
+          44,
+          108,
+          486,
+          1714,
+          2692,
+          108,
+          46
+        ]
+      }
+    ]
+  },
+  "observedGenerationAttempts": 72,
+  "uniqueRequestIDs": 72,
+  "measurementIntegrity": true,
+  "chatFormatFeasible": false,
+  "perFormat": {
+    "raw": {
+      "attempted": 36,
+      "completed": 32,
+      "generationFailed": 4,
+      "invalidCompleted": 32,
+      "validStrictAnswers": 0,
+      "correctCountsByCondition": {
+        "correct": 0,
+        "absent": 0,
+        "counterfactual": 0
+      },
+      "conditionDenominator": 12
+    },
+    "chat": {
+      "attempted": 36,
+      "completed": 36,
+      "generationFailed": 0,
+      "invalidCompleted": 36,
+      "validStrictAnswers": 0,
+      "correctCountsByCondition": {
+        "correct": 0,
+        "absent": 0,
+        "counterfactual": 0
+      },
+      "conditionDenominator": 12
+    }
+  },
+  "rawOutputFrequencies": {
+    "raw": [
+      {
+        "rawOutput": " cedar\n\nWhat",
+        "count": 3
+      },
+      {
+        "rawOutput": "\n\nWhat is",
+        "count": 29
+      },
+      {
+        "rawOutput": null,
+        "count": 4
+      }
+    ],
+    "chat": [
+      {
+        "rawOutput": "B: maple",
+        "count": 12
+      },
+      {
+        "rawOutput": "No stored word is",
+        "count": 12
+      },
+      {
+        "rawOutput": "B: cedar",
+        "count": 12
+      }
+    ]
+  },
+  "generationErrorOrdinals": [
+    12,
+    28,
+    52,
+    57
+  ],
+  "generationErrorSourceOrdinals": [
+    6,
+    14,
+    26,
+    29
+  ],
+  "elapsedMilliseconds": 22073,
+  "sumRequestLatencyMilliseconds": 20949,
+  "offload": {
+    "metalDeviceUsableAtLoad": true,
+    "offloadedLayers": 0,
+    "reportedLayerCount": 31,
+    "requestedGpuLayers": 0
+  },
+  "cleanup": {
+    "activeLeaseCount": 0,
+    "activeLeaseCountBeforeRelease": 1,
+    "activeRequests": 0,
+    "activeRequestsBeforeRelease": 0,
+    "activeUseCount": 0,
+    "activeUseCountBeforeRelease": 0,
+    "leaseReleased": true,
+    "loadedModelIDs": [],
+    "pendingModelIDs": [],
+    "reservedMemoryMB": 0,
+    "unloadingModelIDs": [],
+    "waitingRequests": 0,
+    "waitingRequestsBeforeRelease": 0
+  },
+  "rawV1Comparison": "All 36 raw trial content records match original v1 child run 44762948524; UUIDs/latencies excluded, no rescoring.",
+  "limits": [
+    "Strict frozen A/B parser was not relaxed: B: maple and B: cedar remain invalid.",
+    "The bundled format intervention has no isolated causal explanation of prior failures.",
+    "No generalized quality, learned GIE compatibility, production route or physical-device acceptance established.",
+    "Model weights were hashed by the hosted runner, not downloaded again for this audit."
+  ],
+  "nativeRunConclusion": "failure",
+  "failedNativeSteps": [
+    "Enforce the separate 36-of-36 chat response-format gate"
+  ],
+  "contractSummaryLines": [
+    "\t Executed 7 tests, with 0 failures (0 unexpected) in 0.296 (0.302) seconds",
+    "\t Executed 7 tests, with 0 failures (0 unexpected) in 0.296 (0.305) seconds",
+    "\t Executed 7 tests, with 0 failures (0 unexpected) in 0.296 (0.312) seconds"
+  ],
+  "measurementSummaryLines": [
+    "\t Executed 1 test, with 0 failures (0 unexpected) in 66.206 (66.207) seconds",
+    "\t Executed 1 test, with 0 failures (0 unexpected) in 66.206 (66.209) seconds",
+    "\t Executed 1 test, with 0 failures (0 unexpected) in 66.206 (66.211) seconds"
+  ],
+  "cacheLog": [
+    "2026-11-20T16:50:14.0819010Z Cache hit for: pocket-llama-macOS-X64-e367a4f0182db4a1f58d6f1bb3c3886a7eb211ed9bfa532d510888727be09628-7d67d42f215cd48706da9863af52a8c1825199760a118b5583db3734cf7148c3",
+    "2026-11-20T16:50:20.3356620Z Cache restored successfully",
+    "2026-11-20T16:50:20.4659230Z Cache restored from key: pocket-llama-macOS-X64-e367a4f0182db4a1f58d6f1bb3c3886a7eb211ed9bfa532d510888727be09628-7d67d42f215cd48706da9863af52a8c1825199760a118b5583db3734cf7148c3"
+  ],
+  "logs": {
+    "native-job.log": {
+      "bytes": 771175,
+      "sha256": "1d22344d4c7c8feafaa3308cc3cbe99f957be8a72adbe8dc170f4abd3149dd2e"
+    },
+    "evidence-contract-job.log": {
+      "bytes": 20597,
+      "sha256": "04c91ab20c2c75a3d0d12879a77e0ea5ed579b555f72e155f6ce92bdfd060ea5"
+    },
+    "general-ci-job.log": {
+      "bytes": 68891,
+      "sha256": "72f8f873b3ebd5988c0a517b4e7337b20bf450ca05f3ad1ee0ac70593867df4f"
+    }
+  },
+  "exactSourcePinBlobSHAs": {
+    "runtime/ios/pin/smoke-gguf.json": "bd594e3aca5c4f8afecbc27a0ef69df14fe60ed1",
+    "runtime/ios/pin/llama-cpp.json": "b1e033f408b917c94d79344c895f4a759ac1ab7d",
+    "runtime/ios/Tests/LlamaEngineTests/Fixtures/recipient-format-calibration-v1.json": "727c760a20883717d1a075a9ef29b6e60323b4b5"
+  }
+}

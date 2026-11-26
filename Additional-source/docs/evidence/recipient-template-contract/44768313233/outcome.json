@@ -1,0 +1,151 @@
+{
+  "artifact": {
+    "archive_download_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/artifacts/14645708185/zip",
+    "created_at": "2026-11-20T15:56:42Z",
+    "digest": "sha256:540b5cdbd303147cd701defea5dd48ba8b63811df3076ea799ad5b75c2a1011a",
+    "expired": false,
+    "expires_at": "2026-12-04T15:56:42Z",
+    "id": 14645708185,
+    "name": "recipient-template-contract-44768313233-1",
+    "size_in_bytes": 3177,
+    "updated_at": "2026-11-20T15:56:42Z",
+    "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/artifacts/14645708185",
+    "workflow_run": {
+      "head_branch": "codex/recipient-template-contract-probe-20261120",
+      "head_repository_id": 1442661211,
+      "head_sha": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+      "id": 44768313233,
+      "repository_id": 1442661211
+    }
+  },
+  "chatTemplate": {
+    "bytes": 368,
+    "exactBytesFile": "chat-template.txt",
+    "sha256": "872be49dbb638044ad01b60388f48d469ff2980e5f0dccdc22ec907db54d0788",
+    "text": "{% for message in messages %}{% if loop.first and messages[0]['role'] != 'system' %}{{ '<|im_start|>system\nYou are a helpful AI assistant named SmolLM, trained by Hugging Face<|im_end|>\n' }}{% endif %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
+  },
+  "completeJobLog": {
+    "bytes": 21697,
+    "file": "complete-job.log",
+    "sha256": "03073bc1941c52d25d8d7d59e41b3d7d829121ef798e2ccbc2012b0f15492ce8"
+  },
+  "evidenceBoundary": {
+    "inferenceExecuted": false,
+    "note": "Artifact declarations only. Missing flags remain unknown. No Jinja/template execution, model loading, runtime readiness, publisher authentication or authorization is established.",
+    "recipientQualityEstablished": false,
+    "runtimeDefaultFlagsInferred": false,
+    "templateRendered": false,
+    "tokenizationExecuted": false
+  },
+  "gguf": {
+    "byteOrder": "little",
+    "headerAndMetadataBytes": 1769787,
+    "metadataKeyCount": 37,
+    "tensorCountDeclared": 272,
+    "tensorDirectoryValidated": false,
+    "tensorPayloadParsed": false,
+    "version": 3
+  },
+  "limitations": [
+    "No template rendering, native tokenization or model inference was performed.",
+    "No runtime defaults were inferred from absent metadata.",
+    "No cause of the v1 negative result, response-format compliance or recipient quality is established.",
+    "Template metadata does not authenticate its publisher or grant runtime authorization."
+  ],
+  "llamaCppPinCommit": "5f490d7bfe78844e6390c869454c149fd7e003a8",
+  "missingTokenizerMetadataKeys": [
+    "tokenizer.ggml.add_eos_token",
+    "tokenizer.ggml.clean_spaces",
+    "tokenizer.ggml.remove_extra_whitespaces"
+  ],
+  "pr": 233,
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "run": {
+    "job_id": 136398845400,
+    "run_attempt": 1,
+    "run_conclusion": "success",
+    "run_created_at": "2026-11-20T15:56:35Z",
+    "run_id": 44768313233,
+    "run_status": "completed",
+    "run_updated_at": "2026-11-20T15:56:45Z",
+    "run_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44768313233"
+  },
+  "schemaVersion": 1,
+  "source": {
+    "checkout_parents": [
+      "1a3a9d2813ab8d0a5a6c582b8b93144b63ee4bd5",
+      "be72e9f6873b8890a2ccd5c8d78709e073109868"
+    ],
+    "checkout_sha": "2b4fa78a666d6e3c226483380f4c2b6c1efccfd3",
+    "checkout_tree_sha": "3464c517402ac5e4e6e8bb64dfbedb48d884b307",
+    "source_and_checkout_trees_identical": true,
+    "source_sha": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+    "source_tree_sha": "3464c517402ac5e4e6e8bb64dfbedb48d884b307"
+  },
+  "specialTokens": {
+    "tokenizer.ggml.bos_token_id": {
+      "ggufType": "UINT32",
+      "id": 1,
+      "tokenString": {
+        "sha256": "17a9ea43212df48ca4fca436c080e1e35cded043b9197b44a4bd53fbb04f3193",
+        "text": "<|im_start|>",
+        "utf8ByteLength": 12
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.eos_token_id": {
+      "ggufType": "UINT32",
+      "id": 2,
+      "tokenString": {
+        "sha256": "d6b60b51acc9448b15da9cb03f644d0ec8c410e37735817f39e15764aa75a37f",
+        "text": "<|im_end|>",
+        "utf8ByteLength": 10
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.padding_token_id": {
+      "ggufType": "UINT32",
+      "id": 2,
+      "tokenString": {
+        "sha256": "d6b60b51acc9448b15da9cb03f644d0ec8c410e37735817f39e15764aa75a37f",
+        "text": "<|im_end|>",
+        "utf8ByteLength": 10
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.unknown_token_id": {
+      "ggufType": "UINT32",
+      "id": 0,
+      "tokenString": {
+        "sha256": "3d0c1cf596181258a003e9f95c836c765d44353532e67c70d7dff48b05f64840",
+        "text": "<|endoftext|>",
+        "utf8ByteLength": 13
+      },
+      "tokenStringStatus": "present"
+    }
+  },
+  "tokenizerMetadata": {
+    "tokenizer.ggml.add_bos_token": false,
+    "tokenizer.ggml.add_space_prefix": false,
+    "tokenizer.ggml.model": "gpt2",
+    "tokenizer.ggml.pre": "smollm"
+  },
+  "verification": {
+    "allManifestFileDigestsVerified": true,
+    "artifactPinsByteIdenticalToSourceCommit": true,
+    "artifactZipDigestVerified": true,
+    "fixtureTestsPassed": 20,
+    "modelHashScope": "The hosted probe verified the complete GGUF; this local audit verifies its report against the unchanged source pin and artifact provenance, without downloading the GGUF again.",
+    "realModelExecution": false,
+    "specialTokenTextDigestsVerified": true,
+    "templateBase64TextLengthDigestConsistent": true
+  },
+  "verifiedModel": {
+    "bytes": 105454432,
+    "sha256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d"
+  },
+  "vocabulary": {
+    "count": 49152,
+    "present": true
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "APPLE-DEVICE": {
+    "alternate": [
+      "What comparison does the summary make between simulated and physical hardware speed?",
+      "Which configuration does a paired device need before Xcode launches the application?"
+    ],
+    "missing": [
+      "What speed ratio was measured for the simulator against hardware?",
+      "Which cable type does Xcode require for the physical device?"
+    ]
+  },
+  "APPLE-TEAM": {
+    "alternate": [
+      "Which tool can a personal account use to test an app on the owner's devices?",
+      "How long is a Personal Team profile valid once issued?"
+    ],
+    "missing": [
+      "How many apps can a personal account test at once on its devices?",
+      "What fee is due when a Personal Team profile expires?"
+    ]
+  },
+  "CF-BIND": {
+    "alternate": [
+      "Which binding connects a Worker to hosted inference?",
+      "What inputs must be passed when calling the run method?"
+    ],
+    "missing": [
+      "What is the timeout for an AI binding call?",
+      "Which model identifier does this particular Worker currently use?"
+    ]
+  },
+  "CF-QUOTA": {
+    "alternate": [
+      "How much free inference is available each day and when does it renew?",
+      "Under which plan could usage above the allowance cost money?"
+    ],
+    "missing": [
+      "What percentage of the daily free allocation has been consumed?",
+      "What is the paid rate for every additional neuron?"
+    ]
+  },
+  "W3C-PROV": {
+    "alternate": [
+      "What distinction does the provenance summary make between evidence and a revision?"
+    ],
+    "missing": [
+      "Who created the primary evidence for this specific entity?",
+      "How long does an earlier revision have to be retained?"
+    ]
+  },
+  "W3C-QUOTE": {
+    "alternate": [
+      "What text does the selector use to locate the quoted passage?",
+      "Which surrounding context helps when the wording occurs repeatedly?"
+    ],
+    "missing": [
+      "Which file format stores a text quote selector?",
+      "How many repetitions of the wording were found in this passage?"
+    ]
+  },
+  "ACL-CITE": {
+    "alternate": [
+      "Which aspects of answers with citations are measured by ALCE?"
+    ],
+    "missing": [
+      "Which model obtained the highest citation quality?",
+      "Which of the three dimensions has the largest coefficient?"
+    ]
+  },
+  "ACL-ABSTAIN": {
+    "alternate": [
+      "What makes some of the authors' questions impossible to answer?",
+      "What does a successful reader recognize about the evidence in the passage?"
+    ],
+    "missing": [
+      "In what month did the authors collect the questions?",
+      "How many unanswerable questions appear in the passage study?"
+    ]
+  }
+}

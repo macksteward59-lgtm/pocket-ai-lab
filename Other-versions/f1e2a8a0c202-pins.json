@@ -1,0 +1,52 @@
+{
+  "default": "smollm2-135m-instruct-q4_k_m",
+  "models": [
+    {
+      "id": "smollm2-135m-instruct-q4_k_m",
+      "filename": "SmolLM2-135M-Instruct-Q4_K_M.gguf",
+      "repo": "bartowski/SmolLM2-135M-Instruct-GGUF",
+      "revision": "09816acd5d99df7be770d85ea30822623dab342c",
+      "sourceUrl": "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/09816acd5d99df7be770d85ea30822623dab342c/SmolLM2-135M-Instruct-Q4_K_M.gguf",
+      "sha256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+      "bytes": 105454432,
+      "license": "apache-2.0",
+      "baseModel": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "purpose": "loopback smoke test only; not hardware acceptance and not an authorization receipt"
+    },
+    {
+      "id": "qwen2.5-0.5b-instruct-q4_k_m",
+      "filename": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+      "sourceUrl": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+      "bytes": 491400032,
+      "license": "apache-2.0",
+      "baseModel": "Qwen/Qwen2.5-0.5B-Instruct",
+      "purpose": "base smoke model verified by checksum; not a custom fine-tune and not hardware acceptance"
+    },
+    {
+      "id": "deepseek-r1-distill-qwen-1.5b-q4_k_m",
+      "filename": "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+      "repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+      "revision": "9cc28b17e86fa2415fcb070f8ee5ec27c965aa61",
+      "sourceUrl": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/9cc28b17e86fa2415fcb070f8ee5ec27c965aa61/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+      "sha256": "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f",
+      "bytes": 1117320800,
+      "license": "mit",
+      "baseModel": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+      "purpose": "explicit development qualification candidate only; not the default, a custom fine-tune, hardware acceptance or an authorization receipt",
+      "provenance": {
+        "conversionPublisher": "bartowski (community conversion)",
+        "upstreamModel": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+        "upstreamConversionRevision": null,
+        "upstreamConversionRevisionStatus": "not attested by the converter; do not substitute the current upstream revision",
+        "upstreamLicense": "MIT",
+        "baseModelAncestry": "Qwen/Qwen2.5-Math-1.5B",
+        "baseLicense": "Apache-2.0",
+        "licenseSource": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B/blob/ad9f0ae0864d7fbcd1cd905e3c6c5b069cc8b562/LICENSE",
+        "conversionReadme": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/blob/9cc28b17e86fa2415fcb070f8ee5ec27c965aa61/README.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+warning: no usable GPU found, --gpu-layers option will be ignored
+warning: one possible reason is that llama.cpp was compiled without GPU support
+warning: consult docs/build.md for compilation instructions
+0.00.001.607 I srv  llama_server: initializing ...
+0.00.001.622 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.001.749 W srv  server_setup: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.003.069 I srv    load_model: loading model '/home/runner/work/_temp/workshop-deepseek.gguf'
+0.00.163.319 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.00.730.419 I cmn          init: llama threadpool init, n_threads = 2
+0.00.809.128 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 4096, kv_unified = 'false'
+0.00.811.903 I srv  server_run_i: model loaded
+0.00.811.914 I srv  server_on_li: listening on http://127.0.0.1:8086
+0.01.031.431 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 0, t_last = -1
+0.01.031.472 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.14.548.505 I slot print_timing: id  0 | task 0 | n_gen =    106, tg =  34.79 t/s, tg_3s =  35.12 t/s
+0.17.555.683 I slot print_timing: id  0 | task 0 | n_gen =    210, tg =  34.69 t/s, tg_3s =  34.58 t/s
+0.20.565.727 I slot print_timing: id  0 | task 0 | n_gen =    312, tg =  34.42 t/s, tg_3s =  33.89 t/s
+0.23.573.417 I slot print_timing: id  0 | task 0 | n_gen =    413, tg =  34.21 t/s, tg_3s =  33.58 t/s
+0.26.576.849 I slot print_timing: id  0 | task 0 | n_gen =    510, tg =  33.83 t/s, tg_3s =  32.30 t/s
+0.29.606.596 I slot print_timing: id  0 | task 0 | n_gen =    608, tg =  33.58 t/s, tg_3s =  32.35 t/s
+0.32.635.072 I slot print_timing: id  0 | task 0 | n_gen =    707, tg =  33.45 t/s, tg_3s =  32.69 t/s
+0.35.666.454 I slot print_timing: id  0 | task 0 | n_gen =    803, tg =  33.23 t/s, tg_3s =  31.67 t/s
+0.38.695.870 I slot print_timing: id  0 | task 0 | n_gen =    898, tg =  33.02 t/s, tg_3s =  31.36 t/s
+0.41.720.415 I slot print_timing: id  0 | task 0 | n_gen =    992, tg =  32.83 t/s, tg_3s =  31.08 t/s
+0.42.775.717 I slot print_timing: id  0 | task 0 | prompt eval time =   10498.62 ms /  1061 tokens (    9.90 ms per token,   101.06 tokens per second)
+0.42.775.727 I slot print_timing: id  0 | task 0 |        eval time =   31245.59 ms /  1024 tokens (   30.54 ms per token,    32.74 tokens per second)
+0.42.775.728 I slot print_timing: id  0 | task 0 |       total time =   41744.21 ms /  2085 tokens
+0.42.775.735 I slot print_timing: id  0 | task 0 |    graphs reused =       1019
+0.42.775.736 I slot print_timing: id  0 | task 0 |   graph reallocs =          0    /     0        (same size) / (changed size)
+0.42.775.844 I slot      release: id  0 | task 0 | stop processing: n_tokens = 2084, truncated = 0
+0.42.780.419 I srv    operator(): operator(): cleaning up before exit...

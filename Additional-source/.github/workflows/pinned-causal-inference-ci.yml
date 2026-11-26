@@ -1,0 +1,33 @@
+name: Pinned Qwen causal adapter unit CI
+
+on:
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/pinned-causal-inference-v1/**'
+      - '.github/workflows/pinned-causal-inference-ci.yml'
+  push:
+    branches:
+      - codex/pinned-causal-inference-20261122
+    paths:
+      - 'tools/security-evaluation/pinned-causal-inference-v1/**'
+      - '.github/workflows/pinned-causal-inference-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-causal-adapter:
+    name: No-model source evidence and provider boundary tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact proposed source without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure pinned Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Run causal oracle and model-adapter protocol checks
+        run: node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs tools/security-evaluation/pinned-causal-inference-v1/adapter.test.mjs

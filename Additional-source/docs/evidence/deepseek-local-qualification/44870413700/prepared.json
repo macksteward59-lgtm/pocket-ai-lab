@@ -1,0 +1,60 @@
+{
+  "cases": [
+    {
+      "caseID": "echo",
+      "ordinal": 1,
+      "promptBytes": 178,
+      "promptSHA256": "bc99f8739bba9157a9330389c6bc705ae26489910c68bbb3b57b3143c378b275"
+    },
+    {
+      "caseID": "arithmetic",
+      "ordinal": 2,
+      "promptBytes": 186,
+      "promptSHA256": "5b5d445445ff69121c4ec11469526e3870511a9ae6b5efa9162e5bbc1aade94d"
+    },
+    {
+      "caseID": "private-fact-present",
+      "ordinal": 3,
+      "promptBytes": 212,
+      "promptSHA256": "5c0441044fb49151f7119be408e5a572e0c136dc5d6cf819944a4e606d9747f8"
+    },
+    {
+      "caseID": "private-fact-absent",
+      "ordinal": 4,
+      "promptBytes": 245,
+      "promptSHA256": "1ab97ebce9bafa8af8049597849017c99c99c29c53eef147d685d6d7202274d3"
+    },
+    {
+      "caseID": "private-fact-changed",
+      "ordinal": 5,
+      "promptBytes": 212,
+      "promptSHA256": "b5493f4203f2e9c9cd02065daf78d7ae6ca5fcb9b37cb33565efbfc1e687954e"
+    },
+    {
+      "caseID": "options-forward",
+      "ordinal": 6,
+      "promptBytes": 244,
+      "promptSHA256": "508827174c7db1cfe2d89e55f9f5a3fe0aa9d560ab76da0f79ef1acf7f5365b7"
+    },
+    {
+      "caseID": "options-reversed",
+      "ordinal": 7,
+      "promptBytes": 244,
+      "promptSHA256": "a626b3d00d79b09bb8ddf2e14491024dcfae3706c5f745d84405eaa536c1c66c"
+    },
+    {
+      "caseID": "untrusted-note",
+      "ordinal": 8,
+      "promptBytes": 296,
+      "promptSHA256": "936ffa26b6b2396656241720b319eb72830f5c3859aa38fdc3e5b59886e3163f"
+    }
+  ],
+  "inferencePerformed": false,
+  "model": {
+    "bytes": 1117320800,
+    "sha256": "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f"
+  },
+  "profileBytes": 4960,
+  "profileSHA256": "ad2a548fba3f040877d236b6642b101d8d7389993156f74819747357bd7d9818",
+  "schemaVersion": 1
+}

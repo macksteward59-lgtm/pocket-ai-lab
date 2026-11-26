@@ -1,0 +1,319 @@
+name: Recipient Format Calibration
+
+on:
+  pull_request:
+    branches:
+      - main
+      - codex/recipient-template-contract-probe-20261120
+    paths:
+      - runtime/ios/Tests/LlamaEngineTests/RecipientFormatCalibration*.swift
+      - runtime/ios/Tests/LlamaEngineTests/Fixtures/recipient-format-calibration-v1.json
+      - runtime/ios/Tests/RecipientTokenizationProbe/**
+      - runtime/ios/scripts/recipient_format_calibration.py
+      - runtime/ios/scripts/test_recipient_format_calibration.py
+      - runtime/ios/scripts/run-recipient-tokenization-probe.sh
+      - runtime/ios/scripts/recipient_gguf_template.py
+      - runtime/ios/scripts/build-llama-cpp.sh
+      - runtime/ios/Package.swift
+      - runtime/ios/pin/**
+      - runtime/ios/Sources/**
+      - .github/workflows/recipient-format-calibration-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recipient-format-calibration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify independent evidence validation and failure accounting
+        run: |
+          python3 - <<'PY'
+          import unittest
+          suite = unittest.defaultTestLoader.discover('runtime/ios/scripts', pattern='test_recipient_format_calibration.py')
+          count = suite.countTestCases()
+          if count == 0:
+              raise SystemExit('No independent evidence-contract tests were discovered')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          if result.testsRun != count or result.skipped or not result.wasSuccessful():
+              raise SystemExit('Evidence-contract tests were missing, skipped or failed')
+          PY
+
+  native-calibration:
+    needs: evidence-contract
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    steps:
+      - name: Check out the frozen experiment
+        uses: actions/checkout@v4
+
+      - name: Prepare native build tools
+        id: build-tools
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          swift --version
+          uname -m
+          brew install cmake ninja
+          tool_versions="$(brew list --versions cmake ninja)"
+          echo "build_tools_hash=$(printf '%s\n%s\n' "$(xcodebuild -version)" "$tool_versions" | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore existing pinned native dependencies
+        id: llama-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: pocket-llama-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-tools.outputs.build_tools_hash }}-${{ hashFiles('runtime/ios/pin/llama-cpp.json', 'runtime/ios/scripts/build-llama-cpp.sh') }}
+
+      - name: Verify or build pinned dependencies
+        id: native-build
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && bash runtime/ios/scripts/build-llama-cpp.sh verify && bash runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
+            echo "Verified existing pinned native archives."
+          else
+            bash runtime/ios/scripts/build-llama-cpp.sh simulator
+            rm -rf runtime/ios/build/cmake-simulator
+            bash runtime/ios/scripts/build-llama-cpp.sh ios-device
+            rm -rf runtime/ios/build/cmake-ios-device
+            bash runtime/ios/scripts/build-llama-cpp.sh macos
+            rm -rf runtime/ios/build/cmake-macos
+          fi
+          bash runtime/ios/scripts/build-llama-cpp.sh verify-artifacts
+          bash runtime/ios/scripts/build-llama-cpp.sh xcframework
+
+      - name: Save verified native dependencies
+        if: always() && steps.llama-cache.outputs.cache-hit != 'true' && steps.native-build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: ${{ steps.llama-cache.outputs.cache-primary-key }}
+
+      - name: Verify the frozen model metadata and prepare exact prompts
+        id: prepare
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          bash runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/format-gguf-path.txt
+          python3 runtime/ios/scripts/recipient_gguf_template.py \
+            --model "$(tail -n 1 /tmp/format-gguf-path.txt)" \
+            --pin runtime/ios/pin/smoke-gguf.json \
+            --output runtime/ios/build/recipient-format-metadata.json
+          python3 runtime/ios/scripts/recipient_format_calibration.py prepare \
+            --manifest runtime/ios/Tests/LlamaEngineTests/Fixtures/recipient-format-calibration-v1.json \
+            --metadata runtime/ios/build/recipient-format-metadata.json \
+            --model "$(tail -n 1 /tmp/format-gguf-path.txt)" \
+            --output runtime/ios/build/recipient-format-calibration
+          cp runtime/ios/build/recipient-format-metadata.json runtime/ios/build/recipient-format-calibration/metadata.json
+          cp runtime/ios/pin/smoke-gguf.json runtime/ios/build/recipient-format-calibration/model-pin.json
+          cp runtime/ios/pin/llama-cpp.json runtime/ios/build/recipient-format-calibration/llama-cpp-pin.json
+
+      - name: Observe pinned vocabulary and all exact input token sequences
+        id: probe
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          bash runtime/ios/scripts/run-recipient-tokenization-probe.sh \
+            "$(tail -n 1 /tmp/format-gguf-path.txt)" \
+            runtime/ios/build/recipient-format-calibration/prompts 72 \
+            > runtime/ios/build/recipient-format-calibration/tokenizer.jsonl \
+            2> runtime/ios/build/recipient-format-calibration/tokenizer-stderr.log
+
+      - name: Independently enforce the frozen tokenization contract
+        id: tokenizer
+        if: always() && steps.prepare.outcome == 'success'
+        run: |
+          python3 runtime/ios/scripts/recipient_format_calibration.py tokenizer \
+            --manifest runtime/ios/Tests/LlamaEngineTests/Fixtures/recipient-format-calibration-v1.json \
+            --input runtime/ios/build/recipient-format-calibration/tokenizer.jsonl \
+            --output runtime/ios/build/recipient-format-calibration/tokenization-verified.json
+
+      - name: Build the isolated experiment and fixture tests
+        id: mac-build
+        if: ${{ !cancelled() && steps.probe.outcome == 'success' && steps.tokenizer.outcome == 'success' }}
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/pocket-format-host
+          rsync -a --exclude '.build' runtime/ios/ /tmp/pocket-format-host/
+          bash /tmp/pocket-format-host/scripts/build-llama-cpp.sh write-smoke-path "$(tail -n 1 /tmp/format-gguf-path.txt)"
+          git diff --exit-code -- runtime/ios/Tests/LlamaEngineTests/SmokePath.swift
+          cd /tmp/pocket-format-host
+          xcodebuild build-for-testing \
+            -scheme PocketLlamaEngine \
+            -destination "platform=macOS,arch=$(uname -m)" \
+            -derivedDataPath /tmp/pocket-derived-format \
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO \
+            | tee "$GITHUB_WORKSPACE/runtime/ios/build/recipient-format-calibration/macos-build.log"
+          python3 - <<'PY'
+          import glob, os, plistlib
+          paths = glob.glob('/tmp/pocket-derived-format/Build/Products/*.xctestrun')
+          if len(paths) != 1:
+              raise SystemExit(f'Expected one generated test plan, found {paths}')
+          with open(paths[0], 'rb') as handle:
+              plan = plistlib.load(handle)
+          if 'TestConfigurations' in plan:
+              candidates = [(target, None) for config in plan['TestConfigurations']
+                            for target in config.get('TestTargets', [])]
+          else:
+              candidates = [(value, key) for key, value in plan.items()
+                            if isinstance(value, dict) and 'TestBundlePath' in value]
+          matches = [(target, key) for target, key in candidates
+                     if target.get('TestBundlePath', '').endswith('/LlamaEngineTests.xctest')]
+          if len(matches) != 1:
+              raise SystemExit('Expected exactly one LlamaEngineTests target')
+          target, key = matches[0]
+          identifier = target.get('BlueprintName') or key
+          if not identifier or '/' in identifier or '\n' in identifier:
+              raise SystemExit('Invalid test target identifier')
+          if target.get('OnlyTestIdentifiers') or target.get('SkipTestIdentifiers'):
+              raise SystemExit('Generated test product unexpectedly contains filters')
+          target.setdefault('EnvironmentVariables', {})['POCKET_RECIPIENT_FORMAT_CALIBRATION'] = '1'
+          with open(paths[0], 'wb') as handle:
+              plistlib.dump(plan, handle)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'xctestrun={paths[0]}\ntarget={identifier}\n')
+          PY
+
+      - name: Verify the experiment runner with declared fixture engines
+        id: contract
+        if: ${{ !cancelled() && steps.mac-build.outcome == 'success' }}
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          xcodebuild test-without-building \
+            -xctestrun "${{ steps.mac-build.outputs.xctestrun }}" \
+            -destination "platform=macOS,arch=$(uname -m)" -parallel-testing-enabled NO \
+            "-only-testing:${{ steps.mac-build.outputs.target }}/RecipientFormatCalibrationContractTests" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee runtime/ios/build/recipient-format-calibration/contract-xctest.log
+          python3 - <<'PY'
+          import collections, pathlib, re
+          text = pathlib.Path('runtime/ios/build/recipient-format-calibration/contract-xctest.log').read_text()
+          expected = {
+              'testFrozenManifestAndLiteralTemplateExpansion',
+              'testAllFrozenRequestsReachExistingRuntimeUnchanged',
+              'testFailuresAndInvalidOutputStaySeparateWithoutRetries',
+              'testBudgetKeepsAllRowsAndDoesNotStartRemainingRequests',
+              'testCancellationIsPropagatedWithoutSchedulingOtherRows',
+              'testChangedModelArtifactIsRejectedBeforeRequestsAndAfterCallbacks',
+              'testReleasedLeaseDoesNotBecomeAnOrdinaryMeasuredError',
+          }
+          outcomes = re.findall(r"Test Case '-\[(?:\w+\.)?RecipientFormatCalibrationContractTests (test\w+)\]' (passed|failed|skipped)", text)
+          counts = collections.Counter(name for name, result in outcomes)
+          if set(counts) != expected or any(count != 1 for count in counts.values()) or any(result != 'passed' for name, result in outcomes):
+              raise SystemExit(f'Expected all seven named fixture tests to execute and pass once; observed {outcomes}')
+          print('Verified all seven named fixture tests executed and passed.')
+          PY
+
+      - name: Execute the precommitted 72-request comparison
+        id: experiment
+        if: ${{ !cancelled() && steps.contract.outcome == 'success' }}
+        timeout-minutes: 18
+        run: |
+          set -euo pipefail
+          xcodebuild test-without-building \
+            -xctestrun "${{ steps.mac-build.outputs.xctestrun }}" \
+            -destination "platform=macOS,arch=$(uname -m)" -parallel-testing-enabled NO \
+            "-only-testing:${{ steps.mac-build.outputs.target }}/RecipientFormatCalibrationTests" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee runtime/ios/build/recipient-format-calibration/calibration-xctest.log
+
+      - name: Preserve partial evidence and independently verify measurement integrity
+        id: integrity
+        if: always() && steps.prepare.outcome == 'success'
+        run: |
+          python3 runtime/ios/scripts/recipient_format_calibration.py verify \
+            --manifest runtime/ios/Tests/LlamaEngineTests/Fixtures/recipient-format-calibration-v1.json \
+            --log runtime/ios/build/recipient-format-calibration/calibration-xctest.log \
+            --tokenizer runtime/ios/build/recipient-format-calibration/tokenization-verified.json \
+            --output runtime/ios/build/recipient-format-calibration/evidence
+
+      - name: Enforce the separate 36-of-36 chat response-format gate
+        if: always() && steps.integrity.outcome == 'success'
+        run: |
+          python3 runtime/ios/scripts/recipient_format_calibration.py gate \
+            --audit runtime/ios/build/recipient-format-calibration/evidence/audit.json
+
+      - name: Record source and artifact provenance
+        if: always()
+        env:
+          SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
+          TOKENIZER_OUTCOME: ${{ steps.tokenizer.outcome }}
+          CONTRACT_OUTCOME: ${{ steps.contract.outcome }}
+          EXPERIMENT_OUTCOME: ${{ steps.experiment.outcome }}
+          INTEGRITY_OUTCOME: ${{ steps.integrity.outcome }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          root = pathlib.Path('runtime/ios/build/recipient-format-calibration')
+          root.mkdir(parents=True, exist_ok=True)
+          # Retain metadata and pins even if preparation rejected the input
+          # contract before it created the output directory.
+          for source, name in [
+              ('runtime/ios/build/recipient-format-metadata.json', 'metadata.json'),
+              ('runtime/ios/pin/smoke-gguf.json', 'model-pin.json'),
+              ('runtime/ios/pin/llama-cpp.json', 'llama-cpp-pin.json'),
+              ('runtime/ios/Tests/LlamaEngineTests/Fixtures/recipient-format-calibration-v1.json', 'manifest.json'),
+          ]:
+              path = pathlib.Path(source)
+              if path.is_file():
+                  destination = root / name
+                  if destination.exists() and destination.read_bytes() != path.read_bytes():
+                      raise SystemExit(f'Refusing to overwrite divergent evidence: {name}')
+                  destination.write_bytes(path.read_bytes())
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+          provenance = {
+              'schemaVersion': 1, 'kind': 'recipient-format-calibration',
+              'githubRepository': os.environ['GITHUB_REPOSITORY'],
+              'githubRunId': os.environ['GITHUB_RUN_ID'],
+              'githubRunAttempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'githubSHA': os.environ['GITHUB_SHA'],
+              'sourceHead': os.environ['SOURCE_HEAD'],
+              'checkedOutSHA': git('rev-parse', 'HEAD'),
+              'checkedOutTree': git('rev-parse', 'HEAD^{tree}'),
+              'machine': subprocess.check_output(['uname', '-m'], text=True).strip(),
+              'stepOutcomes': {name.lower(): os.environ[name + '_OUTCOME']
+                               for name in ['PREPARE', 'PROBE', 'TOKENIZER', 'CONTRACT', 'EXPERIMENT', 'INTEGRITY']},
+              'limits': 'Hosted Intel macOS; no physical iPhone, learned GIE mapping, production routing or authorization established.',
+              'files': {str(path.relative_to(root)): {'bytes': path.stat().st_size,
+                         'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                        for path in sorted(root.rglob('*')) if path.is_file() and path.name != 'provenance.json'},
+          }
+          (root / 'provenance.json').write_text(json.dumps(provenance, indent=2, sort_keys=True) + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('## Separate recipient format calibration\n\n')
+              summary.write('Raw and chat inputs use the same frozen v1 questions, strict parser and generation settings. Measurement integrity and chat-format feasibility have separate steps.\n\n')
+              summary.write('Original v1 outputs and failed gates remain unchanged. This exploratory result does not establish a learned GIE recipient or a production route.\n')
+          PY
+
+      - name: Upload all observed evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recipient-format-calibration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime/ios/build/recipient-format-calibration/
+          if-no-files-found: warn
+          retention-days: 14

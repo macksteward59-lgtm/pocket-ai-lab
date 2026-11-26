@@ -1,0 +1,42 @@
+name: Post-run owned causal packet independent regrade
+
+on:
+  push:
+    branches:
+      - codex/causal-postrun-review-20261122
+    paths:
+      - 'tools/security-evaluation/causal-counterfactual-v1/protocol.mjs'
+      - 'tools/security-evaluation/pinned-causal-inference-v1/run-live.mjs'
+      - 'tools/security-evaluation/causal-postrun-review-v1/**'
+      - '.github/workflows/causal-postrun-review-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/causal-counterfactual-v1/protocol.mjs'
+      - 'tools/security-evaluation/pinned-causal-inference-v1/run-live.mjs'
+      - 'tools/security-evaluation/causal-postrun-review-v1/**'
+      - '.github/workflows/causal-postrun-review-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-postrun-review:
+    name: Independent unsigned packet review
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout pinned source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Verify existing and post-run synthetic controls
+        run: |
+          node --test \
+            tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs \
+            tools/security-evaluation/pinned-causal-inference-v1/adapter.test.mjs \
+            tools/security-evaluation/causal-postrun-review-v1/verify.test.mjs \
+            tools/security-evaluation/causal-postrun-review-v1/write.test.mjs

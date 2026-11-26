@@ -1,0 +1,60 @@
+{
+  "success": true,
+  "engine": "chromium",
+  "version": "143.0.7499.4",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scores": [
+    {
+      "id": "build-d7d7f1178f1afc5f6adcfbcd326eb2bc0fcd3636995b1f19601fc0021843b8ed",
+      "role": "Selected reader",
+      "correct": 12,
+      "total": 16
+    },
+    {
+      "id": "build-c71ea866194fe22a1d23149b5bb8ba08d0f844a4889b64889edaa45086bf1aa0",
+      "role": "Base",
+      "correct": 12,
+      "total": 16
+    },
+    {
+      "id": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+      "role": "Second parent",
+      "correct": 14,
+      "total": 16
+    }
+  ],
+  "disagreement": {
+    "question": "How many grams does a nickel weigh?",
+    "expected": 0,
+    "choices": [
+      {
+        "id": "build-d7d7f1178f1afc5f6adcfbcd326eb2bc0fcd3636995b1f19601fc0021843b8ed",
+        "index": -1,
+        "displayed": "Abstained · UNKNOWN · insufficient evidence"
+      },
+      {
+        "id": "build-c71ea866194fe22a1d23149b5bb8ba08d0f844a4889b64889edaa45086bf1aa0",
+        "index": -1,
+        "displayed": "Abstained · UNKNOWN · insufficient evidence"
+      },
+      {
+        "id": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+        "index": 0,
+        "displayed": "Sentence 1 · The listed mass of a United States nickel is 5.000 grams."
+      }
+    ]
+  },
+  "selectedChatId": "038efceb312cd410a08a358cfc9917cb562fb80f2c1ef49bffc819cec6d4f812",
+  "chatAnswer": "The listed mass of a United States nickel is 5.000 grams.",
+  "privateFileCases": 2,
+  "typedUngradedChecked": true,
+  "offlinePrivateReloadChecked": true,
+  "chatDraftPreservedOnCancel": true,
+  "readerCatalogUnchanged": true,
+  "savedMemoriesBeforeOffline": 0,
+  "unexpectedHttpRequests": 0,
+  "automaticChatMessages": 0
+}

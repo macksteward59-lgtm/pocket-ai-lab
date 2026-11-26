@@ -1,0 +1,69 @@
+name: Frozen word-choice comparison
+on:
+  pull_request:
+    branches: [codex/recipient-format-calibration-20261120]
+    paths:
+      - tools/word-choice/compare.py
+      - .github/workflows/word-choice.yml
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.16.0
+      - name: Verify the pinned CPU server
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(jq -r .tag runtime/ios/pin/llama-cpp.json)
+          test "$version" = b12233
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o llama.tar.gz "https://github.com/ggml-org/llama.cpp/releases/download/$version/llama-$version-bin-ubuntu-x64.tar.gz"
+          echo '9f4a78cc4e4c9f5a166102a43f1d8f8e4e9d75e76823eb9505d05bbba288abd5  llama.tar.gz' | sha256sum --check
+          mkdir llama evidence
+          tar -xzf llama.tar.gz -C llama --strip-components=1
+          llama/llama-server --version 2>&1 | tee evidence/server-version.txt
+          git -C "$GITHUB_WORKSPACE" rev-parse HEAD > evidence/source-commit.txt
+      - name: Measure two fixed decoders for each pinned model
+        shell: bash
+        run: |
+          set -euo pipefail
+          results="$RUNNER_TEMP/evidence"
+          for model in smollm2-135m-instruct-q4_k_m qwen2.5-0.5b-instruct-q4_k_m; do
+            (
+              export POCKET_GGUF_ID="$model" POCKET_GGUF_DIR="$RUNNER_TEMP/models"
+              node scripts/local-gguf/fetch-smoke-gguf.mjs | tee "$results/$model-pin.json"
+              file=$(jq -er 'select(.verified == true) | .path' "$results/$model-pin.json")
+              "$RUNNER_TEMP/llama/llama-server" --host 127.0.0.1 --port 18081 \
+                -m "$file" --alias "$model" -c 512 -np 1 -ngl 0 > "$RUNNER_TEMP/server.log" 2>&1 &
+              pid=$!
+              trap 'rc=$?; if ((rc)); then tail -30 "$RUNNER_TEMP/server.log"; fi; kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
+              for attempt in {1..60}; do
+                kill -0 "$pid"
+                if curl --max-time 2 -fs http://127.0.0.1:18081/health >/dev/null; then break; fi
+                sleep 1
+              done
+              curl --max-time 3 -fsS http://127.0.0.1:18081/health | jq -e '.status == "ok"'
+              python3 tools/word-choice/compare.py measure "$results" --model "$model"
+            )
+          done
+      - name: Score all fixed trials
+        run: python3 tools/word-choice/compare.py grade "$RUNNER_TEMP/evidence"
+      - name: Preserve raw replies and pins
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: word-choice-evidence
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: error
+          retention-days: 14

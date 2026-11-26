@@ -1,0 +1,22 @@
+name: v3.12 database privilege monitor
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/director/db/v3.12/**'
+      - '.github/workflows/v312-privilege-monitor.yml'
+permissions:
+  contents: read
+jobs:
+  monitor:
+    name: PostgreSQL ${{ matrix.major }} permission checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        major: [15, 16]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test migrations through schema-owner and observer connections
+        run: python3 packages/director/db/v3.12/test_integration.py ${{ matrix.major }}

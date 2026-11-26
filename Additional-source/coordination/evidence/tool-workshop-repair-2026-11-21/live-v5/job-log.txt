@@ -1,0 +1,506 @@
+﻿2026-11-21T10:00:31.1564103Z Current runner version: '2.338.2'
+2026-11-21T10:00:31.1587662Z ##[group]Runner Image Provisioner
+2026-11-21T10:00:31.1588561Z Hosted Compute Agent
+2026-11-21T10:00:31.1589133Z Version: 20261111.635
+2026-11-21T10:00:31.1590308Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-21T10:00:31.1591392Z Build Date: 2026-11-11T01:49:01Z
+2026-11-21T10:00:31.1592097Z Worker ID: {e54cf767-fd53-42d7-a246-1b29c50f7911}
+2026-11-21T10:00:31.1592791Z Region: westus3
+2026-11-21T10:00:31.1593312Z Cloud: Azure
+2026-11-21T10:00:31.1593843Z ##[endgroup]
+2026-11-21T10:00:31.1595235Z ##[group]Operating System
+2026-11-21T10:00:31.1595805Z Ubuntu
+2026-11-21T10:00:31.1596360Z 24.04.5
+2026-11-21T10:00:31.1596881Z LTS
+2026-11-21T10:00:31.1597387Z ##[endgroup]
+2026-11-21T10:00:31.1597913Z ##[group]Runner Image
+2026-11-21T10:00:31.1598491Z Image: ubuntu-24.04
+2026-11-21T10:00:31.1599060Z Version: 20261116.376.1
+2026-11-21T10:00:31.1600251Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.376/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-21T10:00:31.1601906Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.376
+2026-11-21T10:00:31.1602835Z ##[endgroup]
+2026-11-21T10:00:31.1603933Z ##[group]GITHUB_TOKEN Permissions
+2026-11-21T10:00:31.1605921Z Contents: read
+2026-11-21T10:00:31.1606503Z Metadata: read
+2026-11-21T10:00:31.1607026Z ##[endgroup]
+2026-11-21T10:00:31.1609378Z Secret source: Actions
+2026-11-21T10:00:31.1610287Z Cache mode: write
+2026-11-21T10:00:31.1611190Z Prepare workflow directory
+2026-11-21T10:00:31.2172216Z Prepare all required actions
+2026-11-21T10:00:31.2223261Z Getting action download info
+2026-11-21T10:00:31.5435872Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-21T10:00:31.6656481Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-21T10:00:31.7882857Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-21T10:00:32.0166413Z Complete job name: live-model
+2026-11-21T10:00:32.0900751Z ##[group]Run actions/checkout@v4
+2026-11-21T10:00:32.0901703Z with:
+2026-11-21T10:00:32.0902206Z   persist-credentials: false
+2026-11-21T10:00:32.0902818Z   repository: macksteward59-lgtm/pocket-ai-lab
+2026-11-21T10:00:32.0907075Z   token: ***
+2026-11-21T10:00:32.0907586Z   ssh-strict: true
+2026-11-21T10:00:32.0908102Z   ssh-user: git
+2026-11-21T10:00:32.0908575Z   clean: true
+2026-11-21T10:00:32.0909060Z   sparse-checkout-cone-mode: true
+2026-11-21T10:00:32.0909667Z   fetch-depth: 1
+2026-11-21T10:00:32.0910181Z   fetch-tags: false
+2026-11-21T10:00:32.0910861Z   show-progress: true
+2026-11-21T10:00:32.0911383Z   lfs: false
+2026-11-21T10:00:32.0911829Z   submodules: false
+2026-11-21T10:00:32.0912363Z   set-safe-directory: true
+2026-11-21T10:00:32.0912949Z   allow-unsafe-pr-checkout: false
+2026-11-21T10:00:32.0913685Z env:
+2026-11-21T10:00:32.0914165Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:00:32.0914736Z ##[endgroup]
+2026-11-21T10:00:32.3764644Z Syncing repository: macksteward59-lgtm/pocket-ai-lab
+2026-11-21T10:00:32.3768050Z ##[group]Getting Git version info
+2026-11-21T10:00:32.3769254Z Working directory is '/home/runner/work/pocket-ai-lab/pocket-ai-lab'
+2026-11-21T10:00:32.3771327Z [command]/usr/bin/git version
+2026-11-21T10:00:32.3862196Z git version 2.56.1
+2026-11-21T10:00:32.3880161Z ##[endgroup]
+2026-11-21T10:00:32.3900680Z Temporarily overriding HOME='/home/runner/work/_temp/c6520722-ecdc-46e9-8255-807dc553aa3b' before making global git config changes
+2026-11-21T10:00:32.3902287Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-21T10:00:32.3905402Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/pocket-ai-lab/pocket-ai-lab
+2026-11-21T10:00:32.3959634Z Deleting the contents of '/home/runner/work/pocket-ai-lab/pocket-ai-lab'
+2026-11-21T10:00:32.3962872Z ##[group]Initializing the repository
+2026-11-21T10:00:32.3968235Z [command]/usr/bin/git init /home/runner/work/pocket-ai-lab/pocket-ai-lab
+2026-11-21T10:00:32.4088633Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-21T10:00:32.4092401Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-21T10:00:32.4094169Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-21T10:00:32.4104212Z hint: call:
+2026-11-21T10:00:32.4110168Z hint:
+2026-11-21T10:00:32.4115806Z hint: 	git config --global init.defaultBranch <name>
+2026-11-21T10:00:32.4120795Z hint:
+2026-11-21T10:00:32.4122374Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-21T10:00:32.4124595Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-21T10:00:32.4126016Z hint:
+2026-11-21T10:00:32.4127152Z hint: 	git branch -m <name>
+2026-11-21T10:00:32.4128274Z hint:
+2026-11-21T10:00:32.4129598Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-21T10:00:32.4131987Z Initialized empty Git repository in /home/runner/work/pocket-ai-lab/pocket-ai-lab/.git/
+2026-11-21T10:00:32.4135310Z [command]/usr/bin/git remote add origin https://github.com/macksteward59-lgtm/pocket-ai-lab
+2026-11-21T10:00:32.4171181Z ##[endgroup]
+2026-11-21T10:00:32.4172504Z ##[group]Disabling automatic garbage collection
+2026-11-21T10:00:32.4175201Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-21T10:00:32.4206395Z ##[endgroup]
+2026-11-21T10:00:32.4207527Z ##[group]Setting up auth
+2026-11-21T10:00:32.4214581Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-21T10:00:32.4248593Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-21T10:00:32.4611378Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-21T10:00:32.4646535Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-21T10:00:32.4899251Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-21T10:00:32.4933065Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-21T10:00:32.5122385Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-21T10:00:32.5161602Z ##[endgroup]
+2026-11-21T10:00:32.5163063Z ##[group]Fetching the repository
+2026-11-21T10:00:32.5174057Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +6c01e953ceb6d6633a770a31980aaf19125d5c47:refs/remotes/origin/codex/tool-workshop-repair-integration-20261121
+2026-11-21T10:00:33.2929573Z From https://github.com/macksteward59-lgtm/pocket-ai-lab
+2026-11-21T10:00:33.2932343Z  * [new ref]         6c01e953ceb6d6633a770a31980aaf19125d5c47 -> origin/codex/tool-workshop-repair-integration-20261121
+2026-11-21T10:00:33.2937366Z ##[endgroup]
+2026-11-21T10:00:33.2939097Z ##[group]Determining the checkout info
+2026-11-21T10:00:33.2941212Z ##[endgroup]
+2026-11-21T10:00:33.2944008Z [command]/usr/bin/git sparse-checkout disable
+2026-11-21T10:00:33.3008837Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-21T10:00:33.3042076Z ##[group]Checking out the ref
+2026-11-21T10:00:33.3045460Z [command]/usr/bin/git checkout --progress --force -B codex/tool-workshop-repair-integration-20261121 refs/remotes/origin/codex/tool-workshop-repair-integration-20261121
+2026-11-21T10:00:33.3354763Z Switched to a new branch 'codex/tool-workshop-repair-integration-20261121'
+2026-11-21T10:00:33.3361261Z branch 'codex/tool-workshop-repair-integration-20261121' set up to track 'origin/codex/tool-workshop-repair-integration-20261121'.
+2026-11-21T10:00:33.3368468Z ##[endgroup]
+2026-11-21T10:00:33.3399917Z [command]/usr/bin/git log -1 --format=%H
+2026-11-21T10:00:33.3424419Z 6c01e953ceb6d6633a770a31980aaf19125d5c47
+2026-11-21T10:00:33.3434055Z ##[group]Removing auth
+2026-11-21T10:00:33.3436324Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-21T10:00:33.3466722Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-21T10:00:33.3655305Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-21T10:00:33.3679274Z http.https://github.com/.extraheader
+2026-11-21T10:00:33.3685996Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-21T10:00:33.3719503Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-21T10:00:33.3903209Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-21T10:00:33.3932253Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-21T10:00:33.4115290Z ##[endgroup]
+2026-11-21T10:00:33.4459187Z ##[group]Run actions/setup-node@v4
+2026-11-21T10:00:33.4460403Z with:
+2026-11-21T10:00:33.4461527Z   node-version: 22
+2026-11-21T10:00:33.4462551Z   always-auth: false
+2026-11-21T10:00:33.4463619Z   check-latest: false
+2026-11-21T10:00:33.4472885Z   token: ***
+2026-11-21T10:00:33.4473924Z env:
+2026-11-21T10:00:33.4474872Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:00:33.4476101Z ##[endgroup]
+2026-11-21T10:00:33.5984535Z (node:2282) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-21T10:00:33.5988084Z Found in cache @ /opt/hostedtoolcache/node/22.23.5/x64
+2026-11-21T10:00:33.5990242Z ##[group]Environment details
+2026-11-21T10:00:33.5992258Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-21T10:00:34.0082807Z node: v22.23.5
+2026-11-21T10:00:34.0083868Z npm: 10.9.9
+2026-11-21T10:00:34.0084535Z yarn: 1.22.22
+2026-11-21T10:00:34.0086338Z ##[endgroup]
+2026-11-21T10:00:34.0206171Z ##[group]Run npm install --ignore-scripts --package-lock=false
+2026-11-21T10:00:34.0206874Z [36;1mnpm install --ignore-scripts --package-lock=false[0m
+2026-11-21T10:00:34.0233024Z shell: /usr/bin/bash -e {0}
+2026-11-21T10:00:34.0233583Z env:
+2026-11-21T10:00:34.0233947Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:00:34.0234372Z ##[endgroup]
+2026-11-21T10:00:42.9137338Z 
+2026-11-21T10:00:42.9146731Z added 49 packages, and audited 50 packages in 9s
+2026-11-21T10:00:42.9147453Z 
+2026-11-21T10:00:42.9148038Z 14 packages are looking for funding
+2026-11-21T10:00:42.9148706Z   run `npm fund` for details
+2026-11-21T10:00:42.9149130Z 
+2026-11-21T10:00:42.9149362Z found 0 vulnerabilities
+2026-11-21T10:00:42.9477937Z ##[group]Run docker pull "$WORKSHOP_IMAGE"
+2026-11-21T10:00:42.9478438Z [36;1mdocker pull "$WORKSHOP_IMAGE"[0m
+2026-11-21T10:00:42.9495721Z shell: /usr/bin/bash -e {0}
+2026-11-21T10:00:42.9496104Z env:
+2026-11-21T10:00:42.9496397Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:00:42.9497007Z   WORKSHOP_IMAGE: python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+2026-11-21T10:00:42.9497542Z ##[endgroup]
+2026-11-21T10:00:43.7619441Z docker.io/library/python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df: Pulling from library/python
+2026-11-21T10:00:43.9889066Z dd051e1b8c92: Pulling fs layer
+2026-11-21T10:00:43.9889919Z a47be7bff94f: Pulling fs layer
+2026-11-21T10:00:43.9890764Z 8691b22c22a3: Pulling fs layer
+2026-11-21T10:00:43.9891293Z 88d156875409: Pulling fs layer
+2026-11-21T10:00:43.9891674Z 88d156875409: Waiting
+2026-11-21T10:00:44.2415038Z a47be7bff94f: Verifying Checksum
+2026-11-21T10:00:44.2416864Z a47be7bff94f: Download complete
+2026-11-21T10:00:44.2951620Z 8691b22c22a3: Verifying Checksum
+2026-11-21T10:00:44.2952658Z 8691b22c22a3: Download complete
+2026-11-21T10:00:44.3526991Z dd051e1b8c92: Verifying Checksum
+2026-11-21T10:00:44.3527723Z dd051e1b8c92: Download complete
+2026-11-21T10:00:44.4944797Z 88d156875409: Verifying Checksum
+2026-11-21T10:00:44.4945948Z 88d156875409: Download complete
+2026-11-21T10:00:45.2315859Z dd051e1b8c92: Pull complete
+2026-11-21T10:00:47.5391306Z a47be7bff94f: Pull complete
+2026-11-21T10:00:48.2651411Z 8691b22c22a3: Pull complete
+2026-11-21T10:00:48.2743806Z 88d156875409: Pull complete
+2026-11-21T10:00:48.2791781Z Digest: sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+2026-11-21T10:00:48.2803896Z Status: Downloaded newer image for python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+2026-11-21T10:00:48.2816701Z docker.io/library/python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+2026-11-21T10:00:48.2873384Z ##[group]Run bash scripts/tool-workshop/build-server.sh
+2026-11-21T10:00:48.2873913Z [36;1mbash scripts/tool-workshop/build-server.sh[0m
+2026-11-21T10:00:48.2888589Z shell: /usr/bin/bash -e {0}
+2026-11-21T10:00:48.2888940Z env:
+2026-11-21T10:00:48.2889313Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:00:48.2892380Z   GITHUB_TOKEN: ***
+2026-11-21T10:00:48.2892677Z ##[endgroup]
+2026-11-21T10:00:48.3213713Z pin header matches b12233 5f490d7bfe78844e6390c869454c149fd7e003a8
+2026-11-21T10:00:48.8740498Z tag b12233 commit 5f490d7bfe78844e6390c869454c149fd7e003a8
+2026-11-21T10:00:48.8845507Z downloading https://github.com/ggml-org/llama.cpp/archive/refs/tags/b12233.tar.gz
+2026-11-21T10:00:48.8934033Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+2026-11-21T10:00:48.8934870Z                                  Dload  Upload   Total   Spent    Left  Speed
+2026-11-21T10:00:48.8951339Z 
+2026-11-21T10:00:49.1379005Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-11-21T10:00:49.1380010Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-11-21T10:00:49.7237814Z 
+2026-11-21T10:00:50.7104550Z 100 1121k    0 1121k    0     0  1350k      0 --:--:-- --:--:-- --:--:-- 1350k
+2026-11-21T10:00:51.6865525Z 100 9216k    0 9216k    0     0  5071k      0 --:--:--  0:00:01 --:--:-- 8201k
+2026-11-21T10:00:52.7064206Z 100 15.5M    0 15.5M    0     0  5695k      0 --:--:--  0:00:02 --:--:-- 7532k
+2026-11-21T10:00:53.7213770Z 100 23.5M    0 23.5M    0     0  6332k      0 --:--:--  0:00:03 --:--:-- 7717k
+2026-11-21T10:00:54.3376947Z 100 31.0M    0 31.0M    0     0  6586k      0 --:--:--  0:00:04 --:--:-- 7673k
+2026-11-21T10:00:54.3377961Z 100 37.3M    0 37.3M    0     0  7023k      0 --:--:--  0:00:05 --:--:-- 8045k
+2026-11-21T10:00:54.4131525Z tarball sha256 76572f95d0ce2b7603fe77d472d29f7df9f0f9c12ae126d8b167252212e8babe bytes 39154253
+2026-11-21T10:00:55.7599083Z include/llama.h matches 5f490d7bfe78844e6390c869454c149fd7e003a8
+2026-11-21T10:00:56.0157548Z -- The C compiler identification is GNU 13.3.0
+2026-11-21T10:00:56.1442915Z -- The CXX compiler identification is GNU 13.3.0
+2026-11-21T10:00:56.1587887Z -- Detecting C compiler ABI info
+2026-11-21T10:00:56.2322311Z -- Detecting C compiler ABI info - done
+2026-11-21T10:00:56.2474181Z -- Check for working C compiler: /usr/bin/cc - skipped
+2026-11-21T10:00:56.2479391Z -- Detecting C compile features
+2026-11-21T10:00:56.2486626Z -- Detecting C compile features - done
+2026-11-21T10:00:56.2602758Z -- Detecting CXX compiler ABI info
+2026-11-21T10:00:56.3192693Z -- Detecting CXX compiler ABI info - done
+2026-11-21T10:00:56.3351116Z -- Check for working CXX compiler: /usr/bin/c++ - skipped
+2026-11-21T10:00:56.3354374Z -- Detecting CXX compile features
+2026-11-21T10:00:56.3360778Z -- Detecting CXX compile features - done
+2026-11-21T10:00:56.3459288Z -- llama.cpp version: 0.9.0-dev
+2026-11-21T10:00:56.3460687Z CMAKE_BUILD_TYPE=Release
+2026-11-21T10:00:56.3493979Z -- Found Git: /usr/bin/git (found version "2.56.1")
+2026-11-21T10:00:56.3556467Z fatal: not a git repository (or any of the parent directories): .git
+2026-11-21T10:00:56.3568196Z fatal: not a git repository (or any of the parent directories): .git
+2026-11-21T10:00:56.3682482Z -- The ASM compiler identification is GNU
+2026-11-21T10:00:56.3698325Z -- Found assembler: /usr/bin/cc
+2026-11-21T10:00:56.4121616Z -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+2026-11-21T10:00:56.4862686Z -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+2026-11-21T10:00:56.4873209Z -- Found Threads: TRUE
+2026-11-21T10:00:56.5034008Z -- Warning: ccache not found - consider installing it for faster compilation or disable this warning with GGML_CCACHE=OFF
+2026-11-21T10:00:56.5189657Z -- CMAKE_SYSTEM_PROCESSOR: x86_64
+2026-11-21T10:00:56.5191575Z -- GGML_SYSTEM_ARCH: x86
+2026-11-21T10:00:56.5216522Z -- Including CPU backend
+2026-11-21T10:00:56.5220054Z -- x86 detected
+2026-11-21T10:00:56.5222278Z -- Adding CPU backend variant ggml-cpu: -msse4.2;-mf16c;-mfma;-mbmi2;-mavx;-mavx2 GGML_SSE42;GGML_F16C;GGML_FMA;GGML_BMI2;GGML_AVX;GGML_AVX2
+2026-11-21T10:00:56.5280111Z -- ggml version: 0.29.0
+2026-11-21T10:00:56.5280716Z -- ggml commit:  unknown
+2026-11-21T10:00:56.5850966Z -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.13")
+2026-11-21T10:00:56.5856218Z -- Performing Test OPENSSL_VERSION_SUPPORTED
+2026-11-21T10:00:56.6377794Z -- Performing Test OPENSSL_VERSION_SUPPORTED - Success
+2026-11-21T10:00:56.6378492Z -- OpenSSL found: 3.0.13
+2026-11-21T10:00:56.6404095Z CMake Warning at common/CMakeLists.txt:33 (message):
+2026-11-21T10:00:56.6405056Z   Git repository not found; to enable automatic generation of build info,
+2026-11-21T10:00:56.6406018Z   make sure Git is installed and the project is a Git repository.
+2026-11-21T10:00:56.6406497Z 
+2026-11-21T10:00:56.6406575Z 
+2026-11-21T10:00:56.6666896Z -- Generating embedded license file for target: llama-app
+2026-11-21T10:00:56.6731256Z -- Configuring done (0.8s)
+2026-11-21T10:00:56.8252442Z -- Generating done (0.2s)
+2026-11-21T10:00:56.8257000Z -- Build files have been written to: /home/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/build/workshop-server
+2026-11-21T10:00:56.8657856Z [  0%] Building CXX object vendor/hash/CMakeFiles/vendor-hash.dir/hash.cpp.o
+2026-11-21T10:00:56.8659997Z [  1%] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
+2026-11-21T10:00:57.0940022Z [  1%] Building C object vendor/hash/CMakeFiles/vendor-hash.dir/xxhash/xxhash.c.o
+2026-11-21T10:00:57.9905023Z [  3%] Building CXX object vendor/hash/CMakeFiles/vendor-hash.dir/sha1/sha1.c.o
+2026-11-21T10:00:58.1539714Z [  3%] Building C object vendor/hash/CMakeFiles/vendor-hash.dir/sha256/sha256.c.o
+2026-11-21T10:00:58.3002806Z [  4%] Linking CXX static library libvendor-hash.a
+2026-11-21T10:00:58.7979262Z [  4%] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
+2026-11-21T10:00:59.0231952Z [  4%] Built target vendor-hash
+2026-11-21T10:00:59.0298652Z [  4%] Building CXX object vendor/cpp-httplib/CMakeFiles/cpp-httplib.dir/httplib.cpp.o
+2026-11-21T10:00:59.0866523Z [  4%] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
+2026-11-21T10:00:59.4430420Z [  6%] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
+2026-11-21T10:01:01.2273667Z [  6%] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+2026-11-21T10:01:04.8505531Z [  6%] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
+2026-11-21T10:01:05.8817535Z [  8%] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
+2026-11-21T10:01:06.0177059Z [  8%] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
+2026-11-21T10:01:11.5553462Z [  8%] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
+2026-11-21T10:01:15.2138872Z [  9%] Linking CXX shared library ../../bin/libggml-base.so
+2026-11-21T10:01:15.2831110Z [  9%] Built target ggml-base
+2026-11-21T10:01:15.2895514Z [  9%] Building CXX object common/CMakeFiles/llama-common-base.dir/build-info.cpp.o
+2026-11-21T10:01:15.4889398Z [ 11%] Linking CXX static library libllama-common-base.a
+2026-11-21T10:01:15.5651094Z [ 11%] Built target llama-common-base
+2026-11-21T10:01:15.5715188Z [ 12%] Provisioning UI assets
+2026-11-21T10:01:15.5744832Z CMake Warning at /home/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/build/src/llama.cpp-b12233/scripts/ui-assets.cmake:584 (message):
+2026-11-21T10:01:15.5746274Z   UI: no assets available - building without an embedded UI.  In a
+2026-11-21T10:01:15.5747391Z   disconnected environment, download the pre-built UI from a llama.cpp
+2026-11-21T10:01:15.5748661Z   release at https://github.com/ggml-org/llama.cpp/releases and extract to
+2026-11-21T10:01:15.5749395Z -- UI: embedded 0 assets
+2026-11-21T10:01:15.5750314Z   tools/ui/dist.
+2026-11-21T10:01:15.5751164Z 
+2026-11-21T10:01:15.5751562Z 
+2026-11-21T10:01:15.5772032Z [ 12%] Built target llama-ui-assets
+2026-11-21T10:01:15.5841571Z [ 12%] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.c.o
+2026-11-21T10:01:16.7165356Z [ 12%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.cpp.o
+2026-11-21T10:01:17.8606638Z [ 14%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/repack.cpp.o
+2026-11-21T10:01:19.1762022Z [ 14%] Linking CXX static library libcpp-httplib.a
+2026-11-21T10:01:19.2640315Z [ 14%] Built target cpp-httplib
+2026-11-21T10:01:19.2706274Z [ 16%] Building CXX object tools/ui/CMakeFiles/llama-ui.dir/ui.cpp.o
+2026-11-21T10:01:19.4225151Z [ 16%] Linking CXX static library libllama-ui.a
+2026-11-21T10:01:19.4985960Z [ 16%] Built target llama-ui
+2026-11-21T10:01:19.5007895Z [ 16%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/hbm.cpp.o
+2026-11-21T10:01:19.5127926Z [ 16%] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/quants.c.o
+2026-11-21T10:01:20.7687967Z [ 17%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/traits.cpp.o
+2026-11-21T10:01:21.3757218Z [ 17%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o
+2026-11-21T10:01:22.0569998Z [ 17%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/mmq.cpp.o
+2026-11-21T10:01:22.7419058Z [ 19%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled.cpp.o
+2026-11-21T10:01:23.7905551Z [ 19%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled-kernel.cpp.o
+2026-11-21T10:01:24.7215150Z [ 19%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/binary-ops.cpp.o
+2026-11-21T10:01:26.4138972Z [ 20%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/unary-ops.cpp.o
+2026-11-21T10:01:26.6312377Z [ 20%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/vec.cpp.o
+2026-11-21T10:01:27.3834907Z [ 20%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ops.cpp.o
+2026-11-21T10:01:28.8821472Z [ 22%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/llamafile/sgemm.cpp.o
+2026-11-21T10:01:32.6967993Z [ 22%] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/quants.c.o
+2026-11-21T10:01:33.6910283Z [ 22%] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/repack.cpp.o
+2026-11-21T10:01:36.0013636Z [ 24%] Linking CXX shared library ../../bin/libggml-cpu.so
+2026-11-21T10:01:36.0681223Z [ 24%] Built target ggml-cpu
+2026-11-21T10:01:36.0748076Z [ 25%] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o
+2026-11-21T10:01:36.0749117Z [ 25%] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-reg.cpp.o
+2026-11-21T10:01:37.2328637Z [ 25%] Linking CXX shared library ../../bin/libggml.so
+2026-11-21T10:01:37.2901581Z [ 25%] Built target ggml
+2026-11-21T10:01:37.2979854Z [ 25%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_10_cxx.cxx.o
+2026-11-21T10:01:37.2982530Z [ 27%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_9_cxx.cxx.o
+2026-11-21T10:01:40.0982678Z [ 27%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_8_cxx.cxx.o
+2026-11-21T10:01:40.7563649Z [ 27%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_7_cxx.cxx.o
+2026-11-21T10:01:42.1997107Z [ 29%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_6_cxx.cxx.o
+2026-11-21T10:01:42.9933963Z [ 29%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_5_cxx.cxx.o
+2026-11-21T10:01:45.5432780Z [ 29%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_4_cxx.cxx.o
+2026-11-21T10:01:46.2987666Z [ 30%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_3_cxx.cxx.o
+2026-11-21T10:01:48.1669281Z [ 30%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_2_cxx.cxx.o
+2026-11-21T10:01:50.4489494Z [ 30%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_1_cxx.cxx.o
+2026-11-21T10:01:51.7741244Z [ 32%] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_0_cxx.cxx.o
+2026-11-21T10:01:54.8162352Z [ 32%] Building CXX object src/CMakeFiles/llama.dir/llama.cpp.o
+2026-11-21T10:01:54.9649555Z [ 32%] Building CXX object src/CMakeFiles/llama.dir/llama-adapter.cpp.o
+2026-11-21T10:01:56.1940257Z [ 33%] Building CXX object src/CMakeFiles/llama.dir/llama-arch.cpp.o
+2026-11-21T10:01:56.7022976Z [ 33%] Building CXX object src/CMakeFiles/llama.dir/llama-batch.cpp.o
+2026-11-21T10:01:58.2526254Z [ 33%] Building CXX object src/CMakeFiles/llama.dir/llama-chat.cpp.o
+2026-11-21T10:01:59.3933683Z [ 35%] Building CXX object src/CMakeFiles/llama.dir/llama-context.cpp.o
+2026-11-21T10:01:59.9012161Z [ 35%] Building CXX object src/CMakeFiles/llama.dir/llama-cparams.cpp.o
+2026-11-21T10:02:00.0157764Z [ 35%] Building CXX object src/CMakeFiles/llama.dir/llama-grammar.cpp.o
+2026-11-21T10:02:04.5307094Z [ 37%] Building CXX object src/CMakeFiles/llama.dir/llama-graph.cpp.o
+2026-11-21T10:02:05.5856253Z [ 37%] Building CXX object src/CMakeFiles/llama.dir/llama-hparams.cpp.o
+2026-11-21T10:02:05.9470020Z [ 37%] Building CXX object src/CMakeFiles/llama.dir/llama-impl.cpp.o
+2026-11-21T10:02:06.4877015Z [ 38%] Building CXX object src/CMakeFiles/llama.dir/llama-io.cpp.o
+2026-11-21T10:02:06.6783143Z [ 38%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache.cpp.o
+2026-11-21T10:02:09.0916979Z [ 38%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-iswa.cpp.o
+2026-11-21T10:02:10.5636441Z [ 40%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-dsa.cpp.o
+2026-11-21T10:02:11.9554994Z [ 40%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-dsa-iswa.cpp.o
+2026-11-21T10:02:13.2780042Z [ 40%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-msa.cpp.o
+2026-11-21T10:02:13.6184345Z [ 41%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-dsv4.cpp.o
+2026-11-21T10:02:14.7614779Z [ 41%] Building CXX object src/CMakeFiles/llama.dir/llama-memory.cpp.o
+2026-11-21T10:02:15.5266472Z [ 41%] Building CXX object src/CMakeFiles/llama.dir/llama-moe-cache.cpp.o
+2026-11-21T10:02:17.7167910Z [ 43%] Building CXX object src/CMakeFiles/llama.dir/llama-memory-hybrid.cpp.o
+2026-11-21T10:02:18.1542454Z [ 43%] Building CXX object src/CMakeFiles/llama.dir/llama-memory-hybrid-iswa.cpp.o
+2026-11-21T10:02:19.2012504Z [ 45%] Building CXX object src/CMakeFiles/llama.dir/llama-memory-hybrid-idx.cpp.o
+2026-11-21T10:02:19.8049241Z [ 45%] Building CXX object src/CMakeFiles/llama.dir/llama-memory-recurrent.cpp.o
+2026-11-21T10:02:21.5151414Z [ 45%] Building CXX object src/CMakeFiles/llama.dir/llama-mmap.cpp.o
+2026-11-21T10:02:21.6413525Z [ 46%] Building CXX object src/CMakeFiles/llama.dir/llama-model-loader.cpp.o
+2026-11-21T10:02:22.3491764Z [ 46%] Building CXX object src/CMakeFiles/llama.dir/llama-model-saver.cpp.o
+2026-11-21T10:02:23.6521729Z [ 46%] Building CXX object src/CMakeFiles/llama.dir/llama-model.cpp.o
+2026-11-21T10:02:29.1716210Z [ 48%] Building CXX object src/CMakeFiles/llama.dir/llama-quant.cpp.o
+2026-11-21T10:02:33.7805568Z [ 48%] Building CXX object src/CMakeFiles/llama.dir/llama-sampler.cpp.o
+2026-11-21T10:02:34.6096077Z [ 48%] Building CXX object src/CMakeFiles/llama.dir/llama-vocab.cpp.o
+2026-11-21T10:02:39.9014142Z [ 50%] Building CXX object src/CMakeFiles/llama.dir/unicode-data.cpp.o
+2026-11-21T10:02:40.2873160Z [ 50%] Building CXX object src/CMakeFiles/llama.dir/unicode.cpp.o
+2026-11-21T10:02:48.1688992Z [ 50%] Linking CXX shared library ../bin/libllama.so
+2026-11-21T10:02:48.3181657Z [ 50%] Built target llama
+2026-11-21T10:02:48.3251741Z [ 51%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/Unity/unity_3_cxx.cxx.o
+2026-11-21T10:02:48.3271644Z [ 53%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/parsers.cpp.o
+2026-11-21T10:02:49.8608680Z [ 53%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/Unity/unity_2_cxx.cxx.o
+2026-11-21T10:02:49.8832898Z [ 53%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/cohere2moe.cpp.o
+2026-11-21T10:02:52.2900501Z [ 53%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/deepseek.cpp.o
+2026-11-21T10:02:53.6025395Z [ 53%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/Unity/unity_1_cxx.cxx.o
+2026-11-21T10:02:55.5799301Z [ 54%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/functionary-v3-2.cpp.o
+2026-11-21T10:02:55.8694936Z [ 56%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/Unity/unity_0_cxx.cxx.o
+2026-11-21T10:02:57.8769431Z [ 56%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gemma4.cpp.o
+2026-11-21T10:02:57.9645828Z [ 56%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd.cpp.o
+2026-11-21T10:03:00.6075916Z [ 56%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gigachat-v3.cpp.o
+2026-11-21T10:03:02.9182445Z [ 58%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gpt-oss.cpp.o
+2026-11-21T10:03:04.2414127Z [ 58%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-audio.cpp.o
+2026-11-21T10:03:05.3917073Z [ 58%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/harmony-xml.cpp.o
+2026-11-21T10:03:07.0679957Z [ 59%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-image.cpp.o
+2026-11-21T10:03:08.3138914Z [ 59%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/k2-horizon.cpp.o
+2026-11-21T10:03:10.0187863Z [ 59%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-helper.cpp.o
+2026-11-21T10:03:11.1810785Z [ 61%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/kimi-k2.cpp.o
+2026-11-21T10:03:13.5482963Z [ 61%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/kimi-k3.cpp.o
+2026-11-21T10:03:16.1593759Z [ 61%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/ling3.cpp.o
+2026-11-21T10:03:18.8277616Z [ 62%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/lfm2.cpp.o
+2026-11-21T10:03:21.1657581Z [ 62%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/llm-jp-harmony.cpp.o
+2026-11-21T10:03:22.7167092Z [ 62%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-helper-gen.cpp.o
+2026-11-21T10:03:23.6206718Z [ 62%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/minicpm5.cpp.o
+2026-11-21T10:03:26.1252879Z [ 64%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/minimax-m3.cpp.o
+2026-11-21T10:03:26.2591442Z [ 66%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-model.cpp.o
+2026-11-21T10:03:29.0372429Z [ 66%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/ministral3.cpp.o
+2026-11-21T10:03:31.4803327Z [ 66%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/muse-glimmer.cpp.o
+2026-11-21T10:03:34.0822800Z [ 67%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/muse-spark.cpp.o
+2026-11-21T10:03:34.9184306Z [ 67%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-subcontext.cpp.o
+2026-11-21T10:03:36.6624497Z [ 67%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/qwen3-coder.cpp.o
+2026-11-21T10:03:39.4772899Z [ 67%] Building CXX object common/CMakeFiles/llama-common.dir/parsers/translate-gemma.cpp.o
+2026-11-21T10:03:40.3346149Z [ 67%] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-graph.cpp.o
+2026-11-21T10:03:41.5537167Z [ 69%] Building CXX object common/CMakeFiles/llama-common.dir/arg.cpp.o
+2026-11-21T10:03:42.1758044Z [ 70%] Linking CXX shared library ../../bin/libmtmd.so
+2026-11-21T10:03:42.2761282Z [ 70%] Built target mtmd
+2026-11-21T10:03:42.2782961Z [ 70%] Building CXX object common/CMakeFiles/llama-common.dir/chat-auto-parser-generator.cpp.o
+2026-11-21T10:03:45.1203010Z [ 70%] Building CXX object common/CMakeFiles/llama-common.dir/chat-auto-parser-helpers.cpp.o
+2026-11-21T10:03:47.2317015Z [ 72%] Building CXX object common/CMakeFiles/llama-common.dir/chat-diff-analyzer.cpp.o
+2026-11-21T10:03:52.9040297Z [ 72%] Building CXX object common/CMakeFiles/llama-common.dir/chat-peg-parser.cpp.o
+2026-11-21T10:03:56.4861419Z [ 72%] Building CXX object common/CMakeFiles/llama-common.dir/chat.cpp.o
+2026-11-21T10:03:56.8255890Z [ 74%] Building CXX object common/CMakeFiles/llama-common.dir/common.cpp.o
+2026-11-21T10:04:02.9632197Z [ 74%] Building CXX object common/CMakeFiles/llama-common.dir/console.cpp.o
+2026-11-21T10:04:03.1508565Z [ 74%] Building CXX object common/CMakeFiles/llama-common.dir/debug.cpp.o
+2026-11-21T10:04:04.2048294Z [ 75%] Building CXX object common/CMakeFiles/llama-common.dir/download.cpp.o
+2026-11-21T10:04:06.7658089Z [ 75%] Building CXX object common/CMakeFiles/llama-common.dir/fit.cpp.o
+2026-11-21T10:04:09.7192214Z [ 77%] Building CXX object common/CMakeFiles/llama-common.dir/file-lock.cpp.o
+2026-11-21T10:04:10.2369201Z [ 77%] Building CXX object common/CMakeFiles/llama-common.dir/hf-cache.cpp.o
+2026-11-21T10:04:11.1544044Z [ 77%] Building CXX object common/CMakeFiles/llama-common.dir/imatrix-loader.cpp.o
+2026-11-21T10:04:12.2915205Z [ 79%] Building CXX object common/CMakeFiles/llama-common.dir/json-schema-to-grammar.cpp.o
+2026-11-21T10:04:13.3752608Z [ 79%] Building CXX object common/CMakeFiles/llama-common.dir/json-schema.cpp.o
+2026-11-21T10:04:15.6339797Z [ 79%] Building CXX object common/CMakeFiles/llama-common.dir/json.cpp.o
+2026-11-21T10:04:18.4931908Z [ 80%] Building CXX object common/CMakeFiles/llama-common.dir/llguidance.cpp.o
+2026-11-21T10:04:19.0271038Z [ 80%] Building CXX object common/CMakeFiles/llama-common.dir/log.cpp.o
+2026-11-21T10:04:20.1131853Z [ 80%] Building CXX object common/CMakeFiles/llama-common.dir/ngram-cache.cpp.o
+2026-11-21T10:04:21.2200030Z [ 82%] Building CXX object common/CMakeFiles/llama-common.dir/ngram-map.cpp.o
+2026-11-21T10:04:21.6682128Z [ 82%] Building CXX object common/CMakeFiles/llama-common.dir/ngram-mod.cpp.o
+2026-11-21T10:04:21.8354266Z [ 82%] Building CXX object common/CMakeFiles/llama-common.dir/peg-parser.cpp.o
+2026-11-21T10:04:22.0775481Z [ 83%] Building CXX object common/CMakeFiles/llama-common.dir/preset.cpp.o
+2026-11-21T10:04:26.8523404Z [ 83%] Building CXX object common/CMakeFiles/llama-common.dir/reasoning-budget.cpp.o
+2026-11-21T10:04:27.8713009Z [ 83%] Building CXX object common/CMakeFiles/llama-common.dir/sampling.cpp.o
+2026-11-21T10:04:28.0178444Z [ 85%] Building CXX object common/CMakeFiles/llama-common.dir/speculative.cpp.o
+2026-11-21T10:04:30.4832188Z [ 85%] Building CXX object common/CMakeFiles/llama-common.dir/subproc.cpp.o
+2026-11-21T10:04:30.8396203Z [ 85%] Building CXX object common/CMakeFiles/llama-common.dir/trie.cpp.o
+2026-11-21T10:04:31.4705394Z [ 87%] Building CXX object common/CMakeFiles/llama-common.dir/unicode.cpp.o
+2026-11-21T10:04:31.7148827Z [ 87%] Building CXX object common/CMakeFiles/llama-common.dir/jinja/lexer.cpp.o
+2026-11-21T10:04:33.0251762Z [ 87%] Building CXX object common/CMakeFiles/llama-common.dir/jinja/parser.cpp.o
+2026-11-21T10:04:33.8572459Z [ 88%] Building CXX object common/CMakeFiles/llama-common.dir/jinja/runtime.cpp.o
+2026-11-21T10:04:35.9941183Z [ 88%] Building CXX object common/CMakeFiles/llama-common.dir/jinja/value.cpp.o
+2026-11-21T10:04:37.8348135Z [ 88%] Building CXX object common/CMakeFiles/llama-common.dir/jinja/string.cpp.o
+2026-11-21T10:04:38.7602755Z [ 90%] Building CXX object common/CMakeFiles/llama-common.dir/jinja/caps.cpp.o
+2026-11-21T10:04:42.4892486Z [ 90%] Linking CXX shared library ../bin/libllama-common.so
+2026-11-21T10:04:42.7011192Z [ 90%] Built target llama-common
+2026-11-21T10:04:42.7078761Z [ 90%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-chat.cpp.o
+2026-11-21T10:04:42.7081531Z [ 90%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-task.cpp.o
+2026-11-21T10:04:46.6873187Z [ 91%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-queue.cpp.o
+2026-11-21T10:04:49.4311242Z [ 91%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-common.cpp.o
+2026-11-21T10:04:50.9295350Z [ 91%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-decision.cpp.o
+2026-11-21T10:04:55.5572914Z [ 93%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-context.cpp.o
+2026-11-21T10:04:57.7715872Z [ 93%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-realtime.cpp.o
+2026-11-21T10:05:04.0236466Z [ 93%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-stream.cpp.o
+2026-11-21T10:05:07.3052807Z [ 95%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-tools.cpp.o
+2026-11-21T10:05:09.4857376Z [ 95%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-mcp.cpp.o
+2026-11-21T10:05:13.1723878Z [ 95%] Building CXX object tools/server/CMakeFiles/server-context.dir/server-schema.cpp.o
+2026-11-21T10:05:17.2628723Z [ 96%] Linking CXX static library libserver-context.a
+2026-11-21T10:05:17.3679289Z [ 96%] Built target server-context
+2026-11-21T10:05:17.3746576Z [ 98%] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server.cpp.o
+2026-11-21T10:05:17.3747988Z [ 98%] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-connect.cpp.o
+2026-11-21T10:05:19.3897218Z [ 98%] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-http.cpp.o
+2026-11-21T10:05:22.6804267Z [100%] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-models.cpp.o
+2026-11-21T10:05:24.5345967Z [100%] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-models-sched.cpp.o
+2026-11-21T10:05:34.0213998Z [100%] Linking CXX shared library ../../bin/libllama-server-impl.so
+2026-11-21T10:05:34.2053624Z [100%] Built target llama-server-impl
+2026-11-21T10:05:34.2116948Z [100%] Building CXX object tools/server/CMakeFiles/llama-server.dir/main.cpp.o
+2026-11-21T10:05:34.2281349Z [100%] Linking CXX executable ../../bin/llama-server
+2026-11-21T10:05:34.3319438Z [100%] Built target llama-server
+2026-11-21T10:05:34.3523293Z version: 0.9.0-dev (build 0, commit unknown)
+2026-11-21T10:05:34.3524017Z built with GNU 13.3.0 for Linux x86_64
+2026-11-21T10:05:34.3569533Z ##[group]Run node scripts/tool-workshop/prepare-model.mjs "$RUNNER_TEMP/workshop-deepseek.gguf"
+2026-11-21T10:05:34.3570358Z [36;1mnode scripts/tool-workshop/prepare-model.mjs "$RUNNER_TEMP/workshop-deepseek.gguf"[0m
+2026-11-21T10:05:34.3585338Z shell: /usr/bin/bash -e {0}
+2026-11-21T10:05:34.3585682Z env:
+2026-11-21T10:05:34.3585991Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:05:34.3586381Z ##[endgroup]
+2026-11-21T10:05:46.0213171Z {"path":"/home/runner/work/_temp/workshop-deepseek.gguf","sha256":"1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f","verified":true}
+2026-11-21T10:05:46.0361862Z ##[group]Run node --import tsx scripts/tool-workshop/run-repair.mjs
+2026-11-21T10:05:46.0362474Z [36;1mnode --import tsx scripts/tool-workshop/run-repair.mjs[0m
+2026-11-21T10:05:46.0376929Z shell: /usr/bin/bash -e {0}
+2026-11-21T10:05:46.0377269Z env:
+2026-11-21T10:05:46.0377638Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:05:46.0377990Z   POCKET_WORKSHOP_EXPERIMENT: 1
+2026-11-21T10:05:46.0378606Z   POCKET_WORKSHOP_PYTHON_IMAGE: python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+2026-11-21T10:05:46.0379289Z   POCKET_WORKSHOP_OUTPUT: /home/runner/work/_temp/pocket-workshop-live
+2026-11-21T10:05:46.0379828Z   POCKET_WORKSHOP_MODEL: /home/runner/work/_temp/workshop-deepseek.gguf
+2026-11-21T10:05:46.0380704Z   POCKET_WORKSHOP_SERVER: /home/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/build/workshop-server/bin/llama-server
+2026-11-21T10:05:46.0381368Z ##[endgroup]
+2026-11-21T10:07:36.1936940Z {"accepted":false,"outputDirectory":"/home/runner/work/_temp/pocket-workshop-live","qualityPassed":false,"controlPassed":true}
+2026-11-21T10:07:39.7475135Z ##[error]Process completed with exit code 1.
+2026-11-21T10:07:39.7565673Z ##[group]Run actions/upload-artifact@v4
+2026-11-21T10:07:39.7566138Z with:
+2026-11-21T10:07:39.7566533Z   name: workshop-live-6c01e953ceb6d6633a770a31980aaf19125d5c47
+2026-11-21T10:07:39.7567044Z   path: /home/runner/work/_temp/pocket-workshop-live
+2026-11-21T10:07:39.7567644Z   if-no-files-found: warn
+2026-11-21T10:07:39.7567990Z   compression-level: 6
+2026-11-21T10:07:39.7568325Z   overwrite: false
+2026-11-21T10:07:39.7568638Z   include-hidden-files: false
+2026-11-21T10:07:39.7568950Z env:
+2026-11-21T10:07:39.7569308Z   POCKET_WORKSHOP_PROFILE: v5
+2026-11-21T10:07:39.7569637Z ##[endgroup]
+2026-11-21T10:07:39.9274028Z (node:10527) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-21T10:07:39.9275436Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-21T10:07:39.9347699Z With the provided path, there will be 4 files uploaded
+2026-11-21T10:07:39.9351091Z Artifact name is valid!
+2026-11-21T10:07:39.9352027Z Root directory input is valid!
+2026-11-21T10:07:40.2876181Z Beginning upload of artifact content to blob storage
+2026-11-21T10:07:40.3221616Z (node:10527) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-21T10:07:40.5829601Z Uploaded bytes 24474
+2026-11-21T10:07:40.6407792Z Finished uploading artifact content to blob storage!
+2026-11-21T10:07:40.6409230Z SHA256 digest of uploaded artifact zip is c666045c82c8908749711739337be3e3e84960b622c638ba9f0aaa93259e09d9
+2026-11-21T10:07:40.6410262Z Finalizing artifact upload
+2026-11-21T10:07:41.0053507Z Artifact workshop-live-6c01e953ceb6d6633a770a31980aaf19125d5c47.zip successfully finalized. Artifact ID 14702552071
+2026-11-21T10:07:41.0055304Z Artifact workshop-live-6c01e953ceb6d6633a770a31980aaf19125d5c47 has been successfully uploaded! Final size is 24474 bytes. Artifact ID is 14702552071
+2026-11-21T10:07:41.0061195Z Artifact download URL: https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44892136884/artifacts/14702552071
+2026-11-21T10:07:41.0268184Z Post job cleanup.
+2026-11-21T10:07:41.1157084Z [command]/usr/bin/git version
+2026-11-21T10:07:41.1205146Z git version 2.56.1
+2026-11-21T10:07:41.1247253Z Temporarily overriding HOME='/home/runner/work/_temp/d0f54e4c-5ab3-4c7a-bd4d-175085f5bfde' before making global git config changes
+2026-11-21T10:07:41.1248338Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-21T10:07:41.1254053Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/pocket-ai-lab/pocket-ai-lab
+2026-11-21T10:07:41.1294809Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-21T10:07:41.1327812Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-21T10:07:41.1566587Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-21T10:07:41.1598479Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-21T10:07:41.1829487Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-21T10:07:41.1865258Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-21T10:07:41.2263541Z Cleaning up orphan processes
+2026-11-21T10:07:41.2598872Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

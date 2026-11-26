@@ -1,0 +1,40 @@
+{
+  "reportKind": "pr234-first-run-independent-artifact-audit",
+  "schemaVersion": 1,
+  "consistencyAudit": "passed",
+  "nativeWorkflowAcceptance": "failed",
+  "sourceHead": "811b02646fc30cba4eea86dc53adecde208b7222",
+  "checkoutSHA": "f27ce2295b0fa83239c28a87b5ddaff5fdbdaccf",
+  "sourceAndCheckoutTree": "c663bd1092db9b98756368a56f52003891501a7b",
+  "runId": 44774751361,
+  "runAttempt": 1,
+  "nativeJobId": 136421516995,
+  "artifactId": 14650660530,
+  "artifactBytes": 39323,
+  "artifactSHA256": "8e934e88330f6d47023e5112f911925b329ef6c626dd118397e8861dcb3cd819",
+  "artifactMemberCount": 87,
+  "provenanceDigestEntriesVerified": 86,
+  "exactManifestPromptFilesVerified": 72,
+  "manifestSHA256": "95acbcd4237899a2234fd9c16f5e86823cec1595e6922c96cb54851d15432992",
+  "tokenizerRecords": 0,
+  "observedGenerationAttempts": 0,
+  "failureStage": "Darwin C compilation of the vocabulary-only probe",
+  "compilerErrors": "Vocabulary-only model pin verified: 105454432 bytes, sha256 2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d\n/Users/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/Tests/RecipientTokenizationProbe/main.c:95:76: error: use of undeclared identifier 'O_NOFOLLOW'\n   95 |     const int descriptor = openat(directory, name, O_RDONLY | O_NONBLOCK | O_NOFOLLOW);\n      |                                                                            ^\n/Users/runner/work/pocket-ai-lab/pocket-ai-lab/runtime/ios/Tests/RecipientTokenizationProbe/main.c:214:66: error: use of undeclared identifier 'O_NOFOLLOW'\n  214 |     const int directory = open(argv[2], O_RDONLY | O_DIRECTORY | O_NOFOLLOW);\n      |                                                                  ^\n2 errors generated.\n",
+  "experimentStepOutcome": "skipped",
+  "qualityMeasured": false,
+  "rawAndChatResults": "unmeasured; zero observed rows is not a measured quality score",
+  "sourceBlobSHAs": {
+    "model-pin.json": "bd594e3aca5c4f8afecbc27a0ef69df14fe60ed1",
+    "llama-cpp-pin.json": "b1e033f408b917c94d79344c895f4a759ac1ab7d",
+    "manifest.json": "727c760a20883717d1a075a9ef29b6e60323b4b5"
+  },
+  "cacheLog": [
+    "2026-11-20T16:35:04.2040960Z Cache not found for input keys: pocket-llama-macOS-X64-e367a4f0182db4a1f58d6f1bb3c3886a7eb211ed9bfa532d510888727be09628-7d67d42f215cd48706da9863af52a8c1825199760a118b5583db3734cf7148c3",
+    "2026-11-20T16:43:37.9326670Z Cache saved with key: pocket-llama-macOS-X64-e367a4f0182db4a1f58d6f1bb3c3886a7eb211ed9bfa532d510888727be09628-7d67d42f215cd48706da9863af52a8c1825199760a118b5583db3734cf7148c3"
+  ],
+  "limits": [
+    "No native vocabulary observation or model inference occurred.",
+    "The source feature-test macro is a suspected declaration-visibility cause; this audit does not execute a repair.",
+    "Original recipient v1 evidence and gates remain unchanged."
+  ]
+}

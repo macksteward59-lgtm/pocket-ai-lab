@@ -1,0 +1,55 @@
+# Consumer Prototype Acceptance Criteria
+
+This document defines the minimum bar for a usable Pocket AI Lab prototype. A passing TypeScript build alone is not product acceptance.
+
+## User experience
+- Responsive browser interface usable on current iOS Safari and desktop browsers.
+- Installable PWA shell with offline access to the application shell.
+- Clear navigation for Chat, Agent Team, Memory, Activity, and Settings.
+- Conversation creation, prompt submission, readable responses, loading/error states, and accessible keyboard controls.
+- No fabricated AI response when no inference provider is connected.
+
+## Inference and privacy
+- Local inference is the default path; llama.cpp server can be configured without changing orchestration code.
+- Provider credentials are held server-side, never in browser storage or shipped JavaScript.
+- Cloud inference is opt-in and explicitly disclosed before sending content to a remote provider.
+- Requests have size limits, timeouts, safe error handling, and no prompt logging by default.
+- UI accurately distinguishes configured, reachable, and unavailable model states.
+
+## Collaboration and governance
+- Agent roles are presented as active only when real inference calls have executed for those roles.
+- Every agent output is attributable to an agent, model, task, and evidence references where available.
+- Deliberation must preserve disagreement; no false consensus or fabricated verification.
+- Model output is untrusted proposal data. It cannot authorize execution, grant permissions, or create APEX receipts.
+- Consequential operations fail closed unless the existing APEX/East authorization path independently approves them.
+- Repair actions require their own independent authorization.
+
+## Memory
+- Persistent memory is opt-in, inspectable, editable, deletable, and provenance-aware.
+- An edit preserves entry identity and creation time, and resets verification to `false` until independently checked again.
+- No conversation is silently promoted to verified long-term memory.
+- Storage is encrypted at rest where supported by the target platform; key handling must be documented.
+
+## Release engineering
+- Reproducible setup from a clean checkout.
+- Automated unit/integration tests for server, inference adapter, orchestration, and governance boundaries.
+- CI build and test jobs required on every pull request.
+- Dependency and secret scanning; no credentials committed.
+- A release build and tested install path for the intended target devices.
+- Documented limitations, supported model formats, memory requirements, and recovery steps.
+
+## Current prototype slice
+The web shell on this tree loads without reading missing settings fields. Chat and Agent Team call the llama.cpp `InferenceProvider` and fail closed when the server is unreachable or the payload is rejected. "Local model ready" requires a successful loopback `/health` check. The Memory screen now supports explicit local save/list/delete through `MemoryManager` and `FileMemoryStore`; chat is not auto-saved, and new entries remain unverified. The memory file is checksummed plaintext, not encrypted. Activity, cloud-provider consent, and APEX/East runtime integration remain explicit about what is not connected. Model text is still not an authorization receipt. `/api/chat`, `/api/memory`, and `/api/agent-tasks` are limited in process and return 429, with `authorized` false, when the limit is exceeded. That response does not invent a reply. The same routes, plus the health routes, accept only a loopback `Host`. A foreign or mismatched `Origin`, or a `Sec-Fetch-Site` other than `same-origin` or `none`, is rejected before a model call or a memory change. Chat and agent posts require `application/json`. A loopback CLI request that omits browser headers still works, as does the same-origin page. These guards are local prototype checks, not authentication and not a production deployment.
+
+
+## Deployment security gate (current)
+
+The consumer web server is a local prototype, not a production service. Startup now rejects any bind host other than loopback (127.0.0.1, localhost, or ::1). Do not deploy it behind a public interface, reverse proxy, tunnel, or shared network and do not set HOST=0.0.0.0. The API loopback Host/peer/Origin/Sec-Fetch-Site checks and in-process rate limits are defense-in-depth for a local app; they are not user authentication, session management, public-deployment CSRF protection, or distributed rate limiting.
+
+Production deployment remains blocked until an independently reviewed authentication/session design, secret-management mechanism, encrypted persistent storage and key lifecycle, provider consent/credential handling, privacy-safe telemetry, deployment/rollback process, and security acceptance tests are implemented. No cloud provider is enabled by this change. Do not place credentials in browser storage, source control, logs, or client bundles. Memory remains checksummed plaintext and must not contain secrets. Model output remains untrusted proposal data and cannot set authorized or verified.
+
+## Owner memory and citation recovery
+
+A content-only edit preserves the note ID, creation time, author, task and ordered source references. An edit returns the note to unverified status. The local API accepts an ordered `sourceRefs` array or the existing single `source` string; on an edit an omitted source field keeps the stored references, and an explicitly empty array clears them. The browser gives each reference its own field so punctuation inside a citation remains part of the citation.
+
+The owner-review workflow exercises the Memory editor in Chromium and WebKit. Its citation test saves an edit, waits for acknowledgement, forcibly stops the local server, reopens the same store in a new process and checks the note and each source through the UI and API. The device acceptance gate still needs the signed native build and physical iPhone Air.

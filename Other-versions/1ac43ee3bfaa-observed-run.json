@@ -1,0 +1,27 @@
+{
+  "where": "cloud VM CPU, not the user's computer",
+  "baseRepo": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "baseRevision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+  "license": "apache-2.0",
+  "parameterCount": 134515008,
+  "steps": 6,
+  "seconds": 4.077,
+  "trainLossStart": 5.168317794799805,
+  "trainLossEnd": 4.6251726150512695,
+  "baselineExact": 0,
+  "heldoutExact": 0,
+  "heldoutCount": 2,
+  "baselinePredictions": [
+    "A: A model sentence grants permission to use a model sentence.",
+    "The lab lab marker is a small, round object that is attached to the"
+  ],
+  "trainedPredictions": [
+    "A: A model sentence grants permission to use a model sentence.",
+    "The lab lab is a small, enclosed area where the students can work on"
+  ],
+  "exportedGguf": false,
+  "reason": "held-out exact match stayed 0/2, so the export guard blocks a custom GGUF",
+  "authorized": false,
+  "production": false,
+  "eagle3": false
+}

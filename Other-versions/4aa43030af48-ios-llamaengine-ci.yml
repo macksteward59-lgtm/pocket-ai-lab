@@ -1,0 +1,328 @@
+name: iOS LlamaEngine CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - codex/native-product-experience-integration
+    paths:
+      - "runtime/ios/**"
+      - "packages/director/ios/**"
+      - "docs/architecture/director-native-bridge.md"
+      - "ios/**"
+      - "docs/implementation/ios-llamaengine-gate*.md"
+      - "README.md"
+      - ".github/workflows/ios-llamaengine-ci.yml"
+  push:
+    branches:
+      - main
+      - ios/private-iphone-test-hybrid
+    paths:
+      - "runtime/ios/**"
+      - "packages/director/ios/**"
+      - "docs/architecture/director-native-bridge.md"
+      - "ios/**"
+      - "docs/implementation/ios-llamaengine-gate*.md"
+      - "README.md"
+      - ".github/workflows/ios-llamaengine-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-llamaengine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-llamaengine:
+    # macos-15 (arm64) was not acquired: run 42692199700 was cancelled with no steps.
+    # The annotation was "The job was not acquired by Runner of type hosted even after
+    # multiple attempts" plus the macOS arm64 capacity notice. macos-15-intel is the
+    # separate hosted pool. It is an Intel Mac, not an Apple Silicon Mac and not an iPhone.
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show Xcode
+        id: toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          uname -m
+          echo "xcode_hash=$(xcodebuild -version | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Install CMake and Ninja
+        id: build-tools
+        run: |
+          brew install cmake ninja xcodegen
+          tool_versions="$(brew list --versions cmake ninja)"
+          echo "build_tools_hash=$(printf '%s\n%s\n' "$(xcodebuild -version)" "$tool_versions" | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pinned llama.cpp build artifacts
+        id: llama-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: pocket-llama-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-tools.outputs.build_tools_hash }}-${{ hashFiles('runtime/ios/pin/llama-cpp.json', 'runtime/ios/scripts/build-llama-cpp.sh') }}
+
+      - name: Build pinned llama.cpp for the simulator and macOS
+        id: llama-build
+        run: |
+          chmod +x runtime/ios/scripts/build-llama-cpp.sh
+          if [[ "${{ steps.llama-cache.outputs.cache-hit }}" == "true" ]] && runtime/ios/scripts/build-llama-cpp.sh verify && runtime/ios/scripts/build-llama-cpp.sh verify-artifacts; then
+            echo "Reusing checksum-keyed llama.cpp archives for this pinned source and Xcode toolchain."
+          else
+            runtime/ios/scripts/build-llama-cpp.sh simulator
+            rm -rf runtime/ios/build/cmake-simulator
+            runtime/ios/scripts/build-llama-cpp.sh ios-device
+            rm -rf runtime/ios/build/cmake-ios-device
+            runtime/ios/scripts/build-llama-cpp.sh macos
+            rm -rf runtime/ios/build/cmake-macos
+          fi
+          runtime/ios/scripts/build-llama-cpp.sh verify-artifacts
+          runtime/ios/scripts/build-llama-cpp.sh xcframework
+          test -d runtime/ios/build/xc/llama.xcframework
+          test -d runtime/ios/build/xc/llama.xcframework/ios-arm64
+          find runtime/ios/build/xc/llama.xcframework -maxdepth 1 -type d -name 'ios-*-simulator' | grep -q .
+          test -d runtime/ios/build/xc/ggml-metal.xcframework
+          test -d runtime/ios/Sources/LlamaCppBridge/vendor
+
+      - name: Save verified pinned llama.cpp build cache
+        if: always() && steps.llama-cache.outputs.cache-hit != 'true' && steps.llama-build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            runtime/ios/build/cache
+            runtime/ios/build/src
+            runtime/ios/build/simulator
+            runtime/ios/build/ios-device
+            runtime/ios/build/macos
+            runtime/ios/Sources/LlamaCppBridge/vendor
+          key: ${{ steps.llama-cache.outputs.cache-primary-key }}
+
+      - name: Typecheck the unlinked fail-closed branch
+        run: |
+          sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          xcrun swiftc -typecheck -parse-as-library \
+            -target arm64-apple-ios16.0-simulator \
+            -sdk "$sdk" \
+            runtime/ios/Sources/PocketLlamaEngine/LlamaEngine.swift \
+            runtime/ios/Sources/PocketLlamaEngine/LlamaEngineSupport.swift
+
+      - name: Link PocketLlamaEngine for physical iOS device
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          # Generic iOS selects iphoneos/arm64. This compiles and links the
+          # Swift package and device XCFramework slices; it does not run on a phone.
+          xcodebuild build-for-testing \
+            -scheme PocketLlamaEngine \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath /tmp/pocket-derived-device \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/device-build-for-testing.log
+
+      - name: Choose an iPhone simulator
+        id: sim
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, subprocess, sys
+          raw = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"], text=True)
+          devices = json.loads(raw).get("devices", {})
+          candidates = [
+              (runtime, device)
+              for runtime, entries in devices.items()
+              if "iOS" in runtime
+              for device in entries
+              if device.get("isAvailable") and "iPhone" in device.get("name", "")
+          ]
+          if not candidates:
+              sys.exit("no available iPhone simulator")
+          # Prefer a simulator already booted by the hosted image. Otherwise prefer
+          # the newest available iOS runtime/device rather than accidentally selecting
+          # an older device whose first-boot migration may be unusually slow.
+          def runtime_version(runtime):
+              import re
+              match = re.search(r"iOS[- ]([0-9.]+)", runtime)
+              return tuple(int(part) for part in match.group(1).split(".")) if match else ()
+          runtime, chosen = max(
+              candidates,
+              key=lambda item: (
+                  item[1].get("state") == "Booted",
+                  runtime_version(item[0]),
+                  "SE" not in item[1].get("name", ""),
+                  item[1].get("name", "")
+              )
+          )
+          print(f"id={chosen['udid']}")
+          print(f"name={chosen['name']}")
+          print(f"runtime={runtime}")
+          print(f"state={chosen.get('state', 'Unknown')}")
+          PY
+
+      - name: Boot selected iPhone simulator
+        timeout-minutes: 12
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import sys
+          device_id = "${{ steps.sim.outputs.id }}"
+          devices = json.loads(subprocess.check_output(
+              ["xcrun", "simctl", "list", "devices", "available", "-j"], text=True
+          )).get("devices", {})
+          state = next(
+              (device.get("state") for entries in devices.values()
+               for device in entries if device.get("udid") == device_id),
+              None
+          )
+          if state is None:
+              sys.exit("selected iPhone simulator disappeared before boot")
+          if state != "Booted":
+              subprocess.run(["xcrun", "simctl", "boot", device_id], check=True, timeout=90)
+          try:
+              # Fresh hosted simulator images can spend several minutes migrating
+              # LaunchServices on first boot. Allow a bounded ten-minute window.
+              subprocess.run(
+                  ["xcrun", "simctl", "bootstatus", device_id, "-b"],
+                  check=True, timeout=600
+              )
+          except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+              print("Simulator boot failed or timed out; collecting runner diagnostics.", file=sys.stderr)
+              subprocess.run(["xcrun", "simctl", "list", "devices", "available"], check=False)
+              subprocess.run(["xcrun", "simctl", "list", "runtimes"], check=False)
+              raise
+          PY
+
+      - name: Validate restored Director bridge package manifest
+        run: |
+          test -f packages/director/ios/Package.swift
+          swift package --package-path packages/director/ios describe
+
+      - name: Generate and build the native Pocket AI Lab app
+        run: |
+          set -o pipefail
+          rm -rf ios/PocketAILab.xcodeproj
+          xcodegen generate --spec ios/project.yml --project ios
+          # Limit concurrent Swift compiler jobs on the Intel hosted runner. The
+          # unified native target includes the full app, agent catalogue, and vault;
+          # lower parallelism reduces peak compiler memory and keeps diagnostics.
+          xcodebuild build \
+            -jobs 2 \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/pocket-app-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/pocket-app-simulator-build.log
+          xcodebuild build \
+            -jobs 2 \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath /tmp/pocket-app-device-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee /tmp/pocket-app-device-build.log
+
+      - name: XCTest the native Pocket AI Lab app
+        timeout-minutes: 20
+        run: |
+          xcodebuild test \
+            -jobs 2 \
+            -project ios/PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
+            -derivedDataPath /tmp/pocket-app-test-derived \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: XCTest on the iOS simulator
+        timeout-minutes: 20
+        working-directory: runtime/ios
+        run: |
+          set -o pipefail
+          # Derived data stays outside the package. Writing it under runtime/ios makes
+          # xcodebuild decide the package changed and then fail to rewrite its scheme.
+          xcodebuild test \
+            -scheme PocketLlamaEngine \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.id }}" \
+            -derivedDataPath /tmp/pocket-derived-sim \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build/simulator-xctest.log
+
+      - name: Download the pinned smoke GGUF
+        run: |
+          # Do not let tee mask a failed download. The helper emits a pin banner
+          # as well as the artifact path, so select only a verified existing GGUF.
+          set -o pipefail
+          runtime/ios/scripts/build-llama-cpp.sh fetch-gguf | tee /tmp/gguf-fetch.log
+          python3 - <<'PY'
+          import pathlib, sys
+          log = pathlib.Path("/tmp/gguf-fetch.log").read_text().splitlines()
+          candidates = []
+          for line in log:
+              value = line.strip()
+              if not value.startswith("/"):
+                  continue
+              path = pathlib.Path(value)
+              if path.is_absolute() and path.suffix.lower() == ".gguf" and path.is_file():
+                  candidates.append(str(path))
+          if len(candidates) != 1:
+              sys.exit(f"expected exactly one existing absolute GGUF path; found {len(candidates)}")
+          pathlib.Path("/tmp/gguf-path.txt").write_text(candidates[0] + "\n")
+          print(f"verified smoke GGUF path: {candidates[0]}")
+          PY
+          test -s /tmp/gguf-path.txt
+
+      - name: Point the macOS smoke test at that GGUF
+        run: |
+          gguf_path="$(cat /tmp/gguf-path.txt)"
+          case "$gguf_path" in
+            /*.gguf) ;;
+            *) echo "smoke GGUF path must be an absolute .gguf path" >&2; exit 1 ;;
+          esac
+          test -f "$gguf_path"
+          runtime/ios/scripts/build-llama-cpp.sh write-smoke-path "$gguf_path"
+
+      - name: XCTest on macOS
+        timeout-minutes: 20
+        run: |
+          set -o pipefail
+          # swift test rejects the package's linker flag -ObjC. A second xcodebuild in
+          # runtime/ios cannot rewrite the scheme generated by the simulator test.
+          # A copy of the package is a clean host build of the same XCTest target.
+          rm -rf /tmp/pocket-host
+          mkdir -p runtime/ios/build
+          rsync -a --exclude '.build' --exclude 'build/simulator-xctest.log' runtime/ios/ /tmp/pocket-host/
+          cd /tmp/pocket-host
+          xcodebuild test \
+            -scheme PocketLlamaEngine \
+            -destination "platform=macOS,arch=$(uname -m)" \
+            -derivedDataPath /tmp/pocket-derived-mac \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "$GITHUB_WORKSPACE/runtime/ios/build/macos-xctest.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Record what this runner actually did
+        if: always()
+        run: |
+          {
+            echo "## iOS LlamaEngine CI"
+            echo
+            echo "This job did not use a physical iPhone."
+            echo "Simulator destination: ${{ steps.sim.outputs.name }} (\`${{ steps.sim.outputs.id }}\`)."
+            echo
+            echo '```'
+            grep -h "POCKET_LLAMA_" runtime/ios/build/simulator-xctest.log runtime/ios/build/macos-xctest.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

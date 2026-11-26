@@ -1,0 +1,83 @@
+name: Owned-only ExploitGym worker isolation compatibility smoke
+
+on:
+  push:
+    branches: [codex/owned-gym-isolation-probe-20261122]
+    paths:
+      - 'tools/security-evaluation/owned-gym-boundary-v1/**'
+      - '.github/workflows/owned-gym-boundary-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/security-evaluation/owned-gym-boundary-v1/**'
+      - '.github/workflows/owned-gym-boundary-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  owned-worker-isolation:
+    name: Bounded synthetic-only runtime with Docker host controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact proposed source without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Pin Node to check source syntax
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.16.0'
+      - name: Check the tiny worker and unchanged public fixture contracts
+        run: |
+          node --check tools/security-evaluation/owned-gym-boundary-v1/run-owned.mjs
+          node --test tools/security-evaluation/causal-counterfactual-v1/protocol.test.mjs
+      - name: Pull versioned base image, capture resolved ID, build without network
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull node:22.16.0-bookworm-slim@sha256:048ed02c5fd52e86fda6fbd2f6a76cf0d4492fd6c6fee9e2c463ed5108da0e34
+          docker image inspect node:22.16.0-bookworm-slim@sha256:048ed02c5fd52e86fda6fbd2f6a76cf0d4492fd6c6fee9e2c463ed5108da0e34 --format 'Resolved image id: {{.Id}}'
+          docker build --network none --pull=false --no-cache \
+            -t pal-owned-gym-smoke -f tools/security-evaluation/owned-gym-boundary-v1/Dockerfile .
+      - name: Verify host controls then execute owned counterfactual in the isolated worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          cid=""
+          cleanup() {
+            if [[ -n "$cid" ]]; then docker rm -f "$cid" >/dev/null 2>&1 || true; fi
+          }
+          trap cleanup EXIT
+          cid=$(docker create \
+            --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 64 \
+            --memory 192m --cpus 1 --user 65534:65534 \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
+            --ulimit nofile=64:64 --restart no pal-owned-gym-smoke)
+          docker inspect "$cid" | jq -e '
+            .[0].HostConfig as $h |
+            $h.NetworkMode=="none" and
+            $h.ReadonlyRootfs==true and $h.Privileged==false and
+            ($h.CapDrop | index("ALL") != null) and
+            ($h.SecurityOpt | any(.[]; startswith("no-new-privileges"))) and
+            $h.PidsLimit==64 and $h.Memory==201326592 and
+            $h.NanoCpus==1000000000 and
+            $h.Binds==null and
+            (.[0].Config.User=="65534:65534")
+          '
+          docker start -a "$cid" | tee "$RUNNER_TEMP/pal-owned-gym-observation.json"
+          test "$(docker inspect -f '{{.State.ExitCode}}' "$cid")" = 0
+          jq -e '
+            .schema=="pal-owned-gym-boundary-smoke-v1" and
+            .status=="synthetic-local-only-sandbox-behavior-observed" and
+            .runningAsUid==65534 and .rootFilesystemWriteDenied==true and
+            .visibleNetworkInterfaces==["lo"] and
+            .localRequests==28 and .externalSecurityTargets==0 and
+            .hostAuthorizationGranted==false and
+            .productionExploitGymExecutionVerified==false and
+            .modelOrRuntimeAttested==false and .humanReviewerValidated==false and
+            (.studies | length)==2 and
+            all(.studies[]; .scriptOnlyScore.tp==1 and .scriptOnlyScore.fp==0 and
+              .scriptOnlyScore.fn==0 and .realModelCalls==0 and .apexAuthorized==false)
+          ' "$RUNNER_TEMP/pal-owned-gym-observation.json"

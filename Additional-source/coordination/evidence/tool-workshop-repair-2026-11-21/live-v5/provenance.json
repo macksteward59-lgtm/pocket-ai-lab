@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-21T10:14:04Z",
+  "profile": "v5",
+  "directory": "live-v5",
+  "sourceHead": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+  "sourceTree": "a4a30278ea00a3c769e2ad0d913a1ee1cd8dbf67",
+  "runId": 44892136884,
+  "jobId": 136810331157,
+  "artifactId": 14702552071,
+  "archiveSHA256": "c666045c82c8908749711739337be3e3e84960b622c638ba9f0aaa93259e09d9",
+  "reportSHA256": "974d8acb6595e7d4e0867c7d273b23786ade110745f001ae8ee52a4c21e32404",
+  "profileSHA256": "882dc994e36f55dac52c17c9de4473c57cb7e8949f05e96a9ff9d0b632b5ae40",
+  "directorCalls": 2,
+  "engineerCalls": 1,
+  "retainedRevisions": 1,
+  "development": {
+    "baseline": {
+      "passed": 3,
+      "total": 8
+    },
+    "version2": {
+      "passed": 1,
+      "total": 8
+    }
+  },
+  "heldOut": {
+    "baseline": {
+      "passed": 4,
+      "total": 20
+    },
+    "finalCandidate": {
+      "passed": 1,
+      "total": 20
+    },
+    "fedBackToModel": false
+  },
+  "containerCases": 56,
+  "accepted": false,
+  "controlPassed": true,
+  "qualityPassed": false,
+  "modelUnchanged": true,
+  "outcome": "The Engineer returned one exact 334-byte executable Python module. It scored 1/8 development and 1/20 held-out, below baseline 3/8 and 4/20. The Director chose complete with one revision still available, despite quarantined failed feedback. Host quality acceptance rejected it.",
+  "remainingRevisionsObserved": [
+    2,
+    1
+  ],
+  "zeroBudgetActionFilteringObservedInLiveRun": false,
+  "secondEngineerRevisionObserved": false,
+  "candidateSourceBytes": 334,
+  "controlInterpretation": "controlPassed means completed bounded protocol, not a correct completion decision.",
+  "semanticFinding": "Static inspection and recorded outputs show the candidate returns the original valid input rather than enforcing the UTF-8 byte budget.",
+  "lastModelCallCompletedAt": "2026-11-21T10:07:19.817Z",
+  "finalSelectionFrozenAt": "2026-11-21T10:07:19.819Z",
+  "firstHeldOutStartedAt": "2026-11-21T10:07:19.918Z",
+  "stoppingRule": "Final small interface diagnostic in this continuation; no further tiny prompt iterations on this reused task. This model/prompt/task configuration remains unqualified.",
+  "independentAudit": {
+    "passed": true,
+    "archiveAndExtractedBytesVerified": true,
+    "sourceProfileFixtureVerified": true,
+    "sourcePreservedExactly": true,
+    "candidateSourceBytes": 334,
+    "candidateSourceSHA256": "4b56e514b3a34a9d79cddfad37becf4fdf0cdfc6ccc104d3cc90ba402c269c30",
+    "recomputedCaseSourceArtifactInputExpectedHashes": 56,
+    "uniqueContainers": 56,
+    "cleanupVerified": true,
+    "candidateOutputsEqualOriginalInput": 28,
+    "noHeldOutIdentifiersInRequests": true,
+    "noModelCallAfterFreeze": true,
+    "modelIntegrity": "Host report records the model file unchanged and matching its pin; the model bytes are not included in the artifact for an independent post-run rehash.",
+    "findingPresentationLimitation": "Director received the failed 1/8 summary and first 3 of 7 findings. findingsTruncated was false because the experiment host had already sliced the array before the planner calculated its flag. The explicit failed score is intact."
+  },
+  "validation": {
+    "generalCI": {
+      "runId": 44892136889,
+      "head": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+      "conclusion": "success"
+    },
+    "workshopContracts": {
+      "runId": 44892136884,
+      "jobId": 136810076605,
+      "conclusion": "success"
+    },
+    "focusedRuntimeTests": 262,
+    "existingSkippedRuntimeTests": 1,
+    "fixtureEvidenceProfileTests": 17,
+    "typeScript": "passed",
+    "independentSourceReview": "no blockers",
+    "physicalDeviceAcceptance": false
+  },
+  "sandbox": {
+    "name": "v5-sandbox",
+    "directory": "v5-sandbox",
+    "sourceHead": "6c01e953ceb6d6633a770a31980aaf19125d5c47",
+    "sourceTree": "a4a30278ea00a3c769e2ad0d913a1ee1cd8dbf67",
+    "runId": 44892136884,
+    "jobId": 136810172966,
+    "artifactId": 14701963989,
+    "archiveSHA256": "91b953f14b755b48beccab0f96b02963eecb1e09de2f38dab2e0080690bafa05",
+    "reportSHA256": "d4605e89bd402cf0ad8d04ed85c2a5acb9adc6b6be164607e49c217bb87aff2d",
+    "accepted": true,
+    "containerCases": 21,
+    "sourceAuthor": "scripted fixture; no model generation",
+    "independentAudit": {
+      "passed": true,
+      "actualContainers": 21,
+      "uniqueContainerIds": 21,
+      "recomputedSourceAndArtifactDigests": 20,
+      "diagnosticBytes": 734,
+      "rawStderrBytes": 522,
+      "limitation": "The isolation probe's dynamic port and exact generated source are not retained, so its source/artifact digest cannot be independently reconstructed from this bundle. Its observed isolation result and cleanup are recorded."
+    }
+  }
+}

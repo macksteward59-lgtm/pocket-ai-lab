@@ -1,0 +1,31 @@
+name: Closed-choice fact recall
+on:
+  push:
+    branches: [codex/recipient-choice-diagnostic]
+    paths:
+      - tools/recipient-choice/measure.py
+      - tools/recipient-choice/run.sh
+      - .github/workflows/recipient-choice.yml
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Run both arms on the same frozen prompts
+        run: bash tools/recipient-choice/run.sh "$RUNNER_TEMP/choices"
+      - name: Show experimental results
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/choices/summary.md"; then
+            cat "$RUNNER_TEMP/choices/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve measurement evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: closed-choice-fact-recall
+          path: ${{ runner.temp }}/choices
+          if-no-files-found: warn

@@ -1,0 +1,66 @@
+name: East PostgreSQL Lifecycle Integration
+
+on:
+  push:
+    branches:
+      - "codex/**"
+    paths:
+      - "packages/intelligence/autonomy/**"
+      - ".github/workflows/east-postgres-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/intelligence/autonomy/**"
+      - ".github/workflows/east-postgres-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  east-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: east_lifecycle_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: east_lifecycle_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d east_lifecycle_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: east_lifecycle_ci_password
+      PGDATABASE: east_lifecycle_ci
+      DATABASE_URL: postgres://postgres:east_lifecycle_ci_password@127.0.0.1:5432/east_lifecycle_ci
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Apply East lifecycle migration to PostgreSQL 16
+        run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/migrations/001_task_lifecycle_snapshots.sql
+      - name: Verify row locking, compare-and-swap, namespace isolation, and rollback
+        run: psql --set ON_ERROR_STOP=1 --file packages/intelligence/autonomy/tests/postgres-integration.sql
+      - name: Verify concurrent stale writers serialize on the database row lock
+        run: bash packages/intelligence/autonomy/tests/postgres-concurrency.sh
+      - name: Set up Node.js for the actual TypeScript adapter test
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install
+      - name: Install temporary PostgreSQL driver
+        run: npm install --no-save --package-lock=false pg
+      - name: Exercise PostgresTaskLifecycleStore against PostgreSQL
+        run: node --import tsx packages/intelligence/autonomy/tests/postgres-adapter-integration.mjs

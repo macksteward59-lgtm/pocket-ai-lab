@@ -1,0 +1,166 @@
+{
+  "observedAt": "2026-11-20T15:57:38.074Z",
+  "runId": 44759190955,
+  "headSHA": "0a3bc9df657445de4433f534c597ebdea0a34725",
+  "status": "completed",
+  "conclusion": "failure",
+  "runAttempt": 1,
+  "url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44759190955",
+  "jobs": [
+    {
+      "id": 136366867224,
+      "name": "ios-llamaengine",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_id": 44759190955,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Show Xcode",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install CMake and Ninja",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Restore pinned llama.cpp build artifacts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Build pinned llama.cpp for the simulator and macOS",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Save verified pinned llama.cpp build cache",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7
+        },
+        {
+          "name": "Typecheck the unlinked fail-closed branch",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Link PocketLlamaEngine for physical iOS device",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Choose an iPhone simulator",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Boot selected iPhone simulator",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Generate and build the native Pocket AI Lab app",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "XCTest the native Pocket AI Lab app",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "XCTest on the iOS simulator",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Download the pinned smoke GGUF",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Point the macOS smoke test at that GGUF",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Build macOS tests once",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "XCTest on macOS",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Frozen native text recipient benchmark on macOS",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 19
+        },
+        {
+          "name": "Preserve and independently verify recipient benchmark evidence",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 20
+        },
+        {
+          "name": "Upload recipient benchmark evidence including partial runs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21
+        },
+        {
+          "name": "Record what this runner actually did",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22
+        },
+        {
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 44
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 45
+        }
+      ]
+    }
+  ],
+  "note": "Final job reports success through full macOS regression suite, then failed recipient XCTest and independent evidence verification. Raw job log and digest-verified artifact preserved."
+}

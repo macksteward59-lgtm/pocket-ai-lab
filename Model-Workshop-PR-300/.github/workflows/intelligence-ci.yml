@@ -1,0 +1,39 @@
+name: Pocket AI Lab CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  intelligence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Report dependency advisories
+        run: npm audit --json > npm-audit.json || true
+      - name: Summarize dependency advisories
+        run: node -e "const report = require('./npm-audit.json'); console.log(JSON.stringify(report.vulnerabilities ?? {}, null, 2))"
+      - name: Check JavaScript syntax
+        run: |
+          node --check apps/web/server.mjs
+          node --check apps/web/app.js
+          node --check apps/web/sw.js
+      - name: Type-check and build
+        run: npm run build
+      - name: Run tests
+        run: npm test

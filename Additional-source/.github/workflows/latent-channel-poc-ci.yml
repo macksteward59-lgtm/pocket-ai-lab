@@ -1,0 +1,56 @@
+name: Latent Channel POC CI
+
+on:
+  push:
+    branches:
+      - codex/latent-channel-runtime-poc
+      - codex/ios-final-embedding-export
+      - codex/neuralese-sequence-codec-poc
+    paths:
+      - "packages/intelligence/latent-communication/**"
+      - "packages/intelligence/__tests__/latent-channel*.test.ts"
+      - "packages/intelligence/__tests__/latent-sequence-codec.test.ts"
+      - "packages/intelligence/index.ts"
+      - ".github/workflows/latent-channel-poc-ci.yml"
+  pull_request:
+    branches:
+      - codex/latent-agent-communication-on-integration
+      - codex/latent-channel-runtime-poc
+      - codex/ios-final-embedding-export
+    paths:
+      - "packages/intelligence/latent-communication/**"
+      - "packages/intelligence/__tests__/latent-channel*.test.ts"
+      - "packages/intelligence/index.ts"
+      - ".github/workflows/latent-channel-poc-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: latent-channel-poc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type-check and build
+        run: npm run build
+
+      - name: Test latent communication contract and runtime
+        run: npx vitest run packages/intelligence/__tests__/latent-channel.test.ts packages/intelligence/__tests__/latent-channel-runtime.test.ts packages/intelligence/__tests__/latent-sequence-codec.test.ts
+
+      - name: Test full intelligence engine suite
+        run: npm run test:engine

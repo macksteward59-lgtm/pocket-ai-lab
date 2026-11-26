@@ -1,0 +1,18 @@
+{
+  "searchCommit": "19a69da59edeb091668ea77ebb16403471cb3d6d",
+  "protocol": "Use the complete question verbatim. Score the rank of the designated source within the five returned. On questions with no supporting record, report whether the service returned any suggestions. Count retrieval only, without credit for answer generation. Run the frozen questions on bytes read back from the private handoff.",
+  "cases": [
+    {"id":"handset","question":"My simulator feels fast. Which reference tells me whether that carries over to the phone in my hand?","support":"APPLE-DEVICE"},
+    {"id":"signing","question":"I signed my own phone build with a free Apple account. Where is the renewal window documented?","support":"APPLE-TEAM"},
+    {"id":"invocation","question":"The note saved successfully. What evidence would actually show that a Worker called a hosted model?","support":"CF-BIND"},
+    {"id":"billing","question":"If yesterday’s allowance is exhausted, which reference says when the counter starts over?","support":"CF-QUOTA"},
+    {"id":"lineage","question":"Which reference lets a later reviewer distinguish an original source from the version that a correction replaced?","support":"W3C-PROV"},
+    {"id":"duplicate-passage","question":"The same sentence occurs twice on a page. What should I keep to identify the intended occurrence?","support":"W3C-QUOTE"},
+    {"id":"citations","question":"A generated paragraph reads smoothly but links to the wrong paper. Which study measures that aspect?","support":"ACL-CITE"},
+    {"id":"missing-context","question":"Which study tests what a reader does when the answer is missing from the material it was given?","support":"ACL-ABSTAIN"},
+    {"id":"old-grade","question":"I reopened an old run after the grading rule changed. Where can I see why a final line break used to pass?","support":"NATIVE-EXACT-ANSWER"},
+    {"id":"phone-temperature","question":"At what exact battery temperature did my iPhone Air terminate yesterday’s local generation?","support":null},
+    {"id":"personal-balance","question":"How many neurons are left in my own Cloudflare account at this moment?","support":null},
+    {"id":"merged-version","question":"Which commit merged the revised exact-answer rule into the main branch?","support":null}
+  ]
+}

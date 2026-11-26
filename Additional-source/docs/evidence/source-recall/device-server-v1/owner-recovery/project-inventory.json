@@ -1,0 +1,1089 @@
+{
+  "observedUTC": "2026-11-22T06:21:14.095940+00:00",
+  "main": "fb59f76ea8bbb496ba9b40c2d54f7252a4dc9873",
+  "candidate": "b0bee1a99e2bcd3322a3401ae1e56ce3cc505c21",
+  "coordinationBaseline": "7c2bc81d9fb3f1c62c52a50b58c7dfc8d64e455b",
+  "openPRs": 141,
+  "openDrafts": 135,
+  "openHeadsIncluded": 41,
+  "openHeadsNotIncluded": 100,
+  "openHeadsAlreadyInMain": 0,
+  "ancestryDefinition": "Includes the exact open PR head if reachable through commit parents. Cherry-picked or equivalent content may exist elsewhere. Counts do not measure feature completeness.",
+  "requirementRows": 344,
+  "historicalLedgerBySection": {
+    "00": {
+      "unassessed": 12
+    },
+    "01": {
+      "unassessed": 19
+    },
+    "02": {
+      "partial": 14
+    },
+    "03": {
+      "partial": 12
+    },
+    "04": {
+      "implemented-unverified": 22
+    },
+    "05": {
+      "partial": 1,
+      "blocked": 9
+    },
+    "06": {
+      "implemented-unverified": 23
+    },
+    "07": {
+      "implemented-unverified": 15
+    },
+    "08": {
+      "unassessed": 9
+    },
+    "09": {
+      "implemented-unverified": 14
+    },
+    "10": {
+      "unassessed": 8
+    },
+    "11": {
+      "unassessed": 13
+    },
+    "12": {
+      "unassessed": 9
+    },
+    "13": {
+      "unassessed": 15
+    },
+    "14": {
+      "unassessed": 13
+    },
+    "15": {
+      "unassessed": 13
+    },
+    "16": {
+      "unassessed": 9
+    },
+    "17": {
+      "unassessed": 10
+    },
+    "18": {
+      "partial": 11
+    },
+    "19": {
+      "implemented-unverified": 11
+    },
+    "20": {
+      "unassessed": 8
+    },
+    "21": {
+      "unassessed": 9
+    },
+    "22": {
+      "unassessed": 11
+    },
+    "24": {
+      "unassessed": 14
+    },
+    "25": {
+      "unassessed": 12
+    },
+    "HIST": {
+      "unassessed": 4
+    },
+    "SEC": {
+      "unassessed": 10
+    },
+    "GIRL": {
+      "unassessed": 14
+    }
+  },
+  "openPullRequestHeads": [
+    {
+      "number": 36,
+      "headSHA": "1f98807c94e3a44d84500ef6f354bc600ebec664",
+      "draft": false,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 37,
+      "headSHA": "9a96d330ac0ca9b70462882aacd01c0566bbb1dd",
+      "draft": false,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 40,
+      "headSHA": "9bf0afa16679adca485ca1788868449c85849c9f",
+      "draft": false,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 83,
+      "headSHA": "8efb90be3e16c4819e08bbbdc4c6767a5e7bba1e",
+      "draft": false,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 84,
+      "headSHA": "92f39d7ee79cabe9028e7782cec40ca7a0f2c219",
+      "draft": false,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 85,
+      "headSHA": "c97bb3b167b74c822ad3af6dd4d79a4a3f07755c",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 86,
+      "headSHA": "7319ea97d7b5bdfc4c1a3ec921b8b2eb65612dc5",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 88,
+      "headSHA": "232967967f2344ef6612713404fa387f394f1875",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 90,
+      "headSHA": "1feb42e04346ae45a08f3dc137b1c5e382313c13",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 91,
+      "headSHA": "4486d2356684d069a52380abb8d5737055b79180",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 92,
+      "headSHA": "0c47c333d8a7f4a7d24ff63a3e990fd52a8f4bd0",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 93,
+      "headSHA": "3df02f60b3f2c4c1f0a1b0986ac1d7170a94ac4b",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 94,
+      "headSHA": "03b6247db1766d01015472525b8ccb93aeefd938",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 95,
+      "headSHA": "9cbd655ae6fb71d8a7d093620263298e4dd850cd",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 96,
+      "headSHA": "c7fcbd45b1dea605f85baf05b8bf4bf51b21dba2",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 97,
+      "headSHA": "bde0a41099b9c044d2745899e34fe77ceec068c7",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 98,
+      "headSHA": "09c322215e9a89151279bc9c8e444b1740c4e91b",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 99,
+      "headSHA": "6d91252ac1f16b0fdb984d396fce6cc41f404c77",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 100,
+      "headSHA": "d5705a287fd126074e617644d77cc491bccda2a9",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 101,
+      "headSHA": "3799fe3118787f3187981166dd0cb7de506b6601",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 102,
+      "headSHA": "64894812502bd9baad080fd29a04d80679f01a8c",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 103,
+      "headSHA": "752b79b5d7a9e65c1a0e78b722e0574fafea7dc9",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 104,
+      "headSHA": "bf7a61c9732c23a6e7b23ad43ff0e415b6d745b4",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 105,
+      "headSHA": "bd3ed42f4b98f41dd59806c3fa11dbf3289ad13e",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 106,
+      "headSHA": "35bd45863c0438144e938d89046e0888b77184f1",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 107,
+      "headSHA": "ed32fecef579dfd53c0263c3e73f00d95cc1af32",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 108,
+      "headSHA": "607adfea9129d84f07bc59eb7e1de2dfb3765f45",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 109,
+      "headSHA": "a6de5e5387a0f6745c61ba509678fae3811d0cf6",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 110,
+      "headSHA": "50b5adcd306c1079b5df137e7801894aae796a61",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 112,
+      "headSHA": "4c33c08b4082121cfe252f5954c748728142894f",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 114,
+      "headSHA": "9efbf94564571f70dd7f4fea5fbea250cd53109f",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 115,
+      "headSHA": "88a28dc6b67c50d38f13ec548d8ea1aded635b6e",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 121,
+      "headSHA": "c8b2f6fbc380759c6318c189bb1e32472617a16c",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 122,
+      "headSHA": "ad10fac5ac16bc4aaf71eff4ff318dcb59a6dfb8",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 123,
+      "headSHA": "c8b2f6fbc380759c6318c189bb1e32472617a16c",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 124,
+      "headSHA": "31e7cfdfe047d1c172369da4aa1b9f30bc8c8658",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 128,
+      "headSHA": "cf18d0be1ef27b63fb34c9a3045bc78c88d2eaeb",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 129,
+      "headSHA": "808136b6fd139f5c6bcc46822e68c3fa1bd5fa24",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 131,
+      "headSHA": "ee81760ecb4eaac0acf9f7f8bacba4c39c2d9e11",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 132,
+      "headSHA": "60a9fa6e5fa99b72dc45c6a2d2c2590c0776f896",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 133,
+      "headSHA": "8d0a5b158ba77577248fa0882c40ee4c2bafa465",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 135,
+      "headSHA": "48c8d0601178cdedefcc748054c88adda9ad1e4f",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 139,
+      "headSHA": "6415a60cbcf90f077584ed4294389aa00be1cbb2",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 140,
+      "headSHA": "58105c41adba5cab63361e6fdc710566764c7269",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 142,
+      "headSHA": "34671bd9e3e777b105390b22867d3ba061ddc26f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 143,
+      "headSHA": "c41ab20395c913cd8bd8dfedca490a923bcec591",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 144,
+      "headSHA": "55697d6ccfc83761fdcf785ba6d8e41676e1d143",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 145,
+      "headSHA": "c3a9bdb2a2673bf19c0c661dc937a9c4c37990a9",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 146,
+      "headSHA": "0e58f1bff38c4aae36ce619e5a84faeafb83da16",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 147,
+      "headSHA": "0e58f1bff38c4aae36ce619e5a84faeafb83da16",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 148,
+      "headSHA": "121487049d57f96730ae70f789a9495cf49bc70a",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 149,
+      "headSHA": "121487049d57f96730ae70f789a9495cf49bc70a",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 150,
+      "headSHA": "20ea14d4a7b4625e1ff7dde300bfa7f037485498",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 151,
+      "headSHA": "20ea14d4a7b4625e1ff7dde300bfa7f037485498",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 152,
+      "headSHA": "2d15997ad4238c0a88ce2e42223c062c711f109f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 153,
+      "headSHA": "f1dda415a1808d1e9fdead5812136339f2d1a1b6",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 154,
+      "headSHA": "7a2236627cd1b6e8dacc9c059f6e6be37562e0b9",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 156,
+      "headSHA": "31bdc57b8812243279097899fecd2c938a96e78f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 157,
+      "headSHA": "ab2ad101d1a2ebfa277bd2c136db79b6b1afc094",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 158,
+      "headSHA": "ab2ad101d1a2ebfa277bd2c136db79b6b1afc094",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 159,
+      "headSHA": "30f414012dbfbd43ad84f28b714d8b1450388750",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 160,
+      "headSHA": "20c5588e6bc6f50629e4683efef1db448926979a",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 162,
+      "headSHA": "4bc9afaa0debec72fff8dc539e9e37f0fe6721c3",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 163,
+      "headSHA": "cddb43103384711707c6474c1f99dab5e33c6dd3",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 164,
+      "headSHA": "482b364cb362b86224c3399ce16ce51a1c06c738",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 165,
+      "headSHA": "b89d0bffd319ba940b17c50ee971fa1674dd541f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 166,
+      "headSHA": "0ae7dafff95065d5a17c6c3caac98897a0cae43b",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 168,
+      "headSHA": "ab6f290702018023edaec800f59bfec422f24bc9",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 169,
+      "headSHA": "3666c01a629219b22b9313cb770b6246f082217d",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 170,
+      "headSHA": "658d6bb5557adf4962ceb75883c009d8559919f9",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 171,
+      "headSHA": "109fd4bb93ce00028265d60e010fa6a572d77d3a",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 174,
+      "headSHA": "ab6ff0b6e6f385c849b675f55938b8e1c78f4583",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 175,
+      "headSHA": "4381df81ed0305a96cded87c78c9e446369c5893",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 180,
+      "headSHA": "fe25b0a43151f71c23ee8d673788a18187e019c8",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 181,
+      "headSHA": "c69ced4535d331748eddfac2a105a863262094dc",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 182,
+      "headSHA": "02f0b8698a197335121168be81b015f7aaed58fd",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 183,
+      "headSHA": "6040fbc7091b5d86fc8ff1a5d1157e4385ab2d64",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 184,
+      "headSHA": "270c6955cffd55858e2dc44c9c70a2e922175472",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 186,
+      "headSHA": "0f44072cb8c58f3d9cef1f943e8fcab4dd0198a6",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 187,
+      "headSHA": "d00260e4a1c3d0f3e8902b756e67e5cfcaf36bc4",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 188,
+      "headSHA": "26d7e6962f4c7720ec239d27b7cfec8a802f8a49",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 189,
+      "headSHA": "9d4d3493de34a28fcddc08fa8995a503cf7b97b4",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 192,
+      "headSHA": "b72d379628500a6da5de249a5f17c9ebb9d2db0a",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 193,
+      "headSHA": "b7217f5eaededefcd4516cf3d015b3ac505e790a",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 194,
+      "headSHA": "4899f12f804e1854817ac475e741d01e6d3887ad",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 195,
+      "headSHA": "a79ab4a91524f0271863b8c6a1717e7c594496ed",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 196,
+      "headSHA": "a962c9b80be83455202c53994a0d8dd5a849b0cb",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 198,
+      "headSHA": "17ac696687bfaaba3123eccb18c9f3d03bb1c13f",
+      "draft": false,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 200,
+      "headSHA": "947c1ac289f70779e336fde6dd9e6c687f191a07",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 203,
+      "headSHA": "6b71ff6da2b8fe6970042884a48dedf8a78694d3",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 204,
+      "headSHA": "6fc21e0cbbfad828853f88fc9a1fa287d4448a49",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 210,
+      "headSHA": "d3f168a91693e8eefedd20ff1b99548abdf6215b",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 211,
+      "headSHA": "58a4b3ac4c8a931044c7a3144c2f124168f8d898",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 212,
+      "headSHA": "00f68a7ccd24f9d3ecae749be6d2b08a7abac2a1",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 213,
+      "headSHA": "15a2f634f219c3b024b811230c58a1c9762d654c",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 216,
+      "headSHA": "34241d8dcbee5a637e2d914af0d8fbf508b63ba7",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 217,
+      "headSHA": "299b1532ea5ac91cfaa800272aa1a043bdb0ee8f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 218,
+      "headSHA": "7318cedb079c51ae6bfc977365b25668ab47b591",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 219,
+      "headSHA": "04dc3a869eaf8f038c4bfe82be2d549c3cf97a9a",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 221,
+      "headSHA": "abeba215d635a4eabb0131478dd461dcf8b75ea3",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 222,
+      "headSHA": "5ea36ec96b144f1bbc1313259800f8bc14fc8e6c",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 223,
+      "headSHA": "8e69a274613765979a6c5837c4235956fc90d94c",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 224,
+      "headSHA": "8154cbb0d005a7560adf1ec6e443aeee95221c60",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 225,
+      "headSHA": "a53dce66c916c3ac498acc67ec535efc192a6c51",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 226,
+      "headSHA": "4df8e74d9351605bea72bda3338a3c28cb4bf322",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 227,
+      "headSHA": "42665cb92bb303b56107d375b3779f9c11dc81cb",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 228,
+      "headSHA": "c913aac79ec4eabd1e09b838e8abc4f7983555d1",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 229,
+      "headSHA": "d067e0506b2575f41c356a03f3e19bd324a8f3ed",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 230,
+      "headSHA": "acb80ee8221b80011bf773e32814f5dcf973e4d3",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 231,
+      "headSHA": "0a3bc9df657445de4433f534c597ebdea0a34725",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 232,
+      "headSHA": "1a3a9d2813ab8d0a5a6c582b8b93144b63ee4bd5",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 233,
+      "headSHA": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 234,
+      "headSHA": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 235,
+      "headSHA": "51462fd4a2a475e1d82fa8b1adba130ec0a33945",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 236,
+      "headSHA": "e38c80144e06f51d9809c35971f53ac25d0841f5",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 238,
+      "headSHA": "6860ca4a6b3b9450cfe3cc409b98c10715e289a8",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 239,
+      "headSHA": "313a280aeabcdc3a8b3cb56b3bdbb5c33917c93f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 240,
+      "headSHA": "e5cf16b9b3af96ab0fe4832105538abd5d22c551",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 241,
+      "headSHA": "7e1cfcd2b4653f0fea70662d91964cf407be81f1",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 242,
+      "headSHA": "ef088af89eb67d90986f6160a4ddc58dec72002b",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 243,
+      "headSHA": "86cf4022874e1faf8bb8a24f9e9a25f792b03788",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 244,
+      "headSHA": "8d03fa5da6e4ddf5b981ea550ab1332ec42de96f",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 245,
+      "headSHA": "66cedc4bec7c402dd30f13e2478d4dba8dc7aa07",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 246,
+      "headSHA": "c38bfc0a3da058416b9a884a3acbc2f8ec3f193c",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 247,
+      "headSHA": "d2172cba89343421ed4fc0189fa344a5aab46756",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 248,
+      "headSHA": "ac27526edba6d5629117c3af7bdcda0081e7ce1f",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 249,
+      "headSHA": "bf3c9e6b6d01e508c1c58c29fc5ad4dece8ddf2b",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 250,
+      "headSHA": "bc7ca417281b073b927512acbc69bf9db27ad2df",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 251,
+      "headSHA": "aa5ea68680a53e2defafb7f74bf00c00f1e55750",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 252,
+      "headSHA": "83e3891d2c1f58d334c264e0f029fb7b94e62868",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 253,
+      "headSHA": "42f025593a7bc15df1a9659c11d19f2e497249c2",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 254,
+      "headSHA": "59046bcefe4a30771e4765448195adea66e3a640",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 256,
+      "headSHA": "19a69da59edeb091668ea77ebb16403471cb3d6d",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 257,
+      "headSHA": "0944346e4af5d1123c63b9990cc3881d18becfe5",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 258,
+      "headSHA": "7fc3b96e19b3f7a1fc5ccea1fa769ff99da6bc74",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 259,
+      "headSHA": "4f38f303aa0de9ea5a315c2e9b6bdb987ea5fe95",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 260,
+      "headSHA": "20839729fb4bf73c5475bc670280400e0f347d2b",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 261,
+      "headSHA": "2115057a6affe8160c786309b56a2100ad883c81",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 262,
+      "headSHA": "b0bee1a99e2bcd3322a3401ae1e56ce3cc505c21",
+      "draft": true,
+      "ancestorOfCandidate": true,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 263,
+      "headSHA": "42d15e7df1683629c34bdd792e89c85b96d68a0e",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    },
+    {
+      "number": 264,
+      "headSHA": "2e9643014cbc3ed0bd765586d602eb23362b138e",
+      "draft": true,
+      "ancestorOfCandidate": false,
+      "ancestorOfMain": false
+    }
+  ]
+}

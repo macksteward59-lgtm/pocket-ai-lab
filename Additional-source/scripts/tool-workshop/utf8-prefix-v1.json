@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "taskSpec": "Repair the Python function truncate_utf8(text, byte_limit). Return the longest starting prefix of text whose UTF-8 encoding is at most byte_limit bytes. Preserve the original characters and order exactly, including whitespace and control characters. Never normalize, replace, transliterate, skip characters, or split a Unicode code point. The host supplies a Unicode scalar-value string of at most 4096 UTF-8 bytes and an integer byte_limit from 0 through 4096; booleans and unpaired surrogates are excluded. A zero budget returns an empty string, and a budget larger than the whole encoding returns the original string. Boundaries are Unicode code points, not grapheme clusters: combining marks, emoji modifiers, regional indicators, and ZWJ sequences may be separated at code-point boundaries. Define truncate_utf8(text, byte_limit) and return only its string result; the host handles JSON input and output. You may revise the candidate at most twice using development feedback. The held-out suite is unavailable during revision. This is a candidate-only code-repair warm-up, not a native source repair, weight-training result, or production activation.",
+  "baselineSource": "def truncate_utf8(text, byte_limit):\n    return text[:byte_limit]\n",
+  "maxRevisions": 2,
+  "development": [
+    { "id": "D01", "text": "pocket", "byteLimit": 4, "expected": "pock" },
+    { "id": "D02", "text": "caf\u00e9", "byteLimit": 4, "expected": "caf" },
+    { "id": "D03", "text": "\u6f22\u5b57A", "byteLimit": 4, "expected": "\u6f22" },
+    { "id": "D04", "text": "\ud83d\ude00x", "byteLimit": 3, "expected": "" },
+    { "id": "D05", "text": "abc", "byteLimit": 0, "expected": "" },
+    { "id": "D06", "text": "\u00e9x", "byteLimit": 2, "expected": "\u00e9" },
+    { "id": "D07", "text": "e\u0301z", "byteLimit": 2, "expected": "e" },
+    { "id": "D08", "text": "", "byteLimit": 10, "expected": "" }
+  ],
+  "heldOut": [
+    { "id": "H01", "text": "A\u00e9B", "byteLimit": 2, "expected": "A" },
+    { "id": "H02", "text": "A\u00e9B", "byteLimit": 3, "expected": "A\u00e9" },
+    { "id": "H03", "text": "\u00a3\u20ac\ud83d\ude00Z", "byteLimit": 5, "expected": "\u00a3\u20ac" },
+    { "id": "H04", "text": "\u00a3\u20ac\ud83d\ude00Z", "byteLimit": 6, "expected": "\u00a3\u20ac" },
+    { "id": "H05", "text": "\ud83d\ude00\ud83d\ude00", "byteLimit": 7, "expected": "\ud83d\ude00" },
+    { "id": "H06", "text": "\ud800\udf48X", "byteLimit": 4, "expected": "\ud800\udf48" },
+    { "id": "H07", "text": "\u0939\u093f\u0928\u094d\u0926\u0940", "byteLimit": 7, "expected": "\u0939\u093f" },
+    { "id": "H08", "text": "\u0627\u064e\u0628", "byteLimit": 3, "expected": "\u0627" },
+    { "id": "H09", "text": "e\u0301Z", "byteLimit": 3, "expected": "e\u0301" },
+    { "id": "H10", "text": "\u00e9Z", "byteLimit": 2, "expected": "\u00e9" },
+    { "id": "H11", "text": "\ud83d\udc69\u200d\ud83d\udcbb!", "byteLimit": 7, "expected": "\ud83d\udc69\u200d" },
+    { "id": "H12", "text": "\ud83d\udc4d\ud83c\udffd!", "byteLimit": 4, "expected": "\ud83d\udc4d" },
+    { "id": "H13", "text": "\ud83c\uddfa\ud83c\uddf8!", "byteLimit": 4, "expected": "\ud83c\uddfa" },
+    { "id": "H14", "text": "A\u0000B\nC", "byteLimit": 4, "expected": "A\u0000B\n" },
+    { "id": "H15", "text": "\r\n\t", "byteLimit": 2, "expected": "\r\n" },
+    { "id": "H16", "text": "\"\\\u00e9", "byteLimit": 3, "expected": "\"\\" },
+    { "id": "H17", "text": "\u00e9abc", "byteLimit": 1, "expected": "" },
+    { "id": "H18", "text": "na\u00efve caf\u00e9", "byteLimit": 100, "expected": "na\u00efve caf\u00e9" },
+    { "id": "H19", "text": "\ud83d\ude00", "byteLimit": 0, "expected": "" },
+    { "id": "H20", "text": "A\u2028B", "byteLimit": 4, "expected": "A\u2028" }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "protocolCommit": "63dbde07e6ac28043324494cc9214e513975b120",
+  "os": "Linux",
+  "arch": "x86_64",
+  "runtime": "1.24.4",
+  "tokenizers": "0.22.2",
+  "providers": [
+    "CPUExecutionProvider"
+  ],
+  "rows": [
+    {
+      "sourceId": "APPLE-DEVICE",
+      "kind": "supported",
+      "tokenCount": 39,
+      "supportProbability": 0.6718677282333374,
+      "predictedSupported": true
+    },
+    {
+      "sourceId": "APPLE-DEVICE",
+      "kind": "contradicted",
+      "tokenCount": 38,
+      "supportProbability": 0.004850304685533047,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "APPLE-DEVICE",
+      "kind": "absent",
+      "tokenCount": 44,
+      "supportProbability": 0.022508330643177032,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "APPLE-TEAM",
+      "kind": "supported",
+      "tokenCount": 39,
+      "supportProbability": 0.30849337577819824,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "APPLE-TEAM",
+      "kind": "contradicted",
+      "tokenCount": 39,
+      "supportProbability": 0.019205771386623383,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "APPLE-TEAM",
+      "kind": "absent",
+      "tokenCount": 41,
+      "supportProbability": 0.12353762239217758,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "CF-BIND",
+      "kind": "supported",
+      "tokenCount": 43,
+      "supportProbability": 0.9070619940757751,
+      "predictedSupported": true
+    },
+    {
+      "sourceId": "CF-BIND",
+      "kind": "contradicted",
+      "tokenCount": 41,
+      "supportProbability": 0.06124071031808853,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "CF-BIND",
+      "kind": "absent",
+      "tokenCount": 44,
+      "supportProbability": 0.039756301790475845,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "CF-QUOTA",
+      "kind": "supported",
+      "tokenCount": 48,
+      "supportProbability": 0.26238951086997986,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "CF-QUOTA",
+      "kind": "contradicted",
+      "tokenCount": 48,
+      "supportProbability": 0.22739122807979584,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "CF-QUOTA",
+      "kind": "absent",
+      "tokenCount": 50,
+      "supportProbability": 0.07720018178224564,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "W3C-PROV",
+      "kind": "supported",
+      "tokenCount": 40,
+      "supportProbability": 0.33997097611427307,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "W3C-PROV",
+      "kind": "contradicted",
+      "tokenCount": 38,
+      "supportProbability": 0.11815694719552994,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "W3C-PROV",
+      "kind": "absent",
+      "tokenCount": 33,
+      "supportProbability": 0.09793427586555481,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "W3C-QUOTE",
+      "kind": "supported",
+      "tokenCount": 37,
+      "supportProbability": 0.8819822072982788,
+      "predictedSupported": true
+    },
+    {
+      "sourceId": "W3C-QUOTE",
+      "kind": "contradicted",
+      "tokenCount": 42,
+      "supportProbability": 0.02581264264881611,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "W3C-QUOTE",
+      "kind": "absent",
+      "tokenCount": 41,
+      "supportProbability": 0.01019067969173193,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "ACL-CITE",
+      "kind": "supported",
+      "tokenCount": 31,
+      "supportProbability": 0.9144399762153625,
+      "predictedSupported": true
+    },
+    {
+      "sourceId": "ACL-CITE",
+      "kind": "contradicted",
+      "tokenCount": 29,
+      "supportProbability": 0.04989531263709068,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "ACL-CITE",
+      "kind": "absent",
+      "tokenCount": 33,
+      "supportProbability": 0.01752973161637783,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "ACL-ABSTAIN",
+      "kind": "supported",
+      "tokenCount": 39,
+      "supportProbability": 0.9233951568603516,
+      "predictedSupported": true
+    },
+    {
+      "sourceId": "ACL-ABSTAIN",
+      "kind": "contradicted",
+      "tokenCount": 37,
+      "supportProbability": 0.083974190056324,
+      "predictedSupported": false
+    },
+    {
+      "sourceId": "ACL-ABSTAIN",
+      "kind": "absent",
+      "tokenCount": 41,
+      "supportProbability": 0.15181776881217957,
+      "predictedSupported": false
+    }
+  ],
+  "acceptedByCondition": {
+    "supported": 5,
+    "contradicted": 0,
+    "absent": 0
+  },
+  "developmentThresholdMet": false
+}

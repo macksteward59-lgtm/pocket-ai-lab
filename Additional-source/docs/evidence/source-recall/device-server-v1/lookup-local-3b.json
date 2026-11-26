@@ -1,0 +1,160 @@
+{
+  "fixtureSHA256": "5d3a4fb3dbd75c53bb3799b17f98426ecaedc4d53c7c49e89a43bc3c519df408",
+  "rows": [
+    {
+      "id": "reset",
+      "passed": true,
+      "expected": "00:00 UTC",
+      "expectedSource": "CF-QUOTA",
+      "question": "At what time does the daily free neuron allocation reset?",
+      "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+      "retrieved": [
+        {
+          "id": "CF-QUOTA",
+          "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+          "finding": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation."
+        },
+        {
+          "id": "APPLE-DEVICE",
+          "url": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
+          "finding": "Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured."
+        }
+      ],
+      "model": "qwen2.5-3b-instruct-q4_k_m",
+      "modelSHA256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "semanticSupportVerified": false,
+      "status": "quote_proposed",
+      "answer": "00:00 UTC",
+      "source": "CF-QUOTA",
+      "sourceURL": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "rawOutput": "00:00 UTC [A]",
+      "requestID": "chatcmpl-erwgenoeKnRdqqcjYRmeYOGqAYrmZYvC",
+      "latencyMs": 2551,
+      "prompt": "Use only the supplied project-source summaries. Answer the question with the shortest exact phrase that gives the requested fact, followed by its passage label. If the passages do not give the requested fact, answer UNKNOWN. Return only that answer.\n\n[A] The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation.\n[B] Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured.\n\nQuestion: At what time does the daily free neuron allocation reset?"
+    },
+    {
+      "id": "provision",
+      "passed": false,
+      "expected": "seven days",
+      "expectedSource": "APPLE-TEAM",
+      "question": "How long after issuance do Personal Team provisioning profiles expire?",
+      "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+      "retrieved": [
+        {
+          "id": "APPLE-TEAM",
+          "url": "https://developer.apple.com/help/account/basics/about-your-developer-account/",
+          "finding": "A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance."
+        },
+        {
+          "id": "W3C-QUOTE",
+          "url": "https://www.w3.org/TR/annotation-model/",
+          "finding": "A text quote selector identifies a passage using exact text. Context immediately before and after the passage can disambiguate repeated wording."
+        }
+      ],
+      "model": "qwen2.5-3b-instruct-q4_k_m",
+      "modelSHA256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "semanticSupportVerified": false,
+      "status": "quote_proposed",
+      "answer": "seven days after issuance.",
+      "source": "APPLE-TEAM",
+      "sourceURL": "https://developer.apple.com/help/account/basics/about-your-developer-account/",
+      "rawOutput": "seven days after issuance. [A]",
+      "requestID": "chatcmpl-Yy2l77BllSND3iLYNv6nEV3nVGJhL6rI",
+      "latencyMs": 1765,
+      "prompt": "Use only the supplied project-source summaries. Answer the question with the shortest exact phrase that gives the requested fact, followed by its passage label. If the passages do not give the requested fact, answer UNKNOWN. Return only that answer.\n\n[A] A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance.\n[B] A text quote selector identifies a passage using exact text. Context immediately before and after the passage can disambiguate repeated wording.\n\nQuestion: How long after issuance do Personal Team provisioning profiles expire?"
+    },
+    {
+      "id": "allocation",
+      "passed": false,
+      "expected": "10,000 neurons",
+      "expectedSource": "CF-QUOTA",
+      "question": "What is the published free Workers AI allocation per day?",
+      "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+      "retrieved": [
+        {
+          "id": "CF-QUOTA",
+          "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+          "finding": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation."
+        },
+        {
+          "id": "CF-BIND",
+          "url": "https://developers.cloudflare.com/workers-ai/configuration/bindings/",
+          "finding": "A Worker can invoke a hosted model through an AI binding. The run method takes the model identifier and an input object."
+        }
+      ],
+      "model": "qwen2.5-3b-instruct-q4_k_m",
+      "modelSHA256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "semanticSupportVerified": false,
+      "status": "quote_proposed",
+      "answer": "10,000 neurons per day",
+      "source": "CF-QUOTA",
+      "sourceURL": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "rawOutput": "10,000 neurons per day [A]",
+      "requestID": "chatcmpl-x4Ov35PmO4UujtYgnKOVzFSKPZXloJBQ",
+      "latencyMs": 1614,
+      "prompt": "Use only the supplied project-source summaries. Answer the question with the shortest exact phrase that gives the requested fact, followed by its passage label. If the passages do not give the requested fact, answer UNKNOWN. Return only that answer.\n\n[A] The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation.\n[B] A Worker can invoke a hosted model through an AI binding. The run method takes the model identifier and an input object.\n\nQuestion: What is the published free Workers AI allocation per day?"
+    },
+    {
+      "id": "unrecorded-balance",
+      "passed": true,
+      "expected": "UNKNOWN",
+      "expectedSource": null,
+      "question": "How many neurons are still available in my account today?",
+      "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+      "retrieved": [
+        {
+          "id": "CF-QUOTA",
+          "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+          "finding": "The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation."
+        },
+        {
+          "id": "APPLE-TEAM",
+          "url": "https://developer.apple.com/help/account/basics/about-your-developer-account/",
+          "finding": "A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance."
+        }
+      ],
+      "model": "qwen2.5-3b-instruct-q4_k_m",
+      "modelSHA256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "semanticSupportVerified": false,
+      "status": "abstained",
+      "answer": "UNKNOWN",
+      "source": null,
+      "rawOutput": "UNKNOWN",
+      "requestID": "chatcmpl-R7YZ3F3WCOk3cMHkKXMQeQrP0opQLJ4o",
+      "latencyMs": 642,
+      "prompt": "Use only the supplied project-source summaries. Answer the question with the shortest exact phrase that gives the requested fact, followed by its passage label. If the passages do not give the requested fact, answer UNKNOWN. Return only that answer.\n\n[A] The free allocation is 10,000 neurons per day, resetting at 00:00 UTC. The Workers Paid plan can incur charges above that allocation.\n[B] A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance.\n\nQuestion: How many neurons are still available in my account today?"
+    },
+    {
+      "id": "unmeasured-temperature",
+      "passed": true,
+      "expected": "UNKNOWN",
+      "expectedSource": null,
+      "question": "What exact temperature did this physical iPhone reach in the last model run?",
+      "registerRevision": "a13f2314652f5243296acf8d8c4d74e0349eda1b",
+      "retrieved": [
+        {
+          "id": "APPLE-DEVICE",
+          "url": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
+          "finding": "Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured."
+        },
+        {
+          "id": "APPLE-TEAM",
+          "url": "https://developer.apple.com/help/account/basics/about-your-developer-account/",
+          "finding": "A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance."
+        }
+      ],
+      "model": "qwen2.5-3b-instruct-q4_k_m",
+      "modelSHA256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "semanticSupportVerified": false,
+      "status": "abstained",
+      "answer": "UNKNOWN",
+      "source": null,
+      "rawOutput": "UNKNOWN",
+      "requestID": "chatcmpl-qN0EEXGXMPh08gxhdhgyhZzxnKdTW7j5",
+      "latencyMs": 977,
+      "prompt": "Use only the supplied project-source summaries. Answer the question with the shortest exact phrase that gives the requested fact, followed by its passage label. If the passages do not give the requested fact, answer UNKNOWN. Return only that answer.\n\n[A] Simulator performance can differ from actual hardware. Xcode can launch the app on a paired physical device after signing is configured.\n[B] A personal Apple Account can test apps on the owner's devices through Xcode. Personal Team provisioning profiles expire seven days after issuance.\n\nQuestion: What exact temperature did this physical iPhone reach in the last model run?"
+    }
+  ],
+  "total": 5,
+  "passed": 3
+}

@@ -1,0 +1,20 @@
+{
+  "workflowRun": 44981550178,
+  "job": 137083021356,
+  "artifactID": 14738847528,
+  "artifact": "pocket-ai-lab-device-kit",
+  "archiveBytes": 16259269,
+  "archiveSHA256": "4228ce40792d78974fe238645b8e00afd58e4e6e23695ac2ef3e57b30a80bb73",
+  "tarSHA256": "03e255160d8279d8cad934bff4af57b4bd7c8b2f8f4d8ad939f1c659a4c8bf19",
+  "entries": 219,
+  "builtCommit": "395484161747145b498f18c7f6e57660a849b9be",
+  "featureHead": "7fc3b96e19b3f7a1fc5ccea1fa769ff99da6bc74",
+  "identicalTree": "d1e7250831bc33cfa9ec72c1bb0f73859df634d1",
+  "caseSuiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+  "verifiedAfterCleanExtraction": "xcodebuild build for generic/platform=iOS with signing disabled, followed by an exact comparison of the app-bundled suite",
+  "signingCredentialsIncluded": false,
+  "modelWeightsIncluded": false,
+  "physicalDeviceRunObserved": false,
+  "githubArtifact": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44981550178/artifacts/14738847528",
+  "githubExpiresAt": "2026-11-29T04:08:51Z"
+}

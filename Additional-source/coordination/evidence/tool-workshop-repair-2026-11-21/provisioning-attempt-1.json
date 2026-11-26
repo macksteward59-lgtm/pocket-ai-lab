@@ -1,0 +1,87 @@
+{
+  "head": "1b81519c5eeb9b465fc0feae1d934dd03c28f38b",
+  "run": 44877989061,
+  "job": {
+    "id": 136767096493,
+    "name": "live-model",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 44877989061,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/setup-node@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run npm install --ignore-scripts --package-lock=false",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Install the exact sandbox image already tested",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Build server from the existing verified llama.cpp pin",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 6
+      },
+      {
+        "name": "Acquire and hash the existing DeepSeek artifact",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 7
+      },
+      {
+        "name": "Run the frozen model-selected candidate-revision experiment",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 8
+      },
+      {
+        "name": "Run actions/upload-artifact@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Post Run actions/setup-node@v4",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Post Run actions/checkout@v4",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19
+      }
+    ]
+  },
+  "interpretation": "Server build failed before model acquisition/inference. No model result exists for this provisioning attempt."
+}

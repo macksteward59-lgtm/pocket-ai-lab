@@ -1,0 +1,81 @@
+{
+  "suiteID": "pocket-passage-evidence",
+  "suiteVersion": "1.0.0",
+  "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+  "model": "qwen2.5-1.5b-instruct-q4_k_m",
+  "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+  "host": "Linux/x86_64",
+  "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+  "provider": "llama.cpp /v1/chat/completions",
+  "cases": [
+    {
+      "caseID": "published-reset",
+      "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+      "expected": "00:00 UTC [B]",
+      "passed": true,
+      "output": "00:00 UTC [B]",
+      "requestID": "chatcmpl-LRwyscUs0PdnmRNFJkMFlcSnlkktc9az",
+      "finishReason": "stop",
+      "completionTokens": 10,
+      "latencyMs": 1365
+    },
+    {
+      "caseID": "published-allowance",
+      "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+      "expected": "10,000 neurons [A]",
+      "passed": true,
+      "output": "10,000 neurons [A]",
+      "requestID": "chatcmpl-xTjp5NdtxPitibtxx1TBr7qiVqgbcKQF",
+      "finishReason": "stop",
+      "completionTokens": 11,
+      "latencyMs": 920
+    },
+    {
+      "caseID": "account-unknown",
+      "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+      "expected": "UNKNOWN",
+      "passed": true,
+      "output": "UNKNOWN",
+      "requestID": "chatcmpl-QTqsPZHOwuqy9QcPBw3dgYS8NzBDJdZh",
+      "finishReason": "stop",
+      "completionTokens": 2,
+      "latencyMs": 295
+    },
+    {
+      "caseID": "account-observed",
+      "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+      "expected": "6,240 neurons [B]",
+      "passed": false,
+      "output": "6,240 neurons",
+      "requestID": "chatcmpl-X7Mexor7axJaoRwp6XSGt4nLuHMMEKfo",
+      "finishReason": "stop",
+      "completionTokens": 7,
+      "latencyMs": 500
+    },
+    {
+      "caseID": "account-corrected",
+      "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+      "expected": "4,910 neurons [A]",
+      "passed": false,
+      "output": "4,910 neurons",
+      "requestID": "chatcmpl-B5Ze5ZZ3GmzYvUit5z20I0TvYtavXNZ5",
+      "finishReason": "stop",
+      "completionTokens": 7,
+      "latencyMs": 781
+    },
+    {
+      "caseID": "handset-unknown",
+      "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+      "expected": "UNKNOWN",
+      "passed": true,
+      "output": "UNKNOWN",
+      "requestID": "chatcmpl-iMOiMQCqUE1PZqZrHx41l4Y2KUmAnBKg",
+      "finishReason": "stop",
+      "completionTokens": 2,
+      "latencyMs": 400
+    }
+  ],
+  "passed": 4,
+  "total": 6,
+  "allPassed": false
+}

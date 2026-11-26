@@ -1,0 +1,33 @@
+name: Cloudflare public website
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cloudflare/website/**'
+      - 'apps/web/index.html'
+      - 'apps/web/styles.css'
+      - 'apps/web/manifest.webmanifest'
+      - 'apps/web/icon.svg'
+      - '.github/workflows/cloudflare-website-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/website
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm run check
+      - run: npm test

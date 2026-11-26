@@ -1,0 +1,946 @@
+{
+  "source": "local Linux CPU run",
+  "executedRequests": 54,
+  "totals": {
+    "unrestricted": {
+      "exact": 8,
+      "total": 18,
+      "containsExpectedValueAndCorrectLabel": 3,
+      "supported": 12,
+      "exactAbstentions": 5,
+      "unsupported": 6
+    },
+    "citation-grammar": {
+      "exact": 9,
+      "total": 18,
+      "containsExpectedValueAndCorrectLabel": 11,
+      "supported": 12,
+      "exactAbstentions": 6,
+      "unsupported": 6
+    },
+    "quoted-span": {
+      "exact": 9,
+      "total": 18,
+      "containsExpectedValueAndCorrectLabel": 11,
+      "supported": 12,
+      "exactAbstentions": 6,
+      "unsupported": 6
+    }
+  },
+  "summary": [
+    {
+      "suite": "pocket-passage-evidence",
+      "mode": "unrestricted",
+      "passed": 4,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 2,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-evidence-unrestricted.json"
+    },
+    {
+      "suite": "pocket-passage-evidence",
+      "mode": "citation-grammar",
+      "passed": 4,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 4,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-evidence-citation-grammar.json"
+    },
+    {
+      "suite": "pocket-passage-evidence",
+      "mode": "quoted-span",
+      "passed": 4,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 4,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-evidence-quoted-span.json"
+    },
+    {
+      "suite": "pocket-passage-heldout",
+      "mode": "unrestricted",
+      "passed": 2,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 0,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-heldout-unrestricted.json"
+    },
+    {
+      "suite": "pocket-passage-heldout",
+      "mode": "citation-grammar",
+      "passed": 2,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 3,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-heldout-citation-grammar.json"
+    },
+    {
+      "suite": "pocket-passage-heldout",
+      "mode": "quoted-span",
+      "passed": 2,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 3,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-heldout-quoted-span.json"
+    },
+    {
+      "suite": "pocket-passage-transfer",
+      "mode": "unrestricted",
+      "passed": 2,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 1,
+      "absent": 2,
+      "exactAbstentions": 1,
+      "report": "pocket-passage-transfer-unrestricted.json"
+    },
+    {
+      "suite": "pocket-passage-transfer",
+      "mode": "citation-grammar",
+      "passed": 3,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 4,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-transfer-citation-grammar.json"
+    },
+    {
+      "suite": "pocket-passage-transfer",
+      "mode": "quoted-span",
+      "passed": 3,
+      "total": 6,
+      "supported": 4,
+      "supportedOutputsContainingExpectedValueAndEndingInCorrectLabel": 4,
+      "absent": 2,
+      "exactAbstentions": 2,
+      "report": "pocket-passage-transfer-quoted-span.json"
+    }
+  ],
+  "runs": [
+    {
+      "filename": "pocket-passage-evidence-unrestricted.json",
+      "fileSHA256": "54a4d37a9281e6e83fba5d8180141812878ccf669c891d1b0030ba9026acd08c",
+      "run": {
+        "suiteID": "pocket-passage-evidence",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "published-reset",
+            "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+            "expected": "00:00 UTC [B]",
+            "passed": true,
+            "output": "00:00 UTC [B]",
+            "requestID": "chatcmpl-yLb5knG9KMCJgsvbMOo1lkFd7leh4bSp",
+            "finishReason": "stop",
+            "completionTokens": 10,
+            "latencyMs": 2166
+          },
+          {
+            "caseID": "published-allowance",
+            "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+            "expected": "10,000 neurons [A]",
+            "passed": true,
+            "output": "10,000 neurons [A]",
+            "requestID": "chatcmpl-Ta4sxxPgPqgvMaRFiOkBBt45HPcHARZh",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1670
+          },
+          {
+            "caseID": "account-unknown",
+            "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-q5uo0bRiLXVZ4P5MG2exwnJ6E5pxTbOK",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 480
+          },
+          {
+            "caseID": "account-observed",
+            "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+            "expected": "6,240 neurons [B]",
+            "passed": false,
+            "output": "6,240 neurons",
+            "requestID": "chatcmpl-o94AS9eC9SakzI2RRMt1WrWeiTVN7L6Y",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 749
+          },
+          {
+            "caseID": "account-corrected",
+            "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+            "expected": "4,910 neurons [A]",
+            "passed": false,
+            "output": "4,910 neurons",
+            "requestID": "chatcmpl-61xDbR8VsAhHgtV8KCG9oJjGuS3mpW54",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 837
+          },
+          {
+            "caseID": "handset-unknown",
+            "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-zuetLj4sVMHZVDlMtF46DGbgZjoqh4uL",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 479
+          }
+        ],
+        "generationFormat": "unrestricted",
+        "passed": 4,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-evidence-citation-grammar.json",
+      "fileSHA256": "6c3f6d259c728b254bacbf6f7e0f5d4f813a1061e18e573f1473dfe113436914",
+      "run": {
+        "suiteID": "pocket-passage-evidence",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "published-reset",
+            "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+            "expected": "00:00 UTC [B]",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "00:00 UTC [B]",
+            "requestID": "chatcmpl-GfRegJYBlBRTx6pfIacLC76eGQjUxt9a",
+            "finishReason": "stop",
+            "completionTokens": 10,
+            "latencyMs": 1770
+          },
+          {
+            "caseID": "published-allowance",
+            "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+            "expected": "10,000 neurons [A]",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "10,000 neurons [A]",
+            "requestID": "chatcmpl-OBiTr18APOrPWkh1kyEDq0rcaEQ4qlUv",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1172
+          },
+          {
+            "caseID": "account-unknown",
+            "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-kKZnjq5metrPSjMAci6x7KqeMao1Utou",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 404
+          },
+          {
+            "caseID": "account-observed",
+            "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+            "expected": "6,240 neurons [B]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "6,240 neurons remain in account LARCH at the time of the supplied record. [B]",
+            "requestID": "chatcmpl-a9yJrzNBXgeZ4JzmtisucZMu4PlB9b4u",
+            "finishReason": "stop",
+            "completionTokens": 23,
+            "latencyMs": 2004
+          },
+          {
+            "caseID": "account-corrected",
+            "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+            "expected": "4,910 neurons [A]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "4,910 neurons remain in account LARCH at the time of the supplied record. [A]",
+            "requestID": "chatcmpl-kzUIHY6T6fSBI22bBZ159B7r9DBEQNfu",
+            "finishReason": "stop",
+            "completionTokens": 23,
+            "latencyMs": 2128
+          },
+          {
+            "caseID": "handset-unknown",
+            "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-Fog35zeAZWxA4FDAOlUIWMXNtJTuWGnP",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 525
+          }
+        ],
+        "generationFormat": "citation-grammar",
+        "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+        "passed": 4,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-evidence-quoted-span.json",
+      "fileSHA256": "55fc2dd6c59f6dbfbaf043697e47175cc9857273395c99f8353d44449c797bce",
+      "run": {
+        "suiteID": "pocket-passage-evidence",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "published-reset",
+            "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+            "expected": "00:00 UTC [B]",
+            "passed": true,
+            "grammarSHA256": "36a295b586a87bdfbdc5680ff3ee16a0e12fb6808f00d5913c9dfaf85b10274e",
+            "output": "00:00 UTC [B]",
+            "requestID": "chatcmpl-vnx2fxw4nwwK5gdPkrJ87tfKCArMOwAO",
+            "finishReason": "stop",
+            "completionTokens": 10,
+            "latencyMs": 1684
+          },
+          {
+            "caseID": "published-allowance",
+            "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+            "expected": "10,000 neurons [A]",
+            "passed": true,
+            "grammarSHA256": "0dfc984edfb56dab73fea677b8cf06094f2a04efd1f06303d21b3fcd61bd6b7a",
+            "output": "10,000 neurons [A]",
+            "requestID": "chatcmpl-9P6b191RLRReQ3on87MNwl2pLH0L4oMx",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1264
+          },
+          {
+            "caseID": "account-unknown",
+            "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "93a9850af327b89c0dc979d80e1b6485b49fd41970dd12ae252e3ce2e049c973",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-7p08oZXc3ibFNeWpIO1Lg4YTxIDmeKaa",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 417
+          },
+          {
+            "caseID": "account-observed",
+            "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+            "expected": "6,240 neurons [B]",
+            "passed": false,
+            "grammarSHA256": "e83521f7ff8d81389f435e7741333318d86ead2d72e85a3c3becb4aef01ee1a0",
+            "output": "6,240 neurons remaining. [B]",
+            "requestID": "chatcmpl-rwrhO3YcsE1dv9Y8VQUSIVO7JVB9i2zv",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1378
+          },
+          {
+            "caseID": "account-corrected",
+            "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+            "expected": "4,910 neurons [A]",
+            "passed": false,
+            "grammarSHA256": "19fbfbef2fd8b400dd0d18e548c9b9a668cdfd45ce6d8587c32feb6b0701df2f",
+            "output": "4,910 neurons remaining. [A]",
+            "requestID": "chatcmpl-IR81UDUrjQRw4DJDGq6yidqQl6RxWZOc",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1574
+          },
+          {
+            "caseID": "handset-unknown",
+            "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "00d12abf6018f974a4864a64160a94296666f557ccf1bab4808cd48623272c6b",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-ieWr94Frzd9W8Mfff7uDtkG8p9k9qnlo",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 647
+          }
+        ],
+        "generationFormat": "quoted-span",
+        "passed": 4,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-heldout-unrestricted.json",
+      "fileSHA256": "9df03a02158d805b51d0748e3a279f4c9fb037a47d826d523ca23040a08e56f6",
+      "run": {
+        "suiteID": "pocket-passage-heldout",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "d8ed07e1e95c942f864ea1224702bbc7302e4970b443149f0ed1295799d4ba37",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "accepted-blue",
+            "promptSHA256": "d087824d14c961c906cf8bb0bf71829172dbe57a9a97f2628b23a1b525b3b1a6",
+            "expected": "07:14 UTC [A]",
+            "passed": false,
+            "output": "[B]",
+            "requestID": "chatcmpl-lTgMplLTU2JgDeDV1EmwYpHWDbqfFUZJ",
+            "finishReason": "stop",
+            "completionTokens": 3,
+            "latencyMs": 1099
+          },
+          {
+            "caseID": "accepted-gold",
+            "promptSHA256": "a7949940dccbb068a2e9ea1c42f2764615c32bc8e2e42b0c45d69609a9844673",
+            "expected": "09:41 UTC [B]",
+            "passed": false,
+            "output": "[B]",
+            "requestID": "chatcmpl-lekMh7sYmKwdnI2COBZUxwhbjaGjWIE2",
+            "finishReason": "stop",
+            "completionTokens": 3,
+            "latencyMs": 261
+          },
+          {
+            "caseID": "tray-count",
+            "promptSHA256": "8d4b517e2728fdfe72195da17833baab77004db4560146dc487e4fea6c7141e4",
+            "expected": "27 tiles [B]",
+            "passed": false,
+            "output": "[27]",
+            "requestID": "chatcmpl-K34AG1GnhCfk5WDoPvfFcpW74t997fAI",
+            "finishReason": "stop",
+            "completionTokens": 5,
+            "latencyMs": 460
+          },
+          {
+            "caseID": "absent-tray",
+            "promptSHA256": "f383bf59e365862c0360c9907287a80098cccdad4f4fcca2d8fb4adc9c1810a2",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-ag5z5scGMwOU0MKBGyLtsXO4pk0Gi2K3",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 182
+          },
+          {
+            "caseID": "corrected-color",
+            "promptSHA256": "5428803044b8cf7f74a7fbc4a8a0e7c07da8a735d1986d354ad1a351769fef29",
+            "expected": "copper [A]",
+            "passed": false,
+            "output": "The color of the replacement tag for bin N is copper.",
+            "requestID": "chatcmpl-rN307oBASVFfpXTbxbCTj21xjeRoDXio",
+            "finishReason": "stop",
+            "completionTokens": 13,
+            "latencyMs": 843
+          },
+          {
+            "caseID": "missing-property",
+            "promptSHA256": "aeea8c6f742f48441ad7b9ccb316c2bb43f37c7ccd19d2c033c029da94077a0e",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-WC1OLH8NBXdzaXBPmqfkJXqeFPcFKgvy",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 399
+          }
+        ],
+        "generationFormat": "unrestricted",
+        "passed": 2,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-heldout-citation-grammar.json",
+      "fileSHA256": "188ea8b58d2dddb9dfe9f9242564a7a9906624b16188100d4f323b31562307db",
+      "run": {
+        "suiteID": "pocket-passage-heldout",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "d8ed07e1e95c942f864ea1224702bbc7302e4970b443149f0ed1295799d4ba37",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "accepted-blue",
+            "promptSHA256": "d087824d14c961c906cf8bb0bf71829172dbe57a9a97f2628b23a1b525b3b1a6",
+            "expected": "07:14 UTC [A]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "07:14 UTC. [A]",
+            "requestID": "chatcmpl-psK2gUmS3R014FvHn4eYEcnd4NXNzeR1",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1504
+          },
+          {
+            "caseID": "accepted-gold",
+            "promptSHA256": "a7949940dccbb068a2e9ea1c42f2764615c32bc8e2e42b0c45d69609a9844673",
+            "expected": "09:41 UTC [B]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "09:41 UTC. [B]",
+            "requestID": "chatcmpl-I4SFy597b0YiOSgXq6BWizIBWGD7XA0H",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 897
+          },
+          {
+            "caseID": "tray-count",
+            "promptSHA256": "8d4b517e2728fdfe72195da17833baab77004db4560146dc487e4fea6c7141e4",
+            "expected": "27 tiles [B]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "27 [B]",
+            "requestID": "chatcmpl-DAZdVuMsj3WJraDfmSqkU73SV3d1Nd9c",
+            "finishReason": "stop",
+            "completionTokens": 6,
+            "latencyMs": 654
+          },
+          {
+            "caseID": "absent-tray",
+            "promptSHA256": "f383bf59e365862c0360c9907287a80098cccdad4f4fcca2d8fb4adc9c1810a2",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-Ai7j0IbsfUxvMY9ftS4mXU0f0h5XET1i",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 222
+          },
+          {
+            "caseID": "corrected-color",
+            "promptSHA256": "5428803044b8cf7f74a7fbc4a8a0e7c07da8a735d1986d354ad1a351769fef29",
+            "expected": "copper [A]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "The color of the replacement tag for bin N is copper. [A]",
+            "requestID": "chatcmpl-cY8Dzoh9ADBYwkwmOi904XpBCarRHK7M",
+            "finishReason": "stop",
+            "completionTokens": 16,
+            "latencyMs": 1042
+          },
+          {
+            "caseID": "missing-property",
+            "promptSHA256": "aeea8c6f742f48441ad7b9ccb316c2bb43f37c7ccd19d2c033c029da94077a0e",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-wcwWcnZ3NT6Zj9JIK0tdAcyxAfD9aGs9",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 322
+          }
+        ],
+        "generationFormat": "citation-grammar",
+        "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+        "passed": 2,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-heldout-quoted-span.json",
+      "fileSHA256": "e30542c006b8a74878f741f99f1fd194a609d2b68898e53d02a800c85120916e",
+      "run": {
+        "suiteID": "pocket-passage-heldout",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "d8ed07e1e95c942f864ea1224702bbc7302e4970b443149f0ed1295799d4ba37",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "accepted-blue",
+            "promptSHA256": "d087824d14c961c906cf8bb0bf71829172dbe57a9a97f2628b23a1b525b3b1a6",
+            "expected": "07:14 UTC [A]",
+            "passed": false,
+            "grammarSHA256": "1fe8519fd4528c273c7e076aa06c6558ee452a24011841c7d9a18187bebca831",
+            "output": "07:14 UTC. [A]",
+            "requestID": "chatcmpl-8EJYvAqB0l3We1zQ0fTziBR5UsadHQWY",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1756
+          },
+          {
+            "caseID": "accepted-gold",
+            "promptSHA256": "a7949940dccbb068a2e9ea1c42f2764615c32bc8e2e42b0c45d69609a9844673",
+            "expected": "09:41 UTC [B]",
+            "passed": false,
+            "grammarSHA256": "1fe8519fd4528c273c7e076aa06c6558ee452a24011841c7d9a18187bebca831",
+            "output": "09:41 UTC. [B]",
+            "requestID": "chatcmpl-UOSUHdaUxUqFe5CIET6T07sg3c58Y3Au",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1221
+          },
+          {
+            "caseID": "tray-count",
+            "promptSHA256": "8d4b517e2728fdfe72195da17833baab77004db4560146dc487e4fea6c7141e4",
+            "expected": "27 tiles [B]",
+            "passed": false,
+            "grammarSHA256": "2c4d6c083b2ce46482b41d1ce32df0dfd98f6e020e6ee62d91cafbc1f9e5a0e5",
+            "output": "27 [B]",
+            "requestID": "chatcmpl-GWCoi2CSuRT7haE8FbgpTkZzxLFyIt6H",
+            "finishReason": "stop",
+            "completionTokens": 6,
+            "latencyMs": 724
+          },
+          {
+            "caseID": "absent-tray",
+            "promptSHA256": "f383bf59e365862c0360c9907287a80098cccdad4f4fcca2d8fb4adc9c1810a2",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "2c4d6c083b2ce46482b41d1ce32df0dfd98f6e020e6ee62d91cafbc1f9e5a0e5",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-ugoIB30riBeH8k43EEUUawuvRIplzB6f",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 211
+          },
+          {
+            "caseID": "corrected-color",
+            "promptSHA256": "5428803044b8cf7f74a7fbc4a8a0e7c07da8a735d1986d354ad1a351769fef29",
+            "expected": "copper [A]",
+            "passed": false,
+            "grammarSHA256": "cfca54b9f0b1759ed076f1f5f5ad4698337b2dc1a4be101c2fbc7e8540dcc6d3",
+            "output": "The replacement tag for bin N is copper. [A]",
+            "requestID": "chatcmpl-xDTl3NGQZiGtfiWUYwPKeEx9PB5uubbn",
+            "finishReason": "stop",
+            "completionTokens": 13,
+            "latencyMs": 1016
+          },
+          {
+            "caseID": "missing-property",
+            "promptSHA256": "aeea8c6f742f48441ad7b9ccb316c2bb43f37c7ccd19d2c033c029da94077a0e",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "1fe8519fd4528c273c7e076aa06c6558ee452a24011841c7d9a18187bebca831",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-fM5P1Ggl1VqUgzsU6S3Ql40uD3WUo3t1",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 477
+          }
+        ],
+        "generationFormat": "quoted-span",
+        "passed": 2,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-transfer-unrestricted.json",
+      "fileSHA256": "74cf301f8c260a1b22dbb2413822e149e2b7c270c0bf7de265a2959509363491",
+      "run": {
+        "suiteID": "pocket-passage-transfer",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "0e7d87a079bb85a7b7098aab1bf48c7d8ae3fc917f3c35e4b1b18efef3b7efca",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "west-bin",
+            "promptSHA256": "646d1f146a7927fa534d82b346efe35dbc7cca1e005e3d51b5644c13d3822397",
+            "expected": "16 washers [B]",
+            "passed": false,
+            "output": "The west bin contains 16 washers.",
+            "requestID": "chatcmpl-c85LJx84fzxglZ1Rl3Kz1mx61mSKg92l",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1298
+          },
+          {
+            "caseID": "new-train",
+            "promptSHA256": "588b33a4dea937efc7594aff511a00b63f43e61e7facc772a6ed977b043932a3",
+            "expected": "14:08 [A]",
+            "passed": true,
+            "output": "14:08 [A]",
+            "requestID": "chatcmpl-MmNvPakDYjPLvptvXisLWt8nOWZwqDbe",
+            "finishReason": "stop",
+            "completionTokens": 9,
+            "latencyMs": 840
+          },
+          {
+            "caseID": "west-color",
+            "promptSHA256": "5069328ac0b195510f4a1f2aa3d8d36f1a04f8f52647b14f9d4df83d7cec642c",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-0vQslbhLRTOAbaMnAtc1hNGeRI9WA8RQ",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 365
+          },
+          {
+            "caseID": "north-code",
+            "promptSHA256": "1b8c78bbcec8d3dfd4ebb5d10f440295219ac74fd32f4d1e5405538c4dac4e45",
+            "expected": "P4N [A]",
+            "passed": false,
+            "output": "The north sample uses batch code P4N.",
+            "requestID": "chatcmpl-5Mfx7SXgLmAwTZyU5MCK9sY4eNvAjDpW",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 922
+          },
+          {
+            "caseID": "south-code",
+            "promptSHA256": "93b6a4bcc7794941b4f835e41d32d01d844a1851014b4dde4a9aa38663270535",
+            "expected": "Q7S [B]",
+            "passed": false,
+            "output": "[B]",
+            "requestID": "chatcmpl-M6PL9WDDwoBVsG8SXfo2xB1hHe28ZuBp",
+            "finishReason": "stop",
+            "completionTokens": 3,
+            "latencyMs": 236
+          },
+          {
+            "caseID": "absent-train",
+            "promptSHA256": "5e2a096901c220ac8ee6420119bba5051f8e0f8c5784671a9a87263adb10e925",
+            "expected": "UNKNOWN",
+            "passed": false,
+            "output": "[B]",
+            "requestID": "chatcmpl-v10VU6t9rkHMCu7nxkpdbtbVZlkGM5kJ",
+            "finishReason": "stop",
+            "completionTokens": 3,
+            "latencyMs": 496
+          }
+        ],
+        "generationFormat": "unrestricted",
+        "passed": 2,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-transfer-citation-grammar.json",
+      "fileSHA256": "d7a5b99238c8d88def4d90596f653dab54c152f8622e9f332b94ae70339f3538",
+      "run": {
+        "suiteID": "pocket-passage-transfer",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "0e7d87a079bb85a7b7098aab1bf48c7d8ae3fc917f3c35e4b1b18efef3b7efca",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "west-bin",
+            "promptSHA256": "646d1f146a7927fa534d82b346efe35dbc7cca1e005e3d51b5644c13d3822397",
+            "expected": "16 washers [B]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "The west bin contains 16 washers. [B]",
+            "requestID": "chatcmpl-GoFCmcP5k16cKFIcRxrlmd1TCgdgEFrM",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1754
+          },
+          {
+            "caseID": "new-train",
+            "promptSHA256": "588b33a4dea937efc7594aff511a00b63f43e61e7facc772a6ed977b043932a3",
+            "expected": "14:08 [A]",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "14:08 [A]",
+            "requestID": "chatcmpl-XBPWlfPOqAP1vhsSJnHDEnlyXj3eg3s9",
+            "finishReason": "stop",
+            "completionTokens": 9,
+            "latencyMs": 790
+          },
+          {
+            "caseID": "west-color",
+            "promptSHA256": "5069328ac0b195510f4a1f2aa3d8d36f1a04f8f52647b14f9d4df83d7cec642c",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-hDVsulEnp2DSU2LzVrYr2I5JOxGxSU8N",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 344
+          },
+          {
+            "caseID": "north-code",
+            "promptSHA256": "1b8c78bbcec8d3dfd4ebb5d10f440295219ac74fd32f4d1e5405538c4dac4e45",
+            "expected": "P4N [A]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "The north sample uses batch code P4N. [A]",
+            "requestID": "chatcmpl-fvOqr7dHF2LVz6pVtmbXoKWzcIimA0sj",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1096
+          },
+          {
+            "caseID": "south-code",
+            "promptSHA256": "93b6a4bcc7794941b4f835e41d32d01d844a1851014b4dde4a9aa38663270535",
+            "expected": "Q7S [B]",
+            "passed": false,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "The south sample uses batch code Q7S. [B]",
+            "requestID": "chatcmpl-m7dfB2P7Zs2TyjJfQfOpcqKreririmyA",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 814
+          },
+          {
+            "caseID": "absent-train",
+            "promptSHA256": "5e2a096901c220ac8ee6420119bba5051f8e0f8c5784671a9a87263adb10e925",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-qC9PKoG5qR3kwCPtqe92KBF7P1DDyCdp",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 460
+          }
+        ],
+        "generationFormat": "citation-grammar",
+        "grammarSHA256": "e8c660cb25be5faf854a19ee411644cca2b2e92c9ab1cb00236bd39da4e2ab1e",
+        "passed": 3,
+        "total": 6,
+        "allPassed": false
+      }
+    },
+    {
+      "filename": "pocket-passage-transfer-quoted-span.json",
+      "fileSHA256": "022441d898c1159e4c8203d77f60e55d8e56c79b33562d42279b042e5a4c323d",
+      "run": {
+        "suiteID": "pocket-passage-transfer",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "0e7d87a079bb85a7b7098aab1bf48c7d8ae3fc917f3c35e4b1b18efef3b7efca",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "west-bin",
+            "promptSHA256": "646d1f146a7927fa534d82b346efe35dbc7cca1e005e3d51b5644c13d3822397",
+            "expected": "16 washers [B]",
+            "passed": false,
+            "grammarSHA256": "5c20a2a1cd03b84fd345d507d954396614c8b66e3a1c69f9e51d8dd80cdfa8b6",
+            "output": "The west bin contains 16 washers. [B]",
+            "requestID": "chatcmpl-1YWCJE6J8k7bCaJTijpRh8Ud6GrSL9d2",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1797
+          },
+          {
+            "caseID": "new-train",
+            "promptSHA256": "588b33a4dea937efc7594aff511a00b63f43e61e7facc772a6ed977b043932a3",
+            "expected": "14:08 [A]",
+            "passed": true,
+            "grammarSHA256": "b7dd3e85ce607d2c359229136ae2f7c574dca681d804b011cb6fcbcdece38009",
+            "output": "14:08 [A]",
+            "requestID": "chatcmpl-YhHVBZgMSDYHVOmrf6oeBycRmyrVpCkt",
+            "finishReason": "stop",
+            "completionTokens": 9,
+            "latencyMs": 974
+          },
+          {
+            "caseID": "west-color",
+            "promptSHA256": "5069328ac0b195510f4a1f2aa3d8d36f1a04f8f52647b14f9d4df83d7cec642c",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "5c20a2a1cd03b84fd345d507d954396614c8b66e3a1c69f9e51d8dd80cdfa8b6",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-D8ojGgCt51vnaUEDdJpNoJ7DEn5PJqzk",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 408
+          },
+          {
+            "caseID": "north-code",
+            "promptSHA256": "1b8c78bbcec8d3dfd4ebb5d10f440295219ac74fd32f4d1e5405538c4dac4e45",
+            "expected": "P4N [A]",
+            "passed": false,
+            "grammarSHA256": "d4e5f586833a78f356c49cd95b48902f14ceaefcb712aac2e1e4379a9002b90b",
+            "output": "The north sample uses batch code P4N. [A]",
+            "requestID": "chatcmpl-Kircr6uGNntPhYp6gQqJhrositlL9Zhw",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1224
+          },
+          {
+            "caseID": "south-code",
+            "promptSHA256": "93b6a4bcc7794941b4f835e41d32d01d844a1851014b4dde4a9aa38663270535",
+            "expected": "Q7S [B]",
+            "passed": false,
+            "grammarSHA256": "d4e5f586833a78f356c49cd95b48902f14ceaefcb712aac2e1e4379a9002b90b",
+            "output": "The south sample uses batch code Q7S. [B]",
+            "requestID": "chatcmpl-EwgH0gpvaZm2KiPeIn30siObSnCM9vRt",
+            "finishReason": "stop",
+            "completionTokens": 14,
+            "latencyMs": 1027
+          },
+          {
+            "caseID": "absent-train",
+            "promptSHA256": "5e2a096901c220ac8ee6420119bba5051f8e0f8c5784671a9a87263adb10e925",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "grammarSHA256": "b7dd3e85ce607d2c359229136ae2f7c574dca681d804b011cb6fcbcdece38009",
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-O36oqAzc5KMpeOR3WQc0WE9AJ9Rdd7XQ",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 588
+          }
+        ],
+        "generationFormat": "quoted-span",
+        "passed": 3,
+        "total": 6,
+        "allPassed": false
+      }
+    }
+  ]
+}

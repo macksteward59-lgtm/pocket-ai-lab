@@ -1,0 +1,482 @@
+/**
+ * llama-server HTTP transport.
+ * Speaks the native /completion API and the OpenAI-compatible chat API.
+ * No cloud SDK and no native addon.
+ */
+
+import type {
+  LlamaCppBackend,
+  LlamaCppCompletionParams,
+  LlamaCppCompletionResult,
+  LlamaCppServerInfo
+} from "./backend";
+import type { LlamaCppProviderConfig } from "./config";
+import { isAbortError, LlamaCppInferenceError } from "./errors";
+
+const MAX_RESPONSE_BYTES = 2_000_000;
+
+export class HttpLlamaCppBackend implements LlamaCppBackend {
+  constructor(private readonly config: Pick<LlamaCppProviderConfig, "baseUrl" | "api">) {}
+
+  /** null = not probed yet; false = server has no /apply-template route. */
+  private templateSupported: boolean | null = null;
+
+  async complete(params: LlamaCppCompletionParams, signal: AbortSignal): Promise<LlamaCppCompletionResult> {
+    assertToolCallingMode(this.config.api, params, false);
+    const path = this.config.api === "openai-chat" ? "/v1/chat/completions" : "/completion";
+    const prepared = await this.prepare(params, signal);
+    const response = await this.post(path, buildBody(this.config.api, prepared, false), signal);
+    const body = await readCheckedBody(response, signal, path);
+    return readCompletion(this.config.api, body);
+  }
+
+  /**
+   * Streams tokens from llama-server. Each SSE event's text is passed to
+   * onDelta; the full text is returned for schema validation afterwards.
+   */
+  async completeStream(
+    params: LlamaCppCompletionParams,
+    signal: AbortSignal,
+    onDelta: (text: string) => void
+  ): Promise<LlamaCppCompletionResult> {
+    assertToolCallingMode(this.config.api, params, true);
+    const path = this.config.api === "openai-chat" ? "/v1/chat/completions" : "/completion";
+    const prepared = await this.prepare(params, signal);
+    const response = await this.post(path, buildBody(this.config.api, prepared, true), signal);
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new LlamaCppInferenceError(
+        "http_error",
+        `llama.cpp backend returned HTTP ${response.status} for ${path}`,
+        { status: response.status }
+      );
+    }
+    const type = response.headers.get("content-type") ?? "";
+    if (!type.includes("text/event-stream")) {
+      // Some servers ignore stream:true. Read the single JSON body instead.
+      const body = await readCheckedBody(response, signal, path);
+      const content = readContent(this.config.api, body);
+      if (content) onDelta(content);
+      return { content };
+    }
+    let content = "";
+    await readEventStream(response, signal, data => {
+      if (data === "[DONE]") return true;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(data);
+      } catch {
+        return false;
+      }
+      const piece = this.config.api === "openai-chat" ? readChatDelta(parsed) : readCompletionDelta(parsed);
+      if (piece) {
+        content += piece;
+        if (content.length > MAX_RESPONSE_BYTES) {
+          throw new LlamaCppInferenceError(
+            "malformed_response",
+            `llama.cpp response exceeded ${MAX_RESPONSE_BYTES} bytes`
+          );
+        }
+        onDelta(piece);
+      }
+      return isRecord(parsed) && parsed.stop === true;
+    });
+    return { content };
+  }
+
+  /** Reads loaded-model metadata from GET /props. Missing fields stay undefined. */
+  async info(signal: AbortSignal): Promise<LlamaCppServerInfo> {
+    const url = endpoint(this.config.baseUrl, "/props");
+    let response: Response;
+    try {
+      response = await fetch(url, { method: "GET", signal, headers: { accept: "application/json" } });
+    } catch (error) {
+      throw mapTransportError(error, url);
+    }
+    const body = await readCheckedBody(response, signal, "/props");
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      return {};
+    }
+    if (!isRecord(parsed)) return {};
+    const info: LlamaCppServerInfo = {};
+    const modelPath = typeof parsed.model_path === "string" ? parsed.model_path : undefined;
+    if (modelPath) info.modelName = modelPath.split(/[\\/]/).pop() || modelPath;
+    const settings = isRecord(parsed.default_generation_settings) ? parsed.default_generation_settings : undefined;
+    const nCtx = settings && typeof settings.n_ctx === "number" ? settings.n_ctx
+      : typeof parsed.n_ctx === "number" ? parsed.n_ctx : undefined;
+    if (nCtx && Number.isFinite(nCtx)) info.contextLength = nCtx;
+    if (typeof parsed.chat_template === "string") info.hasChatTemplate = parsed.chat_template.trim().length > 0;
+    return info;
+  }
+
+  /**
+   * Native /completion has no roles. When chat messages are supplied, ask
+   * llama-server to render them with the model's own chat template via
+   * POST /apply-template. Older servers without that route fall back to the
+   * flat prompt. The OpenAI-compatible route applies the template itself.
+   */
+  private async prepare(params: LlamaCppCompletionParams, signal: AbortSignal): Promise<LlamaCppCompletionParams> {
+    if (this.config.api === "openai-chat" || !params.messages || params.messages.length === 0) return params;
+    if (this.templateSupported === false) return { ...params, messages: undefined };
+    const path = "/apply-template";
+    let parsed: unknown;
+    try {
+      const response = await this.post(path, { messages: params.messages }, signal);
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => undefined);
+        // 404/405/501 mean the route does not exist; remember that.
+        if (response.status === 404 || response.status === 405 || response.status === 501) this.templateSupported = false;
+        return { ...params, messages: undefined };
+      }
+      parsed = JSON.parse(await readCheckedBody(response, signal, path));
+    } catch (error) {
+      if (isAbortError(error) || signal.aborted) throw error;
+      // The template is an optimization. Any failure falls back to the flat prompt,
+      // and the real /completion call reports a genuinely unreachable server.
+      return { ...params, messages: undefined };
+    }
+    if (!isRecord(parsed) || typeof parsed.prompt !== "string" || !parsed.prompt.trim()) {
+      this.templateSupported = false;
+      return { ...params, messages: undefined };
+    }
+    this.templateSupported = true;
+    return { ...params, prompt: parsed.prompt, messages: undefined };
+  }
+
+  async health(signal: AbortSignal): Promise<void> {
+    const url = endpoint(this.config.baseUrl, "/health");
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        signal,
+        headers: { accept: "application/json, text/plain" }
+      });
+    } catch (error) {
+      throw mapTransportError(error, url);
+    }
+    const body = await readCheckedBody(response, signal, "/health");
+    if (!isHealthyBody(body)) {
+      throw new LlamaCppInferenceError(
+        "malformed_response",
+        "llama.cpp health check did not report status ok"
+      );
+    }
+  }
+
+  private async post(path: string, body: unknown, signal: AbortSignal): Promise<Response> {
+    const url = endpoint(this.config.baseUrl, path);
+    try {
+      return await fetch(url, {
+        method: "POST",
+        signal,
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      throw mapTransportError(error, url);
+    }
+  }
+}
+
+function buildBody(
+  api: LlamaCppProviderConfig["api"],
+  params: LlamaCppCompletionParams,
+  stream: boolean
+): Record<string, unknown> {
+  if (api === "openai-chat") {
+    const body: Record<string, unknown> = {
+      model: params.model,
+      messages: params.messages && params.messages.length > 0
+        ? params.messages.map(message => ({ role: message.role, content: message.content }))
+        : [{ role: "user", content: params.prompt }],
+      temperature: params.temperature,
+      max_tokens: params.maxTokens,
+      stream
+    };
+    if (params.stop && params.stop.length > 0) body.stop = [...params.stop];
+    if (params.seed !== undefined) body.seed = params.seed;
+    if (params.jsonSchema) body.json_schema = params.jsonSchema;
+    if (params.tools && params.tools.length > 0) body.tools = params.tools.map(tool => ({
+      type: "function",
+      function: {
+        name: tool.function.name,
+        ...(tool.function.description ? { description: tool.function.description } : {}),
+        parameters: tool.function.parameters
+      }
+    }));
+    if (params.toolChoice !== undefined) body.tool_choice = params.toolChoice;
+    return body;
+  }
+
+  const body: Record<string, unknown> = {
+    prompt: params.prompt,
+    temperature: params.temperature,
+    n_predict: params.maxTokens,
+    stream
+  };
+  if (params.stop && params.stop.length > 0) body.stop = [...params.stop];
+  if (params.seed !== undefined) body.seed = params.seed;
+  if (params.jsonSchema) body.json_schema = params.jsonSchema;
+  return body;
+}
+
+function readCompletion(api: LlamaCppProviderConfig["api"], body: string): LlamaCppCompletionResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch (error) {
+    throw new LlamaCppInferenceError(
+      "malformed_response",
+      "llama.cpp backend response is not JSON",
+      { cause: error }
+    );
+  }
+  if (api === "openai-chat") return readChatCompletion(parsed);
+  return { content: readCompletionContent(parsed) };
+}
+
+function readContent(api: LlamaCppProviderConfig["api"], body: string): string {
+  return readCompletion(api, body).content;
+}
+
+function readCompletionContent(parsed: unknown): string {
+  if (!isRecord(parsed) || typeof parsed.content !== "string") {
+    throw new LlamaCppInferenceError(
+      "malformed_response",
+      "llama.cpp /completion response is missing string content"
+    );
+  }
+  return parsed.content;
+}
+
+function readChatCompletion(parsed: unknown): LlamaCppCompletionResult {
+  if (!isRecord(parsed) || !Array.isArray(parsed.choices) || parsed.choices.length === 0) {
+    throw new LlamaCppInferenceError(
+      "malformed_response",
+      "llama.cpp /v1/chat/completions response is missing choices"
+    );
+  }
+  const choice = parsed.choices[0];
+  const message = isRecord(choice) ? choice.message : undefined;
+  if (!isRecord(message)) {
+    throw new LlamaCppInferenceError(
+      "malformed_response",
+      "llama.cpp /v1/chat/completions response is missing message"
+    );
+  }
+
+  const content = typeof message.content === "string" ? message.content : "";
+  let toolCalls: LlamaCppCompletionResult["toolCalls"];
+  if (message.tool_calls !== undefined) {
+    if (!Array.isArray(message.tool_calls)) {
+      throw new LlamaCppInferenceError("malformed_response", "llama.cpp tool_calls must be an array");
+    }
+    toolCalls = message.tool_calls.map((value, index) => {
+      if (!isRecord(value) || value.type !== "function" || !isRecord(value.function) ||
+          typeof value.function.name !== "string" || !value.function.name.trim() ||
+          typeof value.function.arguments !== "string") {
+        throw new LlamaCppInferenceError(
+          "malformed_response",
+          `llama.cpp tool call ${index} is missing a function name or string arguments`
+        );
+      }
+      return {
+        ...(typeof value.id === "string" ? { id: value.id } : {}),
+        type: "function" as const,
+        function: { name: value.function.name, arguments: value.function.arguments }
+      };
+    });
+  }
+  if (!content && (!toolCalls || toolCalls.length === 0)) {
+    throw new LlamaCppInferenceError(
+      "malformed_response",
+      "llama.cpp /v1/chat/completions response has neither message content nor tool calls"
+    );
+  }
+  return { content, ...(toolCalls ? { toolCalls } : {}) };
+}
+
+function assertToolCallingMode(
+  api: LlamaCppProviderConfig["api"],
+  params: LlamaCppCompletionParams,
+  streaming: boolean
+): void {
+  const hasTools = Array.isArray(params.tools) && params.tools.length > 0;
+  if ((hasTools || params.toolChoice !== undefined) && api !== "openai-chat") {
+    throw new LlamaCppInferenceError("invalid_request", "Function calling requires api=openai-chat");
+  }
+  if (params.toolChoice !== undefined && !hasTools) {
+    throw new LlamaCppInferenceError("invalid_request", "toolChoice requires at least one function tool");
+  }
+  if (streaming && hasTools) {
+    throw new LlamaCppInferenceError("invalid_request", "Function calling is currently non-streaming");
+  }
+}
+
+function readCompletionDelta(parsed: unknown): string {
+  return isRecord(parsed) && typeof parsed.content === "string" ? parsed.content : "";
+}
+
+function readChatDelta(parsed: unknown): string {
+  if (!isRecord(parsed) || !Array.isArray(parsed.choices) || parsed.choices.length === 0) return "";
+  const choice = parsed.choices[0];
+  const delta = isRecord(choice) && isRecord(choice.delta) ? choice.delta : undefined;
+  return delta && typeof delta.content === "string" ? delta.content : "";
+}
+
+/**
+ * Minimal SSE reader. Calls onData for every `data:` payload; stops when
+ * onData returns true or the stream ends.
+ */
+async function readEventStream(
+  response: Response,
+  signal: AbortSignal,
+  onData: (data: string) => boolean
+): Promise<void> {
+  const reader = response.body?.getReader();
+  if (!reader) return;
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finished = false;
+  const onAbort = () => { void reader.cancel(abortReason(signal)).catch(() => undefined); };
+  signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    while (!finished) {
+      if (signal.aborted) throw abortReason(signal);
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newline: number;
+      while ((newline = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, newline).replace(/\r$/, "");
+        buffer = buffer.slice(newline + 1);
+        if (!line.startsWith("data:")) continue;
+        if (onData(line.slice(5).trim())) {
+          finished = true;
+          break;
+        }
+      }
+    }
+    if (!finished && buffer.startsWith("data:")) onData(buffer.slice(5).trim());
+    if (signal.aborted) throw abortReason(signal);
+  } catch (error) {
+    if (signal.aborted) throw abortReason(signal);
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+    if (finished) await reader.cancel().catch(() => undefined);
+  }
+}
+
+function isHealthyBody(body: string): boolean {
+  const trimmed = body.trim();
+  if (trimmed === "ok") return true;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return isRecord(parsed) && parsed.status === "ok";
+  } catch {
+    return false;
+  }
+}
+
+async function readCheckedBody(response: Response, signal: AbortSignal, path: string): Promise<string> {
+  let consumed = false;
+  try {
+    if (!response.ok) {
+      throw new LlamaCppInferenceError(
+        "http_error",
+        `llama.cpp backend returned HTTP ${response.status} for ${path}`,
+        { status: response.status }
+      );
+    }
+    if ((response.headers.get("content-type") ?? "").includes("text/event-stream")) {
+      throw new LlamaCppInferenceError(
+        "malformed_response",
+        "llama.cpp backend returned an event stream; this adapter requires a single JSON response"
+      );
+    }
+    const declared = response.headers.get("content-length");
+    if (declared && Number(declared) > MAX_RESPONSE_BYTES) {
+      throw new LlamaCppInferenceError(
+        "malformed_response",
+        `llama.cpp response exceeded ${MAX_RESPONSE_BYTES} bytes`
+      );
+    }
+    const body = await readBody(response, signal);
+    consumed = true;
+    return body;
+  } finally {
+    if (!consumed) await response.body?.cancel().catch(() => undefined);
+  }
+}
+
+async function readBody(response: Response, signal: AbortSignal): Promise<string> {
+  if (signal.aborted) throw abortReason(signal);
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const onAbort = () => { void reader.cancel(abortReason(signal)).catch(() => undefined); };
+  signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    while (true) {
+      if (signal.aborted) throw abortReason(signal);
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new LlamaCppInferenceError(
+          "malformed_response",
+          `llama.cpp response exceeded ${MAX_RESPONSE_BYTES} bytes`
+        );
+      }
+      chunks.push(value);
+    }
+    if (signal.aborted) throw abortReason(signal);
+  } catch (error) {
+    if (signal.aborted) throw abortReason(signal);
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function abortReason(signal: AbortSignal): unknown {
+  if (signal.reason instanceof Error) return signal.reason;
+  return new DOMException("aborted", "AbortError");
+}
+
+function mapTransportError(error: unknown, url: string): unknown {
+  if (isAbortError(error)) return error;
+  if (error instanceof LlamaCppInferenceError) return error;
+  const detail = error instanceof Error ? error.message : "request failed";
+  return new LlamaCppInferenceError(
+    "backend_unreachable",
+    `llama.cpp backend unreachable at ${url}: ${detail}`,
+    { cause: error }
+  );
+}
+
+function endpoint(baseUrl: string, path: string): string {
+  const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return new URL(path.replace(/^\//, ""), base).toString();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

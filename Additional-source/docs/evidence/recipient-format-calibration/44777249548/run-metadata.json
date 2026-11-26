@@ -1,0 +1,839 @@
+{
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "run": {
+    "id": 44777249548,
+    "name": "Recipient Format Calibration",
+    "node_id": "WFR_kwLOVf1DW88AAAAKbO6bDA",
+    "head_branch": "codex/recipient-format-calibration-20261120",
+    "head_sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+    "path": ".github/workflows/recipient-format-calibration-ci.yml",
+    "display_title": "Freeze native raw/chat recipient format comparison with tokenizer preflight",
+    "run_number": 2,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "failure",
+    "workflow_id": 425208158,
+    "check_suite_id": 121199980351,
+    "check_suite_node_id": "CS_kwDOVf1DW88AAAAcOBTvPw",
+    "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548",
+    "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/pulls/234",
+        "id": 5416811451,
+        "number": 234,
+        "head": {
+          "ref": "codex/recipient-format-calibration-20261120",
+          "sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+          "repo": {
+            "id": 1442661211,
+            "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+            "name": "pocket-ai-lab"
+          }
+        },
+        "base": {
+          "ref": "codex/recipient-template-contract-probe-20261120",
+          "sha": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+          "repo": {
+            "id": 1442661211,
+            "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+            "name": "pocket-ai-lab"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-20T16:49:44Z",
+    "updated_at": "2026-11-20T16:55:21Z",
+    "actor": {
+      "login": "macksteward59-lgtm",
+      "id": 341892725,
+      "node_id": "U_kgDOFGDedQ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/macksteward59-lgtm",
+      "html_url": "https://github.com/macksteward59-lgtm",
+      "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+      "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+      "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+      "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+      "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+      "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-20T16:49:44Z",
+    "triggering_actor": {
+      "login": "macksteward59-lgtm",
+      "id": 341892725,
+      "node_id": "U_kgDOFGDedQ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/macksteward59-lgtm",
+      "html_url": "https://github.com/macksteward59-lgtm",
+      "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+      "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+      "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+      "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+      "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+      "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548/jobs",
+    "logs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548/logs",
+    "check_suite_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/check-suites/121199980351",
+    "artifacts_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548/artifacts",
+    "cancel_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548/cancel",
+    "rerun_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777249548/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/workflows/425208158",
+    "head_commit": {
+      "id": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+      "tree_id": "44b48a0e9ef0b66cb14896ba3f2b4677132e4c57",
+      "message": "fix(ci): expose Darwin no-follow flags in recipient tokenizer probe",
+      "timestamp": "2026-11-20T16:49:35Z",
+      "author": {
+        "name": "macksteward59-lgtm",
+        "email": "macksteward59@gmail.com"
+      },
+      "committer": {
+        "name": "macksteward59-lgtm",
+        "email": "macksteward59@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1442661211,
+      "node_id": "R_kgDOVf1DWw",
+      "name": "pocket-ai-lab",
+      "full_name": "macksteward59-lgtm/pocket-ai-lab",
+      "private": false,
+      "owner": {
+        "login": "macksteward59-lgtm",
+        "id": 341892725,
+        "node_id": "U_kgDOFGDedQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/macksteward59-lgtm",
+        "html_url": "https://github.com/macksteward59-lgtm",
+        "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+        "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+        "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+        "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+        "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab",
+      "description": "Pocket AI Lab — Hybrid offline-first multi-agent intelligence platform. Agents collaborate; APEX/East authorizes. Built on Director, East/e3, ExploitGym, and Grok Workspace.",
+      "fork": false,
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+      "forks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/forks",
+      "keys_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/teams",
+      "hooks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/hooks",
+      "issue_events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/events",
+      "assignees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/tags",
+      "blobs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/languages",
+      "stargazers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/stargazers",
+      "contributors_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contributors",
+      "subscribers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscribers",
+      "subscription_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscription",
+      "commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/merges",
+      "archive_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/downloads",
+      "issues_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/labels{/name}",
+      "releases_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/deployments"
+    },
+    "head_repository": {
+      "id": 1442661211,
+      "node_id": "R_kgDOVf1DWw",
+      "name": "pocket-ai-lab",
+      "full_name": "macksteward59-lgtm/pocket-ai-lab",
+      "private": false,
+      "owner": {
+        "login": "macksteward59-lgtm",
+        "id": 341892725,
+        "node_id": "U_kgDOFGDedQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/macksteward59-lgtm",
+        "html_url": "https://github.com/macksteward59-lgtm",
+        "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+        "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+        "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+        "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+        "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab",
+      "description": "Pocket AI Lab — Hybrid offline-first multi-agent intelligence platform. Agents collaborate; APEX/East authorizes. Built on Director, East/e3, ExploitGym, and Grok Workspace.",
+      "fork": false,
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+      "forks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/forks",
+      "keys_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/teams",
+      "hooks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/hooks",
+      "issue_events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/events",
+      "assignees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/tags",
+      "blobs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/languages",
+      "stargazers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/stargazers",
+      "contributors_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contributors",
+      "subscribers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscribers",
+      "subscription_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscription",
+      "commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/merges",
+      "archive_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/downloads",
+      "issues_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/labels{/name}",
+      "releases_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/deployments"
+    }
+  },
+  "jobs": [
+    {
+      "id": 136430232585,
+      "name": "evidence-contract",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 44777249548,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Verify independent evidence validation and failure accounting",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        }
+      ]
+    },
+    {
+      "id": 136430313590,
+      "name": "native-calibration",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_id": 44777249548,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Check out the frozen experiment",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Prepare native build tools",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Restore existing pinned native dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify or build pinned dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Save verified native dependencies",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6
+        },
+        {
+          "name": "Verify the frozen model metadata and prepare exact prompts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Observe pinned vocabulary and all exact input token sequences",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Independently enforce the frozen tokenization contract",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Build the isolated experiment and fixture tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Verify the experiment runner with declared fixture engines",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Execute the precommitted 72-request comparison",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Preserve partial evidence and independently verify measurement integrity",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Enforce the separate 36-of-36 chat response-format gate",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 14
+        },
+        {
+          "name": "Record source and artifact provenance",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Upload all observed evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Post Check out the frozen experiment",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 33
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 14650318847,
+      "name": "recipient-format-calibration-44777249548-1",
+      "size_in_bytes": 105688,
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/artifacts/14650318847",
+      "archive_download_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/artifacts/14650318847/zip",
+      "expired": false,
+      "created_at": "2026-11-20T16:55:15Z",
+      "expires_at": "2026-12-04T16:55:13Z",
+      "updated_at": "2026-11-20T16:55:15Z",
+      "digest": "sha256:e501207e0fe98bdc919b6103b4b61233fa95026bb851509254636d7d73d5a0ac",
+      "workflow_run": {
+        "id": 44777249548,
+        "repository_id": 1442661211,
+        "head_repository_id": 1442661211,
+        "head_branch": "codex/recipient-format-calibration-20261120",
+        "head_sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110"
+      }
+    }
+  ],
+  "source": {
+    "sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+    "node_id": "C_kwDOVf1DW9oAKDZhNjEyODFhMWQyOGE2YjhlZTFhMjkyYzc0Zjg1MTVjMjI1MGQxMTA",
+    "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits/6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+    "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/commit/6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+    "author": {
+      "name": "macksteward59-lgtm",
+      "email": "macksteward59@gmail.com",
+      "date": "2026-11-20T16:49:35Z"
+    },
+    "committer": {
+      "name": "macksteward59-lgtm",
+      "email": "macksteward59@gmail.com",
+      "date": "2026-11-20T16:49:35Z"
+    },
+    "tree": {
+      "sha": "44b48a0e9ef0b66cb14896ba3f2b4677132e4c57",
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/trees/44b48a0e9ef0b66cb14896ba3f2b4677132e4c57"
+    },
+    "message": "fix(ci): expose Darwin no-follow flags in recipient tokenizer probe",
+    "parents": [
+      {
+        "sha": "811b02646fc30cba4eea86dc53adecde208b7222",
+        "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits/811b02646fc30cba4eea86dc53adecde208b7222",
+        "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/commit/811b02646fc30cba4eea86dc53adecde208b7222"
+      }
+    ],
+    "verification": {
+      "verified": false,
+      "reason": "unsigned",
+      "signature": null,
+      "payload": null,
+      "verified_at": null
+    }
+  },
+  "merge": {
+    "sha": "2fce444a03c5b74d836404d2022f6b39f921b692",
+    "node_id": "C_kwDOVf1DW9oAKDJmY2U0NDRhMDNjNWI3NGQ4MzY0MDRkMjAyMmY2YjM5ZjkyMWI2OTI",
+    "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits/2fce444a03c5b74d836404d2022f6b39f921b692",
+    "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/commit/2fce444a03c5b74d836404d2022f6b39f921b692",
+    "author": {
+      "name": "macksteward59-lgtm",
+      "email": "macksteward59@gmail.com",
+      "date": "2026-11-20T16:49:41Z"
+    },
+    "committer": {
+      "name": "GitHub",
+      "email": "noreply@github.com",
+      "date": "2026-11-20T16:49:41Z"
+    },
+    "tree": {
+      "sha": "44b48a0e9ef0b66cb14896ba3f2b4677132e4c57",
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/trees/44b48a0e9ef0b66cb14896ba3f2b4677132e4c57"
+    },
+    "message": "Merge 6a61281a1d28a6b8ee1a292c74f8515c2250d110 into be72e9f6873b8890a2ccd5c8d78709e073109868",
+    "parents": [
+      {
+        "sha": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+        "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits/be72e9f6873b8890a2ccd5c8d78709e073109868",
+        "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/commit/be72e9f6873b8890a2ccd5c8d78709e073109868"
+      },
+      {
+        "sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+        "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits/6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+        "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/commit/6a61281a1d28a6b8ee1a292c74f8515c2250d110"
+      }
+    ],
+    "verification": {
+      "verified": true,
+      "reason": "valid",
+      "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJrAHolCRC1aQ7uu5UhlAAAaA8QABWbEtrlmPnpJtNTjLGMKXVH\nyhdEQ85odJ7PFP/t9D6OPJ58qyQxGOkGl1KklnGL4qN85FE/rHxTu2k/7zGOrNUe\n3GDilT2ABzd/xcVWUWi7alERUJd4jQ8TRoDAPKgLFjOjTAwD0wbnMej4UYd+L/pO\nJsgR7vHLtlbBKlIBkEqvIXK3r2EFn4+PEXi3nq16qQWk18cQpRioYxIDHheLoYoZ\nQN5MR4eqaTC781WpTbWWo4qDgBziDJrkrD4UeF9yT5vg2DfiQdm98yVYLUGE8KLQ\nq1ATABXi0/d10PKFXaJYbQkD8duW2vYOnVg8rcJC3CAUPG2eiY4vrMPWGkji3tMf\ncRY3qGbFbouhmOdrXeGXjsO/e7Og5H1CHaMbOH0mT0MPpK8OmEqbnPZ0ca+/RLZr\nEffp9nh73edwKp/WrpFtKs9q7bZY/ctsE22SuoY50TUGnoG7j50oN3StF44BMJYn\naHkGx1DHp5HJ5qfxKN8/v4KRDRuSwqVvj58cteCk0Ei+Wo1xJct+YOQ0L0Q9for5\nkwCP/tMKCwqObn19Ikgt4E86Gf5LM9wtgTPtu9/d86vlgZisZdHmHc0/JLSiXh0W\nPAFkEmJ4+OF++hcMrJLFJ21nGQ0MFOooMYGbYSUlpab5AVSM4la8JlS8xP+Opu9J\nDbuLX3MRG4e41bfGw0WM\n=p9ct\n-----END PGP SIGNATURE-----\n",
+      "payload": "tree 44b48a0e9ef0b66cb14896ba3f2b4677132e4c57\nparent be72e9f6873b8890a2ccd5c8d78709e073109868\nparent 6a61281a1d28a6b8ee1a292c74f8515c2250d110\nauthor macksteward59-lgtm <macksteward59@gmail.com> 1795193381 +0000\ncommitter GitHub <noreply@github.com> 1795193381 +0000\n\nMerge 6a61281a1d28a6b8ee1a292c74f8515c2250d110 into be72e9f6873b8890a2ccd5c8d78709e073109868\n",
+      "verified_at": "2026-11-20T16:49:41Z"
+    }
+  },
+  "generalRun": {
+    "id": 44777232870,
+    "name": "Pocket AI Lab CI",
+    "node_id": "WFR_kwLOVf1DW88AAAAKbO5Z5g",
+    "head_branch": "codex/recipient-format-calibration-20261120",
+    "head_sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+    "path": ".github/workflows/intelligence-ci.yml",
+    "display_title": "fix(ci): expose Darwin no-follow flags in recipient tokenizer probe",
+    "run_number": 3591,
+    "event": "push",
+    "status": "completed",
+    "conclusion": "success",
+    "workflow_id": 404268497,
+    "check_suite_id": 121199936294,
+    "check_suite_node_id": "CS_kwDOVf1DW88AAAAcOBRDJg",
+    "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870",
+    "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870",
+    "pull_requests": [
+      {
+        "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/pulls/234",
+        "id": 5416811451,
+        "number": 234,
+        "head": {
+          "ref": "codex/recipient-format-calibration-20261120",
+          "sha": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+          "repo": {
+            "id": 1442661211,
+            "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+            "name": "pocket-ai-lab"
+          }
+        },
+        "base": {
+          "ref": "codex/recipient-template-contract-probe-20261120",
+          "sha": "be72e9f6873b8890a2ccd5c8d78709e073109868",
+          "repo": {
+            "id": 1442661211,
+            "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+            "name": "pocket-ai-lab"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-11-20T16:49:38Z",
+    "updated_at": "2026-11-20T16:50:33Z",
+    "actor": {
+      "login": "macksteward59-lgtm",
+      "id": 341892725,
+      "node_id": "U_kgDOFGDedQ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/macksteward59-lgtm",
+      "html_url": "https://github.com/macksteward59-lgtm",
+      "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+      "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+      "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+      "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+      "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+      "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "run_attempt": 1,
+    "referenced_workflows": [],
+    "run_started_at": "2026-11-20T16:49:38Z",
+    "triggering_actor": {
+      "login": "macksteward59-lgtm",
+      "id": 341892725,
+      "node_id": "U_kgDOFGDedQ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/macksteward59-lgtm",
+      "html_url": "https://github.com/macksteward59-lgtm",
+      "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+      "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+      "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+      "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+      "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+      "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "jobs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870/jobs",
+    "logs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870/logs",
+    "check_suite_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/check-suites/121199936294",
+    "artifacts_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870/artifacts",
+    "cancel_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870/cancel",
+    "rerun_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/runs/44777232870/rerun",
+    "previous_attempt_url": null,
+    "workflow_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/actions/workflows/404268497",
+    "head_commit": {
+      "id": "6a61281a1d28a6b8ee1a292c74f8515c2250d110",
+      "tree_id": "44b48a0e9ef0b66cb14896ba3f2b4677132e4c57",
+      "message": "fix(ci): expose Darwin no-follow flags in recipient tokenizer probe",
+      "timestamp": "2026-11-20T16:49:35Z",
+      "author": {
+        "name": "macksteward59-lgtm",
+        "email": "macksteward59@gmail.com"
+      },
+      "committer": {
+        "name": "macksteward59-lgtm",
+        "email": "macksteward59@gmail.com"
+      }
+    },
+    "repository": {
+      "id": 1442661211,
+      "node_id": "R_kgDOVf1DWw",
+      "name": "pocket-ai-lab",
+      "full_name": "macksteward59-lgtm/pocket-ai-lab",
+      "private": false,
+      "owner": {
+        "login": "macksteward59-lgtm",
+        "id": 341892725,
+        "node_id": "U_kgDOFGDedQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/macksteward59-lgtm",
+        "html_url": "https://github.com/macksteward59-lgtm",
+        "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+        "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+        "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+        "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+        "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab",
+      "description": "Pocket AI Lab — Hybrid offline-first multi-agent intelligence platform. Agents collaborate; APEX/East authorizes. Built on Director, East/e3, ExploitGym, and Grok Workspace.",
+      "fork": false,
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+      "forks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/forks",
+      "keys_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/teams",
+      "hooks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/hooks",
+      "issue_events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/events",
+      "assignees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/tags",
+      "blobs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/languages",
+      "stargazers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/stargazers",
+      "contributors_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contributors",
+      "subscribers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscribers",
+      "subscription_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscription",
+      "commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/merges",
+      "archive_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/downloads",
+      "issues_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/labels{/name}",
+      "releases_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/deployments"
+    },
+    "head_repository": {
+      "id": 1442661211,
+      "node_id": "R_kgDOVf1DWw",
+      "name": "pocket-ai-lab",
+      "full_name": "macksteward59-lgtm/pocket-ai-lab",
+      "private": false,
+      "owner": {
+        "login": "macksteward59-lgtm",
+        "id": 341892725,
+        "node_id": "U_kgDOFGDedQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/341892725?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/macksteward59-lgtm",
+        "html_url": "https://github.com/macksteward59-lgtm",
+        "followers_url": "https://api.github.com/users/macksteward59-lgtm/followers",
+        "following_url": "https://api.github.com/users/macksteward59-lgtm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/macksteward59-lgtm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/macksteward59-lgtm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/macksteward59-lgtm/subscriptions",
+        "organizations_url": "https://api.github.com/users/macksteward59-lgtm/orgs",
+        "repos_url": "https://api.github.com/users/macksteward59-lgtm/repos",
+        "events_url": "https://api.github.com/users/macksteward59-lgtm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/macksteward59-lgtm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/macksteward59-lgtm/pocket-ai-lab",
+      "description": "Pocket AI Lab — Hybrid offline-first multi-agent intelligence platform. Agents collaborate; APEX/East authorizes. Built on Director, East/e3, ExploitGym, and Grok Workspace.",
+      "fork": false,
+      "url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab",
+      "forks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/forks",
+      "keys_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/teams",
+      "hooks_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/hooks",
+      "issue_events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/events",
+      "assignees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/tags",
+      "blobs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/languages",
+      "stargazers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/stargazers",
+      "contributors_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contributors",
+      "subscribers_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscribers",
+      "subscription_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/subscription",
+      "commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/merges",
+      "archive_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/downloads",
+      "issues_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/labels{/name}",
+      "releases_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/macksteward59-lgtm/pocket-ai-lab/deployments"
+    }
+  },
+  "generalJobs": [
+    {
+      "id": 136430175407,
+      "name": "intelligence",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 44777232870,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Set up Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Report dependency advisories",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Summarize dependency advisories",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Check JavaScript syntax",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Type-check and build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Run tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Post Set up Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "format": "GCB1",
+  "version": 1,
+  "artifactLength": 54,
+  "artifactHex": "474342310100020001000200010004000d000500666978747572652d6d6f64656c7265762d310000a03f000020c00000704000009040",
+  "sha256": "a8b04c0cc3b84740c40f2fa37ccc93a98d2454ed319c500d4cc3c9767dde28f6",
+  "modelId": "fixture-model",
+  "modelRevision": "rev-1",
+  "embeddingDimension": 2,
+  "subspaces": 1,
+  "codebookSize": 2,
+  "residualStages": 1,
+  "maxTokensPerSegment": 4,
+  "stages": [
+    [
+      [1.25, -2.5, 3.75, 4.5]
+    ]
+  ]
+}

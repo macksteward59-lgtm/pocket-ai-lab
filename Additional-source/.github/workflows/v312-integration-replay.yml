@@ -1,0 +1,139 @@
+name: Reproduce v3.12 integration evidence
+
+on:
+  pull_request:
+    branches: [codex/v312-privilege-monitor-ci]
+    paths: ['.github/workflows/v312-integration-replay.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the existing lifecycle integration snapshot
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ab2ad101d1a2ebfa277bd2c136db79b6b1afc094
+          path: integration
+          persist-credentials: false
+
+      - name: Check out the reviewed database candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 5f0706202c326f39db7260c9e21793942b2faa44
+          path: candidate
+          persist-credentials: false
+
+      - name: Verify the combined Git tree before testing
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths=(.github/workflows/v312-privilege-monitor.yml coordination/LEADERSHIP.md packages/director/db/v3.12)
+          test -z "$(git -C integration ls-files -- "${paths[@]}")"
+          git -C candidate archive HEAD -- "${paths[@]}" | tar -x -C integration
+          git -C integration add -- "${paths[@]}"
+          tree=$(git -C integration write-tree)
+          echo "Integration tree: $tree"
+          test "$tree" = fb224c7ecbacb06e25a54a463405b92ac60371d8
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.16.0
+
+      - name: Compile the integration snapshot
+        working-directory: integration
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --no-package-lock
+          npm run build
+
+      - name: Run the lifecycle contract tests
+        working-directory: integration
+        run: ./node_modules/.bin/vitest run packages/intelligence/__tests__/autonomy.test.ts
+
+      - name: Run the repository regression suite with local networking only
+        working-directory: integration
+        shell: bash
+        run: |
+          docker build -t pocket-v312-test - <<'DOCKERFILE'
+          FROM node:22.16.0-bookworm
+          RUN apt-get update && apt-get install -y --no-install-recommends zip unzip && rm -rf /var/lib/apt/lists/*
+          DOCKERFILE
+          cache_path=$(npm config get cache)
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp -e CI=true -e npm_config_offline=true -e npm_config_cache=/tmp/replay-npm-cache \
+            -v "$cache_path:/tmp/replay-npm-cache" -v "$PWD:/repo" -w /repo \
+            pocket-v312-test npm test
+
+      - name: Verify the database monitor on PostgreSQL 15
+        working-directory: integration
+        run: python3 packages/director/db/v3.12/test_integration.py 15
+
+      - name: Verify the database monitor on PostgreSQL 16
+        working-directory: integration
+        run: python3 packages/director/db/v3.12/test_integration.py 16
+
+      - name: Verify the pinned model and Ubuntu llama-server release
+        working-directory: integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          pin=runtime/ios/pin/llama-cpp.json
+          test "$(jq -r .tag "$pin")" = b12233
+          test "$(jq -r .commit "$pin")" = 5f490d7bfe78844e6390c869454c149fd7e003a8
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --retry 3 -o llama.tar.gz \
+            https://github.com/ggml-org/llama.cpp/releases/download/b12233/llama-b12233-bin-ubuntu-x64.tar.gz
+          echo '9f4a78cc4e4c9f5a166102a43f1d8f8e4e9d75e76823eb9505d05bbba288abd5  llama.tar.gz' | sha256sum --check
+          mkdir llama-release
+          tar -xzf llama.tar.gz -C llama-release --strip-components=1
+          "$RUNNER_TEMP/llama-release/llama-server" --version
+          cd "$GITHUB_WORKSPACE/integration"
+          POCKET_GGUF_DIR="$RUNNER_TEMP/models" node scripts/local-gguf/fetch-smoke-gguf.mjs | tee "$RUNNER_TEMP/verified-model.json"
+
+      - name: Exercise the source and compiled providers against the real model
+        working-directory: integration
+        shell: bash
+        env:
+          LLAMACPP_BASE_URL: http://127.0.0.1:18081
+          LLAMACPP_MODEL: smollm2-135m-instruct-q4_k_m
+          LLAMACPP_API: completion
+        run: |
+          set -euo pipefail
+          model=$(jq -er 'select(.verified == true) | .path' "$RUNNER_TEMP/verified-model.json")
+          "$RUNNER_TEMP/llama-release/llama-server" -m "$model" --alias "$LLAMACPP_MODEL" \
+            --host 127.0.0.1 --port 18081 -c 4096 -np 1 --metrics > "$RUNNER_TEMP/llama-server.log" 2>&1 &
+          pid=$!
+          trap 'rc=$?; if (( rc != 0 )); then tail -40 "$RUNNER_TEMP/llama-server.log"; fi; kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do
+            kill -0 "$pid"
+            if curl --max-time 2 -fs "$LLAMACPP_BASE_URL/health" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --max-time 3 -fsS "$LLAMACPP_BASE_URL/health" | jq -e '.status == "ok"'
+          curl --max-time 3 -fsS "$LLAMACPP_BASE_URL/v1/models" | jq -e --arg model "$LLAMACPP_MODEL" 'any(.data[]; .id == $model)'
+          predicted_tokens() {
+            curl --max-time 5 -fsS "$LLAMACPP_BASE_URL/metrics" | awk '$1 == "llamacpp:tokens_predicted_total" {print $2; found=1} END {if (!found) exit 1}'
+          }
+          before=$(predicted_tokens)
+          source_test=runtime/adapters/llama-cpp/LlamaCppInferenceProvider.test.ts
+          compiled_test=dist/runtime/adapters/llama-cpp/LlamaCppInferenceProvider.test.js
+          report="$RUNNER_TEMP/provider-results.json"
+          if ! ./node_modules/.bin/vitest run --no-file-parallelism "$source_test" "$compiled_test" --reporter=json --outputFile="$report"; then
+            if [[ -f "$report" ]]; then jq -r '.testResults[].assertionResults[] | select(.status == "failed") | .fullName, .failureMessages[]' "$report"; fi
+            exit 1
+          fi
+          jq -e --arg src "$PWD/$source_test" --arg js "$PWD/$compiled_test" '
+            [.testResults[] | {name, live: [.assertionResults[] | select(.fullName | contains("llama.cpp live server")) | .status]}] as $results
+            | ($results | map(.name) | sort) == ([$src, $js] | sort)
+            and all($results[]; .live == ["passed"])
+            and .numPassedTests == .numTotalTests' "$report"
+          jq -r '"Provider assertions passed: \(.numPassedTests)/\(.numTotalTests)"' "$report"
+          after=$(predicted_tokens)
+          awk -v before="$before" -v after="$after" 'BEGIN {print "Model tokens generated during provider tests:", after - before; if (after <= before) exit 1}'
+
+      - name: Confirm tests preserved the tracked inputs
+        working-directory: integration
+        run: git diff --exit-code

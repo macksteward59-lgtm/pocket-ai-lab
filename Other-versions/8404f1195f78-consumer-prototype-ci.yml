@@ -1,0 +1,20 @@
+name: Consumer prototype CI
+on:
+  push:
+    branches: [main, "codex/consumer-prototype-foundation", "codex/**"]
+  pull_request:
+    branches: [main]
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: node --check apps/web/server.mjs
+      - run: node --check apps/web/app.js
+      - run: node --check apps/web/sw.js
+      - run: npm test
+      - run: npm run build

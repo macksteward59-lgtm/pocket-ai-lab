@@ -1,0 +1,18 @@
+{
+  "evidence_sha256": "f7c13db28b736b526a6c366c2f8fcb7b1d2a8b2929236d1ac9803a8d915a5b57",
+  "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+  "source": {
+    "job_id": "136909320451",
+    "hosted_steps": "The local-worker job passed checkout, Node setup, dependency installation, the Wrangler dry-run build, and npm test.",
+    "local_tests": 359,
+    "local_files": 11
+  },
+  "review_status": "needs_correction",
+  "receipt": {
+    "ok": true,
+    "model": "qwen2.5-1.5b-instruct-q4_k_m",
+    "provider": "pocket-local",
+    "final": "Hosted CI job 136909320451: The local-worker job passed checkout, Node setup, dependency installation, the Wrangler dry-run build, and npm test.\nLocal checks: ChatGPT independently checked out this commit.\nUnverified: Deployment to production."
+  },
+  "format": "pocket-ai-lab.ci-review.v1"
+}

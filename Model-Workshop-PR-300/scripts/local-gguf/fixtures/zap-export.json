@@ -1,0 +1,31 @@
+{
+  "site": [
+    {
+      "@name": "https://app.example.com",
+      "alerts": [
+        {
+          "name": "Missing security header",
+          "alert": "Missing security header",
+          "riskdesc": "High",
+          "confidence": "Medium",
+          "uri": "https://app.example.com/login",
+          "param": "session",
+          "solution": "Send the header from the application."
+        }
+      ]
+    },
+    {
+      "@name": "https://outside.example.com",
+      "alerts": [
+        {
+          "name": "Cookie without a secure flag",
+          "alert": "Cookie without a secure flag",
+          "riskdesc": "Medium",
+          "confidence": "Medium",
+          "uri": "https://outside.example.com/a",
+          "solution": "Set the flag in the application configuration."
+        }
+      ]
+    }
+  ]
+}

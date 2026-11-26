@@ -1,0 +1,295 @@
+{
+  "method": "Three fresh llama-server processes in sequence on the same Linux x86_64 host. The OS file cache was not flushed. Same frozen six questions, Qwen 1.5B GGUF, CPU-only, seed 17, temperature zero, four server threads.",
+  "executableSHA256": "d7c57833add979d95d920c6186a5603dacc41a54a9fad52c8590ff3b85c0e3b1",
+  "pinnedHostedReferenceSHA256": "22303c00da9a96e0a25872bfb2ef9c85839d2e7706c629fc9df21cedeceb861b",
+  "trials": [
+    {
+      "trial": 1,
+      "usage": {
+        "environment": "Linux/x86_64",
+        "scope": "llama-server process lifetime",
+        "maxResidentKiB": 1851716,
+        "maxResidentBytes": 1896157184,
+        "userCPUSeconds": 16.316675,
+        "systemCPUSeconds": 2.403879,
+        "elapsedSeconds": 7.91,
+        "childExitStatus": 0
+      },
+      "answers": {
+        "suiteID": "pocket-passage-evidence",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "published-reset",
+            "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+            "expected": "00:00 UTC [B]",
+            "passed": true,
+            "output": "00:00 UTC [B]",
+            "requestID": "chatcmpl-WBTyLZXLMYduj4qTdWxCltOxd9hWcsQa",
+            "finishReason": "stop",
+            "completionTokens": 10,
+            "latencyMs": 1193
+          },
+          {
+            "caseID": "published-allowance",
+            "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+            "expected": "10,000 neurons [A]",
+            "passed": true,
+            "output": "10,000 neurons [A]",
+            "requestID": "chatcmpl-MZe05V3VYw1ztXtNJLlfQcv9CLkOtlvf",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 822
+          },
+          {
+            "caseID": "account-unknown",
+            "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-iH7ZukkCYUcUCcEgi3L0Uvcxr2KcaQej",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 271
+          },
+          {
+            "caseID": "account-observed",
+            "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+            "expected": "6,240 neurons [B]",
+            "passed": false,
+            "output": "6,240 neurons",
+            "requestID": "chatcmpl-jKTdJycAxOFng4AiYV5UZC5ZAVWrgNEd",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 460
+          },
+          {
+            "caseID": "account-corrected",
+            "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+            "expected": "4,910 neurons [A]",
+            "passed": false,
+            "output": "4,910 neurons",
+            "requestID": "chatcmpl-ci2SJk48Ogx1QwE5zz3Dory9FE1t6PnT",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 745
+          },
+          {
+            "caseID": "handset-unknown",
+            "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-2rLE4nMMkAVqadT4pa7qAzxoEP3hHfsC",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 358
+          }
+        ],
+        "passed": 4,
+        "total": 6,
+        "allPassed": false
+      },
+      "originalUsageSHA256": "48381353248ed214503e23fa45a447cd20f137a873212388cc5e8c0e7c3c1355",
+      "originalAnswersSHA256": "4dacf3c3dc6ceca8d3be0a00655c734ba10c1ab8928a0bd9abc9dc6f20366b8a"
+    },
+    {
+      "trial": 2,
+      "usage": {
+        "environment": "Linux/x86_64",
+        "scope": "llama-server process lifetime",
+        "maxResidentKiB": 1851736,
+        "maxResidentBytes": 1896177664,
+        "userCPUSeconds": 22.349839,
+        "systemCPUSeconds": 1.575272,
+        "elapsedSeconds": 8.441,
+        "childExitStatus": 0
+      },
+      "answers": {
+        "suiteID": "pocket-passage-evidence",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "published-reset",
+            "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+            "expected": "00:00 UTC [B]",
+            "passed": true,
+            "output": "00:00 UTC [B]",
+            "requestID": "chatcmpl-40yJgrNsWIXFQMj67eyOa59nRFZ2PEr1",
+            "finishReason": "stop",
+            "completionTokens": 10,
+            "latencyMs": 1675
+          },
+          {
+            "caseID": "published-allowance",
+            "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+            "expected": "10,000 neurons [A]",
+            "passed": true,
+            "output": "10,000 neurons [A]",
+            "requestID": "chatcmpl-kzNr7eCQ27o1yk5SaeGakWJOjZEuRlWf",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1138
+          },
+          {
+            "caseID": "account-unknown",
+            "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-XLin9eIxttyMTt9vA4avCRkQf8b0vDdE",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 396
+          },
+          {
+            "caseID": "account-observed",
+            "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+            "expected": "6,240 neurons [B]",
+            "passed": false,
+            "output": "6,240 neurons",
+            "requestID": "chatcmpl-YunX6FMQvv3mDd8AhUBRVQpmR6rsP9Q7",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 626
+          },
+          {
+            "caseID": "account-corrected",
+            "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+            "expected": "4,910 neurons [A]",
+            "passed": false,
+            "output": "4,910 neurons",
+            "requestID": "chatcmpl-GIyelzipy71IyhnDlgJ9bFbQcXLatjW7",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 989
+          },
+          {
+            "caseID": "handset-unknown",
+            "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-2nakYrqIrHpZgOnxU2QPxhQkurpVVaSv",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 552
+          }
+        ],
+        "passed": 4,
+        "total": 6,
+        "allPassed": false
+      },
+      "originalUsageSHA256": "2ffc0def431875370c8e9a74c7301f835ab1eb72f75223adae88fced85dfb1f8",
+      "originalAnswersSHA256": "0acdbc5d384977504498924ee3356a746b8458d54b7c7dbd9fd09cc4b8f6bbdc"
+    },
+    {
+      "trial": 3,
+      "usage": {
+        "environment": "Linux/x86_64",
+        "scope": "llama-server process lifetime",
+        "maxResidentKiB": 1851352,
+        "maxResidentBytes": 1895784448,
+        "userCPUSeconds": 20.71134,
+        "systemCPUSeconds": 0.69636,
+        "elapsedSeconds": 7.119,
+        "childExitStatus": 0
+      },
+      "answers": {
+        "suiteID": "pocket-passage-evidence",
+        "suiteVersion": "1.0.0",
+        "suiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+        "model": "qwen2.5-1.5b-instruct-q4_k_m",
+        "modelSHA256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "host": "Linux/x86_64",
+        "runtimeVersion": "version: 1.0.0-dev (build 12608, commit 93cb37ea7)\nbuilt with GNU 11.4.0 for Linux x86_64",
+        "provider": "llama.cpp /v1/chat/completions",
+        "cases": [
+          {
+            "caseID": "published-reset",
+            "promptSHA256": "da1832d6e3c12f2962579fcc02ee418f2839474cf30eeca8041d00d5a93ffff9",
+            "expected": "00:00 UTC [B]",
+            "passed": true,
+            "output": "00:00 UTC [B]",
+            "requestID": "chatcmpl-DlMaXjkFYlIo9uLTS2oregvt0RdXsgB2",
+            "finishReason": "stop",
+            "completionTokens": 10,
+            "latencyMs": 1741
+          },
+          {
+            "caseID": "published-allowance",
+            "promptSHA256": "a7523ca5e35ed772eac07fa7be0c9b0ee84cef1916c085aa4f08b9a64043aecd",
+            "expected": "10,000 neurons [A]",
+            "passed": true,
+            "output": "10,000 neurons [A]",
+            "requestID": "chatcmpl-fkG5YjNnw9uL6xgsPAzCEFyM7kH7uaRV",
+            "finishReason": "stop",
+            "completionTokens": 11,
+            "latencyMs": 1014
+          },
+          {
+            "caseID": "account-unknown",
+            "promptSHA256": "bc4f95475eb9670e4bb11bc6abfca0d31a4d7997b93b98d86b47ad555cc82137",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-m7dj6eoBt2s658KloLQMecPnwyvBpIzA",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 426
+          },
+          {
+            "caseID": "account-observed",
+            "promptSHA256": "bf8590f4b2f3d417541af75cd17f1679831e4f567123c2db5d5d242f393193b1",
+            "expected": "6,240 neurons [B]",
+            "passed": false,
+            "output": "6,240 neurons",
+            "requestID": "chatcmpl-gborEDS6kAP6hunpQYUOKvqJPTFSLz8l",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 551
+          },
+          {
+            "caseID": "account-corrected",
+            "promptSHA256": "f06aa065c5afc8ebffce4c6238e061a49944360d11c1e9f74c1ed4426c9c9ae0",
+            "expected": "4,910 neurons [A]",
+            "passed": false,
+            "output": "4,910 neurons",
+            "requestID": "chatcmpl-gDEbjyvn9PKhdNGJSrC4X63MmA2A9UEx",
+            "finishReason": "stop",
+            "completionTokens": 7,
+            "latencyMs": 836
+          },
+          {
+            "caseID": "handset-unknown",
+            "promptSHA256": "38e0230cd72397d9c72c93908b6867bdbd237b758e1f361293b470fb33258ab5",
+            "expected": "UNKNOWN",
+            "passed": true,
+            "output": "UNKNOWN",
+            "requestID": "chatcmpl-8YTR7BVPbY8Yrfh6nbllhguP2yp9b9UX",
+            "finishReason": "stop",
+            "completionTokens": 2,
+            "latencyMs": 430
+          }
+        ],
+        "passed": 4,
+        "total": 6,
+        "allPassed": false
+      },
+      "originalUsageSHA256": "9870121727c011fd5b28ae24293b0a360f81f10681a0bb15f5cb17449532eae1",
+      "originalAnswersSHA256": "76f19a8daec62107fcf333cf9974a73f45d5268d5aa624eb2b438f0e19f36f05"
+    }
+  ]
+}

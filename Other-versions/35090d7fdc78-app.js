@@ -1,0 +1,324 @@
+const $ = (id) => document.getElementById(id);
+const state = { model: "model not connected", busy: false };
+const views = ["chat","agents","memory","models","sources","activity","settings"];
+function setView(name){views.forEach(v=>$(v+"-view").classList.toggle("hidden",v!==name));document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("page-name").textContent=name==="models"?"Model workshop":name[0].toUpperCase()+name.slice(1);$("sidebar").classList.remove("open");if(name==="agents")checkAgentHealth();if(name==="memory")loadMemories();if(name==="activity"&&!reviewSource)loadBundledReview();}
+function appendMessage(role,text){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":"POCKET AI LAB · MODEL RESPONSE";const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
+function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
+async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
+let agentController=null;
+async function checkAgentHealth(){
+ const status=$("agent-status");
+ if(!status)return;
+ status.textContent="Checking local llama-server…";
+ try{
+  const response=await fetch("/api/agent-health");
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"Local model unavailable");
+  status.textContent="Connected · "+data.baseUrl+" · "+data.api;
+ }catch(error){status.textContent="Local model unavailable. Start llama-server on 127.0.0.1:8080. "+error.message;}
+}
+function appendAgentEvent(event){
+ if(event.type==="stage")$("agent-status").textContent="Running stage: "+event.stage;
+ if(event.type==="message"){
+  const item=document.createElement("li");
+  const heading=document.createElement("strong");
+  heading.textContent=event.message.role+" · "+event.message.stage;
+  const payload=document.createElement("pre");
+  payload.textContent=JSON.stringify(event.message.payload,null,2);
+  item.append(heading,payload);
+  $("agent-transcript").append(item);
+ }
+ if(event.type==="error")$("agent-status").textContent="Run stopped: "+event.message;
+ if(event.type==="done"){
+  const result=event.result;
+  $("agent-result").classList.remove("hidden");
+  $("agent-result").textContent=(result.synthesis||"No final synthesis was produced.")+"\n\nAuthorized: "+String(result.authorized)+" · Memory verified: "+String(result.memoryVerified)+"\n"+result.disclaimer;
+  $("agent-status").textContent=result.error?"Run ended with an error: "+result.error.message:result.messages.length+" real model messages completed.";
+ }
+}
+$("agent-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const objective=$("agent-objective").value.trim();
+ if(!objective||agentController)return;
+ agentController=new AbortController();
+ $("agent-run").disabled=true;$("agent-stop").disabled=false;
+ $("agent-transcript").replaceChildren();$("agent-result").classList.add("hidden");
+ $("agent-status").textContent="Starting local agent team…";
+ try{
+  const response=await fetch("/api/agent-tasks",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({objective}),signal:agentController.signal});
+  if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||"Could not start the agent run.");}
+  if(!response.body)throw new Error("Streaming is not supported by this browser.");
+  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer="";
+  while(true){
+   const chunk=await reader.read();if(chunk.done)break;
+   buffer+=decoder.decode(chunk.value,{stream:true});
+   let boundary;
+   while((boundary=buffer.indexOf("\n\n"))>=0){
+    const block=buffer.slice(0,boundary);buffer=buffer.slice(boundary+2);
+    const line=block.split("\n").find(value=>value.startsWith("data: "));
+    if(line)appendAgentEvent(JSON.parse(line.slice(6)));
+   }
+  }
+ }catch(error){if(error.name!=="AbortError")$("agent-status").textContent=error.message;}
+ finally{agentController=null;$("agent-run").disabled=false;$("agent-stop").disabled=true;}
+});
+$("agent-stop").addEventListener("click",()=>agentController?.abort());
+
+async function sendMessage(text){if(!text.trim()||state.busy)return; $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";state.busy=true;$("send").disabled=true;const output=appendMessage("assistant","Connecting to your configured model…");try{const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");output.textContent=data.reply||"The model returned an empty response."; }catch(error){output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";}finally{state.busy=false;$("send").disabled=false;health();}}
+$("composer").addEventListener("submit",e=>{e.preventDefault();sendMessage($("prompt").value);});
+$("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("composer").requestSubmit();}});
+document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("settings-shortcut").addEventListener("click",()=>setView("settings"));
+$("new-chat").addEventListener("click",()=>{$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
+$("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
+$("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
+$("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});
+function memoryElement(tag,className,text){
+ const node=document.createElement(tag);
+ if(className)node.className=className;
+ if(text!==undefined)node.textContent=text;
+ return node;
+}
+function renderMemories(entries){
+ const list=$("memory-list");
+ list.replaceChildren();
+ if(!entries.length){
+  const empty=memoryElement("div","empty-state");
+  empty.append(memoryElement("h3","","No saved memories yet"),memoryElement("p","","Use the form above to save something intentionally. Nothing from Chat is saved automatically."));
+  list.append(empty);
+  return;
+ }
+ for(const entry of entries){
+  const card=memoryElement("article","memory-entry");
+  const header=memoryElement("div","memory-entry-header");
+  const type=memoryElement("strong","memory-type",String(entry.layer||"memory").toUpperCase());
+  const date=memoryElement("time","memory-date",entry.createdAt?new Date(entry.createdAt).toLocaleString():"Date unavailable");
+  header.append(type,date);
+  const content=memoryElement("p","memory-entry-content",entry.content||"");
+  const meta=memoryElement("div","memory-entry-meta");
+  meta.append(memoryElement("span","memory-provenance","Saved by "+(entry.provenance?.agentId||"unknown")));
+  meta.append(memoryElement("span",entry.provenance?.verified?"memory-verified":"memory-unverified",entry.provenance?.verified?"Verified separately":"Unverified · not independently checked"));
+  card.append(header,content,meta);
+  const originalSources=entry.provenance?.sourceRefs||[];
+  for(const ref of originalSources){
+   card.append(memoryElement("p","memory-source","Source: "+ref));
+  }
+  const actions=memoryElement("div","memory-entry-actions");
+  const edit=memoryElement("button","secondary-button","Edit");
+  edit.type="button";
+  edit.addEventListener("click",()=>{
+   const editor=memoryElement("form","memory-editor");
+   const contentLabel=memoryElement("label","","Memory content");
+   const contentInput=memoryElement("textarea");
+   contentInput.rows=4;
+   contentInput.maxLength=12000;
+   contentInput.required=true;
+   contentInput.value=entry.content||"";
+   contentLabel.append(contentInput);
+   const sources=memoryElement("div","memory-editor-sources");
+   const sourceFields=[];
+   function addSource(original=""){
+    const label=memoryElement("label","","Source "+(sourceFields.length+1)+" (optional)");
+    const field=memoryElement("textarea");
+    field.rows=1;
+    field.maxLength=500;
+    field.value=original;
+    sourceFields.push({field,original,initial:field.value});
+    label.append(field);
+    sources.append(label);
+    return field;
+   }
+   if(originalSources.length)originalSources.forEach(ref=>addSource(ref));
+   else addSource();
+   const add=memoryElement("button","secondary-button","Add source");
+   add.type="button";
+   add.addEventListener("click",()=>addSource().focus());
+   const controls=memoryElement("div","memory-editor-actions");
+   const save=memoryElement("button","primary-button","Save changes");
+   save.type="submit";
+   const cancel=memoryElement("button","secondary-button","Cancel");
+   cancel.type="button";
+   cancel.addEventListener("click",loadMemories);
+   controls.append(cancel,save);
+   editor.append(contentLabel,sources,add,controls);
+   editor.addEventListener("submit",async event=>{
+    event.preventDefault();
+    const value=contentInput.value.trim();
+    if(!value)return;
+    const patch={content:value};
+    if(sourceFields.some(({field,initial})=>field.value!==initial)){
+     patch.sourceRefs=sourceFields.flatMap(({field,initial,original})=>{
+      const ref=field.value===initial?original:field.value.trim();
+      return ref?[ref]:[];
+     });
+    }
+    save.disabled=true;
+    $( "memory-status" ).textContent="Updating memory…";
+    try{
+     const response=await fetch("/api/memory/"+encodeURIComponent(entry.id),{
+      method:"PUT",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify(patch)
+     });
+     const data=await response.json().catch(()=>({}));
+     if(!response.ok)throw new Error(data.error||"Memory could not be updated.");
+     $( "memory-status" ).textContent="Updated. This memory is now unverified until independently checked.";
+     await loadMemories();
+    }catch(error){
+     $( "memory-status" ).textContent=error.message;
+     save.disabled=false;
+    }
+   });
+   card.replaceChildren(header,editor);
+   contentInput.focus();
+  });
+  const remove=memoryElement("button","secondary-button","Delete");
+  remove.type="button";
+  remove.addEventListener("click",async()=>{
+   if(!window.confirm("Delete this saved memory? This cannot be undone."))return;
+   remove.disabled=true;
+   try{
+    const response=await fetch("/api/memory/"+encodeURIComponent(entry.id),{method:"DELETE"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"Could not delete memory.");
+    $("memory-status").textContent="Memory deleted.";
+    await loadMemories();
+   }catch(error){$("memory-status").textContent=error.message;remove.disabled=false;}
+  });
+  actions.append(edit,remove);
+  card.append(actions);
+  list.append(card);
+ }
+}
+async function loadMemories(){
+ const status=$("memory-status");
+ const list=$("memory-list");
+ if(!list)return;
+ status.textContent="Loading saved memories…";
+ try{
+  const response=await fetch("/api/memory");
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"Memory storage is unavailable.");
+  const entries=Array.isArray(data.entries)?data.entries:[];
+  entries.sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+  renderMemories(entries);
+  status.textContent=entries.length+" saved memor"+(entries.length===1?"y":"ies")+". New entries remain unverified.";
+ }catch(error){
+  list.replaceChildren();
+  list.append(memoryElement("div","empty-state",error.message));
+  status.textContent="Memory could not be loaded.";
+ }
+}
+$("memory-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const content=$("memory-content").value.trim();
+ if(!content)return;
+ const button=$("memory-save");
+ button.disabled=true;
+ $("memory-status").textContent="Saving memory…";
+ try{
+  const response=await fetch("/api/memory",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({content,layer:$("memory-layer").value,source:$("memory-source").value.trim()})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"Memory could not be saved.");
+  $("memory-content").value="";
+  $("memory-source").value="";
+  $("memory-status").textContent="Saved. This memory is unverified until independently checked.";
+  await loadMemories();
+ }catch(error){$("memory-status").textContent=error.message;}
+ finally{button.disabled=false;}
+});
+$("memory-refresh").addEventListener("click",loadMemories);
+let reviewSource = null;
+let reviewGeneration = 0;
+
+function clearReview(message) {
+  $("review-details").hidden = true;
+  $("review-status").textContent = message;
+  $("review-action-status").textContent = "";
+}
+
+function displayReview(record, origin) {
+  const baseline = reviewSource.bundled;
+  const receipt = record?.receipt;
+  if ((record?.format !== undefined && record.format !== "pocket-ai-lab.ci-review.v1") ||
+      record?.evidence_sha256 !== reviewSource.digest || record?.model_sha256 !== baseline.model_sha256 ||
+      record?.source?.job_id !== reviewSource.jobId || receipt?.ok !== true ||
+      receipt.provider !== baseline.receipt.provider || receipt.model !== baseline.receipt.model ||
+      typeof receipt.final !== "string" || !receipt.final.trim() || receipt.final.length > 2000) {
+    throw new Error("The file does not match this review’s source, model or record format.");
+  }
+  const draft = receipt.final;
+  const local = draft.split("\n").find(line => line.startsWith("Local checks: ")) || "";
+  const figures = local.match(/\b\d+\b/g) || [];
+  const match = draft.startsWith("Hosted CI job " + reviewSource.jobId + ":") &&
+    figures.includes(String(reviewSource.localTests)) && figures.includes(String(reviewSource.localFiles));
+  $("review-job").href = reviewSource.job;
+  $("review-job").textContent = "GitHub job " + reviewSource.jobId;
+  $("review-evidence").textContent = reviewSource.evidence;
+  $("review-draft").textContent = draft;
+  $("review-summary").textContent = reviewSource.sourceSummary;
+  $("review-comparison").textContent = match
+    ? "The job and both counts appear in the draft. Check their meaning against the source."
+    : "Correction needed. The draft omits or changes the job or local test counts.";
+  $("review-status").textContent = origin + " · " + receipt.model;
+  $("review-details").hidden = false;
+}
+
+async function loadBundledReview() {
+  const generation = ++reviewGeneration;
+  clearReview("Loading the review…");
+  reviewSource = null;
+  $("review-file").disabled = true;
+  $("review-file").value = "";
+  try {
+    const response = await fetch("/api/activity/openclaw-245");
+    if (!response.ok) throw new Error("The project evidence could not be loaded.");
+    const source = await response.json();
+    if (generation !== reviewGeneration) return;
+    reviewSource = source;
+    displayReview(source.bundled, "Bundled local run");
+    $("review-file").disabled = false;
+  } catch (error) {
+    if (generation === reviewGeneration) {
+      reviewSource = null;
+      clearReview(error.message);
+    }
+  }
+}
+
+$("review-reset").addEventListener("click", loadBundledReview);
+$("review-file").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file || !reviewSource) return;
+  const generation = ++reviewGeneration;
+  clearReview("Reading the selected file…");
+  try {
+    if (file.size > 65536) throw new Error("Choose a review file of 64 KiB or less.");
+    const record = JSON.parse(await file.text());
+    if (generation === reviewGeneration) displayReview(record, "Imported draft");
+  } catch (error) {
+    if (generation === reviewGeneration) clearReview(error instanceof SyntaxError ? "Invalid review JSON." : error.message);
+  }
+});
+$("review-to-memory").addEventListener("click", () => {
+  if (!reviewSource || $("review-details").hidden) return;
+  prepareReviewNote("PR #245 CI evidence\n\n" + reviewSource.sourceSummary +
+    "\n\nEvidence SHA-256: " + reviewSource.digest +
+    "\n\nOpenClaw draft (" + $("review-status").textContent + ")\n" + $("review-draft").textContent,
+    reviewSource.job, $("review-action-status"));
+});
+
+function prepareReviewNote(content, source, status) {
+  if ($("memory-content").value.trim() || $("memory-source").value.trim()) {
+    status.textContent = "A note is already being edited in Memory. Save or clear it first.";
+    return;
+  }
+  $("memory-content").value = content;
+  $("memory-source").value = source;
+  $("memory-layer").value = "episodic";
+  setView("memory");
+  $("memory-content").focus();
+}
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
+health();

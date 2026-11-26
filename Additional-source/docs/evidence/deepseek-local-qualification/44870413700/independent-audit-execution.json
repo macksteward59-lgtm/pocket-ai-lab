@@ -1,0 +1,60 @@
+{
+  "apexReceipt": false,
+  "artifactProfileMatchesSourceBytes": true,
+  "authorized": false,
+  "hardwareAcceptance": false,
+  "inferencePerformedByThisAudit": false,
+  "localCommit": "b30d112d1c03d771b2e8ff7a1c113d5e407e522f",
+  "modelDownloadedByThisAudit": false,
+  "modelPromotion": false,
+  "qualificationAuditorSHA256": "0e6172894507bef67a72db5a8c0dbf2c7ad7d317fb2adc4b40adc6a4f030e335",
+  "recomputedAuditMatchesArtifactBytes": true,
+  "recomputedTokenizerAcceptanceMatchesArtifactBytes": true,
+  "schemaVersion": 1,
+  "sourceCommit": "e5cf16b9b3af96ab0fe4832105538abd5d22c551",
+  "sourceTree": "6b6904d921fdaa084a4be74f7909f3932e9a4262",
+  "steps": [
+    {
+      "command": [
+        "tokenizer",
+        "--profile",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/artifact/profile.json",
+        "--input",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/artifact/tokenizer.jsonl",
+        "--output",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/publish/docs/evidence/deepseek-local-qualification/44870413700/independent-tokenization-verified.json"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "stdout": "DeepSeek qualification tokenizer completed.\n"
+    },
+    {
+      "command": [
+        "verify",
+        "--profile",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/artifact/profile.json",
+        "--input",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/artifact/native-xctest.log",
+        "--tokenizer",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/publish/docs/evidence/deepseek-local-qualification/44870413700/independent-tokenization-verified.json",
+        "--output",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/publish/docs/evidence/deepseek-local-qualification/44870413700/independent-audit.json"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "stdout": "DeepSeek qualification verify completed.\n"
+    },
+    {
+      "command": [
+        "gate",
+        "--profile",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/artifact/profile.json",
+        "--input",
+        "/workspace/scratch/fa50136003f8/deepseek-ci-evidence/44870413700/publish/docs/evidence/deepseek-local-qualification/44870413700/independent-audit.json"
+      ],
+      "exitCode": 1,
+      "stderr": "DeepSeek qualification failed: development quality gate failed: all eight complete final answers must be correct\n",
+      "stdout": ""
+    }
+  ]
+}

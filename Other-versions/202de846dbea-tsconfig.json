@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "packages/intelligence/**/*",
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "packages/director",
+    "packages/exploitgym"
+  ]
+}

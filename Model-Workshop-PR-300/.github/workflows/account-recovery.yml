@@ -1,0 +1,57 @@
+name: Account-owned task recovery
+on:
+  push:
+    branches: [codex/account-owned-task-recovery]
+  pull_request:
+    branches: [main, codex/unified-model-workshop]
+    paths:
+      - apps/web/recovery/**
+      - apps/web/recovery-api.mjs
+      - apps/web/model-workshop/**
+      - apps/web/test/*recovery*.mjs
+      - apps/web/server.mjs
+      - apps/web/app.js
+      - apps/web/index.html
+      - apps/web/styles.css
+      - apps/web/sw.js
+      - tools/review-browser/account-recovery.mjs
+      - tools/review-browser/package*.json
+      - tools/verify-review-task.mjs
+      - .github/workflows/account-recovery.yml
+permissions:
+  contents: read
+jobs:
+  recovery-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - name: Check the consumer app and recovery API
+        run: npm run test:web
+      - name: Recover the signed review in mobile Chromium and WebKit
+        working-directory: tools/review-browser
+        env:
+          RECOVERY_EVIDENCE_DIR: ${{ runner.temp }}/pocket-review-evidence
+          RECOVERY_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/playwright install --with-deps chromium webkit
+          node --import tsx --test account-recovery.mjs
+      - name: Archive the verified synthetic reviews and public keys
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: signed-recovery-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/pocket-review-evidence/chromium/signed-review.json
+            ${{ runner.temp }}/pocket-review-evidence/chromium/public-key.json
+            ${{ runner.temp }}/pocket-review-evidence/chromium/acceptance.json
+            ${{ runner.temp }}/pocket-review-evidence/webkit/signed-review.json
+            ${{ runner.temp }}/pocket-review-evidence/webkit/public-key.json
+            ${{ runner.temp }}/pocket-review-evidence/webkit/acceptance.json

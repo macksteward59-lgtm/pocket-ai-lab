@@ -1,0 +1,90 @@
+{
+  "chatTemplate": {
+    "metadataKey": "tokenizer.chat_template",
+    "present": true,
+    "sha256": "b6835114b7303ddd78919a82e4d9f7d8c26ed0d7dfc36beeb12d524f6144eab1",
+    "text": "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% set ns = namespace(is_first=false, is_tool=false, is_output_first=true, system_prompt='') %}{%- for message in messages %}{%- if message['role'] == 'system' %}{% set ns.system_prompt = message['content'] %}{%- endif %}{%- endfor %}{{bos_token}}{{ns.system_prompt}}{%- for message in messages %}{%- if message['role'] == 'user' %}{%- set ns.is_tool = false -%}{{'<｜User｜>' + message['content']}}{%- endif %}{%- if message['role'] == 'assistant' and message['content'] is none %}{%- set ns.is_tool = false -%}{%- for tool in message['tool_calls']%}{%- if not ns.is_first %}{{'<｜Assistant｜><｜tool▁calls▁begin｜><｜tool▁call▁begin｜>' + tool['type'] + '<｜tool▁sep｜>' + tool['function']['name'] + '\\n' + '```json' + '\\n' + tool['function']['arguments'] + '\\n' + '```' + '<｜tool▁call▁end｜>'}}{%- set ns.is_first = true -%}{%- else %}{{'\\n' + '<｜tool▁call▁begin｜>' + tool['type'] + '<｜tool▁sep｜>' + tool['function']['name'] + '\\n' + '```json' + '\\n' + tool['function']['arguments'] + '\\n' + '```' + '<｜tool▁call▁end｜>'}}{{'<｜tool▁calls▁end｜><｜end▁of▁sentence｜>'}}{%- endif %}{%- endfor %}{%- endif %}{%- if message['role'] == 'assistant' and message['content'] is not none %}{%- if ns.is_tool %}{{'<｜tool▁outputs▁end｜>' + message['content'] + '<｜end▁of▁sentence｜>'}}{%- set ns.is_tool = false -%}{%- else %}{% set content = message['content'] %}{% if '</think>' in content %}{% set content = content.split('</think>')[-1] %}{% endif %}{{'<｜Assistant｜>' + content + '<｜end▁of▁sentence｜>'}}{%- endif %}{%- endif %}{%- if message['role'] == 'tool' %}{%- set ns.is_tool = true -%}{%- if ns.is_output_first %}{{'<｜tool▁outputs▁begin｜><｜tool▁output▁begin｜>' + message['content'] + '<｜tool▁output▁end｜>'}}{%- set ns.is_output_first = false %}{%- else %}{{'\\n<｜tool▁output▁begin｜>' + message['content'] + '<｜tool▁output▁end｜>'}}{%- endif %}{%- endif %}{%- endfor -%}{% if ns.is_tool %}{{'<｜tool▁outputs▁end｜>'}}{% endif %}{% if add_generation_prompt and not ns.is_tool %}{{'<｜Assistant｜>'}}{% endif %}",
+    "utf8Base64": "eyUgaWYgbm90IGFkZF9nZW5lcmF0aW9uX3Byb21wdCBpcyBkZWZpbmVkICV9eyUgc2V0IGFkZF9nZW5lcmF0aW9uX3Byb21wdCA9IGZhbHNlICV9eyUgZW5kaWYgJX17JSBzZXQgbnMgPSBuYW1lc3BhY2UoaXNfZmlyc3Q9ZmFsc2UsIGlzX3Rvb2w9ZmFsc2UsIGlzX291dHB1dF9maXJzdD10cnVlLCBzeXN0ZW1fcHJvbXB0PScnKSAlfXslLSBmb3IgbWVzc2FnZSBpbiBtZXNzYWdlcyAlfXslLSBpZiBtZXNzYWdlWydyb2xlJ10gPT0gJ3N5c3RlbScgJX17JSBzZXQgbnMuc3lzdGVtX3Byb21wdCA9IG1lc3NhZ2VbJ2NvbnRlbnQnXSAlfXslLSBlbmRpZiAlfXslLSBlbmRmb3IgJX17e2Jvc190b2tlbn19e3tucy5zeXN0ZW1fcHJvbXB0fX17JS0gZm9yIG1lc3NhZ2UgaW4gbWVzc2FnZXMgJX17JS0gaWYgbWVzc2FnZVsncm9sZSddID09ICd1c2VyJyAlfXslLSBzZXQgbnMuaXNfdG9vbCA9IGZhbHNlIC0lfXt7JzzvvZxVc2Vy772cPicgKyBtZXNzYWdlWydjb250ZW50J119fXslLSBlbmRpZiAlfXslLSBpZiBtZXNzYWdlWydyb2xlJ10gPT0gJ2Fzc2lzdGFudCcgYW5kIG1lc3NhZ2VbJ2NvbnRlbnQnXSBpcyBub25lICV9eyUtIHNldCBucy5pc190b29sID0gZmFsc2UgLSV9eyUtIGZvciB0b29sIGluIG1lc3NhZ2VbJ3Rvb2xfY2FsbHMnXSV9eyUtIGlmIG5vdCBucy5pc19maXJzdCAlfXt7JzzvvZxBc3Npc3RhbnTvvZw+PO+9nHRvb2ziloFjYWxsc+KWgWJlZ2lu772cPjzvvZx0b29s4paBY2FsbOKWgWJlZ2lu772cPicgKyB0b29sWyd0eXBlJ10gKyAnPO+9nHRvb2ziloFzZXDvvZw+JyArIHRvb2xbJ2Z1bmN0aW9uJ11bJ25hbWUnXSArICdcbicgKyAnYGBganNvbicgKyAnXG4nICsgdG9vbFsnZnVuY3Rpb24nXVsnYXJndW1lbnRzJ10gKyAnXG4nICsgJ2BgYCcgKyAnPO+9nHRvb2ziloFjYWxs4paBZW5k772cPid9fXslLSBzZXQgbnMuaXNfZmlyc3QgPSB0cnVlIC0lfXslLSBlbHNlICV9e3snXG4nICsgJzzvvZx0b29s4paBY2FsbOKWgWJlZ2lu772cPicgKyB0b29sWyd0eXBlJ10gKyAnPO+9nHRvb2ziloFzZXDvvZw+JyArIHRvb2xbJ2Z1bmN0aW9uJ11bJ25hbWUnXSArICdcbicgKyAnYGBganNvbicgKyAnXG4nICsgdG9vbFsnZnVuY3Rpb24nXVsnYXJndW1lbnRzJ10gKyAnXG4nICsgJ2BgYCcgKyAnPO+9nHRvb2ziloFjYWxs4paBZW5k772cPid9fXt7JzzvvZx0b29s4paBY2FsbHPiloFlbmTvvZw+PO+9nGVuZOKWgW9m4paBc2VudGVuY2XvvZw+J319eyUtIGVuZGlmICV9eyUtIGVuZGZvciAlfXslLSBlbmRpZiAlfXslLSBpZiBtZXNzYWdlWydyb2xlJ10gPT0gJ2Fzc2lzdGFudCcgYW5kIG1lc3NhZ2VbJ2NvbnRlbnQnXSBpcyBub3Qgbm9uZSAlfXslLSBpZiBucy5pc190b29sICV9e3snPO+9nHRvb2ziloFvdXRwdXRz4paBZW5k772cPicgKyBtZXNzYWdlWydjb250ZW50J10gKyAnPO+9nGVuZOKWgW9m4paBc2VudGVuY2XvvZw+J319eyUtIHNldCBucy5pc190b29sID0gZmFsc2UgLSV9eyUtIGVsc2UgJX17JSBzZXQgY29udGVudCA9IG1lc3NhZ2VbJ2NvbnRlbnQnXSAlfXslIGlmICc8L3RoaW5rPicgaW4gY29udGVudCAlfXslIHNldCBjb250ZW50ID0gY29udGVudC5zcGxpdCgnPC90aGluaz4nKVstMV0gJX17JSBlbmRpZiAlfXt7JzzvvZxBc3Npc3RhbnTvvZw+JyArIGNvbnRlbnQgKyAnPO+9nGVuZOKWgW9m4paBc2VudGVuY2XvvZw+J319eyUtIGVuZGlmICV9eyUtIGVuZGlmICV9eyUtIGlmIG1lc3NhZ2VbJ3JvbGUnXSA9PSAndG9vbCcgJX17JS0gc2V0IG5zLmlzX3Rvb2wgPSB0cnVlIC0lfXslLSBpZiBucy5pc19vdXRwdXRfZmlyc3QgJX17eyc8772cdG9vbOKWgW91dHB1dHPiloFiZWdpbu+9nD48772cdG9vbOKWgW91dHB1dOKWgWJlZ2lu772cPicgKyBtZXNzYWdlWydjb250ZW50J10gKyAnPO+9nHRvb2ziloFvdXRwdXTiloFlbmTvvZw+J319eyUtIHNldCBucy5pc19vdXRwdXRfZmlyc3QgPSBmYWxzZSAlfXslLSBlbHNlICV9e3snXG48772cdG9vbOKWgW91dHB1dOKWgWJlZ2lu772cPicgKyBtZXNzYWdlWydjb250ZW50J10gKyAnPO+9nHRvb2ziloFvdXRwdXTiloFlbmTvvZw+J319eyUtIGVuZGlmICV9eyUtIGVuZGlmICV9eyUtIGVuZGZvciAtJX17JSBpZiBucy5pc190b29sICV9e3snPO+9nHRvb2ziloFvdXRwdXRz4paBZW5k772cPid9fXslIGVuZGlmICV9eyUgaWYgYWRkX2dlbmVyYXRpb25fcHJvbXB0IGFuZCBub3QgbnMuaXNfdG9vbCAlfXt7JzzvvZxBc3Npc3RhbnTvvZw+J319eyUgZW5kaWYgJX0=",
+    "utf8ByteLength": 2237
+  },
+  "evidenceBoundary": {
+    "inferenceExecuted": false,
+    "note": "Artifact declarations only. Missing flags remain unknown. No Jinja/template execution, model loading, runtime readiness, publisher authentication or authorization is established.",
+    "recipientQualityEstablished": false,
+    "runtimeDefaultFlagsInferred": false,
+    "templateRendered": false,
+    "tokenizationExecuted": false
+  },
+  "gguf": {
+    "byteOrder": "little",
+    "headerAndMetadataBytes": 5931247,
+    "metadataKeyCount": 30,
+    "tensorCountDeclared": 339,
+    "tensorDirectoryValidated": false,
+    "tensorPayloadParsed": false,
+    "version": 3
+  },
+  "limits": {
+    "arrayElements": 1000000,
+    "keyBytes": 512,
+    "metadataKeys": 4096,
+    "metadataPrefixBytes": 16777216,
+    "specialTokenIDs": 64,
+    "stringBytes": 1048576,
+    "tensorsDeclared": 1000000,
+    "tokenBytes": 16384
+  },
+  "missingTokenizerMetadataKeys": [
+    "tokenizer.ggml.add_space_prefix",
+    "tokenizer.ggml.clean_spaces",
+    "tokenizer.ggml.remove_extra_whitespaces"
+  ],
+  "probe": "pinned-gguf-recipient-template-metadata",
+  "schemaVersion": 1,
+  "specialTokens": {
+    "tokenizer.ggml.bos_token_id": {
+      "ggufType": "UINT32",
+      "id": 151646,
+      "tokenString": {
+        "sha256": "103b97e2e11597024429ff21225271c5ddb257852d8264cc8ec48fbac97c48e1",
+        "text": "<｜begin▁of▁sentence｜>",
+        "utf8ByteLength": 29
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.eos_token_id": {
+      "ggufType": "UINT32",
+      "id": 151643,
+      "tokenString": {
+        "sha256": "8d7e65dd2fb76bd687ad8e41e6a68f69bcec565e2f0bc96189e4d7cf38e29290",
+        "text": "<｜end▁of▁sentence｜>",
+        "utf8ByteLength": 27
+      },
+      "tokenStringStatus": "present"
+    },
+    "tokenizer.ggml.padding_token_id": {
+      "ggufType": "UINT32",
+      "id": 151643,
+      "tokenString": {
+        "sha256": "8d7e65dd2fb76bd687ad8e41e6a68f69bcec565e2f0bc96189e4d7cf38e29290",
+        "text": "<｜end▁of▁sentence｜>",
+        "utf8ByteLength": 27
+      },
+      "tokenStringStatus": "present"
+    }
+  },
+  "tokenizerMetadata": {
+    "tokenizer.ggml.add_bos_token": true,
+    "tokenizer.ggml.add_eos_token": false,
+    "tokenizer.ggml.model": "gpt2",
+    "tokenizer.ggml.pre": "deepseek-r1-qwen"
+  },
+  "verifiedModel": {
+    "bytes": 1117320800,
+    "sha256": "1741e5b2d062b07acf048bf0d2c514dadf2a48f94e2b4aa0cfe069af3838ee2f"
+  },
+  "vocabulary": {
+    "count": 151936,
+    "present": true
+  }
+}

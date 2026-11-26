@@ -1,0 +1,37 @@
+{
+  "suiteID": "pocket-passage-heldout",
+  "version": "1.0.0",
+  "maxTokens": 48,
+  "cases": [
+    {
+      "id": "accepted-blue",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] Sample BLUE was accepted at 07:14 UTC.\n[B] Sample GOLD was accepted at 09:41 UTC.\n\nQuestion: At what time was sample BLUE accepted?",
+      "expected": "07:14 UTC [A]"
+    },
+    {
+      "id": "accepted-gold",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] Sample BLUE was accepted at 07:14 UTC.\n[B] Sample GOLD was accepted at 09:41 UTC.\n\nQuestion: At what time was sample GOLD accepted?",
+      "expected": "09:41 UTC [B]"
+    },
+    {
+      "id": "tray-count",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] Tray ELM holds 12 tiles.\n[B] Tray MAPLE holds 27 tiles.\n\nQuestion: How many tiles does tray MAPLE hold?",
+      "expected": "27 tiles [B]"
+    },
+    {
+      "id": "absent-tray",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] Tray ELM holds 12 tiles.\n[B] Tray MAPLE holds 27 tiles.\n\nQuestion: How many tiles does tray CEDAR hold?",
+      "expected": "UNKNOWN"
+    },
+    {
+      "id": "corrected-color",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] The replacement tag for bin N is copper.\n[B] The retired tag for bin N was teal.\n\nQuestion: What color is the replacement tag for bin N?",
+      "expected": "copper [A]"
+    },
+    {
+      "id": "missing-property",
+      "prompt": "Use only the supplied passages. Give the short answer followed by its passage label, as in 42 [B]. Use the exact spelling and units in the passage. If the requested fact is missing, answer UNKNOWN. Return only that answer.\n\n[A] Sample BLUE was accepted at 07:14 UTC.\n[B] Sample GOLD was accepted at 09:41 UTC.\n\nQuestion: What temperature was recorded for sample BLUE?",
+      "expected": "UNKNOWN"
+    }
+  ]
+}

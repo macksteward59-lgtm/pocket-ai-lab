@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "head": "aae5efc89d51ce4d52ccab1d2b37e4a3059c034b",
+    "tree": "26084c519ec12ccaec8d33f7fdd4e440dece9dae",
+    "base": "d3294457e65e59a3d4d53510441f5a6b79474852",
+    "branch": "codex/tool-workshop-repair-integration-20261121",
+    "profileSHA256": "7155902225d8eed9291ff082265430b3fdc87b1f02144427c611bd17be90e29c",
+    "localHead": "1f2fac26059f8db15668451b2b56bb84e19562b2"
+  },
+  "runId": 44890561764,
+  "jobId": 136805486961,
+  "artifactId": 14702295487,
+  "archiveSHA256": "06ce956384afeb5fe1083931846f2525a87456d2dc042c643188dc8bfba0522f",
+  "reportSHA256": "d1e724d08f5f2d02938b60c83e4337da410231b66109252ac939f83ab9890a4a",
+  "directorCalls": 3,
+  "engineerCalls": 2,
+  "retainedSourceValues": [
+    "Python source",
+    "Python source"
+  ],
+  "developmentPassed": [
+    3,
+    0,
+    0
+  ],
+  "developmentTotal": 8,
+  "heldOut": {
+    "baseline": 4,
+    "candidate": 0,
+    "total": 20
+  },
+  "controlPassed": false,
+  "qualityPassed": false,
+  "accepted": false,
+  "actualContainers": 64,
+  "actualDiagnosticsFedBack": true,
+  "modelUnchanged": true,
+  "setupFailures": [],
+  "sandbox": {
+    "artifactId": 14702200479,
+    "archiveSHA256": "1ae07d7fa1bba3c53582d153edfec81cea6206e209b5f64cd454656347e2a8d5",
+    "reportSHA256": "1db70aae4f088ad67d903a1cf4a3288c4a16f0d9087e29379bcf3bf5b2a3b401",
+    "actualContainers": 21,
+    "accepted": true
+  },
+  "generalCI": {
+    "runId": 44890561866,
+    "conclusion": "success"
+  },
+  "interpretation": "Source contract and actual compiler feedback work, but model echoed illustrative source string and did not repair. Third revision was blocked before inference. No held-out feedback or generated-source substitution."
+}

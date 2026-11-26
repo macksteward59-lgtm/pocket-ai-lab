@@ -1,0 +1,35 @@
+[
+  {
+    "matches": {
+      "earlierCapturedMatchesControl": true,
+      "initialOrdinaryMatchesControl": true,
+      "ordinaryControlsMatch": true
+    },
+    "modelSHA256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+    "outputs": {
+      "earlierCaptured": " Paris. Paris is a city known for",
+      "initialOrdinary": " Paris. Paris is a city known for",
+      "ordinaryBeforeInputs": " Paris. Paris is a city known for",
+      "ordinaryBeforeInputsRepeat": " Paris. Paris is a city known for"
+    },
+    "stage": "before-inputs"
+  },
+  {
+    "matches": {
+      "earlierCapturedMatchesControl": true,
+      "initialOrdinaryMatchesControl": true,
+      "ordinaryAfterMatchesCaptured": true,
+      "ordinaryAfterMatchesControl": true,
+      "ordinaryControlsMatch": true
+    },
+    "modelSHA256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+    "outputs": {
+      "earlierCaptured": " Paris. Paris is a city known for",
+      "initialOrdinary": " Paris. Paris is a city known for",
+      "ordinaryAfterInputs": " Paris. Paris is a city known for",
+      "ordinaryBeforeInputs": " Paris. Paris is a city known for",
+      "ordinaryBeforeInputsRepeat": " Paris. Paris is a city known for"
+    },
+    "stage": "after-inputs"
+  }
+]

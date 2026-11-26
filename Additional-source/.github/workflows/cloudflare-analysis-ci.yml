@@ -1,0 +1,57 @@
+name: Cloudflare Analysis Foundation
+
+on:
+  push:
+    branches: [main, codex/cloudflare-analysis-foundation-20261121]
+    paths:
+      - packages/intelligence/cloud/**
+      - packages/intelligence/serverless/cloud-analysis/**
+      - packages/intelligence/autonomy/**
+      - scripts/cloud/**
+      - scripts/cloudflare/**
+      - scripts/google-cloud/**
+      - plugins/pocket-cloud/**
+      - .github/workflows/cloudflare-analysis-ci.yml
+  pull_request:
+    paths:
+      - packages/intelligence/cloud/**
+      - packages/intelligence/serverless/cloud-analysis/**
+      - packages/intelligence/autonomy/**
+      - scripts/cloud/**
+      - scripts/cloudflare/**
+      - scripts/google-cloud/**
+      - plugins/pocket-cloud/**
+      - .github/workflows/cloudflare-analysis-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  provider-and-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Typecheck project and offline entrypoints
+        run: |
+          npm run build
+          npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --strict --esModuleInterop --skipLibCheck scripts/cloudflare/preview.mts scripts/google-cloud/preview.mts
+      - name: Verify provider, old preview compatibility and existing lifecycle safeguards
+        run: >-
+          npx vitest run
+          packages/intelligence/cloud/cloudflare/*.test.ts
+          packages/intelligence/cloud/google-cloud/*.test.ts
+          scripts/cloudflare/preview.test.ts
+          scripts/google-cloud/preview.test.ts
+          packages/intelligence/serverless/cloud-analysis/cloudAnalysis.test.ts
+      # Fixture transports only. No cloud secret, deployment, or live inference.

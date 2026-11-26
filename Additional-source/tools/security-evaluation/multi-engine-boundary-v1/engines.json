@@ -1,0 +1,71 @@
+{
+  "schema": "pal-external-security-engines-v1",
+  "mode": "optional-complete-sidecar-engines",
+  "defaultState": "unavailable-until-host-integration",
+  "ownership": "Director/APEX scope authority; East/e3 task lifecycle; third-party engines execute only behind independently verified host admission",
+  "engines": [
+    {
+      "id": "artex",
+      "project": "ARTEX",
+      "role": "offensive-assessment-engine",
+      "source": "BaaRai/ARTEX",
+      "sourceCommit": "65045efae642159eeef3be5536c262f096f4c08d",
+      "zipSha256": "a08d56087859e8881987fe99cde80855df871e1595e07244f8f7b4b55f6bfefe",
+      "license": "AGPL-3.0",
+      "deployment": "isolated-hosted-sidecar",
+      "capabilities": [
+        "asset-enumeration",
+        "authorized-http-replay",
+        "authorized-browser-testing",
+        "authorized-tool-execution",
+        "traffic-evidence",
+        "coverage-tracking"
+      ],
+      "notes": "Keep its offensive toolchain intact; never delegate APEX authority to its internal target/intercept gate. Source snapshot predates newer upstream security hardening."
+    },
+    {
+      "id": "stride-gpt",
+      "project": "STRIDE-GPT",
+      "role": "threat-modeling-engine",
+      "source": "mrwadams/stride-gpt",
+      "sourceCommit": "5bc2c7b728e4c4d43da6defbf34c53a41d89b909",
+      "zipSha256": "ecb163ff9e22f7b92010c94e3cdb972b615eee2098cc95141f7f1015c9b3540b",
+      "license": "MIT",
+      "deployment": "isolated-analysis-sidecar",
+      "capabilities": [
+        "stride-threat-model",
+        "attack-tree",
+        "dataflow-analysis",
+        "source-evidence-check",
+        "sarif-report"
+      ],
+      "notes": "Keep full Python threat-model workflow; do not replace Pocket model router or East. Any external LLM provider is separately approved; do not infer offline inference."
+    },
+    {
+      "id": "exploitgym",
+      "project": "ExploitGym",
+      "role": "isolated-evaluation-engine",
+      "source": "sunblaze-ucb/exploitgym",
+      "sourceCommit": "a8029e47135a29f1c1a6e79109bf86fba379b3f3",
+      "zipSha256": "fa6e111a5348ce91e6518aeff04a766ad6752ebb7adab39e4b976baf9d4c1fa4",
+      "license": "Apache-2.0 source; task data retains upstream licenses",
+      "deployment": "isolated-hosted-evaluation-sidecar",
+      "capabilities": [
+        "benchmark-provision",
+        "isolated-trial",
+        "reproduction-grading",
+        "trajectory-scoring"
+      ],
+      "notes": "Use existing draft PR #165 pinned Git submodule instead of copying ZIP. Review upstream newer Nov 14 trial-network isolation; no real-world targets or unlicensed dataset redistribution."
+    }
+  ],
+  "safety": {
+    "mode": "deny-by-default",
+    "externalAccess": "only-after-current-independent-APEX-and-program-scope-admission",
+    "modelOutputCanGrantAuthority": false,
+    "crossEngineAuthorityTransfer": false,
+    "cloudSpending": "disabled-by-default",
+    "deviceRole": "iPhone interface and review; no requirement to execute host containers on iPhone",
+    "runtimeStatus": "not-integrated"
+  }
+}

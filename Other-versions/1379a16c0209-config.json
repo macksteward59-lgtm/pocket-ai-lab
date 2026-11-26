@@ -1,0 +1,12 @@
+{
+  "baseRepo": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "baseRevision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+  "license": "apache-2.0",
+  "maxSteps": 8,
+  "budgetSeconds": 600,
+  "sequenceLength": 64,
+  "loraR": 4,
+  "loraAlpha": 8,
+  "learningRate": 0.0002,
+  "purpose": "experimental CPU LoRA demo on synthetic public-doc examples; not production, not EAGLE-3, and not an authorization model"
+}

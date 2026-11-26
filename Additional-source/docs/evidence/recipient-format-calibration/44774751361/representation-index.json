@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "reportKind": "lossless-evidence-publication-representations",
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "runId": 44774751361,
+  "runAttempt": 1,
+  "sourceHead": "811b02646fc30cba4eea86dc53adecde208b7222",
+  "checkoutSHA": "f27ce2295b0fa83239c28a87b5ddaff5fdbdaccf",
+  "sourceAndCheckoutTree": "c663bd1092db9b98756368a56f52003891501a7b",
+  "artifact": {
+    "id": 14650660530,
+    "name": "recipient-format-calibration-44774751361-1",
+    "storedPath": "artifact.zip.base64",
+    "originalBytes": 39323,
+    "originalSHA256": "8e934e88330f6d47023e5112f911925b329ef6c626dd118397e8861dcb3cd819",
+    "memberCount": 87,
+    "promptMemberCount": 72,
+    "memberIndex": "artifact-members.json"
+  },
+  "encodingPolicy": {
+    "base64LineWidth": 76,
+    "base64FinalNewline": true,
+    "gzipCompressionLevel": 9,
+    "gzipMTime": 0,
+    "gzipFilename": "",
+    "artifactLogCompressionThresholdBytes": 32768,
+    "artifactLogCompressionRule": "Strictly larger than threshold; smaller logs copied verbatim. All complete GitHub job logs encoded."
+  },
+  "encodedFiles": [
+    {
+      "storedPath": "artifact.zip.base64",
+      "encoding": "base64",
+      "sourceKind": "github-artifact-archive",
+      "originalPath": "artifact.zip",
+      "restorePath": "artifact.zip",
+      "originalBytes": 39323,
+      "originalSHA256": "8e934e88330f6d47023e5112f911925b329ef6c626dd118397e8861dcb3cd819",
+      "storedBytes": 53122,
+      "storedSHA256": "b24e22dc1352240fed87a0d6b27a46fd2668c5a750f98bde6258e8ac10cdfced",
+      "artifactId": 14650660530
+    },
+    {
+      "storedPath": "native-job.log.gz.base64",
+      "encoding": "gzip+base64",
+      "sourceKind": "github-job-log",
+      "originalPath": "native-job.log",
+      "restorePath": "native-job.log",
+      "originalBytes": 97972,
+      "originalSHA256": "9f1629d93e9a89d775197f02b0b6860362df696fda5b6803b18752fa3944b38d",
+      "storedBytes": 23806,
+      "storedSHA256": "b945a953b96a9ee8dcb7a40b6da8df2fb4f236b781c0bf73dd777c7913a91577",
+      "jobId": 136421516995,
+      "runId": 44774751361,
+      "jobURL": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44774751361/job/136421516995"
+    },
+    {
+      "storedPath": "evidence-contract-job.log.gz.base64",
+      "encoding": "gzip+base64",
+      "sourceKind": "github-job-log",
+      "originalPath": "evidence-contract-job.log",
+      "restorePath": "evidence-contract-job.log",
+      "originalBytes": 20591,
+      "originalSHA256": "16579396b45b2c8fffa456c3987b4910507a129b42830ddf3297ea5218153be4",
+      "storedBytes": 6704,
+      "storedSHA256": "2c51fdbdc0c7feaa88f83b100c2576070fb31ce7ddd1cf3387726a88e9e5490e",
+      "jobId": 136421457133,
+      "runId": 44774751361,
+      "jobURL": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44774751361/job/136421457133"
+    },
+    {
+      "storedPath": "general-ci-job.log.gz.base64",
+      "encoding": "gzip+base64",
+      "sourceKind": "github-job-log",
+      "originalPath": "general-ci-job.log",
+      "restorePath": "general-ci-job.log",
+      "originalBytes": 68735,
+      "originalSHA256": "ee02e0b7724755d1dcc50bf071cbf6ab262edc0dfa107b4ba633d2786ed9f1a9",
+      "storedBytes": 19526,
+      "storedSHA256": "543c2bce2a2ff3c7e7a76312cf8e568d0074fbe99db39c1ab51ac945fbc01fcf",
+      "jobId": 136421414557,
+      "runId": 44774739665,
+      "jobURL": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44774739665/job/136421414557"
+    }
+  ],
+  "verbatimFiles": [
+    {
+      "storedPath": "evidence/audit.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "evidence/audit.json",
+      "restorePath": "artifact/evidence/audit.json",
+      "originalBytes": 5388,
+      "originalSHA256": "4a269facd3820b912a9e9f8f1fb59affdc72f70221a651dcb2a158c40de68849"
+    },
+    {
+      "storedPath": "evidence/capture-status.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "evidence/capture-status.json",
+      "restorePath": "artifact/evidence/capture-status.json",
+      "originalBytes": 389,
+      "originalSHA256": "c1278af9632f028dcb30098649faad9924ad3c48c7b1961e87327eefe6f125d6"
+    },
+    {
+      "storedPath": "evidence/start.jsonl",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "evidence/start.jsonl",
+      "restorePath": "artifact/evidence/start.jsonl",
+      "originalBytes": 0,
+      "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "storedPath": "evidence/raw-markers.log",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "evidence/raw-markers.log",
+      "restorePath": "artifact/evidence/raw-markers.log",
+      "originalBytes": 0,
+      "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "storedPath": "evidence/summary.jsonl",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "evidence/summary.jsonl",
+      "restorePath": "artifact/evidence/summary.jsonl",
+      "originalBytes": 0,
+      "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "storedPath": "evidence/trial.jsonl",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "evidence/trial.jsonl",
+      "restorePath": "artifact/evidence/trial.jsonl",
+      "originalBytes": 0,
+      "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "storedPath": "llama-cpp-pin.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "llama-cpp-pin.json",
+      "restorePath": "artifact/llama-cpp-pin.json",
+      "originalBytes": 458,
+      "originalSHA256": "25a9710f607cb8e748c84147628e37f2efff7b05049fccd36e161011a7822d24"
+    },
+    {
+      "storedPath": "manifest.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "manifest.json",
+      "restorePath": "artifact/manifest.json",
+      "originalBytes": 44072,
+      "originalSHA256": "95acbcd4237899a2234fd9c16f5e86823cec1595e6922c96cb54851d15432992"
+    },
+    {
+      "storedPath": "metadata.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "metadata.json",
+      "restorePath": "artifact/metadata.json",
+      "originalBytes": 3847,
+      "originalSHA256": "d06728f38fa4dd2eded245d7ae0d490ebc9c139968a4e5e960abaf2cc020d879"
+    },
+    {
+      "storedPath": "model-pin.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "model-pin.json",
+      "restorePath": "artifact/model-pin.json",
+      "originalBytes": 662,
+      "originalSHA256": "55427bd97262f5390f4b7614eed9cb7e4784eeda11dd576dabad7bf9b5b86071"
+    },
+    {
+      "storedPath": "preparation.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "preparation.json",
+      "restorePath": "artifact/preparation.json",
+      "originalBytes": 533,
+      "originalSHA256": "41e033d3f280ee0e9c3c6ecc10f663814f4a29589508433e2624ce861d94f709"
+    },
+    {
+      "storedPath": "provenance.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "provenance.json",
+      "restorePath": "artifact/provenance.json",
+      "originalBytes": 12443,
+      "originalSHA256": "ff072e6e3d42d53552bfe2b4a57c92d7a2e12f35b3a4d7c4038b553290713924"
+    },
+    {
+      "storedPath": "tokenization-verified.json",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "tokenization-verified.json",
+      "restorePath": "artifact/tokenization-verified.json",
+      "originalBytes": 787,
+      "originalSHA256": "004f8b59a4b32ddba1516ee7b579326b3c1ff272fc9e5c4e8cdf81cc19933064"
+    },
+    {
+      "storedPath": "tokenizer-stderr.log",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "tokenizer-stderr.log",
+      "restorePath": "artifact/tokenizer-stderr.log",
+      "originalBytes": 798,
+      "originalSHA256": "39d60d214076981bbb7bb36835f88b12d6cbdddd9e4e48ea3a232b08402f0722"
+    },
+    {
+      "storedPath": "tokenizer.jsonl",
+      "sourceKind": "github-artifact-member",
+      "originalPath": "tokenizer.jsonl",
+      "restorePath": "artifact/tokenizer.jsonl",
+      "originalBytes": 0,
+      "originalSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "storedPath": "independent-audit.json",
+      "sourceKind": "independent-capture-report",
+      "originalPath": "independent-audit.json",
+      "restorePath": "independent-audit.json",
+      "originalBytes": 2836,
+      "originalSHA256": "6bef603457d5b3eac7268bbfd8f3b36ab1c684429cd1fa58ca3150a096bda1b1"
+    },
+    {
+      "storedPath": "artifact-members.json",
+      "sourceKind": "independent-capture-report",
+      "originalPath": "artifact-members.json",
+      "restorePath": "artifact-members.json",
+      "originalBytes": 12150,
+      "originalSHA256": "b588c7d9683dc99decd4105d6c8987171634ef84b7b5bc6111994f1feec0ae39"
+    },
+    {
+      "storedPath": "run-metadata.json",
+      "sourceKind": "independent-capture-report",
+      "originalPath": "run-metadata.json",
+      "restorePath": "run-metadata.json",
+      "originalBytes": 43251,
+      "originalSHA256": "7f4e2e9853dd5f9c9fe9107921ed3f2b9e014a2b7694fd99dad8c238336d1287"
+    }
+  ],
+  "restoration": "Decode encodedFiles to restorePath and copy verbatimFiles to restorePath. The exact ZIP includes every original member, including all 72 prompts; prompts are not duplicated as loose publication files. artifact-members.json lists each archive member size and SHA256.",
+  "validation": {
+    "sourceChecksumEntriesVerified": 94,
+    "archiveMembersVerified": 87,
+    "exactPromptMembersVerified": 72,
+    "allEncodedFilesDecodedAndByteCompared": true,
+    "allVerbatimFilesByteCompared": true,
+    "sourceCapturesModified": false
+  }
+}

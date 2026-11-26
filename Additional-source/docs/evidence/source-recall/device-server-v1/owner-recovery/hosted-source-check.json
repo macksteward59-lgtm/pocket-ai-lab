@@ -1,0 +1,55 @@
+{
+  "run": 44995884933,
+  "model": "qwen2.5-1.5b-instruct-q4_k_m",
+  "archiveSHA256": "sha256:c13b21664a5f8dc9fa62df2bcd8020242a2f85ab3a0ecec782e7d547da681f34",
+  "fixtureSHA256": "5d3a4fb3dbd75c53bb3799b17f98426ecaedc4d53c7c49e89a43bc3c519df408",
+  "passed": 2,
+  "total": 5,
+  "cases": [
+    {
+      "id": "reset",
+      "passed": false,
+      "question": "At what time does the daily free neuron allocation reset?",
+      "expected": "00:00 UTC",
+      "expectedSource": "CF-QUOTA",
+      "source": "CF-QUOTA",
+      "answer": "The free allocation is 10,000 neurons per day,"
+    },
+    {
+      "id": "provision",
+      "passed": false,
+      "question": "How long after issuance do Personal Team provisioning profiles expire?",
+      "expected": "seven days",
+      "expectedSource": "APPLE-TEAM",
+      "source": "APPLE-TEAM",
+      "answer": "Personal Team provisioning profiles expire seven days after"
+    },
+    {
+      "id": "allocation",
+      "passed": false,
+      "question": "What is the published free Workers AI allocation per day?",
+      "expected": "10,000 neurons",
+      "expectedSource": "CF-QUOTA",
+      "source": "CF-QUOTA",
+      "answer": "The free allocation is 10,000 neurons per day,"
+    },
+    {
+      "id": "unrecorded-balance",
+      "passed": true,
+      "question": "How many neurons are still available in my account today?",
+      "expected": "UNKNOWN",
+      "expectedSource": null,
+      "source": null,
+      "answer": "UNKNOWN"
+    },
+    {
+      "id": "unmeasured-temperature",
+      "passed": true,
+      "question": "What exact temperature did this physical iPhone reach in the last model run?",
+      "expected": "UNKNOWN",
+      "expectedSource": null,
+      "source": null,
+      "answer": "UNKNOWN"
+    }
+  ]
+}

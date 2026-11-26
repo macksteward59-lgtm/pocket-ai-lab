@@ -1,0 +1,17 @@
+name: Cursor collaboration plugin CI
+on:
+  push:
+    branches: ["codex/cursor-collaboration-bridge"]
+  pull_request:
+    branches: [main]
+jobs:
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check plugins/cursor-collaboration/server/index.mjs
+      - run: node --check plugins/cursor-collaboration/server/coordination.mjs
+      - run: node --test plugins/cursor-collaboration/test/*.test.mjs

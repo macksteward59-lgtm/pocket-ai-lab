@@ -1,0 +1,44 @@
+name: G.I.R.L. v1 Exact-Model Guard CI
+
+on:
+  push:
+    branches:
+      - codex/girl-v1-exact-model-guard-20261120
+    paths:
+      - "packages/intelligence/latent-communication/LatentChannel.ts"
+      - "packages/intelligence/__tests__/latent-channel*.test.ts"
+      - ".github/workflows/girl-v1-exact-model-ci.yml"
+  pull_request:
+    branches:
+      - codex/latent-channel-runtime-poc
+    paths:
+      - "packages/intelligence/latent-communication/LatentChannel.ts"
+      - "packages/intelligence/__tests__/latent-channel*.test.ts"
+      - ".github/workflows/girl-v1-exact-model-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: girl-v1-exact-model-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  protocol-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the proposed exact source
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install source dependencies
+        run: npm install
+      - name: Run exact-model control and host runtime regressions
+        run: npx vitest run packages/intelligence/__tests__/latent-channel.test.ts packages/intelligence/__tests__/latent-channel-runtime.test.ts
+      - name: Report scope accurately
+        run: |
+          echo "Only the latent v1 contract and runtime unit tests were exercised."
+          echo "This does not validate the full East build, model-pair semantics, APEX production authorization, native recipient consumption, or a physical iPhone."

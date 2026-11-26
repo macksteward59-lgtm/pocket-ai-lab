@@ -1,0 +1,38 @@
+Command line invocation:
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/pocket-derived-deepseek/Build/Products/PocketLlamaEngine_PocketLlamaEngine_macosx15.5-x86_64.xctestrun -destination platform=macOS,arch=x86_64 -parallel-testing-enabled NO "-only-testing:LlamaEngineTests/DeepSeekQualificationContractTests" CODE_SIGNING_ALLOWED=NO
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Test Suite 'Selected tests' started at 2026-11-21 05:30:41.057.
+Test Suite 'LlamaEngineTests.xctest' started at 2026-11-21 05:30:41.058.
+Test Suite 'DeepSeekQualificationContractTests' started at 2026-11-21 05:30:41.058.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testAllRequestsUseExistingRuntimeAndRetainCorrectnessSeparately]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testAllRequestsUseExistingRuntimeAndRetainCorrectnessSeparately]' passed (0.033 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testBudgetRetainsEightRowsWithoutStartingRemainingRequests]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testBudgetRetainsEightRowsWithoutStartingRemainingRequests]' passed (0.006 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testCancellationPropagatesAndDoesNotScheduleAnotherRequest]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testCancellationPropagatesAndDoesNotScheduleAnotherRequest]' passed (0.008 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testFinalParserRejectsReasoningRepairDuplicatesAndExtraContent]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testFinalParserRejectsReasoningRepairDuplicatesAndExtraContent]' passed (0.005 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testForeignLeaseIsNotReportedAsAnOrdinaryGenerationFailure]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testForeignLeaseIsNotReportedAsAnOrdinaryGenerationFailure]' passed (0.004 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testMalformedPartialAndFailedGenerationsRemainEvidenceWithoutRetries]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testMalformedPartialAndFailedGenerationsRemainEvidenceWithoutRetries]' passed (0.008 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testModelIdentityChangesFailBeforeRequestsAndAfterCallback]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testModelIdentityChangesFailBeforeRequestsAndAfterCallback]' passed (0.009 seconds).
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testProfileBoundsAndExactPromptConstruction]' started.
+Test Case '-[LlamaEngineTests.DeepSeekQualificationContractTests testProfileBoundsAndExactPromptConstruction]' passed (0.006 seconds).
+Test Suite 'DeepSeekQualificationContractTests' passed at 2026-11-21 05:30:41.140.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.078 (0.082) seconds
+Test Suite 'LlamaEngineTests.xctest' passed at 2026-11-21 05:30:41.140.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.078 (0.083) seconds
+Test Suite 'Selected tests' passed at 2026-11-21 05:30:41.141.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.078 (0.084) seconds
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/pocket-deepseek-host-fwlpwnppxcnfmdbrmsdmqfbebwfw/Logs/Test/Test-PocketLlamaEngine-2026.11.21_05-30-35-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

@@ -1,0 +1,3 @@
+Plugin ID,CVE,Risk,Host,Protocol,Port,Name,Synopsis,Description,Solution
+10001,,High,app.example.com,tcp,443,Missing security header,Header absent,The export recorded a missing header,Send the header from the application
+10002,,Medium,outside.example.com,tcp,443,Cookie without a secure flag,Flag absent,The export recorded a cookie flag,Set the flag in the application configuration

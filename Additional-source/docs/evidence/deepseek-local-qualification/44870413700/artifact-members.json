@@ -1,0 +1,139 @@
+{
+  "archiveBytes": 54188,
+  "archiveSHA256": "c0a83ede14828d4e78ba3f659a9a93c45652a9fc7b75593997e8c507b533bbd5",
+  "members": [
+    {
+      "bytes": 18027,
+      "crc32": "e56154c2",
+      "path": "audit.json",
+      "sha256": "8a19fb38ba05a8eb21cc3be8fb908b8761cb110d388867dfa950c3ef8534ec21"
+    },
+    {
+      "bytes": 119814,
+      "crc32": "2d97f554",
+      "path": "build.log",
+      "sha256": "2d271d9854045bec7ff77296f3e95c2cc3aed8e7251974e8e03df414948b0b10"
+    },
+    {
+      "bytes": 3683,
+      "crc32": "7f5ce4f4",
+      "path": "contract-xctest.log",
+      "sha256": "1a04f647f11b41ea4f822aedf9c7bce5bf4d89fef5a054cd235f557cd8b15e61"
+    },
+    {
+      "bytes": 306,
+      "crc32": "69396a15",
+      "path": "download.json",
+      "sha256": "03aa1f61a3bdea1fcc0e524de6efa44ccc95ba048db7e90528f8eeeb5afc8984"
+    },
+    {
+      "bytes": 7981,
+      "crc32": "d99deaa1",
+      "path": "metadata.json",
+      "sha256": "5a0d4af97a483efbd9dc22cab0ae27ffa6dcf481819d26d33688b5767566e3f1"
+    },
+    {
+      "bytes": 1459,
+      "crc32": "e8399065",
+      "path": "model-pin.json",
+      "sha256": "781ed3150b61610b25d47367adb8f68125108e0cb53471d9a00322829c1791b1"
+    },
+    {
+      "bytes": 410582,
+      "crc32": "974801a7",
+      "path": "native-xctest.log",
+      "sha256": "d1cecba755da49dcb651683fb9c608b5efe1418239bf0833387a9dacc100be09"
+    },
+    {
+      "bytes": 1770,
+      "crc32": "be8d0da8",
+      "path": "prepared.json",
+      "sha256": "da2b67509c1aed066f8758e173ad8c1f52586e2e455bf7e1775a500756377e03"
+    },
+    {
+      "bytes": 4960,
+      "crc32": "5bb75a4e",
+      "path": "profile.json",
+      "sha256": "ad2a548fba3f040877d236b6642b101d8d7389993156f74819747357bd7d9818"
+    },
+    {
+      "bytes": 178,
+      "crc32": "9fc221c6",
+      "path": "prompts/001.txt",
+      "sha256": "bc99f8739bba9157a9330389c6bc705ae26489910c68bbb3b57b3143c378b275"
+    },
+    {
+      "bytes": 186,
+      "crc32": "3e5c6a1b",
+      "path": "prompts/002.txt",
+      "sha256": "5b5d445445ff69121c4ec11469526e3870511a9ae6b5efa9162e5bbc1aade94d"
+    },
+    {
+      "bytes": 212,
+      "crc32": "42d39b75",
+      "path": "prompts/003.txt",
+      "sha256": "5c0441044fb49151f7119be408e5a572e0c136dc5d6cf819944a4e606d9747f8"
+    },
+    {
+      "bytes": 245,
+      "crc32": "b76d49c8",
+      "path": "prompts/004.txt",
+      "sha256": "1ab97ebce9bafa8af8049597849017c99c99c29c53eef147d685d6d7202274d3"
+    },
+    {
+      "bytes": 212,
+      "crc32": "ad51c041",
+      "path": "prompts/005.txt",
+      "sha256": "b5493f4203f2e9c9cd02065daf78d7ae6ca5fcb9b37cb33565efbfc1e687954e"
+    },
+    {
+      "bytes": 244,
+      "crc32": "30808ff9",
+      "path": "prompts/006.txt",
+      "sha256": "508827174c7db1cfe2d89e55f9f5a3fe0aa9d560ab76da0f79ef1acf7f5365b7"
+    },
+    {
+      "bytes": 244,
+      "crc32": "9ab45f74",
+      "path": "prompts/007.txt",
+      "sha256": "a626b3d00d79b09bb8ddf2e14491024dcfae3706c5f745d84405eaa536c1c66c"
+    },
+    {
+      "bytes": 296,
+      "crc32": "ba3dbd4c",
+      "path": "prompts/008.txt",
+      "sha256": "936ffa26b6b2396656241720b319eb72830f5c3859aa38fdc3e5b59886e3163f"
+    },
+    {
+      "bytes": 3940,
+      "crc32": "f39afeb5",
+      "path": "provenance.json",
+      "sha256": "844d1e413183f10a98c9b8408573d58d674573bda39aebbe964a0b0ba60171c1"
+    },
+    {
+      "bytes": 458,
+      "crc32": "45ec3ef4",
+      "path": "runtime-pin.json",
+      "sha256": "25a9710f607cb8e748c84147628e37f2efff7b05049fccd36e161011a7822d24"
+    },
+    {
+      "bytes": 7110,
+      "crc32": "b9d1d0e4",
+      "path": "tokenization-verified.json",
+      "sha256": "01a232b8273f32ca9ada556f33a4339739a0de6c06afe0701e49f0d6220b7f13"
+    },
+    {
+      "bytes": 10424,
+      "crc32": "257506e0",
+      "path": "tokenizer-stderr.log",
+      "sha256": "52b8fb06349547ed649a1c06e03182a9b4817d31137ccf536843ae1128de1d1f"
+    },
+    {
+      "bytes": 16319,
+      "crc32": "4cba8b54",
+      "path": "tokenizer.jsonl",
+      "sha256": "c8402a1b3d51c9c1820e03e799c45c28e5f90d4e12ba1a560a8f234deccddb0f"
+    }
+  ],
+  "schemaVersion": 1
+}

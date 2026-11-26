@@ -1,0 +1,156 @@
+{
+  "head": "12d511f2ae6938a84f65c1d0f31124441bdfeb5d",
+  "apple": {
+    "run": 44995884905,
+    "job": 137126696854,
+    "overall": "failure",
+    "outcome": [
+      "Executed 153 tests, with 2 tests skipped and 0 failures (0 unexpected)",
+      "Executed 77 tests, with 0 failures (0 unexpected)",
+      "Executed 2 tests, with 0 failures (0 unexpected)",
+      "Executed 154 tests, with 5 tests skipped and 0 failures (0 unexpected)"
+    ],
+    "markerCount": 1,
+    "digests": [
+      "969546b99998ac20c171911ed7c6c8f7cb28d75903fbe1cadd462f8337ae96f5"
+    ],
+    "failed": [],
+    "steps": [
+      {
+        "step": "Verify a Swift evaluation export with the independent reader",
+        "conclusion": "success"
+      },
+      {
+        "step": "Install CMake and Ninja",
+        "conclusion": "success"
+      },
+      {
+        "step": "Restore pinned llama.cpp build artifacts",
+        "conclusion": "success"
+      },
+      {
+        "step": "Build pinned llama.cpp for the simulator and macOS",
+        "conclusion": "success"
+      },
+      {
+        "step": "Verify native generation drains queued decode work",
+        "conclusion": "success"
+      },
+      {
+        "step": "Save verified pinned llama.cpp build cache",
+        "conclusion": "skipped"
+      },
+      {
+        "step": "Typecheck the unlinked fail-closed branch",
+        "conclusion": "success"
+      },
+      {
+        "step": "Link PocketLlamaEngine for physical iOS device",
+        "conclusion": "success"
+      },
+      {
+        "step": "Download the pinned smoke GGUF",
+        "conclusion": "success"
+      },
+      {
+        "step": "Point the macOS smoke test at that GGUF",
+        "conclusion": "success"
+      },
+      {
+        "step": "Build macOS tests once",
+        "conclusion": "success"
+      },
+      {
+        "step": "XCTest on macOS",
+        "conclusion": "success"
+      },
+      {
+        "step": "Frozen native text recipient benchmark on macOS",
+        "conclusion": "failure"
+      },
+      {
+        "step": "Preserve and independently verify recipient benchmark evidence",
+        "conclusion": "failure"
+      },
+      {
+        "step": "Upload recipient benchmark evidence including partial runs",
+        "conclusion": "success"
+      },
+      {
+        "step": "Choose an iPhone simulator",
+        "conclusion": "success"
+      },
+      {
+        "step": "Boot selected iPhone simulator",
+        "conclusion": "success"
+      },
+      {
+        "step": "Generate and build the native Pocket AI Lab app",
+        "conclusion": "success"
+      },
+      {
+        "step": "Package and independently rebuild the device test kit",
+        "conclusion": "success"
+      },
+      {
+        "step": "Run actions/upload-artifact@v4",
+        "conclusion": "success"
+      },
+      {
+        "step": "XCTest the native Pocket AI Lab app",
+        "conclusion": "success"
+      },
+      {
+        "step": "Retain the failed app test report",
+        "conclusion": "skipped"
+      },
+      {
+        "step": "Independently read the reviewed source answer exported by the app",
+        "conclusion": "success"
+      },
+      {
+        "step": "Run actions/upload-artifact@v4",
+        "conclusion": "success"
+      },
+      {
+        "step": "Check the simulator Memory vault header",
+        "conclusion": "success"
+      },
+      {
+        "step": "XCTest on the iOS simulator",
+        "conclusion": "success"
+      },
+      {
+        "step": "Record what this runner actually did",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "benchmark": {
+    "attemptedTrialCount": 36,
+    "completedTrialCount": 32,
+    "generationFailedCount": 4,
+    "invalidAnswerCount": 32,
+    "correctAnswerCount": 0
+  },
+  "benchmarkArtifact": 14744310319,
+  "privateHandoff": {
+    "uuid": "b4d749ad-234f-50a4-9f6c-4e27a3a97bbe",
+    "priorRevision": 1,
+    "saveRevision": 2,
+    "retryRevision": 2,
+    "readbackRevision": 2,
+    "matches": true,
+    "engineeringPointer": 7
+  },
+  "sourceArtifact": 14744487028,
+  "sourceArtifactZipSHA256": "sha256:4ea65d7e1d09777a16cba1cd70e6bee0226dab04bac521d1894385ccaaadcf5b",
+  "fieldKitSHA256": "8366b08eb2e9bb18e0c64912014cd4d60b2d612e737dc1cd71d0b9779986634f",
+  "otherWorkflows": {
+    "repository": 44995881798,
+    "consumer": 44995884885,
+    "source": 44995884933
+  },
+  "physicalDeviceVerified": false,
+  "cloudflareModelInferenceVerified": false
+}

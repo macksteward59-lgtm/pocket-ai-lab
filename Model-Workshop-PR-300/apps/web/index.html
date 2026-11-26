@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#10141d">
+  <meta name="description" content="Pocket AI Lab — private, local-first AI workspace.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Pocket AI Lab</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/" aria-label="Pocket AI Lab home"><span class="brand-mark">P</span><span>Pocket AI Lab<small>YOUR PRIVATE AI WORKSPACE</small></span></a>
+      <button class="new-chat" id="new-chat">＋ <span>New conversation</span></button>
+      <div class="nav-label">WORKSPACE</div>
+      <button class="nav-item active" data-view="chat">◫ <span>Chat</span></button>
+      <button class="nav-item" data-view="agents">◎ <span>Agent team</span><span class="nav-soon">PREVIEW</span></button>
+      <button class="nav-item" data-view="memory">▤ <span>Memory</span></button>
+      <button class="nav-item" data-view="models">◇ <span>Model workshop</span></button>
+      <button class="nav-item" data-view="recovery"><span aria-hidden="true">☑</span> <span>Review tasks</span></button>
+      <button class="nav-item" data-view="activity">◷ <span>Activity</span></button>
+      <div class="sidebar-spacer"></div>
+      <div class="privacy-card"><span class="privacy-dot"></span><div><strong>Local-first mode</strong><small>Your prompts stay on this device when using a local model.</small></div></div>
+      <button class="nav-item" data-view="settings">⚙ <span>Settings</span></button>
+      <div class="profile"><div class="avatar">K</div><div><strong>Local workspace</strong><small>Personal instance</small></div><span class="profile-menu">•••</span></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><button class="mobile-menu" id="mobile-menu" aria-label="Open menu">☰</button><div class="crumb">Workspace <span>/</span> <strong id="page-name">Chat</strong></div><div class="top-actions"><span class="connection" id="connection"><i></i> Checking model</span><button class="icon-button" id="settings-shortcut" aria-label="Settings">⚙</button></div></header>
+      <section class="view" id="chat-view">
+        <div class="welcome" id="welcome"><div class="eyebrow"><span></span> PRIVATE AI WORKSPACE</div><h1>Think bigger.<br><em>Build with intelligence.</em></h1><p>One workspace for your ideas, research, and projects. Start with a local model, then add cloud providers when you choose.</p>
+          <div class="suggestions"><button class="suggestion" data-prompt="Help me break down a complex project into clear, testable milestones."><b>↗</b><span><strong>Plan a project</strong><small>Turn an idea into a roadmap</small></span></button><button class="suggestion" data-prompt="Review this idea critically. Identify assumptions, risks, and ways to improve it."><b>⌕</b><span><strong>Challenge an idea</strong><small>Find gaps and better approaches</small></span></button><button class="suggestion" data-prompt="Help me understand a difficult topic step by step, with examples."><b>◇</b><span><strong>Learn something</strong><small>Explore a topic in depth</small></span></button></div>
+        </div>
+        <div class="messages" id="messages" aria-live="polite"></div>
+        <form class="composer" id="composer">
+          <div class="reader-context" id="chat-reader-context" hidden>
+            <div><strong id="chat-reader-label"></strong><button type="button" id="chat-use-default" class="secondary-button">Use configured chat model</button></div>
+            <label id="chat-source-label" for="chat-reader-source">Source sentences, one per line</label>
+            <textarea id="chat-reader-source" rows="2" maxlength="6000"></textarea>
+            <span id="chat-reader-status" role="status"></span>
+          </div>
+          <div class="composer-wrap"><textarea id="prompt" rows="1" placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><button type="button" id="chat-choose-reader" class="reader-choice">Choose model</button><span class="model-pill" id="model-pill">Local model · not connected</span><span class="privacy-hint">◉ Private when using local inference</span></div><button class="send" id="send" type="submit" aria-label="Send message">↑</button></div></div><p class="disclaimer">AI can make mistakes. Verify important information before acting.</p></form>
+      </section>
+      <section class="view secondary-view hidden" id="settings-view"><div class="section-heading"><div class="eyebrow">CONFIGURATION</div><h1>Model settings</h1><p>Connect a local llama.cpp server. Cloud routing is intentionally not enabled until a secure server-side provider is configured.</p></div><form id="settings-form" class="settings-card"><div class="setting-note"><strong>Provider configuration</strong><p>Chat and Agent Team both call the local llama.cpp <code>InferenceProvider</code>. Set <code>LLAMACPP_BASE_URL</code> (default <code>http://127.0.0.1:8080</code>) on the server. <code>LLM_BASE_URL</code> ending in <code>/v1</code> selects the OpenAI-compatible API. No API key is stored in this browser or sent by the local adapter.</p></div><div class="setting-note"><strong>Local endpoint only</strong><p>The browser talks only to this app server. "Local model ready" appears after a loopback health check succeeds. A remote URL is not described as private.</p></div><div class="settings-actions"><button class="secondary-button" type="button" id="test-connection">Test connection</button><button class="primary-button" type="submit">Save settings</button></div><p class="status-text" id="settings-status" role="status"></p></form></section>
+      <section class="view secondary-view hidden" id="agents-view" tabindex="0"><div class="section-heading"><div class="eyebrow">COLLABORATION</div><h1>Agent team</h1><p>The core roles perform independent analysis, cross-review, challenge, revision, verification, and synthesis. Connect a local llama-server to run real model calls. Agent output remains untrusted and cannot authorize actions.</p></div><div class="agent-runner">
+            <div class="agent-runner-header"><div><h2>Run a local agent team</h2><p>Real model calls through Director, Reasoner, Researcher, Engineer, Critic, and Validator roles. Local llama.cpp inference only.</p></div><span class="local-tag">LOCAL INFERENCE</span></div>
+            <form id="agent-form">
+              <textarea id="agent-objective" rows="3" maxlength="4000" placeholder="Describe the problem or project you want the agents to examine…" aria-label="Agent team objective"></textarea>
+              <div class="agent-controls"><button class="primary-button" id="agent-run" type="submit">Run agent team</button><button class="secondary-button" id="agent-stop" type="button" disabled>Stop</button><span id="agent-status" role="status">Checking local llama-server…</span></div>
+            </form>
+            <ol id="agent-transcript" class="agent-transcript" aria-live="polite"></ol>
+            <div id="agent-result" class="agent-result hidden"></div>
+          </div>
+          <div class="agent-grid"><article class="agent-card"><b>01</b><h3>Director</h3><p>Breaks down work and coordinates the team.</p><span>ORCHESTRATION</span></article><article class="agent-card"><b>02</b><h3>Reasoner</h3><p>Decomposes complex questions and checks logic.</p><span>ANALYSIS</span></article><article class="agent-card"><b>03</b><h3>Researcher</h3><p>Collects sources and tracks evidence.</p><span>RESEARCH</span></article><article class="agent-card"><b>04</b><h3>Engineer</h3><p>Builds, tests, and debugs software.</p><span>IMPLEMENTATION</span></article><article class="agent-card"><b>05</b><h3>Security analyst</h3><p>Reviews threats, trust boundaries, and risk.</p><span>SECURITY</span></article><article class="agent-card"><b>06</b><h3>Critic & validator</h3><p>Challenges assumptions and independently checks results.</p><span>VERIFICATION</span></article></div></section>
+      <section class="view secondary-view hidden" id="memory-view">
+        <div class="section-heading"><div class="eyebrow">YOUR CONTEXT</div><h1>Memory</h1><p>Save only what you choose. Chat messages are never automatically added to long-term memory.</p></div>
+        <div class="memory-warning" role="note"><strong>Local storage notice</strong><p>Memory is stored in a local file with restricted permissions and an integrity checksum, but it is <strong>not encrypted at rest</strong>. Do not save passwords, financial credentials, or other secrets. Keep this app bound to loopback.</p></div>
+        <form id="memory-form" class="memory-form">
+          <label for="memory-content">What should Pocket AI Lab remember?</label>
+          <textarea id="memory-content" rows="4" maxlength="12000" required placeholder="Write a preference, project fact, or note you want to keep…"></textarea>
+          <div class="memory-fields">
+            <label for="memory-layer">Memory type<select id="memory-layer"><option value="semantic">Semantic · facts and preferences</option><option value="episodic">Episodic · events and experiences</option><option value="procedural">Procedural · methods and workflows</option><option value="working">Working · short-term context</option></select></label>
+            <label for="memory-source">Source reference (optional)<input id="memory-source" maxlength="500" placeholder="A document, URL, or your own note"></label>
+          </div>
+          <div class="memory-actions"><button class="primary-button" id="memory-save" type="submit">Save memory</button><span id="memory-status" role="status">Loading saved memories…</span></div>
+        </form>
+        <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
+        <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
+      </section>
+      <section class="view secondary-view hidden" id="recovery-view">
+        <div class="section-heading">
+          <h1>Review tasks</h1>
+          <p>Save an excerpt from a source, resume the review after a restart, and verify the signed result.</p>
+        </div>
+        <p id="recovery-status" class="status-text" role="status"></p>
+        <p id="recovery-handoff-status" role="status" hidden></p>
+        <div><button id="recovery-back-to-chat" class="secondary-button" type="button" hidden>Return to Chat</button></div>
+        <form id="recovery-auth" class="memory-form">
+          <h2>Local review account</h2>
+          <label for="recovery-username">Username
+            <input id="recovery-username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="48" required>
+          </label>
+          <label for="recovery-password">Password
+            <input id="recovery-password" type="password" autocomplete="current-password" required>
+          </label>
+          <small>New accounts need a password of at least 12 bytes.</small>
+          <div class="recovery-actions">
+            <button id="recovery-login" class="primary-button" type="submit" value="login">Sign in</button>
+            <button id="recovery-register" class="secondary-button" type="submit" value="register">Create account</button>
+          </div>
+        </form>
+        <button type="button" id="recovery-logout-retry" class="secondary-button" hidden>Retry sign out</button>
+        <div id="recovery-workspace" hidden>
+          <div class="recovery-account"><span>Signed in as <strong id="recovery-owner"></strong></span>
+            <div class="recovery-actions">
+              <button id="recovery-key" class="secondary-button" type="button">Download public key</button>
+              <button id="recovery-logout" class="secondary-button" type="button">Sign out</button>
+            </div>
+          </div>
+          <section aria-labelledby="recovery-list-title">
+            <div class="memory-list-heading"><h2 id="recovery-list-title">Your tasks</h2>
+              <button id="recovery-refresh" class="secondary-button" type="button">Refresh</button>
+            </div>
+            <ul id="recovery-tasks"></ul>
+          </section>
+          <section id="recovery-details" class="memory-form" hidden>
+            <h2 id="recovery-selected-title"></h2>
+            <p id="recovery-state"></p>
+            <details><summary>Source passage</summary><p id="recovery-passage" class="recovery-source-text"></p></details>
+            <div><h3>Excerpt</h3><blockquote id="recovery-excerpt" class="recovery-source-text"></blockquote></div>
+            <button id="recovery-run" class="primary-button" type="button">Resume task</button>
+            <div id="recovery-evidence" hidden>
+              <dl><dt>Attempt ID</dt><dd id="recovery-attempt-id"></dd>
+                <dt>Committed executions</dt><dd id="recovery-execution-count"></dd></dl>
+              <h3>Corrections</h3><ol id="recovery-corrections"></ol>
+              <form id="recovery-correction-form" class="memory-editor">
+                <label for="recovery-note">Add a correction<textarea id="recovery-note" rows="2" maxlength="2048" required></textarea></label>
+                <div><button id="recovery-correct" class="secondary-button" type="submit">Save correction</button></div>
+              </form>
+              <p id="recovery-verdict" role="status"></p>
+              <div class="recovery-actions">
+                <button id="recovery-verify" class="primary-button" type="button">Verify evidence</button>
+                <button id="recovery-export" class="secondary-button" type="button">Download evidence</button>
+              </div>
+            </div>
+          </section>
+          <form id="recovery-create-form" class="memory-form">
+            <h2>Start a source review</h2>
+            <label for="recovery-title">Task title<input id="recovery-title" maxlength="160" required></label>
+            <label for="recovery-source">Source passage<textarea id="recovery-source" maxlength="16384" rows="4" required></textarea></label>
+            <label for="recovery-quote">Exact excerpt<textarea id="recovery-quote" maxlength="4096" rows="2" required></textarea></label>
+            <small>Choose text that occurs once in the passage.</small>
+            <div class="recovery-actions">
+              <button id="recovery-create" class="primary-button" type="submit">Start task</button>
+              <button id="recovery-discard" class="secondary-button" type="button">Discard draft</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section class="view secondary-view hidden" id="models-view">
+        <div class="section-heading"><h1>Model workshop</h1><p>Train a model, edit a reader, or combine two readers. Compare the results before saving a candidate.</p></div>
+        <div class="memory-form">
+          <label>Training location<select id="workshop-engine">
+            <option value="browser">This browser · document readers</option>
+            <option value="host">Local training host · language models</option>
+          </select></label>
+          <div id="reader-import-group"><label for="reader-import">Import compatible v1 document-reader weights (.json)</label>
+          <input id="reader-import" type="file" accept=".json,application/json" disabled></div>
+          <p id="host-help" hidden>Choose from compatible local checkpoints on the configured host. Training stores a separate candidate there.</p>
+          <button id="host-refresh" type="button" class="secondary-button" hidden>Refresh host models</button>
+        </div>
+        <form id="reader-build" class="memory-form">
+          <label id="reader-method-group">Build method<select id="reader-method" disabled>
+            <option value="train">Train with a teacher</option>
+            <option value="edit">Edit a copy of one reader</option>
+            <option value="blend">Combine two readers’ weights</option>
+          </select></label>
+          <div class="memory-fields">
+            <label>Base model<select id="reader-base" required disabled></select></label>
+            <label id="reader-teacher-group"><span id="reader-teacher-label">Teacher model</span><select id="reader-teacher" required disabled></select></label>
+          </div>
+          <label id="reader-percent-group" hidden>Second model’s share (%)<input id="reader-percent" type="number" min="1" max="99" step="1" value="50" disabled></label>
+          <div id="reader-editor-group" class="memory-editor" hidden>
+            <div class="memory-fields">
+              <label>Parameter<select id="reader-parameter" disabled></select></label>
+              <label>Value<input id="reader-value" type="text" inputmode="decimal" maxlength="128" autocomplete="off" spellcheck="false" disabled></label>
+            </div>
+            <div class="reader-parameter-actions">
+              <button id="reader-apply" class="secondary-button" type="button" disabled>Apply to copy</button>
+              <button id="reader-value-cancel" class="secondary-button" type="button" hidden>Discard typed value</button>
+            </div>
+            <p id="reader-value-status" role="status"></p>
+            <label>Advanced · candidate weights (JSON)<textarea id="reader-editor" rows="6" maxlength="65536" spellcheck="false" disabled></textarea></label>
+            <p id="reader-editor-hint" role="status"></p>
+            <div><button id="reader-editor-reset" class="secondary-button" type="button" disabled>Load selected weights</button></div>
+          </div>
+          <label>Candidate name<input id="reader-name" maxlength="64" required placeholder="e.g. Research model v2"></label>
+          <button class="primary-button" id="reader-train" type="submit" disabled>Train candidate</button>
+          <button class="secondary-button" id="host-pause" type="submit" hidden disabled>Train to step 12 and pause</button>
+          <p id="reader-status" role="status"></p>
+        </form>
+        <section id="reader-draft-panel" class="memory-form" hidden>
+          <h2>Reader editing drafts</h2>
+          <small>Keep unfinished reader edits in this browser. Resume a draft to compare it and save a runnable candidate.</small>
+          <button type="button" class="secondary-button" id="reader-draft-save" hidden disabled>Save editing draft</button>
+          <label>Saved editing drafts<select id="reader-drafts" disabled></select></label>
+          <div class="reader-parameter-actions">
+            <button type="button" class="secondary-button" id="reader-draft-resume" disabled>Resume editing draft</button>
+            <button type="button" class="secondary-button" id="reader-draft-delete" disabled>Delete draft</button>
+            <button type="button" class="secondary-button" id="reader-draft-refresh" disabled>Refresh drafts</button>
+          </div>
+          <p id="reader-draft-status" role="status"></p>
+        </section>
+        <section id="reader-family-group" class="memory-form">
+          <label for="reader-family-file">Import model family<input id="reader-family-file" type="file" accept=".json,application/json" aria-describedby="reader-family-help" disabled></label>
+          <small id="reader-family-help">Choose a workshop family file up to 512 KiB to review the reader and its parents.</small>
+          <section id="reader-family-preview" aria-label="Family import preview" hidden>
+            <h2 id="reader-family-summary"></h2>
+            <ul id="reader-family-members"></ul>
+            <p id="reader-family-integrity" hidden>The file declares each build’s parents and recipe. This browser checked the model IDs and weight hashes and measured the scores. Historical training and the publisher’s identity are unverified.</p>
+            <section id="reader-family-differences" hidden>
+              <h3>Differences in local measurements</h3>
+              <p>New readers use the counts measured in this browser. Existing readers keep their saved scores.</p>
+              <ul id="reader-family-difference-list"></ul>
+            </section>
+            <div class="reader-parameter-actions">
+              <button type="button" class="primary-button" id="reader-family-confirm" disabled>Import family</button>
+              <button type="button" class="secondary-button" id="reader-family-cancel">Cancel</button>
+            </div>
+          </section>
+        </section>
+        <section id="host-runs" class="memory-form" hidden>
+          <h2>Resume host training</h2>
+          <label for="host-drafts">Saved training run<select id="host-drafts" disabled></select></label>
+          <p id="host-draft-info" role="status"></p>
+          <button class="primary-button" id="host-resume" type="button" disabled>Resume to step 24</button>
+        </section>
+        <section id="reader-comparison" hidden>
+          <h2>Held-out comparison</h2>
+          <p>Each model answers the same held-out questions.</p>
+          <p id="reader-edit-summary" hidden></p>
+          <ul id="reader-scores"></ul>
+          <button class="secondary-button" id="reader-save" type="button">Save candidate to my readers</button>
+        </section>
+        <form id="reader-try" class="memory-form">
+          <h2>Use a model</h2>
+          <label>Model<select id="reader-use" disabled></select></label>
+          <p id="reader-origin"></p>
+          <label>Question<input id="reader-question" required maxlength="500"></label>
+          <label id="reader-source-label">Source sentences, one per line<textarea id="reader-sentences" required maxlength="6000" rows="3"></textarea></label>
+          <div class="memory-actions">
+            <button class="primary-button" id="reader-answer" type="submit" disabled>Find evidence</button>
+            <button class="secondary-button" id="reader-compare-parents" type="button" disabled>Compare with parents</button>
+            <button class="secondary-button" id="reader-chat" type="button" disabled>Use in Chat</button>
+            <button class="secondary-button" id="reader-export" type="button" disabled>Export weights</button>
+            <button class="secondary-button" id="reader-family-export" type="button" disabled>Export model family</button>
+          </div>
+          <p id="reader-output" role="status"></p>
+        </form>
+        <section id="reader-compare-panel" class="memory-form" aria-label="Compare reader answers">
+          <label for="reader-compare-file">Compare a labeled question set<input id="reader-compare-file" type="file" accept=".json,application/json" aria-describedby="reader-compare-help" disabled></label>
+          <small id="reader-compare-help">Choose a JSON file up to 128 KiB with up to 64 questions. The comparison runs in this browser.</small>
+          <a href="/model-workshop/comparison-example.json" download="pocket-reader-questions.json">Download example question set</a>
+          <details><summary>Question set format</summary>
+            <p>Each question names its expected sentence by index. The first sentence is 0. Use -1 for a question the reader should abstain from answering.</p>
+            <code>[{"sentences":["Ada lives in Oslo."],"questions":[["Where does Ada live?",0],["How old is Ada?",-1]]}]</code>
+          </details>
+          <p id="reader-compare-status" role="status"></p>
+          <section id="reader-compare-results" aria-label="Comparison results" hidden>
+            <div id="reader-compare-score-group" hidden><h3>Scores on this question set</h3><ul id="reader-compare-scores"></ul></div>
+            <label id="reader-compare-case-group">Question<select id="reader-compare-case"></select></label>
+            <h3 id="reader-compare-question"></h3>
+            <details id="reader-compare-passage"><summary>Source sentences</summary><ol id="reader-compare-source"></ol></details>
+            <p id="reader-compare-expected"></p>
+            <ul id="reader-compare-outputs"></ul>
+          </section>
+        </section>
+      </section>
+      <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
+    </main>
+  </div>
+  <script src="/app.js" defer></script>
+  <script type="module" src="/model-workshop/ui.js"></script>
+  <script type="module" src="/recovery/ui.js"></script>
+</body>
+</html>

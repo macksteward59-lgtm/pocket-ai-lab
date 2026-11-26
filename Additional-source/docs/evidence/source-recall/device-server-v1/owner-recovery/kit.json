@@ -1,0 +1,18 @@
+{
+  "workflowRun": 44995884905,
+  "artifactID": 14743884193,
+  "artifact": "pocket-ai-lab-device-kit",
+  "archiveBytes": 16283009,
+  "archiveSHA256": "8366b08eb2e9bb18e0c64912014cd4d60b2d612e737dc1cd71d0b9779986634f",
+  "tarSHA256": "027ebdd7ba0c01bc119c10aa4eb0e12312a6257fc863d8cb1ff3d805cdb6c1ca",
+  "entries": 231,
+  "builtCommit": "b616166078a719ff9dd3e45b652cd10521cca7fe",
+  "featureHead": "12d511f2ae6938a84f65c1d0f31124441bdfeb5d",
+  "caseSuiteSHA256": "13035004d70e75bbe99aa4c85789be53659f2ae41e2db0cd94af78692c71ab2b",
+  "signingCredentialsIncluded": false,
+  "modelWeightsIncluded": false,
+  "physicalDeviceRunObserved": false,
+  "githubArtifact": "https://github.com/macksteward59-lgtm/pocket-ai-lab/actions/runs/44995884905/artifacts/14743884193",
+  "githubExpiresAt": "2026-11-29T07:15:07Z",
+  "verifiedSourceTree": "162b85f79c1f1be63542dae4eabfaa8c39070c46"
+}

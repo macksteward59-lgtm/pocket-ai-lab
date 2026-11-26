@@ -1,0 +1,20 @@
+{
+  "payload": {
+    "schema": "pocket.source-review.v1",
+    "taskId": "15a693b6-d739-4884-a135-fae0a0916bd3",
+    "attemptId": "f5147ce1-daee-43e5-a681-7e250f729807",
+    "owner": "review-owner",
+    "title": "Review JSON array ordering",
+    "source": "\n  Values in a JSON array have a defined order.\nA JSON object groups name/value pairs without defining an order for those pairs.\n",
+    "quote": "Values in a JSON array have a defined order.",
+    "offset": 3,
+    "executionCount": 1,
+    "corrections": [
+      {
+        "id": "69c62e84-1b56-4630-883f-699ae98cd1c2",
+        "note": "The selected sentence describes array values."
+      }
+    ]
+  },
+  "signature": "g1M6iIj9RbAZsWyfGvt8TO6QCWaJ9VmbZVVjcWZUdAwmibp04TMUfqChdCefJExp+Izw4xlWZgKVM5w98ybrew=="
+}

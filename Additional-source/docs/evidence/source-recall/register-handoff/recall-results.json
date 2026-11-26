@@ -1,0 +1,148 @@
+{
+  "frozenQuestionsCommit": "0f9f7107b08f92482589f77e093ca90eb132861d",
+  "searchCommit": "19a69da59edeb091668ea77ebb16403471cb3d6d",
+  "indexID": "4c04d0f3-934f-8995-92a2-e52e981a31e0",
+  "recordCount": 9,
+  "created": 10,
+  "createdOnRepeat": 0,
+  "rows": [
+    {
+      "id": "handset",
+      "support": "APPLE-DEVICE",
+      "rank": 1,
+      "returned": [
+        "APPLE-DEVICE",
+        "APPLE-TEAM",
+        "ACL-ABSTAIN",
+        "CF-QUOTA",
+        "NATIVE-EXACT-ANSWER"
+      ]
+    },
+    {
+      "id": "signing",
+      "support": "APPLE-TEAM",
+      "rank": 1,
+      "returned": [
+        "APPLE-TEAM",
+        "APPLE-DEVICE",
+        "CF-QUOTA",
+        "ACL-CITE",
+        "ACL-ABSTAIN"
+      ]
+    },
+    {
+      "id": "invocation",
+      "support": "CF-BIND",
+      "rank": 1,
+      "returned": [
+        "CF-BIND",
+        "CF-QUOTA",
+        "W3C-PROV",
+        "ACL-ABSTAIN",
+        "APPLE-DEVICE"
+      ]
+    },
+    {
+      "id": "billing",
+      "support": "CF-QUOTA",
+      "rank": 3,
+      "returned": [
+        "W3C-QUOTE",
+        "APPLE-TEAM",
+        "CF-QUOTA",
+        "APPLE-DEVICE"
+      ]
+    },
+    {
+      "id": "lineage",
+      "support": "W3C-PROV",
+      "rank": 1,
+      "returned": [
+        "W3C-PROV",
+        "ACL-CITE",
+        "NATIVE-EXACT-ANSWER",
+        "ACL-ABSTAIN",
+        "CF-QUOTA"
+      ]
+    },
+    {
+      "id": "duplicate-passage",
+      "support": "W3C-QUOTE",
+      "rank": 1,
+      "returned": [
+        "W3C-QUOTE",
+        "W3C-PROV",
+        "CF-BIND"
+      ]
+    },
+    {
+      "id": "citations",
+      "support": "ACL-CITE",
+      "rank": 1,
+      "returned": [
+        "ACL-CITE",
+        "W3C-PROV",
+        "NATIVE-EXACT-ANSWER",
+        "ACL-ABSTAIN",
+        "CF-QUOTA"
+      ]
+    },
+    {
+      "id": "missing-context",
+      "support": "ACL-ABSTAIN",
+      "rank": 5,
+      "returned": [
+        "ACL-CITE",
+        "CF-BIND",
+        "APPLE-TEAM",
+        "NATIVE-EXACT-ANSWER",
+        "ACL-ABSTAIN"
+      ]
+    },
+    {
+      "id": "old-grade",
+      "support": "NATIVE-EXACT-ANSWER",
+      "rank": 1,
+      "returned": [
+        "NATIVE-EXACT-ANSWER",
+        "W3C-QUOTE",
+        "W3C-PROV",
+        "APPLE-DEVICE",
+        "CF-BIND"
+      ]
+    },
+    {
+      "id": "phone-temperature",
+      "support": null,
+      "rank": null,
+      "returned": [
+        "APPLE-DEVICE",
+        "ACL-CITE",
+        "NATIVE-EXACT-ANSWER",
+        "W3C-QUOTE",
+        "APPLE-TEAM"
+      ]
+    },
+    {
+      "id": "personal-balance",
+      "support": null,
+      "rank": null,
+      "returned": [
+        "APPLE-TEAM",
+        "CF-QUOTA"
+      ]
+    },
+    {
+      "id": "merged-version",
+      "support": null,
+      "rank": null,
+      "returned": [
+        "NATIVE-EXACT-ANSWER",
+        "W3C-QUOTE",
+        "W3C-PROV",
+        "ACL-CITE",
+        "ACL-ABSTAIN"
+      ]
+    }
+  ]
+}
