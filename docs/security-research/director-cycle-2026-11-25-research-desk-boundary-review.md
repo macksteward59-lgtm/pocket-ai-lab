@@ -51,3 +51,15 @@ Source: `docs/research-desk/index.html` at the main commit above.
 - Keep the Research Desk static until the authorization, evidence authenticity, scope canonicalization, and durable-state contracts are independently implemented and tested.
 - Repair East lifecycle imports in a small separate branch; do not import the full stacked PR #157 to fix this build.
 - No PR, merge, deployment, active target testing, or permission/configuration change was performed in this cycle.
+
+
+## Public bug-bounty policy research (2026-11-25)
+
+Fresh official desk research; no target interaction.
+
+- HackerOne Safe Harbor overview (https://docs.hackerone.com/en/articles/8494502-safe-harbor-overview-faq): Gold Standard Safe Harbor and AI Research Safe Harbor are independent program settings. A program may adopt either or both; adoption does not enlarge listed scope. Record each status separately and link the actual program's terms.
+- YesWeHack official program directory entry (https://yeswehack.com/programs/yes-we-hack): public listing updated 2025-01-21; four listed scopes; published range €50–€15,000 depending on asset value/severity. The page excludes Wallet and KYC third-party features, forbids DoS and infrastructure interference, restricts account/data changes, and requires PII minimization. This is a dated snapshot; verify live terms before any future proposal.
+- YesWeHack scope/reward guidance (https://helpcenter.yeswehack.io/en/articles/376653-organisations-scopes-rewards; published 2026-09-24): scope is the explicit asset list; unlisted domains/subdomains default out-of-scope when the program says so; reward suggestions depend on CVSS and asset value, with the organization making the final decision.
+- PortSwigger OAuth implicit-flow lab (https://portswigger.net/web-security/oauth/lab-oauth-authentication-bypass-via-oauth-implicit-flow): current public lab describes client-side identity-data trust and token/identity binding failures. It remains queued only for the assigned Academy environment; no lab session was run this cycle.
+
+Evaluator changes reinforced: preserve policy date, asset-specific scope and reward grid, third-party exclusions, both safe-harbor flags, qualitative vs numeric rate restrictions, disclosure/KYC conditions, and a source-backed unknown state. A directory listing or safe-harbor badge is never blanket authorization.
