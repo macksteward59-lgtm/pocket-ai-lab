@@ -957,3 +957,9 @@ ChatGPT completed the [twelve-section v3.12 repository comparison](evidence/rls-
 | ChatGPT | Factory AI Droid integration: isolated `integrations/factory-droid/**` only, source-controlled documentation/adapter/tests for human-gated API execution and GitHub coordination. No APEX, East, iOS, inference runtime, existing workflows, deployments, or secrets. | `codex/factory-droid-bridge-20261122` | claimed | 2026-11-22 | Owner requested full ChatGPT–Factory integration; Factory account/API connectivity unverified. Never claim Factory as authorized APEX agent; no live Factory task until scoped admission and owner credentials are configured. |
 
 | ChatGPT | Cloudflare public website and separate private handoff service | `codex/cloudflare-public-website` | in-review | 2026-11-23 00:22 UTC | Website [#294](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/294) and existing private Worker [#245](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/245). Both service checks passed. Owner review precedes merge or deployment. |
+
+## November 26, 2026 — main baseline reconciliation
+
+| Owner | Scope | Branch | Status | Updated (UTC) | Notes |
+|---|---|---|---|---|---|
+| ChatGPT (owner-authorized continuation of the #157 lane) | Reconcile the present `main` TypeScript build and consumer tests with the existing East lifecycle implementation and its direct seams/tests. | `codex/restore-east-baseline` | in-progress | 2026-11-26 | Work from the exact current #157 source, preserve the historical branches, and prepare a separate review; independent second reader is read-only. No production, deployment, provider/tool authority, APEX policy, native, or research-execution expansion. |
