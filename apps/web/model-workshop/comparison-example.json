@@ -1,0 +1,106 @@
+[
+  {
+    "id": "NASA-MARS",
+    "url": "https://science.nasa.gov/mars/moons/",
+    "sentences": [
+      "The two moons of Mars are Deimos and Phobos.",
+      "Phobos travels around Mars three times in one day."
+    ],
+    "questions": [
+      [
+        "What are the names of the Martian moons?",
+        0
+      ],
+      [
+        "How many trips around Mars does Phobos make per day?",
+        1
+      ],
+      [
+        "How many times per day does Deimos orbit Mars?",
+        -1
+      ],
+      [
+        "Which moon has the greater surface gravity?",
+        -1
+      ]
+    ]
+  },
+  {
+    "id": "US-MINT-NICKEL",
+    "url": "https://www.usmint.gov/content/usmint/us/en/learn/coins-and-medals/circulating-coins/coin-specifications.html",
+    "sentences": [
+      "The listed mass of a United States nickel is 5.000 grams.",
+      "A nickel has a diameter of 21.21 millimeters."
+    ],
+    "questions": [
+      [
+        "How many grams does a nickel weigh?",
+        0
+      ],
+      [
+        "What is the diameter of the five-cent coin in millimeters?",
+        1
+      ],
+      [
+        "What is the thickness of a nickel in millimeters?",
+        -1
+      ],
+      [
+        "Which metal accounts for most of the coin's mass?",
+        -1
+      ]
+    ]
+  },
+  {
+    "id": "FIDE-BOARD",
+    "url": "https://handbook.fide.com/files/handbook/OnlineChessRegulations.pdf",
+    "sentences": [
+      "The virtual chessboard has 64 squares arranged in eight rows and eight columns.",
+      "The squares alternate between light and dark."
+    ],
+    "questions": [
+      [
+        "How many squares make up the virtual board?",
+        0
+      ],
+      [
+        "How are the light and dark squares arranged?",
+        1
+      ],
+      [
+        "Which color is assigned to the player who moves first?",
+        -1
+      ],
+      [
+        "How wide is a square on a player's screen?",
+        -1
+      ]
+    ]
+  },
+  {
+    "id": "NIST-TIME",
+    "url": "https://www.nist.gov/pml/owm/si-units-time",
+    "sentences": [
+      "The SI unit of time is the second, written s.",
+      "The definition fixes the cesium-133 transition frequency at 9,192,631,770 hertz."
+    ],
+    "questions": [
+      [
+        "What symbol represents the SI unit of time?",
+        0
+      ],
+      [
+        "What numerical frequency in hertz is used for the cesium-133 transition?",
+        1
+      ],
+      [
+        "What was the measured frequency error of this particular clock?",
+        -1
+      ],
+      [
+        "Which laboratory first built a cesium clock?",
+        -1
+      ]
+    ]
+  }
+]

@@ -4,7 +4,15 @@
 
 ## Consumer prototype (web/PWA)
 
-The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings, and transparent memory/activity sections. Chat and Agent Team both call the local llama.cpp `InferenceProvider`. Chat shows the model's `analysis` text and fails closed when that text is missing. Agent Team streams the real multi-agent stages. Neither view invents a reply.
+The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings, and transparent memory/activity sections. The configured chat model and Agent Team call the local llama.cpp `InferenceProvider`. Chat shows the model's `analysis` text and fails closed when that text is missing. Agent Team streams the real multi-agent stages. Neither view invents a reply.
+
+### Model workshop
+
+Open **Model workshop** to edit a copy of a document reader, combine two compatible readers by percentage, or train a child with a teacher. Compare the candidate with its parents before saving, then select **Use in Chat**. A reply can become an editable Memory draft. In the browser, you can also compare a saved reader and its parents on your own passage or labeled questions and take any reader’s result into Chat. You can save an unfinished edit or blend as a browser draft, close the workshop and resume it offline. A family export lets you move the selected reader and its parents to another browser and continue there. With two compatible language-model snapshots on the local CPU host, you can pause training, reopen the workshop and resume from the saved optimizer state. [Workflow, recovered product decisions and release acceptance](docs/implementation/unified-model-workflow.md)
+
+### Review tasks
+
+Open **Review tasks** to create a local account and save an excerpt from a passage. In Chat, **Review source excerpt** prepares a draft from a document reader’s answer and its original passage. After closing the app or restarting the host, sign back in, resume the task and verify the signed excerpt. You can add a correction and export both the updated receipt and the host’s public verification key. [Recovery walkthrough and evidence](docs/implementation/account-owned-review.md)
 
 ### Run locally
 
@@ -103,3 +111,7 @@ Model text is untrusted proposal data. It is not an APEX approval or receipt.
 - Repair operations require independent authorization.
 
 See `docs/architecture/Pocket-AI-Lab-Multi-Agent-Intelligence-Architecture-v1.0.md` and `docs/implementation/consumer-prototype-acceptance.md` for the architecture and measurable product acceptance criteria.
+
+## Project decisions and release evidence
+
+The owner’s sign-in and recovery milestone links a model’s answer to a source-review task. The local app preserves the original account’s result after interruption, lets the owner add a correction, and exports signed evidence. The product handoff distinguishes the demonstrated browser and host cases from physical-device and release requirements. [Kay and Pocket AI Lab chat cross-reference](https://github.com/macksteward59-lgtm/pocket-ai-lab/blob/agent-coordination/coordination/POCKET_AI_LAB_COMPLETE_PRODUCT_HANDOFF_2026-11-17.md#kay-and-pocket-ai-lab-chat-cross-reference)

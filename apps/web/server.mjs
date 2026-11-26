@@ -1,5 +1,7 @@
 import http from "node:http";
-import { readFile } from "node:fs/promises";
+import { hostWorkshop } from "./workshop-runtime.mjs";
+import { recoveryApi } from "./recovery-api.mjs";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openMemoryManager } from "./memoryRuntime.ts";
@@ -192,13 +194,15 @@ function rejectContentType(res) {
 }
 
 async function body(req) {
-  let raw = "";
+  const chunks = [];
+  let bytes = 0;
   for await (const chunk of req) {
-    raw += chunk;
-    if (raw.length > maxBody) throw Object.assign(new Error("Request too large"), { status: 413 });
+    bytes += chunk.length;
+    if (bytes > maxBody) throw Object.assign(new Error("Request too large"), { status: 413 });
+    chunks.push(chunk);
   }
   try {
-    return JSON.parse(raw);
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     throw Object.assign(new Error("Invalid JSON"), { status: 400 });
   }
@@ -237,13 +241,55 @@ function chatFailure(error) {
 
 export function createServer() {
   const take = createLimiter(rateLimitConfig());
-  return http.createServer(async (req, res) => {
+  const workshop = hostWorkshop();
+  const recovery = recoveryApi(root);
+  const takeReview = createLimiter({ windowMs: RATE_WINDOW_MS, account: 20, review: 240 });
+  const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
         if (!localApiAllowed(req)) {
           drain(req);
           return rejectLocal(res);
+        }
+      }
+      if (url.pathname === "/api/recovery") {
+        if (req.method !== "POST") { drain(req); return json(res, 405, { error: "Use POST." }, { allow: "POST" }); }
+        if (!jsonContentType(req)) { drain(req); return rejectContentType(res); }
+        if (req.headers.origin !== undefined && req.headers.origin !== "http://" + req.headers.host) {
+          drain(req);
+          return rejectLocal(res);
+        }
+        const budget = takeReview("review", req);
+        if (!budget.allowed) { drain(req); return rejectLimited(res, budget.retryAfterSeconds); }
+        try {
+          const input = await body(req);
+          if (input?.action === "register" || input?.action === "login") {
+            const account = takeReview("account", req);
+            if (!account.allowed) return rejectLimited(res, account.retryAfterSeconds);
+          }
+          const { data, headers } = await recovery.dispatch(input, req.headers.cookie);
+          return json(res, 200, data, headers);
+        } catch (error) {
+          return json(res, error.status || 503, {
+            error: error.status ? error.message : "The local review store is unavailable.",
+            ...(error.code === "account_changed" ? { code: error.code } : {})
+          });
+        }
+      }
+      if (url.pathname === "/api/model-workshop") {
+        if (!["GET", "POST"].includes(req.method)) return json(res, 405, { error: "Use GET or POST." }, { allow: "GET, POST" });
+        if (req.method === "POST" && !jsonContentType(req)) return rejectContentType(res);
+        const limit = take(req.method === "GET" ? "memory" : "agent", req);
+        if (!limit.allowed) { drain(req); return rejectLimited(res, limit.retryAfterSeconds); }
+        try {
+          const input = req.method === "GET" ? { op: "list" } : await body(req);
+          if (req.method === "POST" && !["build", "resume", "answer"].includes(input?.op)) {
+            return json(res, 400, { error: "Unknown workshop operation." });
+          }
+          return json(res, 200, await workshop(input));
+        } catch (error) {
+          return json(res, error.status || 503, { error: error.status ? error.message : "The local training host is unavailable." });
         }
       }
       if (url.pathname === "/api/health" && req.method === "GET") {
@@ -519,7 +565,9 @@ export function createServer() {
       const resolved = path.resolve(root, requested);
       if (!resolved.startsWith(root + path.sep)) return json(res, 403, { error: "Forbidden." });
       try {
-        const content = await readFile(resolved);
+        const target = await realpath(resolved);
+        if (!target.startsWith(root + path.sep)) return json(res, 403, { error: "Forbidden." });
+        const content = await readFile(target);
         res.writeHead(200, {
           "content-type": mime[path.extname(resolved)] || "application/octet-stream",
           "cache-control": resolved.endsWith("index.html") ? "no-cache" : "public, max-age=3600"
@@ -538,6 +586,8 @@ export function createServer() {
       return json(res, status, { error: error instanceof Error ? error.message : "Request failed." });
     }
   });
+  server.once("close", () => recovery.close());
+  return server;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
