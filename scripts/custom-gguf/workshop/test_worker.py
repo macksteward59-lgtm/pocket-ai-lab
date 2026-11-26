@@ -115,6 +115,43 @@ class WorkerTests(unittest.TestCase):
             self.assertNotIn(student["id"], [m["id"] for m in worker.run({"op":"list"})["models"]])
             print(json.dumps({"actualTeacherStudent": first["scores"], "verified": first["verifiedExamples"]}))
 
+    def test_catalog_counts_only_unique_valid_snapshots_toward_capacity(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"POCKET_TRAINING_DIR": directory}):
+            imports = Path(directory) / "imports"
+            config = json.dumps(dict(model_type="llama", num_hidden_layers=2, hidden_size=32,
+                                     num_attention_heads=4, intermediate_size=64, vocab_size=32,
+                                     max_position_embeddings=128, eos_token_id=1))
+
+            def add_snapshot(name, fixture_weights):
+                # Catalog validation checks the config and hashes file bytes; it does not load tensors.
+                path = imports / name
+                path.mkdir(parents=True)
+                (path / "config.json").write_text(config)
+                (path / "tokenizer.json").write_text("{}")
+                (path / "model.safetensors").write_text(fixture_weights)
+
+            for index in range(128):
+                add_snapshot(f"Model {index:03}", f"snapshot {index}")
+            request = {"op": "list"}
+            full = worker.run(request)
+            models = full["models"]
+            self.assertEqual(len({m["id"] for m in models}), 128)
+            self.assertEqual(models[0]["name"], "Model 000")
+
+            (imports / "ZZ incomplete").mkdir()
+            with self.subTest(extra="incomplete import"):
+                self.assertEqual(worker.run(request), full)
+            (imports / "ZZ incomplete").rmdir()
+
+            add_snapshot("ZZ duplicate", "snapshot 0")
+            with self.subTest(extra="duplicate ID"):
+                self.assertEqual(worker.run(request), full)
+
+            add_snapshot("ZZ unique", "snapshot 128")
+            with self.subTest(extra="129th unique ID"):
+                with self.assertRaisesRegex(worker.Invalid, "exceeds its 128-model limit"):
+                    worker.run(request)
+
     def test_missing_workspace_and_non_files(self):
         with patch.dict(os.environ, {"POCKET_TRAINING_DIR": ""}):
             with self.assertRaisesRegex(worker.Invalid, "Configure"):

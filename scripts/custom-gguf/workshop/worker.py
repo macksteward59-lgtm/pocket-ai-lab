@@ -101,8 +101,6 @@ def catalog(root):
         for path in sorted(parent.iterdir()):
             if path.name.startswith(".") or path.is_symlink() or not path.is_dir():
                 continue
-            if len(records) >= 128:
-                raise Invalid("The local catalog exceeds its 128-model limit.")
             try:
                 artifact, weights, _ = snapshot(path)
                 if group == "imports":
@@ -116,10 +114,16 @@ def catalog(root):
                     if (item["id"] != path.name or item["artifactSHA256"] != artifact or item["weightsSHA256"] != weights
                             or item["id"] != build_id(report["recipe"], report["runtimeVersions"], item["parents"], item["name"])):
                         continue
-                item.update(artifactSHA256=artifact, weightsSHA256=weights)
-                records.setdefault(item["id"], (item, path))
             except (OSError, KeyError, TypeError, ValueError):
                 continue
+            ident = item["id"]
+            if ident in records:
+                continue
+            # Keep real overflow outside the invalid-snapshot handler (Invalid is a ValueError).
+            if len(records) >= 128:
+                raise Invalid("The local catalog exceeds its 128-model limit.")
+            item.update(artifactSHA256=artifact, weightsSHA256=weights)
+            records[ident] = (item, path)
     return records
 
 
