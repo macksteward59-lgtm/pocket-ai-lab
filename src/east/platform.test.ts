@@ -40,7 +40,7 @@ function payloadFor(request: InferenceRequest): InferenceResult {
   }
 }
 
-function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = {}): EastPlatformRuntime {
+function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = {}): EastPlatformRuntime & { calls: InferenceRequest[] } {
   const calls: InferenceRequest[] = [];
   const platform = createEastPlatform({
     inference: overrides.inference ?? {
@@ -61,7 +61,7 @@ function runtime(overrides: Partial<Parameters<typeof createEastPlatform>[0]> = 
 }
 
 function assignTeam(platform: EastPlatformRuntime, taskId: string): void {
-  for (const agentId of ["director", "reasoner", "researcher", "engineer", "critic", "validator"]) {
+  for (const agentId of ["director", "reasoner", "researcher", "engineer", "security", "critic", "validator", "archivist"]) {
     platform.assignAgent(taskId, agentId);
   }
 }
@@ -154,6 +154,32 @@ describe("East platform functions", () => {
     expect(starved.getTask(starvedTask).authorized).toBe(false);
   });
 
+  it("restores an East task and validated message thread into a fresh runtime", async () => {
+    const source = runtime({ createId: () => "checkpoint-source" });
+    const taskId = source.createAgentTask("Restore a completed agent proposal");
+    source.assignAgent(taskId, "reasoner");
+    await source.executeAgent(taskId, "reasoner");
+    const checkpoint = source.checkpointTask(taskId);
+
+    const restored = runtime({ createId: () => "checkpoint-target" });
+    const invalid = {
+      ...checkpoint,
+      task: { ...checkpoint.task, assignments: null! }
+    };
+    expect(() => restored.restoreTask(invalid)).toThrow(/Invalid East runtime checkpoint task/);
+    expect(restored.orchestrator.bus.getThread(taskId)).toHaveLength(0);
+    restored.restoreTask(checkpoint);
+    expect(() => restored.restoreTask(checkpoint)).not.toThrow();
+    expect(() => restored.restoreTask({
+      ...checkpoint, evidenceMemoryCommitted: !checkpoint.evidenceMemoryCommitted
+    })).toThrow(/Cannot overwrite/);
+    expect(restored.getTask(taskId)).toEqual(source.getTask(taskId));
+    expect(restored.orchestrator.bus.getThread(taskId)).toEqual(source.orchestrator.bus.getThread(taskId));
+    await restored.executeAgent(taskId, "reasoner");
+    expect(restored.orchestrator.bus.getThread(taskId)).toHaveLength(2);
+    expect(restored.getTask(taskId).authorized).toBe(false);
+  });
+
   it("refuses deliberation until the core team is assigned", async () => {
     const platform = runtime();
     const taskId = platform.createAgentTask("Need the team");
@@ -167,6 +193,8 @@ describe("East platform functions", () => {
     const taskId = platform.createAgentTask("Show the boundary");
     assignTeam(platform, taskId);
     const result = await platform.runDeliberation(taskId);
+    const deliberationAgents = new Set(platform.calls.map(call => call.agentId));
+    expect(deliberationAgents).toEqual(new Set(["reasoner", "researcher", "engineer", "security", "critic", "validator", "director", "archivist"]));
     expect(result.synthesis).toBe("Agents proposed a result. Nothing was authorized.");
     expect(result.evidence).toEqual(["ref-1"]);
     expect(platform.orchestrator.bus.getThread(taskId).length).toBeGreaterThan(0);

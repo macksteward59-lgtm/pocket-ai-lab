@@ -80,6 +80,32 @@ export class MessageBus {
     return frozen;
   }
 
+  /**
+   * Restores a previously persisted task thread without notifying listeners.
+   * Every message is revalidated and sequence/message identifiers must be unique.
+   */
+  restoreThread(taskId: string, messages: readonly AgentMessage[]): void {
+    if (typeof taskId !== "string" || !taskId.trim()) throw new Error("taskId is required");
+    if (this.messages.some(message => message.taskId === taskId)) {
+      throw new Error("Cannot restore a thread over existing task messages");
+    }
+    const restored = messages.map(message => deepFreeze(AgentMessageSchema.parse(structuredClone(message))));
+    if (restored.some(message => message.taskId !== taskId)) {
+      throw new Error("Restored thread contains a message for another task");
+    }
+    const messageIds = new Set<string>();
+    const sequences = new Set<number>();
+    for (const message of restored) {
+      if (messageIds.has(message.messageId) || sequences.has(message.sequence)) {
+        throw new Error("Restored thread contains duplicate message identifiers or sequence numbers");
+      }
+      messageIds.add(message.messageId);
+      sequences.add(message.sequence);
+    }
+    restored.sort((left, right) => left.sequence - right.sequence);
+    for (const message of restored) this.messages.push(message);
+  }
+
   subscribe(agentId: string, callback: (msg: AgentMessage) => void): () => void {
     const listeners = this.listeners.get(agentId) ?? [];
     listeners.push(callback);
