@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101311">
+<title>Pocket AI Lab — Research Desk</title>
+<style>
+:root {
+  --ink: #101311; --brass: #d4b483; --paper: #e8e4d8; --alert: #e08a78;
+  --moss: #1a211c; --line: #2a332e; --muted: #8a9188; --ok: #7d9b76; --warn: #c9a227;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--ink); color: var(--paper); line-height: 1.5; }
+.app { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+.top { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.kicker { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brass); margin: 0 0 0.2rem; }
+h1 { font-size: 1.75rem; margin: 0; font-weight: 600; }
+.sub { color: var(--muted); font-size: 0.85rem; margin: 0.2rem 0 0; }
+.status { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.72rem; background: var(--moss); border: 1px solid var(--line); }
+.tone-ok { background: color-mix(in srgb, var(--ok) 25%, transparent); border-color: var(--ok); color: #c5e0c0; }
+.tone-warn { background: color-mix(in srgb, var(--warn) 20%, transparent); border-color: var(--warn); color: #f0d98a; }
+.deny { background: color-mix(in srgb, var(--alert) 18%, transparent); border: 1px solid var(--alert); padding: 0.65rem 0.85rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem; }
+.note { background: var(--moss); border: 1px solid var(--line); padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; }
+.tabs button { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+.tabs button.active { background: var(--brass); color: var(--ink); border-color: var(--brass); font-weight: 600; }
+.card { background: var(--moss); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 0.85rem; }
+.card-title { margin: 0 0 0.65rem; font-size: 1rem; color: var(--brass); }
+.muted { color: var(--muted); font-size: 0.88rem; }
+.grid { display: grid; gap: 0.85rem; }
+@media (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
+.stack { display: flex; flex-direction: column; gap: 0.75rem; }
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+.row.gap { gap: 0.5rem; }
+.btn { background: var(--moss); border: 1px solid var(--line); color: var(--paper); padding: 0.45rem 0.8rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+.btn.primary { background: var(--brass); color: var(--ink); border-color: var(--brass); font-weight: 600; }
+.btn.secondary { opacity: 0.9; }
+.btn.danger { border-color: var(--alert); color: var(--alert); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.check { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.9rem; cursor: pointer; }
+.stats { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+.stats li { padding: 0.2rem 0; border-bottom: 1px solid var(--line); }
+.steps { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; }
+.steps li { margin-bottom: 0.35rem; }
+.rule { margin-top: 0.75rem; font-size: 0.9rem; padding: 0.6rem; background: color-mix(in srgb, var(--brass) 8%, transparent); border-radius: 8px; }
+.list label.scout-item, .agent-row { display: flex; gap: 0.65rem; padding: 0.65rem 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.name { font-weight: 500; margin-bottom: 0.15rem; }
+.note { font-size: 0.82rem; color: var(--muted); }
+.path { font-family: ui-monospace, monospace; font-size: 0.8rem; color: var(--brass); }
+.two { display: grid; gap: 0.75rem; margin: 0.5rem 0; }
+@media (min-width: 600px) { .two { grid-template-columns: 1fr 1fr; } }
+.two h4, h4, h5 { margin: 0.4rem 0 0.25rem; font-size: 0.85rem; color: var(--brass); }
+code { font-size: 0.78rem; background: #0a0c0b; padding: 0.1rem 0.3rem; border-radius: 4px; }
+select { background: var(--ink); color: var(--paper); border: 1px solid var(--line); padding: 0.3rem 0.5rem; border-radius: 6px; }
+.scope-row { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+.scope-row .muted { grid-column: 1 / -1; font-size: 0.75rem; }
+.finding { border-top: 1px solid var(--line); padding-top: 0.75rem; margin-top: 0.75rem; }
+.iris-result { margin-top: 0.75rem; padding: 0.75rem; background: color-mix(in srgb, var(--ok) 10%, transparent); border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="app" id="root"></div>
+<script>
+const TASK_ID = "task_lumen_refund_01";
+const POLICY = "bb-2026.4";
+const REVISION = "a1c4e90";
+const POLICY_RULE = "There is no refund unless the return is specialized under different terminology.";
+
+const scoutItems = [
+  { id: "signup", kind: "Page", name: "Signup", note: "Account creation on the fixture host.", inScope: true },
+  { id: "login", kind: "Login", name: "Session login", note: "Agent and supervisor are different role claims.", inScope: true },
+  { id: "reset", kind: "Login", name: "Password reset", note: "Reset token is single-use in this revision.", inScope: true },
+  { id: "upload", kind: "API", name: "Receipt upload", note: "Supports image and PDF.", inScope: true },
+  { id: "refund", kind: "API", name: "Refund endpoint", note: "POST /v1/ledger/refund. Requires supervisor claim.", inScope: true },
+  { id: "rule", kind: "Rule", name: "Product rule", note: "Only a supervisor may approve a refund. Specialized term: ledger credit.", inScope: true },
+];
+
+const checks = [
+  {
+    id: "refund", spot: "POST /v1/ledger/refund", title: "Supervisor-only refund", rule: POLICY_RULE,
+    expected: "Only a caller with supervisor role may create a refund. Ordinary agents receive 403.",
+    observed: "An agent session with a forged supervisor claim successfully created a refund of $48.00. Response used ledger credit.",
+    evidence: [
+      { label: "Request", quote: "POST /v1/ledger/refund  Authorization: Bearer <agent-token-with-forged-claim>" },
+      { label: "Response", quote: "201 Created  { status: ledger_credit, amount: 4800 }" },
+      { label: "Role check", quote: "Middleware only inspected presence of claim named supervisor; did not verify issuer or audience." },
+    ],
+    contrary: "The same endpoint correctly rejected a pure agent token without any supervisor claim (403).",
+    omissions: "No test of expired or revoked supervisor tokens.",
+    regression: "A supervisor claim must be issued by the trusted identity provider and match the exact audience for the ledger service.",
+    severity: "High - authorization bypass on financial action", confidence: "high", grader: "support",
+    graderWhy: "Independent reproduction succeeded. Expected, observed, and evidence align.",
+    path: "services/ledger/refund.ts:112-148",
+  },
+  {
+    id: "reset", spot: "Password reset flow", title: "Single-use reset token",
+    rule: "Reset tokens are single-use and expire after 15 minutes.",
+    expected: "Second use of the same token returns 410 Gone.",
+    observed: "Second use of a still-valid token returned 200 and changed the password again.",
+    evidence: [
+      { label: "First use", quote: "POST /auth/reset  token=abc  -> 200, password updated" },
+      { label: "Second use", quote: "POST /auth/reset  token=abc  -> 200, password updated again" },
+    ],
+    contrary: "Token correctly expired after 15 minutes in a separate test.",
+    omissions: "No concurrent race test.",
+    regression: "Mark token consumed in the same transaction that updates the password.",
+    severity: "Medium", confidence: "moderate", grader: "support", graderWhy: "Clear reproduction.",
+    path: "auth/reset.ts:67",
+  },
+];
+
+const agents = [
+  { id: "scope", name: "Scope Interpreter", style: "Claude", note: "Parses program policy. Never grants authority." },
+  { id: "recon", name: "Recon and Asset Mapper", style: "Grok", note: "Maps only the authorized fixture. No live crawl." },
+  { id: "logic", name: "Business Logic Modeler", style: "OpenAI", note: "States invariants and testable hypotheses only." },
+  { id: "critic", name: "Independent Critic", style: "Claude", note: "Grades evidence quality. Can reject the claim." },
+  { id: "archivist", name: "Disclosure Archivist", style: "Grok", note: "Builds the maintainer report. Never submits externally." },
+];
+
+const lumenScope = {
+  program: "Lumen Internal Fixture (authorized research only)",
+  policyId: "bb-2026.4", revision: "a1c4e90",
+  hosts: [
+    { host: "fixture.lumen.local", inScope: true, reason: "Owned test host defined by the research task." },
+    { host: "api.lumen.local", inScope: true, reason: "Ledger and auth services under the same fixture." },
+    { host: "*", inScope: false, reason: "Default deny. Live internet hosts are out of scope." },
+  ],
+  allowedPaths: ["/v1/ledger/refund", "/auth/reset", "/auth/login", "/signup", "/upload"],
+  deniedPatterns: ["live production", "customer data", "third-party CDN origin"],
+  readOnlyDefault: true,
+  notes: "This desk never contacts a live host. Expanding scope requires a new owner-authorized task.",
+};
+
+function checkScope(host, path) {
+  const n = host.trim().toLowerCase();
+  const exact = lumenScope.hosts.find(h => h.host.toLowerCase() === n);
+  if (exact) {
+    if (!exact.inScope) return { allowed: false, reason: exact.reason };
+    if (path) {
+      const ok = lumenScope.allowedPaths.some(p => path === p || path.startsWith(p + "/"));
+      if (!ok) return { allowed: false, reason: "Path " + path + " is not on the authorized path list." };
+    }
+    return { allowed: true, reason: exact.reason };
+  }
+  return { allowed: false, reason: "Default deny. Host is not listed as in-scope." };
+}
+
+const verdictOptions = ["open","hypothesis","observation","finding","rejected","fixed"];
+let state = {
+  tab: "desk",
+  reviewed: {},
+  verdicts: { refund: "open", reset: "open" },
+  irisResult: null,
+  authorized: false,
+  sawContrary: false,
+  submittedAt: null,
+  attempt: 1,
+  budget: 8,
+  budgetCap: 12,
+  lastDeny: null,
+  parked: null,
+  resumeNote: null,
+};
+
+function supportsIris(v) { return v === "observation" || v === "finding" || v === "fixed"; }
+
+function setState(patch) {
+  state = Object.assign({}, state, patch);
+  render();
+}
+
+function setVerdict(id, verdict) {
+  if (state.verdicts[id] === verdict) return;
+  if (state.budget <= 0) {
+    setState({ lastDeny: "APEX denied the change. The assess budget is spent. Raise it to continue." });
+    return;
+  }
+  const verdicts = Object.assign({}, state.verdicts);
+  verdicts[id] = verdict;
+  setState({
+    verdicts: verdicts,
+    irisResult: id === "refund" && !supportsIris(verdict) ? null : state.irisResult,
+    budget: state.budget - 1,
+    submittedAt: null,
+    lastDeny: null,
+    sawContrary: false,
+  });
+}
+
+function submit() {
+  if (!state.authorized) { alert("Owner authorization is required before submit."); return; }
+  const hasFinding = Object.keys(state.verdicts).some(function(k) {
+    const v = state.verdicts[k];
+    return v === "finding" || v === "fixed";
+  });
+  if (!hasFinding) { alert("No finding or fixed claim to submit."); return; }
+  setState({ submittedAt: new Date().toISOString(), lastDeny: null, tab: "report" });
+}
+
+function draftIris() {
+  const refund = state.verdicts.refund;
+  if (!supportsIris(refund)) {
+    setState({ lastDeny: "Iris will not invent a rule from a hypothesis. Record the refund as an observation or a finding first." });
+    return;
+  }
+  setState({
+    irisResult: {
+      ruleId: "iris-refund-supervisor-only",
+      statement: "Only a supervisor claim issued by the trusted identity provider may authorize a ledger credit. Forged or cross-service claims must be rejected.",
+      evidenceDigest: "a1c4e90-refund-01",
+      createdAt: new Date().toISOString(),
+      signed: true,
+    },
+    lastDeny: null,
+  });
+}
+
+function pill(text, tone) {
+  return '<span class="pill' + (tone ? ' tone-' + tone : '') + '">' + text + '</span>';
+}
+
+function render() {
+  const findingsCount = Object.keys(state.verdicts).filter(function(k) {
+    const v = state.verdicts[k];
+    return v === "finding" || v === "fixed";
+  }).length;
+  const scoutDone = scoutItems.filter(function(i) { return state.reviewed[i.id]; }).length;
+  const tabs = [["desk","Desk"],["scope","Scope"],["scout","Scout"],["checks","Checks"],["iris","Iris"],["report","Report"],["agents","Agents"]];
+
+  var main = "";
+  if (state.tab === "desk") {
+    main = '<div class="grid">' +
+      '<section class="card"><h3 class="card-title">Owner controls</h3>' +
+      '<p class="muted">You retain control over consequential actions. The desk never submits externally. Model output is proposal data only.</p>' +
+      '<label class="check"><input type="checkbox" id="auth" ' + (state.authorized ? 'checked' : '') + '> I authorize this review window</label>' +
+      '<div class="row gap">' +
+      '<button class="btn" data-act="raise">Raise budget (+4)</button>' +
+      '<button class="btn secondary" data-act="park">Park task</button>' +
+      '<button class="btn secondary" data-act="resume" ' + (state.parked ? '' : 'disabled') + '>Resume</button>' +
+      '<button class="btn danger" data-act="reset">Reset</button></div>' +
+      '<div class="row"><button class="btn primary" data-act="submit">Submit for owner disposition</button></div></section>' +
+      '<section class="card"><h3 class="card-title">Current state</h3><ul class="stats">' +
+      '<li>Scout complete: ' + scoutDone + '/' + scoutItems.length + '</li>' +
+      '<li>Findings / fixed: ' + findingsCount + '</li>' +
+      '<li>Iris drafted: ' + (state.irisResult ? 'Yes' : 'No') + '</li>' +
+      '<li>Contrary examined: ' + (state.sawContrary ? 'Yes' : 'No') + '</li>' +
+      '<li>Owner authorized: ' + (state.authorized ? 'Yes' : 'No') + '</li></ul>' +
+      '<p class="rule"><strong>Product rule under test</strong><br>' + POLICY_RULE + '</p></section>' +
+      '<section class="card"><h3 class="card-title">Workflow</h3><ol class="steps">' +
+      '<li>Authorize the review window (owner only).</li>' +
+      '<li>Confirm scope. Mark scout items reviewed.</li>' +
+      '<li>Set verdicts on checks. Each change costs budget (APEX gate).</li>' +
+      '<li>Record that contrary observations were examined.</li>' +
+      '<li>Draft Iris only after an observation or finding exists.</li>' +
+      '<li>Generate the maintainer report. You keep the submit button.</li></ol></section>' +
+      '<section class="card"><h3 class="card-title">Scope snapshot</h3><ul class="stats">' +
+      '<li>Program: ' + lumenScope.program + '</li>' +
+      '<li>Policy ' + lumenScope.policyId + ' · Rev ' + lumenScope.revision + '</li>' +
+      '<li>In-scope: fixture.lumen.local, api.lumen.local</li>' +
+      '<li>Authorized paths: ' + lumenScope.allowedPaths.length + '</li></ul>' +
+      '<p class="muted">' + lumenScope.notes + '</p></section></div>';
+  } else if (state.tab === "scope") {
+    var examples = [["fixture.lumen.local","/v1/ledger/refund"],["fixture.lumen.local","/admin/secrets"],["evil.example.com","/"],["api.lumen.local","/auth/reset"]];
+    main = '<section class="card"><h3 class="card-title">Scope engine (deny-wins)</h3>' +
+      '<p class="muted">Scope is enforced in code. Model suggestions cannot enlarge the allowlist.</p>' +
+      '<p><strong>' + lumenScope.program + '</strong></p><h4>Hosts</h4><ul>' +
+      lumenScope.hosts.map(function(h) {
+        return '<li>' + pill(h.inScope ? 'IN' : 'OUT', h.inScope ? 'ok' : 'warn') + ' <code>' + h.host + '</code> — ' + h.reason + '</li>';
+      }).join('') + '</ul><h4>Authorized paths</h4><ul>' +
+      lumenScope.allowedPaths.map(function(p) { return '<li><code>' + p + '</code></li>'; }).join('') +
+      '</ul></section><section class="card"><h3 class="card-title">Live scope checks</h3>' +
+      examples.map(function(ex) {
+        var d = checkScope(ex[0], ex[1]);
+        return '<div class="scope-row"><code>' + ex[0] + ex[1] + '</code>' + pill(d.allowed ? 'ALLOWED' : 'DENIED', d.allowed ? 'ok' : 'warn') + '<span class="muted">' + d.reason + '</span></div>';
+      }).join('') + '</section>';
+  } else if (state.tab === "scout") {
+    main = '<section class="card"><h3 class="card-title">Scout and asset map</h3>' +
+      '<p class="muted">Recon is limited to the owned fixture. No live host is contacted.</p><div class="list">' +
+      scoutItems.map(function(i) {
+        return '<label class="scout-item"><input type="checkbox" data-scout="' + i.id + '" ' + (state.reviewed[i.id] ? 'checked' : '') + '>' +
+          '<div><div class="name">' + pill(i.kind, i.inScope ? 'ok' : 'warn') + ' ' + i.name + '</div><div class="note">' + i.note + '</div></div></label>';
+      }).join('') + '</div></section>';
+  } else if (state.tab === "checks") {
+    main = checks.map(function(c) {
+      var v = state.verdicts[c.id] || 'open';
+      return '<section class="card"><h3 class="card-title">' + c.title + '</h3><p class="path">' + c.path + '</p>' +
+        '<p><strong>Rule:</strong> ' + c.rule + '</p><div class="two"><div><h4>Expected</h4><p>' + c.expected + '</p></div>' +
+        '<div><h4>Observed</h4><p>' + c.observed + '</p></div></div><h4>Evidence</h4><ul>' +
+        c.evidence.map(function(e) { return '<li><strong>' + e.label + ':</strong> <code>' + e.quote + '</code></li>'; }).join('') +
+        '</ul><p><strong>Contrary:</strong> ' + c.contrary + '</p>' +
+        '<p><strong>Omissions:</strong> ' + c.omissions + '</p><p><strong>Regression:</strong> ' + c.regression + '</p>' +
+        '<div class="row"><label>Verdict <select data-verdict="' + c.id + '">' +
+        verdictOptions.map(function(o) { return '<option value="' + o + '" ' + (o===v?'selected':'') + '>' + o + '</option>'; }).join('') +
+        '</select></label>' + pill('Grader: ' + c.grader, c.grader === 'support' ? 'ok' : 'warn') +
+        pill(c.confidence + ' confidence') + ' ' + pill(c.severity) + '</div><p class="muted">' + c.graderWhy + '</p></section>';
+    }).join('') +
+      '<section class="card"><h3 class="card-title">Contrary evidence</h3>' +
+      '<label class="check"><input type="checkbox" id="contrary" ' + (state.sawContrary ? 'checked' : '') + '>' +
+      ' Contrary observations have been examined and are preserved in the record</label></section>';
+  } else if (state.tab === "iris") {
+    main = '<section class="card"><h3 class="card-title">Iris — prevention workstream</h3>' +
+      '<p class="muted">Iris will not invent a rule from a pure hypothesis.</p>' +
+      '<button class="btn" data-act="iris">Draft Iris rule from current evidence</button>' +
+      (state.irisResult ? '<div class="iris-result"><p><strong>Rule ID:</strong> ' + state.irisResult.ruleId + '</p><p>' +
+        state.irisResult.statement + '</p><p>' + pill('Signed', 'ok') + ' Digest: ' + state.irisResult.evidenceDigest +
+        '</p><p class="muted">Created ' + state.irisResult.createdAt + '</p></div>' :
+        '<p class="muted">No Iris rule drafted yet.</p>') + '</section>';
+  } else if (state.tab === "report") {
+    var findings = checks.filter(function(c) {
+      var v = state.verdicts[c.id];
+      return v === 'finding' || v === 'fixed';
+    });
+    main = '<section class="card"><h3 class="card-title">Maintainer report</h3>' +
+      '<p class="muted">Record another engineer can check.</p>' +
+      '<h3>Task ' + TASK_ID + ' · Revision ' + REVISION + '</h3>' +
+      '<p><strong>Policy:</strong> ' + POLICY + '</p>' +
+      '<p><strong>Authorized:</strong> ' + (state.authorized ? 'Yes' : 'No') + '</p>' +
+      '<p><strong>Submitted at:</strong> ' + (state.submittedAt || '—') + '</p>' +
+      (findings.length === 0 ? '<p>No findings or fixed claims recorded.</p>' : findings.map(function(f) {
+        var v = state.verdicts[f.id];
+        return '<div class="finding"><h4>' + f.title + ' ' + pill(v, v==='fixed'?'ok':'warn') + '</h4>' +
+          '<p><strong>Path:</strong> ' + f.path + '</p><p><strong>Expected:</strong> ' + f.expected + '</p>' +
+          '<p><strong>Observed:</strong> ' + f.observed + '</p><p><strong>Contrary:</strong> ' + f.contrary + '</p>' +
+          '<p><strong>Regression:</strong> ' + f.regression + '</p></div>';
+      }).join('')) + '</section>';
+  } else if (state.tab === "agents") {
+    main = '<section class="card"><h3 class="card-title">Logical roles under Director</h3>' +
+      '<p class="muted">Workflow roles, not a permanent agent swarm. Model text is proposal data only.</p><div class="list">' +
+      agents.map(function(a) {
+        return '<div class="agent-row"><div><div class="name">' + a.name + ' ' + pill(a.style) + '</div><div class="note">' + a.note + '</div></div></div>';
+      }).join('') + '</div></section>';
+  }
+
+  document.getElementById('root').innerHTML =
+    '<header class="top"><div><p class="kicker">Authorized research desk · Fixture only</p><h1>Pocket AI Lab</h1>' +
+    '<p class="sub">Task ' + TASK_ID + ' · Policy ' + POLICY + ' · Revision ' + REVISION + '</p></div><div class="status">' +
+    pill(state.authorized ? 'Owner authorized' : 'Authorization required', state.authorized ? 'ok' : 'warn') +
+    pill('Budget ' + state.budget + '/' + state.budgetCap) + pill('Attempt ' + state.attempt) +
+    (state.submittedAt ? pill('Submitted', 'ok') : '') + '</div></header>' +
+    (state.lastDeny ? '<div class="deny"><strong>APEX gate:</strong> ' + state.lastDeny + '</div>' : '') +
+    (state.resumeNote ? '<div class="note">' + state.resumeNote + '</div>' : '') +
+    '<nav class="tabs">' + tabs.map(function(t) {
+      return '<button class="' + (state.tab===t[0]?'active':'') + '" data-tab="' + t[0] + '">' + t[1] + '</button>';
+    }).join('') + '</nav><main>' + main + '</main>';
+
+  document.querySelectorAll('[data-tab]').forEach(function(b) {
+    b.onclick = function() { setState({ tab: b.getAttribute('data-tab'), lastDeny: null }); };
+  });
+  var auth = document.getElementById('auth');
+  if (auth) auth.onchange = function(e) { setState({ authorized: e.target.checked, lastDeny: null }); };
+  var contrary = document.getElementById('contrary');
+  if (contrary) contrary.onchange = function(e) { setState({ sawContrary: e.target.checked }); };
+  document.querySelectorAll('[data-scout]').forEach(function(el) {
+    el.onchange = function(e) {
+      var reviewed = Object.assign({}, state.reviewed);
+      reviewed[el.getAttribute('data-scout')] = e.target.checked;
+      setState({ reviewed: reviewed });
+    };
+  });
+  document.querySelectorAll('[data-verdict]').forEach(function(el) {
+    el.onchange = function(e) { setVerdict(el.getAttribute('data-verdict'), e.target.value); };
+  });
+  document.querySelectorAll('[data-act]').forEach(function(btn) {
+    btn.onclick = function() {
+      var a = btn.getAttribute('data-act');
+      if (a === 'raise') setState({ budget: Math.min(state.budget + 4, state.budgetCap), lastDeny: null });
+      if (a === 'park') setState({ parked: { at: new Date().toISOString(), attempt: state.attempt, digest: 'parked' }, resumeNote: null });
+      if (a === 'resume' && state.parked) setState({ attempt: state.parked.attempt + 1, parked: null, resumeNote: 'Resumed from attempt ' + state.parked.attempt, lastDeny: null });
+      if (a === 'reset') {
+        state = { tab: 'desk', reviewed: {}, verdicts: { refund: 'open', reset: 'open' }, irisResult: null, authorized: false, sawContrary: false, submittedAt: null, attempt: 1, budget: 8, budgetCap: 12, lastDeny: null, parked: null, resumeNote: null };
+        render();
+      }
+      if (a === 'submit') submit();
+      if (a === 'iris') draftIris();
+    };
+  });
+}
+
+render();
+</script>
+</body>
+</html>
