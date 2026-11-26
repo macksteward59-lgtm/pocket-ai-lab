@@ -12,6 +12,8 @@ describe("runEastTaskWithLifecycle", () => {
     const executions: string[] = [];
     let committed = 0;
     let taskExists = true;
+    const initialMessage = { sequence: 0, payload: { analysis: "Before the lifecycle began" } };
+    let messages = [initialMessage];
     const eastTask = {
       id: "east-1",
       objective: "Review the integration architecture",
@@ -44,12 +46,13 @@ describe("runEastTaskWithLifecycle", () => {
       checkpointTask: () => ({
         version: 1 as const,
         task: { ...eastTask, assignments: [...eastTask.assignments], evidenceRefs: [...eastTask.evidenceRefs] },
-        messages: [],
+        messages: [...messages],
         evidenceMemoryCommitted: committed > 0
       }),
-      restoreTask: (checkpoint: { task: typeof eastTask }) => {
+      restoreTask: (checkpoint: { task: typeof eastTask; messages: typeof messages }) => {
         Object.assign(eastTask, checkpoint.task);
         taskExists = true;
+        messages = [...checkpoint.messages];
       },
       orchestrator: {} as EastPlatformRuntime["orchestrator"],
       memory: {} as EastPlatformRuntime["memory"]
@@ -79,11 +82,13 @@ describe("runEastTaskWithLifecycle", () => {
     // Simulate a new East process: its in-memory task map is gone, but the
     // durable lifecycle snapshot contains the completed task and thread.
     taskExists = false;
+    messages = [];
     const resumed = await runEastTaskWithLifecycle({
       coordinator: resumedCoordinator, east, eastTaskId: "east-1",
       lifecycleTaskId: "lifecycle-1", objective: "Review the integration architecture"
     });
     expect(resumed.lifecycle.status).toBe("completed");
+    expect(messages).toEqual([initialMessage]);
     expect(resumed.synthesis).toBe("Unverified synthesis");
     expect(resumed.evidenceRefs).toEqual(["evidence:one"]);
     expect(assignments).toEqual([...EAST_DELIBERATION_AGENTS]);
@@ -116,6 +121,46 @@ describe("runEastTaskWithLifecycle", () => {
     })).rejects.toThrow("Existing lifecycle task does not match this East workflow definition");
     expect(executions).toBe(0);
     expect(coordinator.getTask("lifecycle-3").objective).toBe("Different objective");
+  });
+
+  it("fails closed before generation when the first checkpoint exceeds the coordinator limit", async () => {
+    const coordinator = new TaskLifecycleCoordinator({ store: new InMemoryTaskLifecycleStore() });
+    const task = { id: "east-size", objective: "Review fixture" };
+    let runs = 0;
+    const east = {
+      getTask: () => task,
+      checkpointTask: () => ({
+        version: 1, task, messages: [{ payload: { analysis: "x".repeat(16_000) } }],
+        evidenceMemoryCommitted: false
+      }),
+      assignAgent: () => task.id,
+      executeAgent: async () => { runs++; return "unexpected"; }
+    } as unknown as EastPlatformRuntime;
+    await expect(runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId: task.id, lifecycleTaskId: "oversize", objective: task.objective
+    })).rejects.toMatchObject({ code: "checkpoint_too_large" });
+    expect(runs).toBe(0);
+    expect(coordinator.getTask("oversize").steps[0]).toMatchObject({ status: "failed", result: null });
+  });
+
+  it("leaves cancellation fenced until the host explicitly settles the drained attempt", async () => {
+    const coordinator = new TaskLifecycleCoordinator({ store: new InMemoryTaskLifecycleStore() });
+    const task = { id: "east-cancel", objective: "Review fixture" };
+    const east = {
+      getTask: () => task,
+      checkpointTask: () => ({ version: 1, task, messages: [], evidenceMemoryCommitted: false }),
+      assignAgent: () => task.id,
+      executeAgent: async () => { await coordinator.cancelTask("cancel"); return "late"; }
+    } as unknown as EastPlatformRuntime;
+    await expect(runEastTaskWithLifecycle({
+      coordinator, east, eastTaskId: task.id, lifecycleTaskId: "cancel", objective: task.objective
+    })).rejects.toMatchObject({ code: "cancellation_requested" });
+    const active = coordinator.getTask("cancel").steps.find(step => step.currentAttempt !== null)!;
+    expect(active.status).toBe("running");
+    expect(active.result).toBeNull();
+    await expect(coordinator.settleCancelledStep({
+      taskId: "cancel", stepId: active.id, attemptId: active.currentAttempt!.id
+    })).resolves.toMatchObject({ status: "cancelled" });
   });
 
   it("fails closed and does not retry an agent generation after a provider failure", async () => {

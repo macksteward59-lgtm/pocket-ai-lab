@@ -36,17 +36,31 @@ function harness(options: { leaseMs?: number; maxConcurrentSteps?: number; worke
 }
 
 describe("TaskLifecycleCoordinator", () => {
+  it("rejects stale saves even when both coordinators share the same store object", async () => {
+    const store = new InMemoryTaskLifecycleStore();
+    const first = new TaskLifecycleCoordinator({ store });
+    const second = new TaskLifecycleCoordinator({ store });
+    await Promise.all([first.init(), second.init()]);
+    const task = (id: string) => ({ id, objective: "Review a benign fixture", steps: [{ id: "read", description: "Read fixture" }] });
+    await first.createTask(task("first"));
+    await expect(second.createTask(task("second"))).rejects.toMatchObject({ code: "store_conflict" });
+    expect(store.load().map(record => record.id)).toEqual(["first"]);
+    await second.reload();
+    await second.createTask(task("second"));
+    expect(store.load().map(record => record.id)).toEqual(["first", "second"]);
+  });
+
   it("reloads the authoritative snapshot after a durable store conflict", async () => {
     const backing = new InMemoryTaskLifecycleStore();
     let conflictNextSave = false;
     const store: TaskLifecycleStore = {
       load: () => backing.load(),
-      save: records => {
+      save: (records, expected) => {
         if (conflictNextSave) {
           conflictNextSave = false;
           throw new TaskLifecycleError("store_conflict", "A concurrent writer advanced the snapshot");
         }
-        backing.save(records);
+        backing.save(records, expected);
       }
     };
     const coordinator = new TaskLifecycleCoordinator({ store });
@@ -481,7 +495,7 @@ describe("TaskLifecycleCoordinator", () => {
     const original = await h.coordinator.claimNextStep("task-1");
     const persisted = await h.store.load();
     delete persisted[0].steps[0].currentAttempt!.ownerId;
-    await h.store.save(persisted);
+    await h.store.save(persisted, h.store.load());
 
     const restarted = new TaskLifecycleCoordinator({
       store: h.store,
@@ -505,7 +519,7 @@ describe("TaskLifecycleCoordinator", () => {
     await h.coordinator.claimNextStep("task-1");
     const persisted = await h.store.load();
     persisted[0].steps[0].currentAttempt!.ownerId = "x".repeat(257);
-    await h.store.save(persisted);
+    await h.store.save(persisted, h.store.load());
 
     const restarted = new TaskLifecycleCoordinator({ store: h.store, now: h.now, workerId: "worker-validated" });
     await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
@@ -630,9 +644,9 @@ describe("TaskLifecycleCoordinator", () => {
     const backing = new InMemoryTaskLifecycleStore();
     const store: TaskLifecycleStore = {
       load: () => backing.load(),
-      save: records => {
+      save: (records, expected) => {
         if (fail) throw new Error("write failed");
-        backing.save(records);
+        backing.save(records, expected);
       }
     };
     const coordinator = new TaskLifecycleCoordinator({ store, createId: () => "attempt-atomic" });
@@ -683,7 +697,7 @@ describe("TaskLifecycleCoordinator", () => {
 
     const snapshot = store.load();
     snapshot[0].steps[0].currentAttempt!.id = "forged-attempt";
-    store.save(snapshot);
+    store.save(snapshot, store.load());
 
     const restarted = new TaskLifecycleCoordinator({ store });
     await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
@@ -707,7 +721,7 @@ describe("TaskLifecycleCoordinator", () => {
     const snapshot = store.load();
     snapshot[1].steps[0].attemptIds[0] = snapshot[0].steps[0].attemptIds[0];
     snapshot[1].steps[0].currentAttempt!.id = snapshot[0].steps[0].attemptIds[0];
-    store.save(snapshot);
+    store.save(snapshot, store.load());
 
     const restarted = new TaskLifecycleCoordinator({ store });
     await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
@@ -725,7 +739,7 @@ describe("TaskLifecycleCoordinator", () => {
     const snapshot = store.load();
     snapshot[0].createdAt = "not-a-timestamp";
     snapshot[0].steps[0].evidenceRefs = [""];
-    store.save(snapshot);
+    store.save(snapshot, store.load());
 
     const restarted = new TaskLifecycleCoordinator({ store });
     await expect(restarted.init()).rejects.toMatchObject({ code: "corrupt_store" });
@@ -743,7 +757,7 @@ describe("TaskLifecycleCoordinator", () => {
     const exhausted = store.load();
     exhausted[0].steps[0].attempts = 2;
     exhausted[0].steps[0].attemptIds = ["attempt-one", "attempt-two"];
-    store.save(exhausted);
+    store.save(exhausted, store.load());
     const restartedAfterBudgetTamper = new TaskLifecycleCoordinator({ store });
     await expect(restartedAfterBudgetTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
 
@@ -761,7 +775,7 @@ describe("TaskLifecycleCoordinator", () => {
     });
     const completed = chronologyStore.load();
     completed[0].completedAt = new Date(Date.parse(completed[0].createdAt) - 1).toISOString();
-    chronologyStore.save(completed);
+    chronologyStore.save(completed, chronologyStore.load());
     const restartedAfterChronologyTamper = new TaskLifecycleCoordinator({ store: chronologyStore });
     await expect(restartedAfterChronologyTamper.init()).rejects.toMatchObject({ code: "corrupt_store" });
 
@@ -783,7 +797,7 @@ describe("TaskLifecycleCoordinator", () => {
     stepChronology[0].completedAt = new Date(
       Date.parse(stepChronology[0].steps[0].completedAt!) - 1
     ).toISOString();
-    stepChronologyStore.save(stepChronology);
+    stepChronologyStore.save(stepChronology, stepChronologyStore.load());
     await expect(new TaskLifecycleCoordinator({ store: stepChronologyStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
   });
@@ -803,7 +817,7 @@ describe("TaskLifecycleCoordinator", () => {
     });
     const completedSnapshot = completedStore.load();
     completedSnapshot[0].status = "cancelled";
-    completedStore.save(completedSnapshot);
+    completedStore.save(completedSnapshot, completedStore.load());
     await expect(new TaskLifecycleCoordinator({ store: completedStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
 
@@ -818,7 +832,7 @@ describe("TaskLifecycleCoordinator", () => {
     const readySnapshot = readyStore.load();
     readySnapshot[0].status = "ready";
     readySnapshot[0].completedAt = null;
-    readyStore.save(readySnapshot);
+    readyStore.save(readySnapshot, readyStore.load());
     await expect(new TaskLifecycleCoordinator({ store: readyStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
 
@@ -839,7 +853,7 @@ describe("TaskLifecycleCoordinator", () => {
     mixedSnapshot[0].steps[0].lastError = "Forged failure";
     mixedSnapshot[0].steps[0].attempts = 1;
     mixedSnapshot[0].steps[0].attemptIds = [active!.attemptId];
-    mixedStore.save(mixedSnapshot);
+    mixedStore.save(mixedSnapshot, mixedStore.load());
     await expect(new TaskLifecycleCoordinator({ store: mixedStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
 
@@ -853,7 +867,7 @@ describe("TaskLifecycleCoordinator", () => {
     await resultCoordinator.cancelTask("cancelled-with-result");
     const resultSnapshot = resultStore.load();
     resultSnapshot[0].steps[0].result = "Forged completion";
-    resultStore.save(resultSnapshot);
+    resultStore.save(resultSnapshot, resultStore.load());
     await expect(new TaskLifecycleCoordinator({ store: resultStore }).init())
       .rejects.toMatchObject({ code: "corrupt_store" });
   });

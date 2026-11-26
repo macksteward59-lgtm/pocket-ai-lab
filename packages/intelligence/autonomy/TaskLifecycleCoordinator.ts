@@ -120,11 +120,13 @@ export interface StepClaim {
   completedDependencies: Array<{ stepId: string; result: string | null; evidenceRefs: string[] }>;
 }
 
+export const MAX_TASK_STEP_RESULT_LENGTH = 16_000;
+
 export interface TaskLifecycleStore {
   /** load() returns a complete snapshot. */
   load(): Promise<TaskRecord[]> | TaskRecord[];
-  /** save() must atomically replace the snapshot or leave the prior snapshot intact. */
-  save(records: readonly TaskRecord[]): Promise<void> | void;
+  /** Atomically replace only if the stored snapshot still matches expected; otherwise throw store_conflict. */
+  save(records: readonly TaskRecord[], expected: readonly TaskRecord[]): Promise<void> | void;
 }
 
 export class TaskLifecycleError extends Error {
@@ -141,13 +143,17 @@ export class InMemoryTaskLifecycleStore implements TaskLifecycleStore {
     return this.records.map(cloneTask);
   }
 
-  save(records: readonly TaskRecord[]): void {
+  save(records: readonly TaskRecord[], expected: readonly TaskRecord[]): void {
+    if (JSON.stringify(this.records) !== JSON.stringify(expected)) {
+      throw new TaskLifecycleError("store_conflict", "A concurrent writer advanced the snapshot");
+    }
     this.records = records.map(cloneTask);
   }
 }
 
 export class TaskLifecycleCoordinator {
   private records = new Map<string, TaskRecord>();
+  private persistedSnapshot: readonly TaskRecord[] = [];
   private mutationQueue: Promise<void> = Promise.resolve();
   private initialized = false;
   private readonly store: TaskLifecycleStore;
@@ -178,7 +184,7 @@ export class TaskLifecycleCoordinator {
   async init(): Promise<void> {
     await this.mutate(async () => {
       if (this.initialized) return;
-      const loaded = await this.store.load();
+      const loaded = structuredClone(await this.store.load());
       const next = new Map<string, TaskRecord>();
       const issuedAttemptIds = new Set<string>();
       for (const raw of loaded) {
@@ -195,6 +201,7 @@ export class TaskLifecycleCoordinator {
         next.set(task.id, task);
       }
       this.records = next;
+      this.persistedSnapshot = loaded;
       this.initialized = true;
     });
   }
@@ -205,7 +212,7 @@ export class TaskLifecycleCoordinator {
    */
   async reload(): Promise<void> {
     await this.mutate(async () => {
-      const loaded = await this.store.load();
+      const loaded = structuredClone(await this.store.load());
       const next = new Map<string, TaskRecord>();
       const issuedAttemptIds = new Set<string>();
       for (const raw of loaded) {
@@ -222,6 +229,7 @@ export class TaskLifecycleCoordinator {
         next.set(task.id, task);
       }
       this.records = next;
+      this.persistedSnapshot = loaded;
       this.initialized = true;
     });
   }
@@ -333,7 +341,7 @@ export class TaskLifecycleCoordinator {
       if (hasCancellationRequest(updated)) {
         throw new TaskLifecycleError("cancellation_requested", "A cancelled task attempt must settle through settleCancelledStep after the host drains the provider");
       }
-      if (typeof input.result !== "string" || !input.result.trim() || input.result.length > 16_000) {
+      if (typeof input.result !== "string" || !input.result.trim() || input.result.length > MAX_TASK_STEP_RESULT_LENGTH) {
         throw new TaskLifecycleError("invalid_result", "A non-empty step result up to 16000 characters is required");
       }
       const refs = input.evidenceRefs ?? [];
@@ -547,7 +555,8 @@ export class TaskLifecycleCoordinator {
 
   private async persist(next: Map<string, TaskRecord>): Promise<void> {
     const snapshot = [...next.values()].map(cloneTask);
-    await this.store.save(snapshot);
+    await this.store.save(snapshot, this.persistedSnapshot);
+    this.persistedSnapshot = snapshot;
     this.records = next;
   }
 
@@ -733,7 +742,7 @@ function validateStoredTask(task: TaskRecord): TaskRecord {
         step.attempts > step.maxAttempts ||
         !Array.isArray(step.evidenceRefs) || step.evidenceRefs.length > 100 ||
         step.evidenceRefs.some(ref => typeof ref !== "string" || !ref.trim()) ||
-        (step.result !== null && (typeof step.result !== "string" || !step.result.trim() || step.result.length > 16_000)) ||
+        (step.result !== null && (typeof step.result !== "string" || !step.result.trim() || step.result.length > MAX_TASK_STEP_RESULT_LENGTH)) ||
         (step.lastError !== null && (typeof step.lastError !== "string" || !step.lastError.trim() || step.lastError.length > 2_000)) ||
         (step.completedAt !== null && !validTimestamp(step.completedAt)) ||
         (step.status === "running") !== (step.currentAttempt !== null) ||

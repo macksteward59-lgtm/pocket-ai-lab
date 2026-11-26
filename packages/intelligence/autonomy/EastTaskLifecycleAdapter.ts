@@ -10,6 +10,8 @@ import type { EastPlatformRuntime, EastRuntimeCheckpoint } from "../../../src/ea
 import { EAST_DELIBERATION_AGENTS } from "../../../src/east/platform";
 import {
   TaskLifecycleCoordinator,
+  MAX_TASK_STEP_RESULT_LENGTH,
+  TaskLifecycleError,
   type TaskRecord,
   type TaskStepDefinition
 } from "./TaskLifecycleCoordinator";
@@ -44,8 +46,8 @@ function encodeCheckpoint(kind: string, checkpoint: EastRuntimeCheckpoint, messa
   }
   const delta = { ...checkpoint, messages: checkpoint.messages.slice(messageOffset) };
   const encoded = CHECKPOINT_PREFIX + JSON.stringify({ kind, checkpoint: delta });
-  if (encoded.length > 1_000_000) {
-    throw new Error("East checkpoint exceeds the 1 MB per-step persistence bound");
+  if (encoded.length > MAX_TASK_STEP_RESULT_LENGTH) {
+    throw new TaskLifecycleError("checkpoint_too_large", "East checkpoint exceeds the task step persistence limit");
   }
   return encoded;
 }
@@ -190,7 +192,8 @@ export async function runEastTaskWithLifecycle(
     throw new Error("East task objective does not match the lifecycle objective");
   }
 
-  let checkpointedMessageCount = east.checkpointTask(eastTaskId).messages.length;
+  // Existing runtime messages are durable only after the lifecycle has saved them.
+  let checkpointedMessageCount = latestCheckpoint(lifecycle)?.messages.length ?? 0;
   const captureCheckpoint = (kind: string): string => {
     const checkpoint = east.checkpointTask(eastTaskId);
     const encoded = encodeCheckpoint(kind, checkpoint, checkpointedMessageCount);
@@ -258,6 +261,9 @@ export async function runEastTaskWithLifecycle(
         evidenceRefs: refs
       });
     } catch (error) {
+      // Cancellation is deliberately left for a host with confirmed provider drain.
+      // A generic failure must not clear the owner-fenced lease or hide the state.
+      if (error instanceof TaskLifecycleError && error.code === "cancellation_requested") throw error;
       await coordinator.failStep({
         taskId: lifecycleTaskId,
         stepId: claim.stepId,
