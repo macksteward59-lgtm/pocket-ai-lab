@@ -1,4 +1,5 @@
 import http from "node:http";
+import { hostWorkshop } from "./workshop-runtime.mjs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -237,6 +238,7 @@ function chatFailure(error) {
 
 export function createServer() {
   const take = createLimiter(rateLimitConfig());
+  const workshop = hostWorkshop();
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
@@ -244,6 +246,21 @@ export function createServer() {
         if (!localApiAllowed(req)) {
           drain(req);
           return rejectLocal(res);
+        }
+      }
+      if (url.pathname === "/api/model-workshop") {
+        if (!["GET", "POST"].includes(req.method)) return json(res, 405, { error: "Use GET or POST." }, { allow: "GET, POST" });
+        if (req.method === "POST" && !jsonContentType(req)) return rejectContentType(res);
+        const limit = take(req.method === "GET" ? "memory" : "agent", req);
+        if (!limit.allowed) { drain(req); return rejectLimited(res, limit.retryAfterSeconds); }
+        try {
+          const input = req.method === "GET" ? { op: "list" } : await body(req);
+          if (req.method === "POST" && !["build", "answer"].includes(input?.op)) {
+            return json(res, 400, { error: "Unknown workshop operation." });
+          }
+          return json(res, 200, await workshop(input));
+        } catch (error) {
+          return json(res, error.status || 503, { error: error.status ? error.message : "The local training host is unavailable." });
         }
       }
       if (url.pathname === "/api/health" && req.method === "GET") {

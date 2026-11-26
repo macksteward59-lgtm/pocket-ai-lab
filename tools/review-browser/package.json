@@ -1,0 +1,6 @@
+{
+  "name": "pocket-ai-lab-review-browser-tests",
+  "private": true,
+  "type": "module",
+  "dependencies": { "playwright": "1.57.0" }
+}

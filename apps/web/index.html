@@ -19,6 +19,7 @@
       <button class="nav-item active" data-view="chat">◫ <span>Chat</span></button>
       <button class="nav-item" data-view="agents">◎ <span>Agent team</span><span class="nav-soon">PREVIEW</span></button>
       <button class="nav-item" data-view="memory">▤ <span>Memory</span></button>
+      <button class="nav-item" data-view="models">◇ <span>Model workshop</span></button>
       <button class="nav-item" data-view="activity">◷ <span>Activity</span></button>
       <div class="sidebar-spacer"></div>
       <div class="privacy-card"><span class="privacy-dot"></span><div><strong>Local-first mode</strong><small>Your prompts stay on this device when using a local model.</small></div></div>
@@ -32,7 +33,14 @@
           <div class="suggestions"><button class="suggestion" data-prompt="Help me break down a complex project into clear, testable milestones."><b>↗</b><span><strong>Plan a project</strong><small>Turn an idea into a roadmap</small></span></button><button class="suggestion" data-prompt="Review this idea critically. Identify assumptions, risks, and ways to improve it."><b>⌕</b><span><strong>Challenge an idea</strong><small>Find gaps and better approaches</small></span></button><button class="suggestion" data-prompt="Help me understand a difficult topic step by step, with examples."><b>◇</b><span><strong>Learn something</strong><small>Explore a topic in depth</small></span></button></div>
         </div>
         <div class="messages" id="messages" aria-live="polite"></div>
-        <form class="composer" id="composer"><div class="composer-wrap"><textarea id="prompt" rows="1" placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><span class="model-pill" id="model-pill">Local model · not connected</span><span class="privacy-hint">◉ Private when using local inference</span></div><button class="send" id="send" type="submit" aria-label="Send message">↑</button></div></div><p class="disclaimer">AI can make mistakes. Verify important information before acting.</p></form>
+        <form class="composer" id="composer">
+          <div class="reader-context" id="chat-reader-context" hidden>
+            <div><strong id="chat-reader-label"></strong><button type="button" id="chat-use-default" class="secondary-button">Use configured chat model</button></div>
+            <label id="chat-source-label" for="chat-reader-source">Source sentences, one per line</label>
+            <textarea id="chat-reader-source" rows="2" maxlength="6000"></textarea>
+            <span id="chat-reader-status" role="status"></span>
+          </div>
+          <div class="composer-wrap"><textarea id="prompt" rows="1" placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><button type="button" id="chat-choose-reader" class="reader-choice">Choose model</button><span class="model-pill" id="model-pill">Local model · not connected</span><span class="privacy-hint">◉ Private when using local inference</span></div><button class="send" id="send" type="submit" aria-label="Send message">↑</button></div></div><p class="disclaimer">AI can make mistakes. Verify important information before acting.</p></form>
       </section>
       <section class="view secondary-view hidden" id="settings-view"><div class="section-heading"><div class="eyebrow">CONFIGURATION</div><h1>Model settings</h1><p>Connect a local llama.cpp server. Cloud routing is intentionally not enabled until a secure server-side provider is configured.</p></div><form id="settings-form" class="settings-card"><div class="setting-note"><strong>Provider configuration</strong><p>Chat and Agent Team both call the local llama.cpp <code>InferenceProvider</code>. Set <code>LLAMACPP_BASE_URL</code> (default <code>http://127.0.0.1:8080</code>) on the server. <code>LLM_BASE_URL</code> ending in <code>/v1</code> selects the OpenAI-compatible API. No API key is stored in this browser or sent by the local adapter.</p></div><div class="setting-note"><strong>Local endpoint only</strong><p>The browser talks only to this app server. "Local model ready" appears after a loopback health check succeeds. A remote URL is not described as private.</p></div><div class="settings-actions"><button class="secondary-button" type="button" id="test-connection">Test connection</button><button class="primary-button" type="submit">Save settings</button></div><p class="status-text" id="settings-status" role="status"></p></form></section>
       <section class="view secondary-view hidden" id="agents-view" tabindex="0"><div class="section-heading"><div class="eyebrow">COLLABORATION</div><h1>Agent team</h1><p>The core roles perform independent analysis, cross-review, challenge, revision, verification, and synthesis. Connect a local llama-server to run real model calls. Agent output remains untrusted and cannot authorize actions.</p></div><div class="agent-runner">
@@ -60,9 +68,51 @@
         <div class="memory-list-heading"><h2>Saved memories</h2><button class="secondary-button" id="memory-refresh" type="button">Refresh</button></div>
         <div id="memory-list" class="memory-list" aria-live="polite"><div class="empty-state"><h3>Loading memory…</h3></div></div>
       </section>
+      <section class="view secondary-view hidden" id="models-view">
+        <div class="section-heading"><h1>Model workshop</h1><p>Choose a base and a teacher. Compare their scores with the model you train.</p></div>
+        <div class="memory-form">
+          <label>Training location<select id="workshop-engine">
+            <option value="browser">This browser · document readers</option>
+            <option value="host">Local training host · language models</option>
+          </select></label>
+          <div id="reader-import-group"><label for="reader-import">Import compatible v1 document-reader weights (.json)</label>
+          <input id="reader-import" type="file" accept=".json,application/json" disabled></div>
+          <p id="host-help" hidden>Choose from compatible local checkpoints on the configured host. Training stores a separate candidate there.</p>
+          <button id="host-refresh" type="button" class="secondary-button" hidden>Refresh host models</button>
+        </div>
+        <form id="reader-build" class="memory-form">
+          <div class="memory-fields">
+            <label>Base model<select id="reader-base" required disabled></select></label>
+            <label>Teacher model<select id="reader-teacher" required disabled></select></label>
+          </div>
+          <label>Candidate name<input id="reader-name" maxlength="64" required placeholder="e.g. Research model v2"></label>
+          <button class="primary-button" id="reader-train" type="submit" disabled>Train candidate</button>
+          <p id="reader-status" role="status"></p>
+        </form>
+        <section id="reader-comparison" hidden>
+          <h2>Held-out comparison</h2>
+          <p>Compare the three scores on the same held-out questions.</p>
+          <ul id="reader-scores"></ul>
+          <button class="secondary-button" id="reader-save" type="button">Save candidate to my readers</button>
+        </section>
+        <form id="reader-try" class="memory-form">
+          <h2>Use a model</h2>
+          <label>Model<select id="reader-use" disabled></select></label>
+          <p id="reader-origin"></p>
+          <label>Question<input id="reader-question" required maxlength="500"></label>
+          <label id="reader-source-label">Source sentences, one per line<textarea id="reader-sentences" required maxlength="6000" rows="3"></textarea></label>
+          <div class="memory-actions">
+            <button class="primary-button" id="reader-answer" type="submit" disabled>Find evidence</button>
+            <button class="secondary-button" id="reader-chat" type="button" disabled>Use in Chat</button>
+            <button class="secondary-button" id="reader-export" type="button" disabled>Export weights</button>
+          </div>
+          <p id="reader-output" role="status"></p>
+        </form>
+      </section>
       <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
     </main>
   </div>
   <script src="/app.js" defer></script>
+  <script type="module" src="/model-workshop/ui.js"></script>
 </body>
 </html>
