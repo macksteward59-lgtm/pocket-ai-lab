@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const state = { model: "model not connected", busy: false, reader: null };
-const views = ["chat","agents","memory","models","recovery","activity","settings"];
+const views = ["chat","agents","memory","models","recovery","activity","settings","resources"];
 function setView(name) {
   views.forEach(view => $(view + "-view").classList.toggle("hidden", view !== name));
   document.querySelectorAll("[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === name));
@@ -9,9 +9,10 @@ function setView(name) {
   $("sidebar").classList.remove("open");
   if (name === "agents") checkAgentHealth();
   if (name === "memory") loadMemories();
+  window.dispatchEvent(new CustomEvent("pocket-view-change", { detail: name }));
 }
 function appendMessage(role,text,attribution){const row=document.createElement("article");row.className="message "+role;const label=document.createElement("div");label.className="message-label";label.textContent=role==="user"?"YOU":(attribution || "POCKET AI LAB · MODEL RESPONSE");const body=document.createElement("div");body.className="message-body";body.textContent=text;row.append(label,body);$("messages").append(row);row.scrollIntoView({block:"nearest"});return body;}
-function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;$("model-pill").textContent=ready?state.model+" · local":"Local model · not connected";}
+function setConnection(ready,label){$("connection").classList.toggle("ready",ready);$("connection").lastChild.textContent=label;if(!state.reader)$("model-pill").textContent=ready?state.model+" · configured chat model":"Configured chat model · unavailable";}
 async function health(){try{const r=await fetch("/api/health");const j=await r.json();state.model=j.model||"local model";const hint=document.querySelector(".privacy-hint");if(j.reachable&&j.loopback){setConnection(true,"Local model ready");if(hint)hint.textContent="◉ Prompts stay on this device";}else if(j.reachable){setConnection(false,"Remote model reachable");if(hint)hint.textContent="◉ Remote model — prompts leave this device";}else if(j.configured){setConnection(false,"Model configured but unreachable");if(hint)hint.textContent="◉ Local model is not reachable";}else{setConnection(false,"Model not connected");if(hint)hint.textContent="◉ Private when using local inference";}}catch{setConnection(false,"Server unavailable");}}
 let agentController=null;
 async function checkAgentHealth(){
@@ -72,7 +73,7 @@ $("agent-form").addEventListener("submit",async event=>{
 });
 $("agent-stop").addEventListener("click",()=>agentController?.abort());
 
-function selectChatReader(reader, question, passage) {
+function displayChatReader(reader, question, passage) {
   state.reader = reader;
   $("composer").classList.toggle("reader-mode", Boolean(reader));
   $("chat-reader-context").hidden = !reader;
@@ -83,11 +84,9 @@ function selectChatReader(reader, question, passage) {
   $("chat-reader-source").hidden = host;
   $("chat-reader-status").textContent = "";
   if (reader) {
-    if (!$("prompt").value) $("prompt").value = question;
+    if (!$("prompt").value && typeof question === "string") $("prompt").value = question;
     if (passage) $("chat-reader-source").value = passage;
   }
-  setView("chat");
-  $("prompt").focus();
 }
 $("chat-choose-reader").addEventListener("click", () => document.querySelector('[data-view="models"]').click());
 $("chat-use-default").addEventListener("click", () => selectChatReader(null));
@@ -147,6 +146,7 @@ async function openReaderReview(event) {
   try {
     const { reviewChatSource } = await import("/recovery/ui.js");
     if (reviewSources.get(button) !== draft) return;
+    workspaceController?.captureReviewOrigin();
     setView("recovery");
     reviewChatSource(draft);
   } catch {
@@ -170,42 +170,26 @@ function offerSourceReview(output, reader, result, passage, question) {
   output.after(button);
 }
 
-async function sendReaderMessage(text, reader) {
-  state.busy = true;
-  $("send").disabled = true;
-  const passage = $("chat-reader-source").value;
-  const generation = chatGeneration;
-  const reviewGeneration = reviewAccountGeneration;
-  try {
-    const result = await reader.answer(text, passage);
-    if (chatGeneration !== generation) return;
-    $("welcome").classList.add("hidden");
-    appendMessage("user", text);
-    if ($("prompt").value === text) $("prompt").value = "";
-    const output = appendMessage("assistant", result.answer, reader.label + (reader.location === "host" ? " · LOCAL TRAINING HOST" : " · LOCAL DOCUMENT READER"));
-    offerReaderMemory(output, reader, result);
-    if (reader.importedFamily || Number.isInteger(reader.run?.editedParameters)) {
-      const lineage = memoryElement("details", "reader-lineage");
-      lineage.append(memoryElement("summary", "", "Parent models"), memoryElement("p", "", readerLineage(reader)));
-      output.after(lineage);
-    }
-    if (reviewGeneration === reviewAccountGeneration) offerSourceReview(output, reader, result, passage, text);
-    output.scrollIntoView({ block: "nearest" });
-  } catch (error) {
-    if (chatGeneration === generation) $("chat-reader-status").textContent = error.message;
-  } finally {
-    state.busy = false;
-    $("send").disabled = false;
-  }
+let workspaceController;
+let workspaceReady;
+function selectChatReader(reader, question, passage) {
+  return workspaceReady.then(controller => controller.selectReader(reader, question, passage)).catch(workspaceError);
 }
-let chatGeneration = 0;
-async function sendMessage(text){if(!text.trim()||state.busy)return; if(state.reader){$("chat-reader-status").textContent="";return sendReaderMessage(text,state.reader);} $("welcome").classList.add("hidden");appendMessage("user",text);$("prompt").value="";state.busy=true;$("send").disabled=true;const output=appendMessage("assistant","Connecting to your configured model…");try{const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,model:state.model})});const data=await response.json();if(!response.ok)throw new Error(data.error||"Model request failed");output.textContent=data.reply||"The model returned an empty response."; }catch(error){output.textContent="I couldn't reach a configured model. "+error.message+"\n\nConnect a local llama.cpp server in Settings, then try again. No simulated answer was generated.";}finally{state.busy=false;$("send").disabled=false;health();}}
+async function sendMessage(text) {
+  try { return await (await workspaceReady).send(text); }
+  catch (error) { workspaceError(error); }
+}
+function workspaceError(error) {
+  if (workspaceController) return workspaceController.reportError(error);
+  const status = $("workspace-ready-status");
+  if (status) status.textContent = error.message || "Saved workspace is unavailable. Reload to try again.";
+}
 $("composer").addEventListener("submit",e=>{e.preventDefault();sendMessage($("prompt").value);});
 $("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("composer").requestSubmit();}});
 document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $("settings-shortcut").addEventListener("click",()=>setView("settings"));
-$("new-chat").addEventListener("click",()=>{chatGeneration++;selectChatReader(null);$("chat-reader-source").value="";$("prompt").value="";$("messages").replaceChildren();$("welcome").classList.remove("hidden");setView("chat");});
+$("new-chat").addEventListener("click",()=>workspaceReady.then(controller=>controller.newConversation()).catch(workspaceError));
 $("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
 $("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
 $("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});
@@ -346,3 +330,34 @@ $("memory-form").addEventListener("submit",async event=>{
 $("memory-refresh").addEventListener("click",loadMemories);
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 health();
+
+workspaceReady = import("/workspace/ui.js").then(module => module.initializeWorkspace({
+  setView,
+  appendMessage,
+  displayReader(reader) {
+    displayChatReader(reader);
+    $("model-pill").textContent = reader ? reader.label : "Configured chat model";
+  },
+  clearReader() {
+    state.reader = null;
+    $("composer").classList.remove("reader-mode");
+    $("chat-reader-context").hidden = true;
+    $("model-pill").textContent = "Configured chat model";
+  },
+  readerExtras(output, reader, result, passage, question, generation) {
+    offerReaderMemory(output, reader, result);
+    if (reader.importedFamily || Number.isInteger(reader.run?.editedParameters)) {
+      const lineage = memoryElement("details", "reader-lineage");
+      lineage.append(memoryElement("summary", "", "Parent models"), memoryElement("p", "", readerLineage(reader)));
+      output.after(lineage);
+    }
+    if (generation === reviewAccountGeneration) offerSourceReview(output, reader, result, passage, question);
+  },
+  reviewGeneration: () => reviewAccountGeneration
+})).then(controller => { workspaceController = controller; return controller; });
+workspaceReady.catch(error => {
+  workspaceError(error);
+  $("send").disabled = true;
+  $("workspace-ready-status").parentElement?.classList.add("error");
+});
+$("recovery-back-to-chat").addEventListener("click",()=>workspaceController?.returnToReviewOrigin().catch(workspaceError));
