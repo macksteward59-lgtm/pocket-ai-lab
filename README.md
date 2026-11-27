@@ -4,7 +4,15 @@
 
 ## Consumer prototype (web/PWA)
 
-The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings, and transparent memory/activity sections. Chat and Agent Team both call the local llama.cpp `InferenceProvider`. Chat shows the model's `analysis` text and fails closed when that text is missing. Agent Team streams the real multi-agent stages. Neither view invents a reply.
+The first usable application shell lives in `apps/web/`. It includes a responsive workspace, chat UI, live Agent Team runner, model connection status, settings, and transparent memory/activity sections. The configured chat model and Agent Team call the local llama.cpp `InferenceProvider`. Chat shows the model's `analysis` text and fails closed when that text is missing. Agent Team streams the real multi-agent stages. Neither view invents a reply.
+
+### Model workshop
+
+Choose a base model and a teacher, train a separate candidate, compare the three results, then select **Use in Chat**. A reply can become an editable Memory draft. Document readers run in the browser. Compatible language-model checkpoints use the optional local CPU training host. [Workflow, recovered product decisions and release acceptance](docs/implementation/unified-model-workflow.md)
+
+### Review tasks
+
+Open **Review tasks** to create a local account and save an excerpt from a passage. In Chat, **Review source excerpt** prepares a draft from a document reader’s answer and its original passage. After closing the app or restarting the host, sign back in, resume the task and verify the signed excerpt. You can add a correction and export both the updated receipt and the host’s public verification key. [Recovery walkthrough and evidence](docs/implementation/account-owned-review.md)
 
 ### Run locally
 
