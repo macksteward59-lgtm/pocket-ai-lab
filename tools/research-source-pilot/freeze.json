@@ -1,0 +1,18 @@
+{
+  "schema": "pocket-source-pilot-freeze-v1",
+  "frozen_utc": "2026-11-27T17:57:36.313912+00:00",
+  "evaluation_kind": "visible-development-fixture",
+  "baseline_revision": "4d4baafeeaca5eaa409b2505c910dabcb5700a3e",
+  "files": {
+    "sources.json": "5dbe4d15ebfc3b4082060ad689ebafb860647b18c51b749649dd3654f800a832",
+    "cases.json": "ab87a443e164b7548db389624dde1c317f9dfe4efec04d82001bb2a8eaff2833",
+    "baseline.json": "1214351ed3b1589b0115eb87b1a14ae3f18d48830bba95aeea0232b2a6d03c47"
+  },
+  "family_splits": {
+    "alien-space-of-science": "evaluation",
+    "phantom-b": "evaluation",
+    "chatmate": "evaluation",
+    "owned-boundary-fixture": "evaluation"
+  },
+  "label_review": "Independent research reviewers checked primary-source semantics; root narrowed sentence-selector questions before any run. Synthetic controls are root-authored. No blinded benchmark claim."
+}
