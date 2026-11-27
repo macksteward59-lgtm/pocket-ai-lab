@@ -965,3 +965,12 @@ ChatGPT completed the [twelve-section v3.12 repository comparison](evidence/rls-
 | ChatGPT (owner-authorized continuation of the #157 lane) | Reconcile the present `main` TypeScript build and consumer tests with the existing East lifecycle implementation and its direct seams/tests. | `codex/restore-east-baseline` | done | 2026-11-26 | [#303](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/303) merged with owner approval as `bd734e97f6813cd12d8689949539889df2b8eb70`. Its tree is identical to the four-check-green PR head `4841140ece08cfb1535ddee0e8a5efe8dc007323`; no separate main run was visible. No deployment. |
 
 | ChatGPT | Existing model workshop: reconcile browser, offline draft and signed-review evidence; verify configured-host catalog behavior at its existing limit in `scripts/custom-gguf/workshop/worker.py` and `test_worker.py`. | `codex/edit-combine-document-readers` | in-progress | 2026-11-26 22:11 UTC | Draft [#300](https://github.com/macksteward59-lgtm/pocket-ai-lab/pull/300) refreshed to `a18747d9cd2f041c9ac8c4f8f9f6a54d85107609` on approved baseline `bd734e97f6813cd12d8689949539889df2b8eb70`. Seven exact-head GitHub workflows passed. The configured-host catalog limit remains under review; no exact-head Cloudflare preview is visible. No authority to merge or deploy. |
+
+
+## November 27, 2026 — research pilot and conversational workspace
+
+| Owner | Scope | Branch | Status | Updated (UTC) | Notes |
+|---|---|---|---|---|---|
+| ChatGPT | New `tools/research-source-pilot/**` only: curated source/author cards, frozen visible development cases, existing-reader comparison and independent verifier. | `codex/research-source-pilot-20261127` | claimed | 2026-11-27 18:41:26 UTC | Prepared locally against #300 `4d4baafeeaca5eaa409b2505c910dabcb5700a3e`. Owner approved publication and automatic preview/build attempts. Existing workshop, runtime, native and workflow files remain outside this claim. Publish a stacked draft PR; merge/production deployment/device acceptance remain separate. |
+
+Confirmed product requirements and proposed UX01–UX06 acceptance are recorded in [Conversational workspace requirements](POCKET_AI_LAB_CONVERSATIONAL_WORKSPACE_2026-11-27.md). This is a documentation update, not an application-file claim or implementation result. Reconcile shared frontend ownership with the active workshop lane before editing those files.
