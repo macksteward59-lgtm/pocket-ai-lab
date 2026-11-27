@@ -1,0 +1,31 @@
+name: Desktop launcher entry CI
+
+on:
+  pull_request:
+    paths:
+      - "scripts/desktop/launcher.mjs"
+      - "scripts/desktop/start-pocket-ai-lab.sh"
+      - "scripts/desktop/launcher-arguments.test.mjs"
+      - ".github/workflows/desktop-launcher-entry-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-launcher-entry:
+    name: Desktop launcher entrypoints (stubbed)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Check entrypoint syntax and run stubbed regressions
+        run: |
+          node --check scripts/desktop/launcher.mjs
+          sh -n scripts/desktop/start-pocket-ai-lab.sh
+          node --test scripts/desktop/launcher-arguments.test.mjs
