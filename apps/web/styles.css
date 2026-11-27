@@ -41,3 +41,5 @@
 .view{min-height:0}
 #agents-view{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .agent-transcript{max-height:none;overflow:visible}
+
+.cloud-consent{display:flex;align-items:center;gap:8px;margin:9px 2px 0;color:#aebbd0;font-size:10px;line-height:1.4}.cloud-consent input{width:auto;margin:0;accent-color:#9cbbff}.cloud-consent input:disabled+*{opacity:.55}
