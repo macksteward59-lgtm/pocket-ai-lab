@@ -2,18 +2,25 @@
 
 This is a loopback launcher and a distributable archive. It is not a signed native installer, not an iPhone app, and not a production deployment. Windows and macOS entrypoints are included and were not run on those systems. Linux is the system used to build and smoke-test the archive.
 
-Node.js 22 or newer has to be installed first. `npm install` has to be run once in the unpacked folder. The launcher does not run that install, does not download a GGUF, and does not install llama-server. After that setup, later launches do not need a network connection.
+Install Node.js 22 or newer and run `npm install` once in the unpacked folder. This prepares the chat app. The default launch also starts the governance dashboard and watcher when a compatible Python is available. Their first start can require a network connection.
 
 ## Start
 
-From a checkout:
+From the checkout root, run the Node entry point directly.
 
 ```bash
-scripts/desktop/start-pocket-ai-lab.sh
-scripts/desktop/start-pocket-ai-lab.sh --headless
+node scripts/desktop/launcher.mjs
 ```
 
-`--headless`, or `POCKET_LAUNCHER_HEADLESS=1`, leaves the browser closed and prints the loopback URL. It does not restart the server in a loop and it does not install dependencies. A browser `ERR_FAILED` is not treated as evidence that this process exited.
+`--headless` or `POCKET_LAUNCHER_HEADLESS=1` leaves the browser closed and prints the loopback URL. Governance still starts by default. A browser `ERR_FAILED` alone does not establish whether the process exited.
+
+For a headless, offline chat launch with the Node dependencies already installed, use the existing governance opt-out.
+
+```bash
+node scripts/desktop/launcher.mjs --headless --no-governance
+```
+
+`POCKET_NO_GOVERNANCE=1` also skips the dashboard and watcher. To use governance offline, prepare the project-local `.venv` with Python 3.10 or newer and the dependencies of `services/ai-integrator-automator` before disconnecting. On startup the governance runtime creates the virtual environment if needed and checks that FastAPI, Uvicorn, Pydantic, cryptography and defusedxml can be imported. If the check fails, it invokes pip to install the sidecar and its dependencies. Local inference also requires the GGUF and llama-server described below.
 
 The archive root start script runs `scripts/desktop/launcher.mjs`. That module imports `scripts/local-gguf/lib.mjs`. The archive includes that file, the tests, and `tsconfig.json`. It does not place a second `launcher-lib.mjs` at the archive root.
 
