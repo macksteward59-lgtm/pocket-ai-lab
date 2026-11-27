@@ -1,0 +1,13 @@
+{
+  "schema": "pal-finding-quality-smoke-v1",
+  "studyId": "owned-tenant-quality-smoke-v1",
+  "visibility": "public-synthetic-smoke",
+  "cases": [
+    {"caseId":"cross-tenant-read","groundTruth":"defect","severity":"high","caseClass":"object-authorization","fixtureStatus":"existing-owned-fixture"},
+    {"caseId":"cross-tenant-approval","groundTruth":"defect","severity":"critical","caseClass":"object-authorization","fixtureStatus":"existing-owned-fixture"},
+    {"caseId":"own-tenant-read","groundTruth":"authorized-control","severity":null,"caseClass":"owner-workflow","fixtureStatus":"existing-owned-fixture"},
+    {"caseId":"own-tenant-approval","groundTruth":"authorized-control","severity":null,"caseClass":"owner-workflow","fixtureStatus":"existing-owned-fixture"},
+    {"caseId":"stale-approval-replay","groundTruth":"authorized-control","severity":null,"caseClass":"replay-protection","fixtureStatus":"existing-owned-fixture"},
+    {"caseId":"privileged-admin-audit-read","groundTruth":"authorized-control","severity":null,"caseClass":"privileged-admin","fixtureStatus":"planned-synthetic-control"}
+  ]
+}
