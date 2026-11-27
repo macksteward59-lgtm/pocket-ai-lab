@@ -1,0 +1,67 @@
+{
+  "repository": "macksteward59-lgtm/pocket-ai-lab",
+  "revision": "4d4baafeeaca5eaa409b2505c910dabcb5700a3e",
+  "scope": "Exact read-only subset of PR #300; not a full repository checkout.",
+  "files": [
+    {
+      "path": "package.json",
+      "git_blob_sha": "20c524684f566556edd459d99b9acf63e07dd0cf",
+      "sha256": "978d6a6475b4290500bf78e0be1b1a4a5a7629f34d3b09530a52ef32db3deed2",
+      "bytes": 2333
+    },
+    {
+      "path": "apps/web/model-workshop/reader.js",
+      "git_blob_sha": "a108b5576afd8e5d5e66f38154cb8275a45a303b",
+      "sha256": "7bb01cad1abdac3c5ccde54bedfe4d786837615f399305d6cbf4a4d0bcc6fde0",
+      "bytes": 6291
+    },
+    {
+      "path": "apps/web/model-workshop/compare.js",
+      "git_blob_sha": "e9f8d736c0b84b3eecaacfc774a7b80b366e8fba",
+      "sha256": "34defb748efff384dfbb3ac49417fc28b5e6a0886a2319c0a366eb807d35908f",
+      "bytes": 4440
+    },
+    {
+      "path": "apps/web/model-workshop/identity.js",
+      "git_blob_sha": "ed4ff02fbc1d95d51d5402ce72b1ebf0062ed0fd",
+      "sha256": "c0754e44b30b062facccd3c66b18eda6c1e360986d6b575b83c9196fb1c41039",
+      "bytes": 3203
+    },
+    {
+      "path": "apps/web/model-workshop/soft.json",
+      "git_blob_sha": "aeed8fbc5572a872fb44bd47a0ee75f432450b1c",
+      "sha256": "a83d342fa81b413eb38602ed2c6f76f3be4153fad3db5b628f1ea02314826754",
+      "bytes": 2243
+    },
+    {
+      "path": "apps/web/model-workshop/hard.json",
+      "git_blob_sha": "d922958d43f6bbf3aa5224f08f9f0448adabd8a8",
+      "sha256": "cbe45e272cd1f398bb2b141a5ef0ee453db70d1e78f288c988f73f09b1ee82e9",
+      "bytes": 2205
+    },
+    {
+      "path": "apps/web/model-workshop/comparison-example.json",
+      "git_blob_sha": "e90945e78fbfbf21334eff909452ea54d6d82ba8",
+      "sha256": "b2ac6e95e0805575e15ad3e24d4189202d1786f01488d2b04a114d11c846c2aa",
+      "bytes": 2581
+    },
+    {
+      "path": "apps/web/model-workshop/catalog.js",
+      "git_blob_sha": "eb579363b3fef7ecf974fad16615f6fd53fdebed",
+      "sha256": "11a8a9b5f42fe80238e3ffadc2dd96e7d7517a772c8255389c181c56ac4f5102",
+      "bytes": 6810
+    },
+    {
+      "path": "apps/web/model-workshop/edit.js",
+      "git_blob_sha": "7bf0a69cfe2acf9b3b4b43d1d67c6b519d186f30",
+      "sha256": "3335b7aeb50ce7ba7855d920e6ce74df02969797cacdc0207b0518b4994aa1f1",
+      "bytes": 5596
+    },
+    {
+      "path": "apps/web/model-workshop/family.js",
+      "git_blob_sha": "60e520fe531a7cf3692a1012fb4349fa94504996",
+      "sha256": "a799b5e10a8843789a2c119cd761a2ffe8684abd5af6aff45461f4d87f217f5f",
+      "bytes": 10752
+    }
+  ]
+}
