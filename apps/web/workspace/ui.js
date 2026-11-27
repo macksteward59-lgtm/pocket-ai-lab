@@ -361,8 +361,18 @@ export async function initializeWorkspace(hooks) {
         known.set(id, saved);
       }).catch(fail);
     }
-    await reloadMessages(id);
+    if (activeId === id) {
+      // The durable turn already exists. Keep its pending row usable even if
+      // a subsequent presentation read fails before inference starts.
+      loaded = { ...context, conversation: begun.conversation,
+        messages: [...context.messages, begun.userMessage, begun.assistantMessage],
+        turns: [...context.turns, begun.turn] };
+      renderMessages(); updateControls();
+    }
+    try { await reloadMessages(id); }
+    catch (error) { if (activeId === id) fail(Error("Your message is saved and its reply is continuing, but the view could not refresh. " + error.message)); }
     if (outgoing.omittedExchanges && activeId === id) notice("Earlier messages remain saved. This reply uses the most recent conversation that fits the context limit.");
+    if (ticket.cancelled) return;
     let result;
     try {
       if (reader) {

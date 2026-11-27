@@ -502,6 +502,75 @@ for (const engine of [chromium, webkit]) {
     assert.equal(f.chatRequests.length, 0);
   });
 
+  test(engine.name() + " completes one reply when a presentation read fails after the turn commits", { timeout: 45000 }, async t => {
+    const f = await fixture(t, engine), page = f.page;
+    const project = await createProject(page, "Transient presentation read");
+    try {
+      await page.evaluate(id => {
+        const prototype = IDBObjectStore.prototype;
+        const get = Object.getOwnPropertyDescriptor(prototype, "get");
+        const put = Object.getOwnPropertyDescriptor(prototype, "put");
+        const fault = { pendingPutSeen: false, committed: false, armed: false, injected: 0, requestId: null };
+        globalThis.__workspaceOneShotReadFault = fault;
+        fault.restore = () => {
+          Object.defineProperty(prototype, "get", get);
+          Object.defineProperty(prototype, "put", put);
+          delete globalThis.__workspaceOneShotReadFault;
+        };
+        const target = store => store.name === "conversations" &&
+          store.transaction.db.name === "pocket-ai-lab-conversational-workspace";
+        Object.defineProperty(prototype, "put", { ...put, value: function (...args) {
+          const request = Reflect.apply(put.value, this, args);
+          const value = args[0];
+          if (!fault.pendingPutSeen && target(this) && this.transaction.mode === "readwrite" &&
+              value?.id === id && typeof value.pendingRequestId === "string") {
+            fault.pendingPutSeen = true;
+            fault.requestId = value.pendingRequestId;
+            // Observe the native transaction. Only the later readonly get fails;
+            // beginTurn's real writes and completion handler remain intact.
+            this.transaction.addEventListener("complete", () => { fault.committed = true; fault.armed = true; }, { once: true });
+          }
+          return request;
+        } });
+        Object.defineProperty(prototype, "get", { ...get, value: function (...args) {
+          if (fault.armed && !fault.injected && target(this) && this.transaction.mode === "readonly" && args[0] === id) {
+            fault.armed = false;
+            fault.injected++;
+            throw new DOMException("Synthetic one-shot conversation presentation read failure", "UnknownError");
+          }
+          return Reflect.apply(get.value, this, args);
+        } });
+      }, project.chat.id);
+      // Leave the default conversation title in place: its normal title-write
+      // transaction also completes before the presentation read under test.
+      await send(page, "Continue the committed request after one transient view-read failure.");
+      await page.waitForFunction(() => globalThis.__workspaceOneShotReadFault?.injected === 1);
+      await page.locator("#messages .message.assistant .message-body").filter({ hasText: "Fake provider reply 1" }).waitFor();
+      const injected = await page.evaluate(() => {
+        const { pendingPutSeen, committed, injected, requestId } = globalThis.__workspaceOneShotReadFault;
+        return { pendingPutSeen, committed, injected, requestId };
+      });
+      assert.equal(injected.pendingPutSeen, true);
+      assert.equal(injected.committed, true);
+      assert.equal(injected.injected, 1);
+      assert.equal(f.chatRequests.length, 1, "the saved request is dispatched exactly once despite the read failure");
+      assert.equal(f.providerRequests.length, 1, "the actual configured-provider adapter is invoked exactly once");
+      const saved = await conversation(page, project.chat.id);
+      assert.equal(saved.conversation.pendingRequestId, null);
+      assert.equal(saved.turns.length, 1);
+      assert.equal(saved.turns[0].requestId, injected.requestId);
+      assert.equal(saved.turns[0].status, "complete");
+      assert.equal(saved.messages.length, 2);
+      assert.equal(saved.messages.find(message => message.role === "assistant").text, "Fake provider reply 1");
+      assert.ok(saved.messages.every(message => message.status === "complete"));
+      assert.equal(await page.locator("#messages .message.pending").count(), 0);
+      assert.ok(await page.locator("#workspace-pending").isHidden());
+      assert.ok(await page.locator("#send").isEnabled());
+    } finally {
+      if (!page.isClosed()) await page.evaluate(() => globalThis.__workspaceOneShotReadFault?.restore());
+    }
+  });
+
   test(engine.name() + " performs revision checks across two real IndexedDB connections", { timeout: 45000 }, async t => {
     const { page } = await fixture(t, engine);
     const result = await page.evaluate(async () => {
