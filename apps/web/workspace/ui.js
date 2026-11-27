@@ -64,7 +64,10 @@ export async function initializeWorkspace(hooks) {
       // the old visible form its new revision and thereby authorize overwriting it.
       conflicts.add(saved.id);
       known.set(saved.id, { ...previous, pendingRequestId: saved.pendingRequestId, nextSequence: saved.nextSequence });
-      notice("This conversation changed in another tab. Your visible draft is preserved. Reopen this chat from the sidebar to read the saved changes, or keep your draft in a new chat.", true);
+      const localEdits = Object.entries(formSnapshot()).some(([key, value]) => previous[key] !== value);
+      notice(localEdits
+        ? "This conversation changed in another tab. Your unsaved edits are preserved. Choose Keep draft in a new chat, then reopen the original conversation from the sidebar."
+        : "This conversation changed in another tab. Reopen this chat from the sidebar to read the saved changes. Keep draft in a new chat preserves a separate copy of the visible form.", true);
     } else known.set(saved.id, saved);
   }
 
@@ -79,7 +82,10 @@ export async function initializeWorkspace(hooks) {
     return enqueue(id, async () => {
       const chat = known.get(id);
       if (!chat) throw Error("This conversation is unavailable. Your draft remains on screen.");
-      if (Object.keys(patch).every(key => chat[key] === patch[key])) return chat;
+      if (Object.keys(patch).every(key => chat[key] === patch[key])) {
+        if (activeId === id && JSON.stringify(formSnapshot()) === JSON.stringify(patch)) dirty = false;
+        return chat;
+      }
       if (conflicts.has(id)) throw Error("Another tab changed this conversation. Keep this draft in a new chat before reopening the saved conversation.");
       const saved = await store.updateConversation(id, chat.revision, patch);
       known.set(id, saved);
@@ -202,6 +208,7 @@ export async function initializeWorkspace(hooks) {
       $("prompt").value = next.conversation.draft;
       $("chat-reader-source").value = next.conversation.source;
       $("chat-create-kind").value = next.conversation.draftKind;
+      $("prompt").placeholder = next.conversation.draftKind ? "Describe the " + next.conversation.draftKind + " you want to create…" : "Message Pocket AI Lab…";
       $("conversation-title").textContent = next.conversation.title;
       $("workspace-scope").textContent = next.conversation.projectId === null ? "Individual chat" : "Project · " + projectName(next.conversation.projectId);
       hooks.clearReader(); setWorkspaceView("chat");
@@ -256,28 +263,49 @@ export async function initializeWorkspace(hooks) {
     if (navigationLocked) throw Error("Finish opening this conversation before selecting its model.");
     const id = activeId;
     const form = formSnapshot();
+    const ref = readerReference(reader);
+    const proposed = { draft: form.draft || question || "", source: passage ?? form.source };
     const readerToken = ++readerGeneration;
     readerLoading = true; updateControls();
+    // The existing workshop hands a selection to Chat synchronously. Reflect
+    // that choice immediately, but keep inference disabled until it is saved.
+    const priorDraftSave = flushDraft();
+    // Reserve this write before yielding so a later navigation flush cannot
+    // overtake the choice and restore its previous model reference.
+    const selectionSave = enqueue(id, async () => {
+      await priorDraftSave;
+      if (conflicts.has(id)) throw Error("Reopen the saved conversation before changing its model.");
+      const current = known.get(id);
+      const patch = { modelRef: ref,
+        draft: current.draft === form.draft ? proposed.draft : current.draft,
+        source: current.source === form.source ? proposed.source : current.source };
+      const updated = await store.updateConversation(id, current.revision, patch);
+      known.set(id, updated);
+      return updated;
+    });
+    if (reader) hooks.displayReader(reader); else hooks.clearReader();
+    $("prompt").value = proposed.draft;
+    $("chat-reader-source").value = proposed.source;
+    dirty = true;
+    setWorkspaceView("chat");
+    notice("Saving the selected model and draft…");
+    $("prompt").focus();
     try {
-      await flushDraft();
-      const ref = readerReference(reader);
-      const saved = await enqueue(id, async () => {
-        if (conflicts.has(id)) throw Error("Reopen the saved conversation before changing its model.");
-        const current = known.get(id);
-        const patch = { modelRef: ref,
-          draft: current.draft === form.draft ? form.draft || question || "" : current.draft,
-          source: current.source === form.source ? passage ?? form.source : current.source };
-        const updated = await store.updateConversation(id, current.revision, patch);
-        known.set(id, updated);
-        return updated;
-      });
+      const saved = await selectionSave;
       if (id !== activeId || readerToken !== readerGeneration) return;
       selectedReader = reader; readerFailure = "";
-      if (reader) hooks.displayReader(reader); else hooks.clearReader();
       // Preserve input typed while the catalog/transaction was pending.
-      if ($("prompt").value === form.draft) $("prompt").value = saved.draft;
-      if ($("chat-reader-source").value === form.source) $("chat-reader-source").value = saved.source;
-      setWorkspaceView("chat"); notice(); $("prompt").focus();
+      if ($("prompt").value === proposed.draft) $("prompt").value = saved.draft;
+      if ($("chat-reader-source").value === proposed.source) $("chat-reader-source").value = saved.source;
+      if (Object.entries(formSnapshot()).every(([key, value]) => saved[key] === value)) { dirty = false; notice(); }
+      else scheduleDraft();
+    } catch (error) {
+      if (id === activeId && readerToken === readerGeneration) {
+        readerFailure = "The selected model could not be saved. " + error.message;
+        $("chat-reader-context").hidden = false;
+        $("chat-reader-label").textContent = "Selected model was not saved";
+      }
+      throw error;
     } finally { if (readerToken === readerGeneration) { readerLoading = false; updateControls(); } }
   }
 

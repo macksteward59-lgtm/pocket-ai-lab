@@ -173,6 +173,7 @@ function offerSourceReview(output, reader, result, passage, question) {
 let workspaceController;
 let workspaceReady;
 function selectChatReader(reader, question, passage) {
+  if (workspaceController) return workspaceController.selectReader(reader, question, passage).catch(workspaceError);
   return workspaceReady.then(controller => controller.selectReader(reader, question, passage)).catch(workspaceError);
 }
 async function sendMessage(text) {

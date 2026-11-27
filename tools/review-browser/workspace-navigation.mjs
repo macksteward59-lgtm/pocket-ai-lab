@@ -138,8 +138,19 @@ async function conversation(page, id) {
   }, id);
 }
 
+async function waitForAsync(page, predicate, argument, description = "asynchronous browser condition") {
+  // Playwright 1.57's waitForFunction tests the returned Promise for truthiness
+  // before it resolves. Evaluate and await each boolean explicitly instead.
+  const deadline = Date.now() + 12000;
+  while (true) {
+    if (await page.evaluate(predicate, argument) === true) return;
+    assert.ok(Date.now() < deadline, "Timed out waiting for " + description);
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+}
+
 async function waitSelection(page, expected) {
-  await page.waitForFunction(async expected => {
+  await waitForAsync(page, async expected => {
     const { openWorkspace } = await import("/workspace/store.js");
     const store = await openWorkspace();
     try {
@@ -150,22 +161,23 @@ async function waitSelection(page, expected) {
       return selected && selected.projectId === expected.projectId &&
         (!expected.id || selected.id === expected.id) && (!expected.differentFrom || selected.id !== expected.differentFrom) &&
         (project ? scope.includes(project.name) : /individual/i.test(scope)) &&
+        document.getElementById("workspace-shell").dataset.navigating !== "true" &&
         document.getElementById("conversation-title").textContent === selected.title;
     } finally { store.close(); }
-  }, expected);
+  }, expected, "the selected conversation and its displayed form");
   const state = await snapshot(page);
   return state.conversations.find(item => item.id === state.selection.conversationId);
 }
 
 async function waitSaved(page, id, expected) {
-  await page.waitForFunction(async ({ id, expected }) => {
+  await waitForAsync(page, async ({ id, expected }) => {
     const { openWorkspace } = await import("/workspace/store.js");
     const store = await openWorkspace();
     try {
       const { conversation } = await store.loadConversation(id);
       return Object.entries(expected).every(([key, value]) => JSON.stringify(conversation[key]) === JSON.stringify(value));
     } finally { store.close(); }
-  }, { id, expected });
+  }, { id, expected }, "saved conversation fields: " + Object.keys(expected).join(", "));
 }
 
 async function openMenu(page) {
@@ -215,7 +227,11 @@ async function captureEvidence(page, engine, name) {
   if (!process.env.WORKSPACE_EVIDENCE_DIR) return;
   const dir = path.resolve(process.env.WORKSPACE_EVIDENCE_DIR);
   await mkdir(dir, { recursive: true });
-  await page.screenshot({ path: path.join(dir, engine.name() + "-workspace-" + name + ".png"), fullPage: true });
+  if (name === "mobile-sidebar") {
+    assert.ok((await page.locator("#sidebar").getAttribute("class")).split(/\s+/).includes("open"));
+    await page.locator("#new-project").scrollIntoViewIfNeeded();
+  }
+  await page.screenshot({ path: path.join(dir, engine.name() + "-workspace-" + name + ".png"), fullPage: true, animations: "disabled" });
 }
 
 for (const engine of [chromium, webkit]) {
@@ -233,12 +249,12 @@ for (const engine of [chromium, webkit]) {
     await page.locator("#reader-sentences").fill(passage);
     await page.locator("#reader-chat").click();
     await page.locator("#chat-reader-context").waitFor({ state: "visible" });
-    await page.waitForFunction(async ({ id, readerId }) => {
+    await waitForAsync(page, async ({ id, readerId }) => {
       const { openWorkspace } = await import("/workspace/store.js");
       const store = await openWorkspace();
       try { return (await store.loadConversation(id)).conversation.modelRef?.id === readerId; }
       finally { store.close(); }
-    }, { id: alpha.chat.id, readerId });
+    }, { id: alpha.chat.id, readerId }, "the exact reader selection to be saved");
     const selected = (await conversation(page, alpha.chat.id)).conversation.modelRef;
     assert.equal(selected.id, readerId);
     assert.equal(selected.location, "browser");
@@ -279,9 +295,11 @@ for (const engine of [chromium, webkit]) {
     await selectChat(page, beta.chat);
     assert.equal(await page.locator("#prompt").inputValue(), "Beta unsent draft");
     assert.equal(await page.locator("#chat-create-kind").inputValue(), "agent");
+    assert.equal(await page.locator("#prompt").getAttribute("placeholder"), "Describe the agent you want to create…");
     assert.ok(await page.locator("#chat-reader-context").isHidden());
     await selectChat(page, standalone);
     assert.equal(await page.locator("#prompt").inputValue(), "Standalone unsent draft");
+    assert.equal(await page.locator("#prompt").getAttribute("placeholder"), "Message Pocket AI Lab…");
     assert.equal((await snapshot(page)).projects.length, 2);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   });
@@ -297,22 +315,22 @@ for (const engine of [chromium, webkit]) {
 
     await selectChat(page, alpha.chat);
     await send(page, "hold-origin-reply");
-    await page.waitForFunction(async id => {
+    await waitForAsync(page, async id => {
       const { openWorkspace } = await import("/workspace/store.js");
       const store = await openWorkspace();
       try { return Boolean((await store.loadConversation(id)).conversation.pendingRequestId); } finally { store.close(); }
-    }, alpha.chat.id);
+    }, alpha.chat.id, "the originating pending request");
     await selectChat(page, beta.chat);
     assert.equal(await page.locator("#messages .message").count(), 2);
     await f.waitHeld();
     f.releaseHeld();
-    await page.waitForFunction(async id => {
+    await waitForAsync(page, async id => {
       const { openWorkspace } = await import("/workspace/store.js");
       const store = await openWorkspace();
       try { return (await store.loadConversation(id)).messages.some(message => message.role === "assistant" &&
         message.status === "complete" && message.text === "Fake provider held reply for the originating chat"); }
       finally { store.close(); }
-    }, alpha.chat.id);
+    }, alpha.chat.id, "the completed reply in its originating conversation");
     assert.equal(await page.locator("#messages .message").count(), 2);
     assert.ok(!(await page.locator("#messages").innerText()).includes("held reply"));
     await selectChat(page, alpha.chat);
@@ -387,25 +405,46 @@ for (const engine of [chromium, webkit]) {
     await first.locator("#workspace-ready-status").filter({ hasText: /changed in another tab/ }).waitFor();
     assert.equal(await first.locator("#prompt").inputValue(), "", "completion preserves the first tab's visible form");
     assert.equal((await conversation(first, project.chat.id)).conversation.draft, "B newer saved draft");
+
+    // An unchanged old form can explicitly reopen the saved conversation without
+    // being forced to create a copy or replacing the other tab's newer text.
+    const countBeforeReopen = (await snapshot(first)).conversations.length;
+    await selectChat(first, project.chat);
+    assert.equal(await first.locator("#prompt").inputValue(), "B newer saved draft");
+    assert.ok(await first.locator("#send").isEnabled());
+    assert.equal((await snapshot(first)).conversations.length, countBeforeReopen);
+
+    // Repeat the actual concurrent-completion path, then preserve a divergent
+    // first-tab draft through explicit copy recovery.
+    await send(first, "hold-origin-reply");
+    await f.waitHeld();
+    const nextReply = (await conversation(first, project.chat.id)).turns.at(-1).assistantMessageId;
+    await selectChat(second, project.chat);
+    await second.locator("#workspace-pending").waitFor({ state: "visible" });
+    await second.locator("#prompt").fill("B newest saved draft");
+    await waitSaved(second, project.chat.id, { draft: "B newest saved draft" });
+    f.releaseHeld();
+    await first.locator('[data-message-id="' + nextReply + '"] .message-body').filter({ hasText: "Fake provider held reply for the originating chat" }).waitFor();
+    await first.locator("#workspace-ready-status").filter({ hasText: /changed in another tab/ }).waitFor();
     await first.locator("#prompt").fill("A unsaved copy");
     // Wait for the attempted debounced save to report a conflict; do not rely on a sleep.
     await first.locator("#workspace-ready-status").filter({ hasText: /Keep this draft in a new chat before reopening/ }).waitFor();
-    assert.equal((await conversation(first, project.chat.id)).conversation.draft, "B newer saved draft");
+    assert.equal((await conversation(first, project.chat.id)).conversation.draft, "B newest saved draft");
     assert.equal(await first.locator("#prompt").inputValue(), "A unsaved copy");
     await first.locator("#workspace-save-copy").click();
     const recovered = await waitSelection(first, { projectId: project.id, differentFrom: project.chat.id });
     await waitSaved(first, recovered.id, { draft: "A unsaved copy" });
     assert.equal(await first.locator("#prompt").inputValue(), "A unsaved copy");
     const original = await conversation(first, project.chat.id);
-    assert.equal(original.conversation.draft, "B newer saved draft");
+    assert.equal(original.conversation.draft, "B newest saved draft");
     assert.equal(original.conversation.pendingRequestId, null);
-    assert.equal(original.messages.length, 2);
-    assert.equal(original.messages.find(message => message.role === "assistant").text,
-      "Fake provider held reply for the originating chat");
+    assert.equal(original.messages.length, 4);
+    assert.ok(original.messages.filter(message => message.role === "assistant").every(message =>
+      message.text === "Fake provider held reply for the originating chat"));
     assert.equal((await conversation(first, recovered.id)).messages.length, 0);
-    assert.equal(f.chatRequests.length, 1, "conflict recovery saves a copy without requesting another reply");
+    assert.equal(f.chatRequests.length, 2, "the two deliberate requests complete without a conflict-recovery retry");
     await selectChat(second, project.chat);
-    assert.equal(await second.locator("#prompt").inputValue(), "B newer saved draft");
+    assert.equal(await second.locator("#prompt").inputValue(), "B newest saved draft");
   });
 
   test(engine.name() + " keeps newly typed text while the exact browser reader restores slowly", { timeout: 90000 }, async t => {
@@ -569,6 +608,7 @@ for (const engine of [chromium, webkit]) {
     await page.reload();
     await page.locator('#workspace-shell[data-ready="true"]').waitFor();
     assert.equal(await page.locator("#chat-create-kind").inputValue(), "team");
+    assert.equal(await page.locator("#prompt").getAttribute("placeholder"), "Describe the team you want to create…");
     saved = await snapshot(page);
     assert.equal(saved.resources.length, 6);
     assert.ok(saved.resources.every(resource => resource.state === "draft" && resource.version === 1));

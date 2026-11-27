@@ -134,7 +134,12 @@ for (const engine of [chromium, webkit]) {
       await page.locator("#prompt").fill(originalQuestion);
       await page.locator("#send").click();
       await page.locator("#messages .message.assistant .message-label").filter({ hasText: /Reader B/ }).waitFor();
-      assert.ok((await page.locator("#messages .message.assistant .message-body").innerText()).length);
+      const retainedReplies = page.locator("#messages .message.assistant");
+      assert.equal(await retainedReplies.count(), 2, "the earlier Reader A reply survives the browser restart");
+      assert.match(await retainedReplies.first().locator(".message-label").innerText(), /Reader A.*LOCAL DOCUMENT READER/);
+      assert.equal(await retainedReplies.first().locator(".message-body").innerText(), localAnswer);
+      assert.match(await retainedReplies.last().locator(".message-label").innerText(), /Reader B.*LOCAL DOCUMENT READER/);
+      assert.ok((await retainedReplies.last().locator(".message-body").innerText()).length);
 
     });
 }
