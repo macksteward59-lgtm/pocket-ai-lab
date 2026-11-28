@@ -1,0 +1,64 @@
+name: Conversational workspace
+
+on:
+  pull_request:
+    branches: [main, codex/edit-combine-document-readers]
+    paths:
+      - apps/web/workspace/**
+      - apps/web/test/workspace-*.test.mjs
+      - apps/web/app.js
+      - apps/web/index.html
+      - apps/web/styles.css
+      - apps/web/sw.js
+      - apps/web/server.mjs
+      - tools/review-browser/workspace-navigation.mjs
+      - .github/workflows/workspace-navigation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  workspace-and-existing-readers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Install project dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - name: Build and verify web contracts
+        run: |
+          npm run build
+          npm run test:web
+      - name: Install browser engines
+        working-directory: tools/review-browser
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Verify workspace and shared reader flows
+        shell: bash
+        working-directory: tools/review-browser
+        env:
+          WORKSPACE_EVIDENCE_DIR: ${{ runner.temp }}/workspace-evidence
+          READER_DRAFT_EVIDENCE_DIR: ${{ runner.temp }}/reader-draft-evidence
+          READER_COMPARE_EVIDENCE_DIR: ${{ runner.temp }}/reader-compare-evidence
+          READER_FAMILY_EVIDENCE_DIR: ${{ runner.temp }}/reader-family-evidence
+        run: |
+          set -o pipefail
+          node --import tsx --test workspace-navigation.mjs model-workshop.mjs reader-editor.mjs reader-family.mjs reader-compare.mjs reader-draft.mjs account-recovery.mjs 2>&1 | tee "$RUNNER_TEMP/workspace-browser.log"
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: conversational-workspace-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/workspace-browser.log
+            ${{ runner.temp }}/workspace-evidence/
+            ${{ runner.temp }}/reader-draft-evidence/
+            ${{ runner.temp }}/reader-compare-evidence/
+            ${{ runner.temp }}/reader-family-evidence/

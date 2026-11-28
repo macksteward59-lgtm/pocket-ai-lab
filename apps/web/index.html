@@ -11,18 +11,27 @@
   <title>Pocket AI Lab</title>
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
+  <div class="app-shell" id="workspace-shell" data-ready="false">
+    <aside class="sidebar" id="sidebar" aria-label="Workspace navigation">
       <a class="brand" href="/" aria-label="Pocket AI Lab home"><span class="brand-mark">P</span><span>Pocket AI Lab<small>YOUR PRIVATE AI WORKSPACE</small></span></a>
-      <button class="new-chat" id="new-chat">＋ <span>New conversation</span></button>
-      <div class="nav-label">WORKSPACE</div>
+      <button class="new-chat" id="new-chat" disabled>＋ <span>New conversation</span></button>
+      <div class="workspace-navigation">
+      <div class="workspace-group-heading"><h2>Projects</h2><button id="new-project" type="button" aria-label="New project">＋</button></div>
+      <div id="workspace-projects" class="workspace-tree" aria-label="Projects"></div>
+      <div class="workspace-group-heading"><h2>Individual chats</h2><button id="new-standalone-chat" type="button" aria-label="New standalone chat">＋</button></div>
+      <div id="workspace-chats" class="workspace-tree" aria-label="Individual chats"></div>
+      <div class="nav-label workspace-library-label">YOUR CAPABILITIES</div>
+      <button class="nav-item" data-resource-kind="tool">⌘ <span>Tools</span></button>
+      <button class="nav-item" data-resource-kind="agent">◇ <span>Agents</span></button>
+      <button class="nav-item" data-resource-kind="team">◎ <span>Teams</span></button>
+      <div class="nav-label workspace-library-label">WORKSPACE</div>
       <button class="nav-item active" data-view="chat">◫ <span>Chat</span></button>
-      <button class="nav-item" data-view="agents">◎ <span>Agent team</span><span class="nav-soon">PREVIEW</span></button>
+      <button class="nav-item" data-view="agents">◎ <span>Core team</span><span class="nav-soon">PREVIEW</span></button>
       <button class="nav-item" data-view="memory">▤ <span>Memory</span></button>
       <button class="nav-item" data-view="models">◇ <span>Model workshop</span></button>
       <button class="nav-item" data-view="recovery"><span aria-hidden="true">☑</span> <span>Review tasks</span></button>
       <button class="nav-item" data-view="activity">◷ <span>Activity</span></button>
-      <div class="sidebar-spacer"></div>
+      </div>
       <div class="privacy-card"><span class="privacy-dot"></span><div><strong>Local-first mode</strong><small>Your prompts stay on this device when using a local model.</small></div></div>
       <button class="nav-item" data-view="settings">⚙ <span>Settings</span></button>
       <div class="profile"><div class="avatar">K</div><div><strong>Local workspace</strong><small>Personal instance</small></div><span class="profile-menu">•••</span></div>
@@ -30,18 +39,30 @@
     <main class="main">
       <header class="topbar"><button class="mobile-menu" id="mobile-menu" aria-label="Open menu">☰</button><div class="crumb">Workspace <span>/</span> <strong id="page-name">Chat</strong></div><div class="top-actions"><span class="connection" id="connection"><i></i> Checking model</span><button class="icon-button" id="settings-shortcut" aria-label="Settings">⚙</button></div></header>
       <section class="view" id="chat-view">
+        <div class="conversation-heading"><div><span id="workspace-scope">Individual chat</span><h2 id="conversation-title">New conversation</h2></div><button id="conversation-rename" class="secondary-button" type="button">Rename</button></div>
+        <div class="workspace-notice" aria-live="polite"><span id="workspace-ready-status" role="status">Opening saved workspace…</span><button id="workspace-save-copy" class="secondary-button" type="button" hidden>Keep draft in a new chat</button></div>
+        <div id="workspace-pending" class="workspace-pending" hidden><p id="workspace-pending-text"></p><button id="workspace-interrupt" type="button" class="secondary-button">Mark interrupted</button></div>
         <div class="welcome" id="welcome"><div class="eyebrow"><span></span> PRIVATE AI WORKSPACE</div><h1>Think bigger.<br><em>Build with intelligence.</em></h1><p>One workspace for your ideas, research, and projects. Start with a local model, then add cloud providers when you choose.</p>
           <div class="suggestions"><button class="suggestion" data-prompt="Help me break down a complex project into clear, testable milestones."><b>↗</b><span><strong>Plan a project</strong><small>Turn an idea into a roadmap</small></span></button><button class="suggestion" data-prompt="Review this idea critically. Identify assumptions, risks, and ways to improve it."><b>⌕</b><span><strong>Challenge an idea</strong><small>Find gaps and better approaches</small></span></button><button class="suggestion" data-prompt="Help me understand a difficult topic step by step, with examples."><b>◇</b><span><strong>Learn something</strong><small>Explore a topic in depth</small></span></button></div>
         </div>
         <div class="messages" id="messages" aria-live="polite"></div>
         <form class="composer" id="composer">
+          <label class="chat-action-label" for="chat-create-kind">Ask the assistant to <select id="chat-create-kind" disabled><option value="">Chat</option><option value="tool">Draft a tool</option><option value="agent">Draft an agent</option><option value="team">Draft a team</option></select></label>
           <div class="reader-context" id="chat-reader-context" hidden>
             <div><strong id="chat-reader-label"></strong><button type="button" id="chat-use-default" class="secondary-button">Use configured chat model</button></div>
             <label id="chat-source-label" for="chat-reader-source">Source sentences, one per line</label>
-            <textarea id="chat-reader-source" rows="2" maxlength="6000"></textarea>
+            <textarea id="chat-reader-source" rows="2" maxlength="6000" readonly></textarea>
             <span id="chat-reader-status" role="status"></span>
           </div>
-          <div class="composer-wrap"><textarea id="prompt" rows="1" placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><button type="button" id="chat-choose-reader" class="reader-choice">Choose model</button><span class="model-pill" id="model-pill">Local model · not connected</span><span class="privacy-hint">◉ Private when using local inference</span></div><button class="send" id="send" type="submit" aria-label="Send message">↑</button></div></div><p class="disclaimer">AI can make mistakes. Verify important information before acting.</p></form>
+          <div class="composer-wrap"><textarea id="prompt" rows="1" maxlength="12000" readonly placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><button type="button" id="chat-choose-reader" class="reader-choice">Choose model</button><span class="model-pill" id="model-pill">Configured chat model</span><span class="privacy-hint">◉ Private when using local inference</span></div><div class="chat-send-controls"><button id="chat-stop" type="button" class="secondary-button" hidden>Stop reply</button><button class="send" id="send" type="submit" aria-label="Send message" disabled>↑</button></div></div></div><p class="disclaimer">Saved in this browser. Long-term Memory is separate. AI can make mistakes.</p></form>
+      </section>
+      <section class="view secondary-view hidden" id="resources-view">
+        <div class="section-heading"><div class="eyebrow">YOUR CAPABILITIES</div><h1 id="resource-heading">Tools</h1><p id="resource-intro">Create reusable definitions for your work.</p></div>
+        <p id="resource-scope" class="status-text"></p>
+        <div class="resource-toolbar"><button id="resource-create" class="primary-button" type="button">Create</button><button id="resource-ask" class="secondary-button" type="button">Ask assistant to create</button></div>
+        <p class="resource-draft-notice">Definitions are editable drafts. Validation and activation will connect them to the harness before they can run.</p>
+        <div id="resource-list" class="resource-list"></div>
+        <p id="resource-status" role="status"></p>
       </section>
       <section class="view secondary-view hidden" id="settings-view"><div class="section-heading"><div class="eyebrow">CONFIGURATION</div><h1>Model settings</h1><p>Connect a local llama.cpp server. Cloud routing is intentionally not enabled until a secure server-side provider is configured.</p></div><form id="settings-form" class="settings-card"><div class="setting-note"><strong>Provider configuration</strong><p>Chat and Agent Team both call the local llama.cpp <code>InferenceProvider</code>. Set <code>LLAMACPP_BASE_URL</code> (default <code>http://127.0.0.1:8080</code>) on the server. <code>LLM_BASE_URL</code> ending in <code>/v1</code> selects the OpenAI-compatible API. No API key is stored in this browser or sent by the local adapter.</p></div><div class="setting-note"><strong>Local endpoint only</strong><p>The browser talks only to this app server. "Local model ready" appears after a loopback health check succeeds. A remote URL is not described as private.</p></div><div class="settings-actions"><button class="secondary-button" type="button" id="test-connection">Test connection</button><button class="primary-button" type="submit">Save settings</button></div><p class="status-text" id="settings-status" role="status"></p></form></section>
       <section class="view secondary-view hidden" id="agents-view" tabindex="0"><div class="section-heading"><div class="eyebrow">COLLABORATION</div><h1>Agent team</h1><p>The core roles perform independent analysis, cross-review, challenge, revision, verification, and synthesis. Connect a local llama-server to run real model calls. Agent output remains untrusted and cannot authorize actions.</p></div><div class="agent-runner">
@@ -261,6 +282,12 @@
       <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
     </main>
   </div>
+  <dialog id="workspace-name-dialog" class="workspace-dialog" aria-labelledby="workspace-name-heading">
+    <form id="workspace-name-form"><h2 id="workspace-name-heading">New project</h2><label for="workspace-name-input">Name<input id="workspace-name-input" maxlength="120" required autocomplete="off"></label><p id="workspace-name-error" role="alert"></p><div class="workspace-dialog-actions"><button class="secondary-button" type="button" data-close-dialog="workspace-name-dialog">Cancel</button><button id="workspace-name-save" class="primary-button" type="submit">Save</button></div></form>
+  </dialog>
+  <dialog id="resource-dialog" class="workspace-dialog" aria-labelledby="resource-dialog-heading" aria-describedby="resource-dialog-scope">
+    <form id="resource-form"><h2 id="resource-dialog-heading">Create tool draft</h2><p id="resource-dialog-scope"></p><label for="resource-name">Name<input id="resource-name" maxlength="120" required autocomplete="off"></label><label for="resource-description">Purpose<textarea id="resource-description" rows="2" maxlength="4000" required></textarea></label><label for="resource-instructions">Instructions and configuration<textarea id="resource-instructions" rows="7" maxlength="12000" required></textarea></label><p class="resource-draft-notice">Saving a draft does not activate it or grant permissions.</p><p id="resource-error" role="alert"></p><div class="workspace-dialog-actions"><button type="button" class="secondary-button" data-close-dialog="resource-dialog">Cancel</button><button id="resource-save" class="primary-button" type="submit">Save draft</button></div></form>
+  </dialog>
   <script src="/app.js" defer></script>
   <script type="module" src="/model-workshop/ui.js"></script>
   <script type="module" src="/recovery/ui.js"></script>

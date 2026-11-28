@@ -5,6 +5,7 @@ import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openMemoryManager } from "./memoryRuntime.ts";
+import { validateConversation } from "./workspace/chat-context.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4173);
@@ -530,8 +531,12 @@ export function createServer() {
         } catch (e) {
           return json(res, e.status || 400, { error: e.message });
         }
+        if (!input || typeof input !== "object" || Array.isArray(input)) return json(res, 400, { error: "A chat request must be a JSON object." });
         if (typeof input.message !== "string" || !input.message.trim()) return json(res, 400, { error: "A non-empty message is required." });
         if (input.message.length > 12000) return json(res, 413, { error: "Message exceeds 12,000 characters." });
+        let conversation;
+        try { conversation = validateConversation(input.conversation); }
+        catch (error) { return json(res, error.status || 400, { error: error.message }); }
         const { cfg, provider } = await openProvider(60000);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 60000);
@@ -542,7 +547,8 @@ export function createServer() {
             modelId: cfg.modelAlias || "local",
             prompt: input.message,
             stage: "independent",
-            contextMessages: []
+            contextMessages: [],
+            conversation
           }, { signal: controller.signal });
           const payload = result && typeof result === "object" ? result.payload : undefined;
           const analysis = payload && typeof payload.analysis === "string" ? payload.analysis.trim() : "";
