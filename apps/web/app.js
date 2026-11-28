@@ -173,11 +173,19 @@ function offerSourceReview(output, reader, result, passage, question) {
 let workspaceController;
 let workspaceReady;
 function selectChatReader(reader, question, passage) {
-  if (workspaceController) return workspaceController.selectReader(reader, question, passage).catch(workspaceError);
-  return workspaceReady.then(controller => controller.selectReader(reader, question, passage)).catch(workspaceError);
+  if (!workspaceController || $("workspace-shell").dataset.ready !== "true") {
+    const message = "Saved chats are still opening. Choose this model again when the workspace is ready.";
+    workspaceError(Error(message));
+    $("reader-status").textContent = message;
+    return Promise.resolve();
+  }
+  return workspaceController.selectReader(reader, question, passage).catch(workspaceError);
 }
 async function sendMessage(text) {
-  try { return await (await workspaceReady).send(text); }
+  // A startup submission must not wait and later inherit a different chat.
+  // Leave its text as a draft until the workspace is ready for a fresh send.
+  if (!workspaceController || $("workspace-shell").dataset.ready !== "true") return;
+  try { return await workspaceController.send(text); }
   catch (error) { workspaceError(error); }
 }
 function workspaceError(error) {
@@ -190,7 +198,9 @@ $("prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.pr
 document.querySelectorAll("[data-prompt]").forEach(b=>b.addEventListener("click",()=>sendMessage(b.dataset.prompt)));
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $("settings-shortcut").addEventListener("click",()=>setView("settings"));
-$("new-chat").addEventListener("click",()=>workspaceReady.then(controller=>controller.newConversation()).catch(workspaceError));
+$("new-chat").addEventListener("click",()=>{
+  if (workspaceController && $("workspace-shell").dataset.ready === "true") workspaceController.newConversation().catch(workspaceError);
+});
 $("mobile-menu").addEventListener("click",()=>$("sidebar").classList.toggle("open"));
 $("settings-form").addEventListener("submit",e=>{e.preventDefault();$("settings-status").textContent="The server endpoint is controlled by the app host. Nothing was saved in this browser.";});
 $("test-connection").addEventListener("click",async()=>{await health();$("settings-status").textContent=$("connection").classList.contains("ready")?"Local llama-server responded to a health check.":"The model is not a reachable local llama-server. No simulated status was saved.";});
@@ -355,7 +365,7 @@ workspaceReady = import("/workspace/ui.js").then(module => module.initializeWork
     if (generation === reviewAccountGeneration) offerSourceReview(output, reader, result, passage, question);
   },
   reviewGeneration: () => reviewAccountGeneration
-})).then(controller => { workspaceController = controller; return controller; });
+})).then(controller => { workspaceController = controller; $("new-chat").disabled = false; return controller; });
 workspaceReady.catch(error => {
   workspaceError(error);
   $("send").disabled = true;

@@ -1,4 +1,4 @@
-const RELEASE = 21;
+const RELEASE = 22;
 const SHELL = [
   "/", "/styles.css", "/app.js",
   "/workspace/ui.js", "/workspace/store.js", "/workspace/reader-ref.js", "/workspace/chat-context.js",

@@ -121,7 +121,7 @@ export async function initializeWorkspace(hooks) {
       button.type = "button"; button.dataset.projectId = project.id;
       button.addEventListener("click", () => openProject(project.id).catch(fail));
       const rename = element("button", "···", "workspace-project-rename");
-      rename.type = "button"; rename.setAttribute("aria-label", "Rename project " + project.name);
+      rename.type = "button"; rename.dataset.renameProjectId = project.id; rename.setAttribute("aria-label", "Rename project " + project.name);
       rename.addEventListener("click", () => openName({ type: "project-rename", project }));
       row.append(button, rename); projects.append(row);
       const children = element("div", undefined, "workspace-project-chats");
@@ -173,7 +173,7 @@ export async function initializeWorkspace(hooks) {
     const chat = known.get(activeId);
     const pending = chat?.pendingRequestId;
     const local = pending && requests.get(pending);
-    $("send").disabled = !chat || navigationLocked || readerLoading || Boolean(pending) || Boolean(readerFailure) || conflicts.has(activeId);
+    $("send").disabled = $("workspace-shell").dataset.ready !== "true" || !chat || navigationLocked || readerLoading || Boolean(pending) || Boolean(readerFailure) || conflicts.has(activeId);
     $("chat-stop").hidden = !local || Boolean(local.unsaved);
     $("chat-stop").textContent = "Stop waiting";
     $("workspace-pending").hidden = !pending || Boolean(local);
@@ -192,7 +192,7 @@ export async function initializeWorkspace(hooks) {
     await refreshSidebar();
   }
 
-  async function activate(id, { skipFlush = false, token = beginNavigation() } = {}) {
+  async function activate(id, { skipFlush = false, token = beginNavigation(), preserveView = false } = {}) {
     try {
       if (token !== navigation) return;
       if (!skipFlush) await flushDraft();
@@ -211,7 +211,8 @@ export async function initializeWorkspace(hooks) {
       $("prompt").placeholder = next.conversation.draftKind ? "Describe the " + next.conversation.draftKind + " you want to create…" : "Message Pocket AI Lab…";
       $("conversation-title").textContent = next.conversation.title;
       $("workspace-scope").textContent = next.conversation.projectId === null ? "Individual chat" : "Project · " + projectName(next.conversation.projectId);
-      hooks.clearReader(); setWorkspaceView("chat");
+      hooks.clearReader();
+      if (!preserveView) setWorkspaceView("chat");
       renderMessages(); notice();
       // Lock only the old form's flush/switch. The newly opened draft remains
       // editable while its exact model is being restored.
@@ -448,7 +449,13 @@ export async function initializeWorkspace(hooks) {
         await enqueue(id, async () => known.set(id, await store.updateConversation(id, known.get(id).revision, { title: name })));
         await reloadMessages(id);
       }
-      if (nameAction === action) $("workspace-name-dialog").close();
+      if (nameAction === action) {
+        $("workspace-name-dialog").close();
+        if (action.type === "project-rename") {
+          [...$("workspace-projects").querySelectorAll("[data-rename-project-id]")]
+            .find(button => button.dataset.renameProjectId === action.project.id)?.focus();
+        }
+      }
     } catch (error) { if (nameAction === action) $("workspace-name-error").textContent = error.message; }
     finally { if (nameAction === action) $("workspace-name-save").disabled = false; }
   });
@@ -471,7 +478,7 @@ export async function initializeWorkspace(hooks) {
       card.append(element("h2", resource.name), element("p", resource.description));
       card.append(element("p", "Draft · version " + resource.version + " · " + (resource.createdBy === "assistant" ? "Created by assistant" : "Created by you") + " · " + scopeName(resource.projectId), "resource-meta"));
       const details = element("details"); details.append(element("summary", "Instructions and configuration"), element("pre", resource.instructions));
-      const edit = element("button", "Edit draft", "secondary-button"); edit.type = "button";
+      const edit = element("button", "Edit draft", "secondary-button"); edit.type = "button"; edit.dataset.editResourceId = resource.id;
       edit.addEventListener("click", () => openResource(resource));
       card.append(details, edit); list.append(card);
     }
@@ -494,7 +501,19 @@ export async function initializeWorkspace(hooks) {
     try {
       if (editing.id) await store.updateResourceDraft(editing.id, editing.revision, value);
       else await store.createResourceDraft({ ...value, kind: editing.kind, projectId: editing.projectId, createdBy: "user" });
-      if (resourceEdit === editing) { $("resource-dialog").close(); await showResources(editing.kind); }
+      if (resourceEdit === editing) {
+        await showResources(editing.kind);
+        if (resourceEdit === editing) {
+          $("resource-dialog").close();
+          if (activeView === "resources" && resourceKind === editing.kind) {
+            const target = editing.id
+              ? [...$("resource-list").querySelectorAll("[data-edit-resource-id]")]
+                .find(button => button.dataset.editResourceId === editing.id)
+              : $("resource-create");
+            target?.focus();
+          }
+        }
+      }
     } catch (error) { if (resourceEdit === editing) $("resource-error").textContent = error.message; }
     finally { if (resourceEdit === editing) $("resource-save").disabled = false; }
   });
@@ -552,8 +571,11 @@ export async function initializeWorkspace(hooks) {
   if (!initial && snapshot.conversations.length) initial = snapshot.conversations[0];
   if (!initial && snapshot.issues.length) throw Error("Saved workspace records could not be read. They have been preserved; no empty replacement was created.");
   if (!initial) initial = await store.createConversation({ projectId: null, title: "New conversation", modelRef: null });
-  await activate(initial.id, { skipFlush: true });
+  // Initial restoration has no outgoing form to flush. It must not close a
+  // drawer or replace a workspace pane the user opened while the store loaded.
+  await activate(initial.id, { skipFlush: true, token: ++navigation, preserveView: true });
   $("workspace-shell").dataset.ready = "true";
+  updateControls();
   return {
     send, newConversation, selectReader, reportError: fail,
     captureReviewOrigin() { reviewOrigin = activeId; },

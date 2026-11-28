@@ -14,7 +14,7 @@
   <div class="app-shell" id="workspace-shell" data-ready="false">
     <aside class="sidebar" id="sidebar" aria-label="Workspace navigation">
       <a class="brand" href="/" aria-label="Pocket AI Lab home"><span class="brand-mark">P</span><span>Pocket AI Lab<small>YOUR PRIVATE AI WORKSPACE</small></span></a>
-      <button class="new-chat" id="new-chat">＋ <span>New conversation</span></button>
+      <button class="new-chat" id="new-chat" disabled>＋ <span>New conversation</span></button>
       <div class="workspace-navigation">
       <div class="workspace-group-heading"><h2>Projects</h2><button id="new-project" type="button" aria-label="New project">＋</button></div>
       <div id="workspace-projects" class="workspace-tree" aria-label="Projects"></div>
@@ -47,14 +47,14 @@
         </div>
         <div class="messages" id="messages" aria-live="polite"></div>
         <form class="composer" id="composer">
-          <label class="chat-action-label" for="chat-create-kind">Ask the assistant to <select id="chat-create-kind"><option value="">Chat</option><option value="tool">Draft a tool</option><option value="agent">Draft an agent</option><option value="team">Draft a team</option></select></label>
+          <label class="chat-action-label" for="chat-create-kind">Ask the assistant to <select id="chat-create-kind" disabled><option value="">Chat</option><option value="tool">Draft a tool</option><option value="agent">Draft an agent</option><option value="team">Draft a team</option></select></label>
           <div class="reader-context" id="chat-reader-context" hidden>
             <div><strong id="chat-reader-label"></strong><button type="button" id="chat-use-default" class="secondary-button">Use configured chat model</button></div>
             <label id="chat-source-label" for="chat-reader-source">Source sentences, one per line</label>
-            <textarea id="chat-reader-source" rows="2" maxlength="6000"></textarea>
+            <textarea id="chat-reader-source" rows="2" maxlength="6000" readonly></textarea>
             <span id="chat-reader-status" role="status"></span>
           </div>
-          <div class="composer-wrap"><textarea id="prompt" rows="1" maxlength="12000" placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><button type="button" id="chat-choose-reader" class="reader-choice">Choose model</button><span class="model-pill" id="model-pill">Configured chat model</span><span class="privacy-hint">◉ Private when using local inference</span></div><div class="chat-send-controls"><button id="chat-stop" type="button" class="secondary-button" hidden>Stop reply</button><button class="send" id="send" type="submit" aria-label="Send message" disabled>↑</button></div></div></div><p class="disclaimer">Saved in this browser. Long-term Memory is separate. AI can make mistakes.</p></form>
+          <div class="composer-wrap"><textarea id="prompt" rows="1" maxlength="12000" readonly placeholder="Message Pocket AI Lab…" aria-label="Message Pocket AI Lab"></textarea><div class="composer-bottom"><div class="composer-meta"><button type="button" id="chat-choose-reader" class="reader-choice">Choose model</button><span class="model-pill" id="model-pill">Configured chat model</span><span class="privacy-hint">◉ Private when using local inference</span></div><div class="chat-send-controls"><button id="chat-stop" type="button" class="secondary-button" hidden>Stop reply</button><button class="send" id="send" type="submit" aria-label="Send message" disabled>↑</button></div></div></div><p class="disclaimer">Saved in this browser. Long-term Memory is separate. AI can make mistakes.</p></form>
       </section>
       <section class="view secondary-view hidden" id="resources-view">
         <div class="section-heading"><div class="eyebrow">YOUR CAPABILITIES</div><h1 id="resource-heading">Tools</h1><p id="resource-intro">Create reusable definitions for your work.</p></div>
@@ -282,10 +282,10 @@
       <section class="view secondary-view hidden" id="activity-view"><div class="section-heading"><div class="eyebrow">TRANSPARENCY</div><h1>Activity</h1><p>Execution and authorization events will appear here when the governed task runtime is connected.</p></div><div class="empty-state"><span>◷</span><h3>No execution events yet</h3><p>Model responses are not authorization receipts. Consequential actions must be approved independently.</p></div></section>
     </main>
   </div>
-  <dialog id="workspace-name-dialog" class="workspace-dialog">
+  <dialog id="workspace-name-dialog" class="workspace-dialog" aria-labelledby="workspace-name-heading">
     <form id="workspace-name-form"><h2 id="workspace-name-heading">New project</h2><label for="workspace-name-input">Name<input id="workspace-name-input" maxlength="120" required autocomplete="off"></label><p id="workspace-name-error" role="alert"></p><div class="workspace-dialog-actions"><button class="secondary-button" type="button" data-close-dialog="workspace-name-dialog">Cancel</button><button id="workspace-name-save" class="primary-button" type="submit">Save</button></div></form>
   </dialog>
-  <dialog id="resource-dialog" class="workspace-dialog">
+  <dialog id="resource-dialog" class="workspace-dialog" aria-labelledby="resource-dialog-heading" aria-describedby="resource-dialog-scope">
     <form id="resource-form"><h2 id="resource-dialog-heading">Create tool draft</h2><p id="resource-dialog-scope"></p><label for="resource-name">Name<input id="resource-name" maxlength="120" required autocomplete="off"></label><label for="resource-description">Purpose<textarea id="resource-description" rows="2" maxlength="4000" required></textarea></label><label for="resource-instructions">Instructions and configuration<textarea id="resource-instructions" rows="7" maxlength="12000" required></textarea></label><p class="resource-draft-notice">Saving a draft does not activate it or grant permissions.</p><p id="resource-error" role="alert"></p><div class="workspace-dialog-actions"><button type="button" class="secondary-button" data-close-dialog="resource-dialog">Cancel</button><button id="resource-save" class="primary-button" type="submit">Save draft</button></div></form>
   </dialog>
   <script src="/app.js" defer></script>

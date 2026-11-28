@@ -235,6 +235,124 @@ async function captureEvidence(page, engine, name) {
 }
 
 for (const engine of [chromium, webkit]) {
+  test(engine.name() + " preserves a drawer or Models view opened before workspace initialization", { timeout: 60000 }, async t => {
+    // Each fresh page holds only the actual dynamic workspace import. Blocking
+    // service workers makes that network gate deterministic without faking app logic.
+    const f = await fixture(t, engine, { serviceWorkers: "block" });
+    const initial = (await snapshot(f.page)).selection.conversationId;
+    await f.page.locator("#prompt").fill("Keep this saved draft while the workspace opens.");
+    await waitSaved(f.page, initial, { draft: "Keep this saved draft while the workspace opens." });
+    for (const choice of ["drawer", "models"]) {
+      const savedDraft = (await conversation(f.page, initial)).conversation.draft;
+      const page = await f.page.context().newPage();
+      page.setDefaultTimeout(12000);
+      let releaseImport;
+      const gate = new Promise(resolve => { releaseImport = resolve; });
+      const pendingRoutes = [];
+      const pattern = "**/workspace/ui.js";
+      const holdImport = route => {
+        const pending = gate.then(() => route.continue());
+        pendingRoutes.push(pending);
+        return pending;
+      };
+      await page.route(pattern, holdImport);
+      try {
+        const requested = page.waitForRequest(pattern);
+        await page.goto(f.url, { waitUntil: "domcontentloaded" });
+        await requested;
+        assert.equal(await page.locator("#workspace-shell").getAttribute("data-ready"), "false");
+        assert.ok(await page.locator("#send").isDisabled());
+        assert.ok(await page.locator("#new-chat").isDisabled());
+        assert.ok(!(await page.locator("#prompt").isEditable()));
+        assert.equal(await page.locator("#chat-reader-source").evaluate(node => node.readOnly), true);
+        assert.ok(await page.locator("#chat-create-kind").isDisabled());
+        await page.evaluate(() => {
+          const shell = document.getElementById("workspace-shell"), send = document.getElementById("send");
+          const observed = { earlySendEnabled: false };
+          const check = () => { if (shell.dataset.ready !== "true" && !send.disabled) observed.earlySendEnabled = true; };
+          const observer = new MutationObserver(check);
+          observer.observe(shell, { attributes: true, attributeFilter: ["data-ready"] });
+          observer.observe(send, { attributes: true, attributeFilter: ["disabled"] });
+          check();
+          globalThis.__workspaceStartupObservation = { observed, stop: () => observer.disconnect() };
+        });
+        // Exercise the actual form path independently of the disabled button.
+        // Its draft already exists in storage, so startup can preserve it exactly.
+        await page.evaluate(text => {
+          document.getElementById("prompt").value = text;
+          document.getElementById("composer").requestSubmit();
+        }, savedDraft);
+        assert.equal(await page.locator("#prompt").inputValue(), savedDraft);
+        await openMenu(page);
+        await page.locator("#sidebar.open").waitFor();
+        let readerId;
+        if (choice === "models") {
+          await page.locator('[data-view="models"]').click();
+          await page.locator("#models-view:not(.hidden)").waitFor();
+          assert.equal(await page.locator("#page-name").textContent(), "Model workshop");
+          await page.locator("#reader-use:enabled").waitFor();
+          readerId = await page.locator("#reader-use").inputValue();
+          await page.locator("#reader-question").fill(question);
+          await page.locator("#reader-sentences").fill(passage);
+          await page.locator("#reader-chat:enabled").click();
+          await page.locator("#reader-status").filter({ hasText: /Saved chats are still opening\. Choose this model again/ }).waitFor();
+          assert.ok(await page.locator("#models-view").isVisible());
+          assert.equal(await page.locator("#prompt").inputValue(), savedDraft);
+        }
+        assert.equal(await page.locator("#workspace-shell").getAttribute("data-ready"), "false");
+        assert.ok(await page.locator("#send").isDisabled());
+        assert.equal(f.chatRequests.length, 0);
+        releaseImport();
+        await page.locator('#workspace-shell[data-ready="true"]').waitFor();
+        const earlySendEnabled = await page.evaluate(() => {
+          const observation = globalThis.__workspaceStartupObservation;
+          observation.stop();
+          delete globalThis.__workspaceStartupObservation;
+          return observation.observed.earlySendEnabled;
+        });
+        assert.equal(earlySendEnabled, false, "Send stays disabled throughout initialization");
+        assert.ok(await page.locator("#send").isEnabled());
+        assert.ok(await page.locator("#new-chat").isEnabled());
+        assert.equal(await page.locator("#prompt").inputValue(), savedDraft);
+        assert.equal((await conversation(page, initial)).conversation.modelRef, null,
+          "a pre-ready reader action is not deferred into the restored chat");
+        if (choice === "drawer") {
+          assert.ok((await page.locator("#sidebar").getAttribute("class")).split(/\s+/).includes("open"));
+          assert.ok(await page.locator("#chat-view").isVisible());
+          await page.locator('[data-view="chat"]').click();
+        } else {
+          assert.ok(await page.locator("#models-view").isVisible());
+          assert.ok(await page.locator("#chat-view").isHidden());
+          assert.equal(await page.locator("#page-name").textContent(), "Model workshop");
+          assert.ok(!(await page.locator("#sidebar").getAttribute("class")).split(/\s+/).includes("open"));
+          // A deliberate new selection works once startup has completed.
+          await page.locator("#reader-chat:enabled").click();
+          await page.locator("#chat-view:not(.hidden)").waitFor();
+          await page.locator("#send:enabled").waitFor();
+          assert.equal((await conversation(page, initial)).conversation.modelRef.id, readerId);
+          assert.equal(await page.locator("#prompt").inputValue(), savedDraft);
+        }
+        // Complete a real post-startup save before checking absence of queued
+        // submissions; do not close the page immediately after data-ready flips.
+        const nextDraft = savedDraft + " Ready for " + choice + ".";
+        await page.locator("#prompt").fill(nextDraft);
+        await waitSaved(page, initial, { draft: nextDraft, pendingRequestId: null });
+        const restored = await conversation(page, initial);
+        assert.equal(restored.messages.length, 0);
+        assert.equal(restored.turns.length, 0);
+        assert.equal(f.chatRequests.length, 0, "native pre-ready submit never becomes a deferred request");
+        assert.equal(f.providerRequests.length, 0);
+      } finally {
+        releaseImport();
+        await page.unroute(pattern, holdImport);
+        await Promise.all(pendingRoutes);
+        await page.close();
+      }
+    }
+    assert.equal(f.chatRequests.length, 0, "startup navigation does not queue a chat request");
+    assert.equal(f.providerRequests.length, 0);
+  });
+
   test(engine.name() + " keeps project and standalone drafts, exact models and offline reader replies", { timeout: 90000 }, async t => {
     const f = await fixture(t, engine);
     let page = f.page;
